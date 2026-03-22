@@ -2,9 +2,14 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 
 export async function getCustomers() {
-  return await prisma.customer.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    return await prisma.customer.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    return [];
+  }
 }
 
 export async function createCustomer(data: {

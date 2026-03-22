@@ -3,14 +3,24 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 
 export async function getProducts() {
-  return await prisma.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    return await prisma.product.findMany({
+      include: { category: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
 }
 
 export async function getCategories() {
-  return await prisma.category.findMany();
+  try {
+    return await prisma.category.findMany();
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return [];
+  }
 }
 
 export async function createProduct(data: {

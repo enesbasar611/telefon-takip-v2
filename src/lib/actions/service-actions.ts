@@ -89,13 +89,18 @@ export async function deleteServiceTicket(id: string) {
 }
 
 export async function getServiceTickets() {
-  return await prisma.serviceTicket.findMany({
-    include: {
-      customer: true,
-      technician: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    return await prisma.serviceTicket.findMany({
+      include: {
+        customer: true,
+        technician: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching service tickets:", error);
+    return [];
+  }
 }

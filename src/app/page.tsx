@@ -1,17 +1,25 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wrench, Package, ShoppingCart, Users, CreditCard, Smartphone } from "lucide-react";
+import { getDashboardStats, getRecentServiceTickets } from "@/lib/actions/dashboard-actions";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
-const stats = [
-  { label: "Aktif Servis", value: "12", icon: Wrench, color: "text-blue-500", bg: "bg-blue-50" },
-  { label: "Bugünkü Satış", value: "₺2,450", icon: ShoppingCart, color: "text-green-500", bg: "bg-green-50" },
-  { label: "Stok Uyarısı", value: "4", icon: Package, color: "text-orange-500", bg: "bg-orange-50" },
-  { label: "Yeni Müşteriler", value: "8", icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
-  { label: "Toplam Alacak", value: "₺1,200", icon: CreditCard, color: "text-red-500", bg: "bg-red-50" },
-  { label: "2. El Stok", value: "15", icon: Smartphone, color: "text-amber-500", bg: "bg-amber-50" },
-];
+export const dynamic = 'force-dynamic';
 
-export default function Dashboard() {
+export default async function Dashboard() {
+  const statsData = await getDashboardStats();
+  const recentTickets = await getRecentServiceTickets();
+
+  const stats = [
+    { label: "Aktif Servis", value: statsData.activeServices, icon: Wrench, color: "text-blue-500", bg: "bg-blue-50" },
+    { label: "Toplam Gelir", value: statsData.totalIncome, icon: ShoppingCart, color: "text-green-500", bg: "bg-green-50" },
+    { label: "Kritik Stok", value: statsData.criticalStock, icon: Package, color: "text-orange-500", bg: "bg-orange-50" },
+    { label: "Müşteriler", value: statsData.totalCustomers, icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
+    { label: "Toplam Alacak", value: "₺0", icon: CreditCard, color: "text-red-500", bg: "bg-red-50" },
+    { label: "2. El Stok", value: "0", icon: Smartphone, color: "text-amber-500", bg: "bg-amber-50" },
+  ];
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -43,19 +51,26 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Mock placeholder */}
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <div className="font-medium">iPhone 13 - Ekran Değişimi</div>
-                    <div className="text-xs text-muted-foreground">Ali Yılmaz • 0532 123 45 67</div>
+              {recentTickets.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Henüz servis kaydı bulunmuyor.</p>
+              ) : (
+                recentTickets.map((ticket) => (
+                  <div key={ticket.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                    <div>
+                      <div className="font-medium">{ticket.deviceBrand} {ticket.deviceModel}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {ticket.customer.name} • {ticket.customer.phone}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium">{ticket.status}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(ticket.createdAt, "HH:mm", { locale: tr })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">Onay Bekliyor</div>
-                    <div className="text-xs text-muted-foreground">14:30</div>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
