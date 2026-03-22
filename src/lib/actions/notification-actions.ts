@@ -7,10 +7,11 @@ export async function getSystemNotifications() {
     const notifications: any[] = [];
 
     // 1. Critical Stock Notifications
-    const criticalStock = await prisma.product.findMany({
-      where: { stock: { lte: prisma.product.fields.criticalStock } },
+    const products = await prisma.product.findMany({
       include: { category: true }
     });
+
+    const criticalStock = products.filter(p => p.stock <= p.criticalStock);
 
     criticalStock.forEach(p => {
       notifications.push({
