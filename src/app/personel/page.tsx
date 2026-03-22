@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Users, TrendingUp, Wallet } from "lucide-react";
 import { getStaff } from "@/lib/actions/staff-actions";
-import { UserCog, Shield, Activity } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,14 +13,14 @@ export default async function PersonelPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Personel ve Yetkiler</h1>
-        <p className="text-muted-foreground">İşletme personelini ve sistem yetkilerini yönetin.</p>
+        <p className="text-muted-foreground">Ekibinizi yönetin ve performanslarını takip edin.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Toplam Personel</CardTitle>
-            <UserCog className="h-4 w-4 text-primary" />
+            <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{staff.length}</div>
@@ -28,11 +28,20 @@ export default async function PersonelPage() {
         </Card>
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktif Yöneticiler</CardTitle>
-            <Shield className="h-4 w-4 text-emerald-500" />
+            <CardTitle className="text-sm font-medium">Aktif Teknisyenler</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{staff.filter((s: any) => s.role === 'ADMIN').length}</div>
+            <div className="text-2xl font-bold">{staff.filter((s: any) => s.role === 'TECHNICIAN').length}</div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Bu Ayki Primler</CardTitle>
+            <Wallet className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₺0</div>
           </CardContent>
         </Card>
       </div>
@@ -40,42 +49,37 @@ export default async function PersonelPage() {
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle>Personel Listesi</CardTitle>
+          <CardDescription>Maaş, prim ve işlem loglarını yönetin.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Ad Soyad</TableHead>
-                <TableHead>E-posta</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead>Katılım Tarihi</TableHead>
+                <TableHead>Tamamlanan Servis</TableHead>
+                <TableHead>Satış Adedi</TableHead>
+                <TableHead>Prim Oranı (%)</TableHead>
                 <TableHead className="text-right">Durum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {staff.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Henüz personel kaydı bulunmuyor.
-                  </TableCell>
+                  <TableCell colSpan={6} className="h-24 text-center">Personel bulunamadı.</TableCell>
                 </TableRow>
               ) : (
-                staff.map((s: any) => (
-                  <TableRow key={s.id} className="group">
-                    <TableCell className="font-medium group-hover:text-primary transition-colors">
-                      {s.name || "İsimsiz"}
-                    </TableCell>
-                    <TableCell>{s.email}</TableCell>
+                staff.map((user: any) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name || user.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-semibold">
-                        {s.role}
-                      </Badge>
+                      <Badge variant="outline">{user.role}</Badge>
                     </TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(s.createdAt).toLocaleDateString('tr-TR')}
-                    </TableCell>
+                    <TableCell>{user.assignedTickets?.length || 0}</TableCell>
+                    <TableCell>{user.sales?.length || 0}</TableCell>
+                    <TableCell>%{Number(user.commissionRate)}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="success">Aktif</Badge>
+                      <Badge className="bg-green-100 text-green-800 border-none">AKTİF</Badge>
                     </TableCell>
                   </TableRow>
                 ))

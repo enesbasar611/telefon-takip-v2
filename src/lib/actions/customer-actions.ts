@@ -1,11 +1,16 @@
-import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { revalidatePath } from "next/cache";
 
 export async function getCustomers() {
   try {
     const customers = await prisma.customer.findMany({
-      orderBy: { createdAt: "desc" },
+      include: {
+        tickets: true,
+        sales: true,
+        debts: true
+      },
+      orderBy: { updatedAt: "desc" }
     });
     return serializePrisma(customers);
   } catch (error) {
@@ -14,46 +19,41 @@ export async function getCustomers() {
   }
 }
 
-export async function createCustomer(data: {
-  name: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  notes?: string;
-}) {
+export async function getCustomerById(id: string) {
   try {
-    const customer = await prisma.customer.create({
-      data,
+    const customer = await prisma.customer.findUnique({
+      where: { id },
+      include: {
+        tickets: { orderBy: { createdAt: "desc" } },
+        sales: {
+            include: { items: { include: { product: true } } },
+            orderBy: { createdAt: "desc" }
+        },
+        debts: { orderBy: { createdAt: "desc" } }
+      }
     });
-    revalidatePath("/musteriler");
-    return { success: true, data: serializePrisma(customer) };
+    return serializePrisma(customer);
   } catch (error) {
-    console.error("Error creating customer:", error);
-    return { success: false, error: "Müşteri oluşturulurken bir hata oluştu." };
+    return null;
   }
 }
 
-export async function updateCustomer(id: string, data: Partial<{
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  notes: string;
-}>) {
-  const customer = await prisma.customer.update({
-    where: { id },
-    data,
-  });
-  revalidatePath("/musteriler");
-  return customer;
+export async function createCustomer(data: { name: string; phone: string; email?: string; address?: string; notes?: string }) {
+  try {
+    const customer = await prisma.customer.create({ data });
+    revalidatePath("/musteriler");
+    return { success: true, customer: serializePrisma(customer) };
+  } catch (error) {
+    return { success: false, error: "Müşteri oluşturulurken hata oluştu." };
+  }
 }
 
 export async function deleteCustomer(id: string) {
-  // Check if customer has related data
-  const ticketCount = await prisma.serviceTicket.count({ where: { customerId: id } });
-  if (ticketCount > 0) {
-    throw new Error("Müşterinin servis kayıtları olduğu için silinemez.");
-  }
-  await prisma.customer.delete({ where: { id } });
-  revalidatePath("/musteriler");
+    try {
+      await prisma.customer.delete({ where: { id } });
+      revalidatePath("/musteriler");
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Müşteri silinemedi. Aktif kayıtları olabilir." };
+    }
 }

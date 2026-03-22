@@ -36,13 +36,14 @@ enum PaymentMethod {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          Role      @default(STAFF)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  password        String
+  role            Role      @default(STAFF)
+  commissionRate  Decimal   @default(0) @db.Decimal(5, 2) // Percentage e.g. 10.00%
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   assignedTickets ServiceTicket[] @relation("AssignedTechnician")
   createdTickets  ServiceTicket[] @relation("CreatedBy")

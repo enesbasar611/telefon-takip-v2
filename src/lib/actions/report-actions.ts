@@ -1,74 +1,76 @@
-import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfDay, endOfDay } from "date-fns";
+import { tr } from "date-fns/locale";
 
-export async function getSalesReport() {
+export async function getSalesReport(startDate?: Date, endDate?: Date) {
   try {
-    const start = startOfMonth(new Date());
-    const end = endOfMonth(new Date());
+    const start = startDate || startOfMonth(new Date());
+    const end = endDate || endOfMonth(new Date());
 
     const sales = await prisma.sale.findMany({
       where: {
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
-      },
-      select: {
-        createdAt: true,
-        finalAmount: true,
-      },
+        createdAt: { gte: start, lte: end }
+      }
     });
 
-    const dailyData = eachDayOfInterval({ start, end }).map((day) => {
-      const daySales = sales.filter((s) => {
-        const saleDate = new Date(s.createdAt);
-        return saleDate.getDate() === day.getDate() &&
-               saleDate.getMonth() === day.getMonth() &&
-               saleDate.getFullYear() === day.getFullYear();
-      });
-
-      const total = daySales.reduce((acc, s) => acc + Number(s.finalAmount), 0);
-
+    const days = eachDayOfInterval({ start, end });
+    const trend = days.map(day => {
+      const daySales = sales.filter(s =>
+        format(new Date(s.createdAt), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+      );
       return {
-        date: format(day, "dd MMM"),
-        total,
+        date: format(day, 'dd MMM', { locale: tr }),
+        total: daySales.reduce((sum, s) => sum + Number(s.finalAmount), 0)
       };
     });
 
-    return dailyData;
+    return trend;
   } catch (error) {
-    console.error("Error fetching sales report:", error);
     return [];
   }
 }
 
-export async function getServiceVolumeReport() {
+export async function getServiceMetrics() {
   try {
-    const start = startOfMonth(new Date());
-    const end = endOfMonth(new Date());
-
-    const tickets = await prisma.serviceTicket.findMany({
-      where: {
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
-      },
-    });
-
-    const statusSummary = await prisma.serviceTicket.groupBy({
+    const statuses = await prisma.serviceTicket.groupBy({
       by: ['status'],
-      _count: true,
+      _count: true
     });
 
-    return statusSummary.map((s) => ({
+    const metrics = statuses.map(s => ({
       name: s.status,
-      count: s._count,
+      value: s._count
     }));
+
+    return metrics;
   } catch (error) {
-    console.error("Error fetching service volume report:", error);
     return [];
   }
+}
+
+export async function getDashboardStats() {
+    try {
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+
+        const [activeServices, dailySales, criticalStock, customers] = await Promise.all([
+            prisma.serviceTicket.count({ where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
+            prisma.sale.aggregate({
+                where: { createdAt: { gte: todayStart, lte: todayEnd } },
+                _sum: { finalAmount: true }
+            }),
+            prisma.product.count({ where: { stock: { lte: prisma.product.fields.criticalStock } } }),
+            prisma.customer.count()
+        ]);
+
+        return {
+            activeServices,
+            dailyRevenue: Number(dailySales._sum.finalAmount || 0),
+            criticalStockCount: criticalStock,
+            totalCustomers: customers
+        };
+    } catch (error) {
+        return { activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0 };
+    }
 }

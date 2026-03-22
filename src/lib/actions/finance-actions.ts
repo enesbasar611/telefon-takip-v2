@@ -1,25 +1,15 @@
-import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { TransactionType, PaymentMethod } from "@prisma/client";
-
-async function getOrCreateDevUser() {
-  return await prisma.user.upsert({
-    where: { email: "admin@takipv2.com" },
-    update: {},
-    create: {
-      email: "admin@takipv2.com",
-      name: "Admin",
-      password: "hashed_password",
-      role: "ADMIN",
-    },
-  });
-}
+import { revalidatePath } from "next/cache";
 
 export async function getTransactions() {
   try {
     const transactions = await prisma.transaction.findMany({
-      orderBy: { createdAt: "desc" },
+      include: {
+        user: true,
+        sale: true
+      },
+      orderBy: { createdAt: "desc" }
     });
     return serializePrisma(transactions);
   } catch (error) {
@@ -28,52 +18,57 @@ export async function getTransactions() {
   }
 }
 
-export async function createTransaction(data: {
-  description: string;
-  amount: number;
-  type: TransactionType;
-  paymentMethod: PaymentMethod;
-}) {
+export async function createManualTransaction(data: { type: "INCOME" | "EXPENSE"; amount: number; description: string; paymentMethod: "CASH" | "CARD" | "TRANSFER" }) {
   try {
-    const user = await getOrCreateDevUser();
+    // For demo/simplicity, we use the first admin user or a generic user ID
+    let user = await prisma.user.findFirst();
+    if (!user) {
+        user = await prisma.user.create({
+            data: {
+              email: "admin@basarteknik.com",
+              name: "Admin",
+              password: "password123",
+              role: "ADMIN"
+            }
+          });
+    }
+
     const transaction = await prisma.transaction.create({
       data: {
         ...data,
-        userId: user.id,
-      },
+        userId: user.id
+      }
     });
     revalidatePath("/finans");
     revalidatePath("/");
-    return { success: true, data: serializePrisma(transaction) };
+    return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
-    console.error("Error creating transaction:", error);
-    return { success: false, error: "İşlem kaydedilirken bir hata oluştu." };
+    return { success: false, error: "İşlem kaydedilemedi." };
   }
 }
 
-export async function getFinanceSummary() {
+export async function getFinancialSummary() {
   try {
-    const [income, expense] = await Promise.all([
-      prisma.transaction.aggregate({
-        where: { type: "INCOME" },
-        _sum: { amount: true },
-      }),
-      prisma.transaction.aggregate({
-        where: { type: "EXPENSE" },
-        _sum: { amount: true },
-      }),
-    ]);
+    const transactions = await prisma.transaction.findMany();
 
-    const totalIncome = Number(income._sum.amount) || 0;
-    const totalExpense = Number(expense._sum.amount) || 0;
+    const summary = transactions.reduce((acc, t) => {
+      const amount = Number(t.amount);
+      if (t.type === 'INCOME') {
+        acc.totalIncome += amount;
+        if (t.paymentMethod === 'CASH') acc.cashBalance += amount;
+        if (t.paymentMethod === 'CARD') acc.bankBalance += amount;
+        if (t.paymentMethod === 'TRANSFER') acc.bankBalance += amount;
+      } else {
+        acc.totalExpense += amount;
+        if (t.paymentMethod === 'CASH') acc.cashBalance -= amount;
+        if (t.paymentMethod === 'CARD') acc.bankBalance -= amount;
+        if (t.paymentMethod === 'TRANSFER') acc.bankBalance -= amount;
+      }
+      return acc;
+    }, { totalIncome: 0, totalExpense: 0, cashBalance: 0, bankBalance: 0 });
 
-    return {
-      totalIncome,
-      totalExpense,
-      balance: totalIncome - totalExpense,
-    };
+    return summary;
   } catch (error) {
-    console.error("Error fetching finance summary:", error);
-    return { totalIncome: 0, totalExpense: 0, balance: 0 };
+    return { totalIncome: 0, totalExpense: 0, cashBalance: 0, bankBalance: 0 };
   }
 }
