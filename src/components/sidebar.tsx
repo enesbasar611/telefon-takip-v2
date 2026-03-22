@@ -39,7 +39,7 @@ const menuItems = [
     label: "Servis Yönetimi",
     href: "/servis",
     subItems: [
-      { label: "Servis Listesi", href: "/servis" },
+      { label: "Servis Listesi", href: "/servis/liste" },
       { label: "Yeni Kayıt", href: "/servis/yeni" },
       { label: "Teslimatlar", href: "/servis/teslimatlar" },
       { label: "Garanti/İade", href: "/servis/iade" },

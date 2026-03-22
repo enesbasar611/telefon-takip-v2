@@ -78,6 +78,7 @@ model ServiceTicket {
   imei            String?
   serialNumber    String?
   problemDesc     String
+  cosmeticCondition String?
   notes           String?
 
   status          ServiceStatus @default(PENDING)
@@ -94,6 +95,7 @@ model ServiceTicket {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   deliveredAt     DateTime?
+  estimatedDeliveryDate DateTime?
 
   logs            ServiceLog[]
   usedParts       ServiceUsedPart[]

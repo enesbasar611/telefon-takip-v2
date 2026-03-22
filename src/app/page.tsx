@@ -1,80 +1,140 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, Package, ShoppingCart, Users, CreditCard, Smartphone } from "lucide-react";
+import { Wrench, Package, ShoppingCart, Users, CreditCard, Smartphone, TrendingUp, DollarSign } from "lucide-react";
 import { getDashboardStats, getRecentServiceTickets } from "@/lib/actions/dashboard-actions";
+import { getSalesReport, getServiceMetrics } from "@/lib/actions/report-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { SalesTrendChart } from "@/components/charts/sales-trend-chart";
+import { ServiceStatusChart } from "@/components/charts/service-status-chart";
 
 export const dynamic = 'force-dynamic';
 
+const statusColors: Record<string, string> = {
+  PENDING: "#94a3b8",
+  APPROVED: "#3b82f6",
+  REPAIRING: "#f59e0b",
+  WAITING_PART: "#8b5cf6",
+  READY: "#10b981",
+  DELIVERED: "#059669",
+  CANCELLED: "#ef4444",
+};
+
 export default async function Dashboard() {
   const statsData = await getDashboardStats();
-  const recentTickets = await getRecentServiceTickets();
+  const recentTicketsRaw = await getRecentServiceTickets();
+  const salesTrend = await getSalesReport();
+  const serviceMetricsRaw = await getServiceMetrics();
+
+  const serviceMetrics = serviceMetricsRaw.map(m => ({
+    ...m,
+    color: statusColors[m.name] || "#cbd5e1"
+  }));
 
   const stats = [
-    { label: "Aktif Servis", value: statsData.activeServices, icon: Wrench, color: "text-blue-500", bg: "bg-blue-50" },
-    { label: "Toplam Gelir", value: statsData.totalIncome, icon: ShoppingCart, color: "text-green-500", bg: "bg-green-50" },
-    { label: "Kritik Stok", value: statsData.criticalStock, icon: Package, color: "text-orange-500", bg: "bg-orange-50" },
-    { label: "Müşteriler", value: statsData.totalCustomers, icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
-    { label: "Toplam Alacak", value: "₺0", icon: CreditCard, color: "text-red-500", bg: "bg-red-50 dark:bg-red-900/10" },
-    { label: "2. El Stok", value: "0", icon: Smartphone, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/10" },
+    { label: "Bugünkü Satış", value: statsData.todaySales, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
+    { label: "Tamir Cirosu", value: statsData.repairRevenue, icon: Wrench, color: "text-green-500", bg: "bg-green-50" },
+    { label: "Aktif Servis", value: statsData.activeServices, icon: TrendingUp, color: "text-orange-500", bg: "bg-orange-50" },
+    { label: "Kritik Stok", value: statsData.criticalStock, icon: Package, color: "text-red-500", bg: "bg-red-50" },
+    { label: "Toplam Müşteri", value: statsData.totalCustomers, icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
+    { label: "Genel Ciro", value: statsData.totalIncome, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50" },
   ];
 
   return (
     <div className="flex flex-col gap-8 pb-10">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Genel Bakış</h1>
-        <p className="text-muted-foreground">İşletmenizin bugünkü özeti.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Ana Panel</h1>
+          <p className="text-muted-foreground">İşletmenizin anlık performans ve teknik servis özeti.</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-muted-foreground">{format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })}</p>
+          <Badge variant="outline" className="mt-1 bg-primary/5 text-primary border-primary/20">Sistem Aktif</Badge>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {stats.map((stat) => (
-          <Card key={stat.label} className="hover:shadow-md transition-shadow border-none bg-card shadow-sm overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card key={stat.label} className="hover:shadow-md transition-all border-none bg-card shadow-sm group hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-              <div className={`${stat.bg} ${stat.color} p-2 rounded-md transition-transform group-hover:scale-110`}>
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{stat.label}</CardTitle>
+              <div className={`${stat.bg} ${stat.color} p-2 rounded-lg transition-transform group-hover:rotate-12`}>
                 <stat.icon className="h-4 w-4" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
+              <div className="text-xl font-black tracking-tight">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 border-none shadow-md overflow-hidden bg-card">
-          <CardHeader className="bg-primary/5 border-b mb-4">
-            <CardTitle>Son Servis Kayıtları</CardTitle>
-            <CardDescription>Son 5 teknik servis işlemi.</CardDescription>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="shadow-lg border-none">
+          <CardHeader className="border-b pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Haftalık Satış Trendi
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentTickets.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Henüz servis kaydı bulunmuyor.</p>
+          <CardContent className="pt-6">
+            <div className="h-[300px] w-full">
+              <SalesTrendChart data={salesTrend} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-none">
+          <CardHeader className="border-b pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              Servis Durum Dağılımı
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="h-[300px] w-full">
+              <ServiceStatusChart data={serviceMetrics} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-7">
+        <Card className="col-span-4 shadow-lg border-none overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b pb-4">
+            <CardTitle className="text-lg">Son Servis İşlemleri</CardTitle>
+            <CardDescription>Teknik masadaki son hareketler.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {recentTicketsRaw.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-10">Henüz servis kaydı bulunmuyor.</p>
               ) : (
-                recentTickets.map((ticket) => (
-                  <div key={ticket.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0 hover:bg-muted/50 transition-colors p-2 rounded-lg cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                recentTicketsRaw.map((ticket: any) => (
+                  <div key={ticket.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary text-xl shadow-inner">
                         {ticket.deviceBrand[0]}
                       </div>
                       <div>
-                        <div className="font-bold">{ticket.deviceBrand} {ticket.deviceModel}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {ticket.customer.name} • {ticket.customer.phone}
+                        <div className="font-bold text-sm">{ticket.deviceBrand} {ticket.deviceModel}</div>
+                        <div className="text-xs text-muted-foreground font-medium">
+                          {ticket.customer?.name} • {ticket.customer?.phone}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider">
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] uppercase font-black px-2 py-0.5 tracking-tighter"
+                        style={{ backgroundColor: `${statusColors[ticket.status]}20`, color: statusColors[ticket.status], borderColor: `${statusColors[ticket.status]}40` }}
+                      >
                         {ticket.status}
                       </Badge>
-                      <div className="text-xs text-muted-foreground font-medium">
-                        {format(ticket.createdAt, "HH:mm", { locale: tr })}
+                      <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        {format(new Date(ticket.createdAt), "HH:mm")}
                       </div>
                     </div>
                   </div>
@@ -84,35 +144,34 @@ export default async function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 border-none shadow-md overflow-hidden bg-card">
-          <CardHeader className="bg-primary/5 border-b mb-4">
-            <CardTitle>Hızlı Aksiyonlar</CardTitle>
-            <CardDescription>Sık kullanılan işlemler.</CardDescription>
+        <Card className="col-span-3 shadow-lg border-none">
+          <CardHeader className="bg-primary/5 border-b pb-4 text-primary">
+            <CardTitle className="text-lg">Kısayol İşlemleri</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="h-24 flex flex-col gap-2 group hover:border-primary hover:bg-primary/5 transition-all">
-              <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary group-hover:text-white transition-colors">
+          <CardContent className="grid grid-cols-2 gap-4 pt-6">
+            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-primary hover:bg-primary/5 shadow-sm">
+              <div className="p-3 rounded-2xl bg-primary/10 group-hover:bg-primary group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <Wrench className="h-6 w-6" />
               </div>
-              <span className="font-bold text-xs uppercase tracking-wider">Yeni Servis</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Yeni Servis</span>
             </Button>
-            <Button variant="outline" className="h-24 flex flex-col gap-2 group hover:border-emerald-500 hover:bg-emerald-500/5 transition-all">
-              <div className="p-2 rounded-full bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-emerald-500 hover:bg-emerald-500/5 shadow-sm">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <ShoppingCart className="h-6 w-6" />
               </div>
-              <span className="font-bold text-xs uppercase tracking-wider">Hızlı Satış</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Hızlı Satış</span>
             </Button>
-            <Button variant="outline" className="h-24 flex flex-col gap-2 group hover:border-blue-500 hover:bg-blue-500/5 transition-all">
-              <div className="p-2 rounded-full bg-blue-500/10 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-blue-500 hover:bg-blue-500/5 shadow-sm">
+              <div className="p-3 rounded-2xl bg-blue-500/10 group-hover:bg-blue-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <Users className="h-6 w-6" />
               </div>
-              <span className="font-bold text-xs uppercase tracking-wider">Müşteri Ekle</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Müşteri Ekle</span>
             </Button>
-            <Button variant="outline" className="h-24 flex flex-col gap-2 group hover:border-amber-500 hover:bg-amber-500/5 transition-all">
-              <div className="p-2 rounded-full bg-amber-500/10 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-amber-500 hover:bg-amber-500/5 shadow-sm">
+              <div className="p-3 rounded-2xl bg-amber-500/10 group-hover:bg-amber-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <Smartphone className="h-6 w-6" />
               </div>
-              <span className="font-bold text-xs uppercase tracking-wider">2. El Cihaz Gir</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.15em]">2. El Cihaz</span>
             </Button>
           </CardContent>
         </Card>

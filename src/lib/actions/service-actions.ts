@@ -20,6 +20,7 @@ const serviceSchema = z.object({
     .optional()
     .or(z.literal("")),
   problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
+  cosmeticCondition: z.string().optional(),
   estimatedCost: z.number().min(0, "Geçerli bir ücret giriniz"),
 });
 
@@ -62,6 +63,7 @@ export async function createServiceTicket(rawData: any) {
         deviceModel: validatedData.deviceModel,
         imei: validatedData.imei || null,
         problemDesc: validatedData.problemDesc,
+        cosmeticCondition: validatedData.cosmeticCondition || null,
         estimatedCost: validatedData.estimatedCost,
         createdById: user.id,
         status: ServiceStatus.PENDING,
@@ -75,6 +77,7 @@ export async function createServiceTicket(rawData: any) {
     });
 
     revalidatePath("/servis");
+    revalidatePath("/servis/liste");
     revalidatePath("/");
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
@@ -107,6 +110,29 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
   } catch (error) {
     console.error("Error updating service status:", error);
     return { success: false, error: "Durum güncellenirken bir hata oluştu." };
+  }
+}
+
+export async function assignTechnician(ticketId: string, technicianId: string) {
+  try {
+    const ticket = await prisma.serviceTicket.update({
+      where: { id: ticketId },
+      data: {
+        technicianId,
+        logs: {
+          create: {
+            message: `Teknisyen atandı.`,
+            status: ServiceStatus.PENDING, // Keeping current status or fetching it
+          }
+        }
+      },
+    });
+
+    revalidatePath("/servis/liste");
+    return { success: true, data: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("Error assigning technician:", error);
+    return { success: false, error: "Teknisyen atanırken bir hata oluştu." };
   }
 }
 

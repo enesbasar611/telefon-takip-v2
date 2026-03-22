@@ -3,11 +3,16 @@ import prisma from "@/lib/prisma";
 
 export async function getDashboardStats() {
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const [
       activeServices,
       totalCustomers,
       criticalStock,
       totalIncome,
+      todaySales,
+      repairRevenue,
     ] = await Promise.all([
       prisma.serviceTicket.count({
         where: {
@@ -27,6 +32,14 @@ export async function getDashboardStats() {
       prisma.transaction.aggregate({
         where: { type: "INCOME" },
         _sum: { amount: true }
+      }),
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: today } },
+        _sum: { finalAmount: true }
+      }),
+      prisma.serviceTicket.aggregate({
+        where: { status: "DELIVERED", deliveredAt: { gte: today } },
+        _sum: { actualCost: true }
       })
     ]);
 
@@ -35,6 +48,8 @@ export async function getDashboardStats() {
       totalCustomers: totalCustomers.toString(),
       criticalStock: criticalStock.toString(),
       totalIncome: `₺${(Number(totalIncome._sum.amount) || 0).toLocaleString('tr-TR')}`,
+      todaySales: `₺${(Number(todaySales._sum.finalAmount) || 0).toLocaleString('tr-TR')}`,
+      repairRevenue: `₺${(Number(repairRevenue._sum.actualCost) || 0).toLocaleString('tr-TR')}`,
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
