@@ -34,8 +34,8 @@ export default async function DashboardUyarilarPage() {
                 notifications.filter((n: any) => n.type === 'CRITICAL_STOCK').map((n: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-red-50/10 hover:bg-red-50/20 transition-colors">
                     <div className="flex flex-col">
-                      <span className="font-semibold">{n.title}</span>
-                      <span className="text-xs text-muted-foreground">{n.message}</span>
+                      <span className="text-lg font-extrabold uppercase tracking-tight">{n.title}</span>
+                      <span className="text-sm text-muted-foreground">{n.message}</span>
                     </div>
                     <Badge variant="destructive" className="font-bold">Hemen Sipariş Ver</Badge>
                   </div>

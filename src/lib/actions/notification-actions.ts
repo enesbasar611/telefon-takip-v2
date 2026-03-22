@@ -16,8 +16,8 @@ export async function getSystemNotifications() {
       notifications.push({
         id: `stock-${p.id}`,
         type: "CRITICAL_STOCK",
-        title: "Kritik Stok Uyarısı",
-        message: `${p.name} ürünü için kritik stok seviyesine ulaşıldı. Kalan: ${p.stock}`,
+        title: `${p.name} (KALAN: ${p.stock})`,
+        message: `Kritik stok seviyesine ulaşıldı. Lütfen hemen tedarik edin.`,
         createdAt: p.updatedAt,
         priority: "HIGH"
       });

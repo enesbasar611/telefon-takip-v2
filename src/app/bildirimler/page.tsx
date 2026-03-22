@@ -41,8 +41,8 @@ export default async function BildirimlerPage() {
                   <div className="flex items-center gap-3">
                     {getIcon(n.type)}
                     <div>
-                      <CardTitle className="text-sm font-bold">{n.title}</CardTitle>
-                      <CardDescription className="text-xs">{n.message}</CardDescription>
+                      <CardTitle className="text-lg font-extrabold uppercase tracking-tight">{n.title}</CardTitle>
+                      <CardDescription className="text-sm">{n.message}</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
