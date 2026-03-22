@@ -163,6 +163,9 @@ model SecondHandDevice {
 
   testResults     Json?     // Checklist results
   warrantyStatus  String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model InventoryMovement {

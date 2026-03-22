@@ -54,21 +54,25 @@ export function CreateProductModal({ categories }: { categories: any[] }) {
 
   const onSubmit = async (data: ProductFormValues) => {
     startTransition(async () => {
-      try {
-        await createProduct({
-          name: data.name,
-          categoryId: data.categoryId,
-          buyPrice: Number(data.buyPrice),
-          sellPrice: Number(data.sellPrice),
-          stock: Number(data.stock),
-          barcode: data.barcode || undefined,
-        });
+      const result = await createProduct({
+        name: data.name,
+        categoryId: data.categoryId,
+        buyPrice: Number(data.buyPrice),
+        sellPrice: Number(data.sellPrice),
+        stock: Number(data.stock),
+        barcode: data.barcode || undefined,
+      });
 
+      if (result.success) {
         toast({ title: "Başarılı", description: "Ürün başarıyla oluşturuldu." });
         setOpen(false);
         reset();
-      } catch (error) {
-        toast({ title: "Hata", description: "Ürün oluşturulurken bir hata oluştu.", variant: "destructive" });
+      } else {
+        toast({
+          title: "Hata",
+          description: result.error || "Ürün oluşturulurken bir hata oluştu.",
+          variant: "destructive"
+        });
       }
     });
   };

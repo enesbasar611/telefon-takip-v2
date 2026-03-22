@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+import { serializePrisma } from "@/lib/utils";
 
 export async function getCustomers() {
   try {
-    return await prisma.customer.findMany({
+    const customers = await prisma.customer.findMany({
       orderBy: { createdAt: "desc" },
     });
+    return serializePrisma(customers);
   } catch (error) {
     console.error("Error fetching customers:", error);
     return [];
@@ -19,11 +21,16 @@ export async function createCustomer(data: {
   address?: string;
   notes?: string;
 }) {
-  const customer = await prisma.customer.create({
-    data,
-  });
-  revalidatePath("/musteriler");
-  return customer;
+  try {
+    const customer = await prisma.customer.create({
+      data,
+    });
+    revalidatePath("/musteriler");
+    return { success: true, data: serializePrisma(customer) };
+  } catch (error) {
+    console.error("Error creating customer:", error);
+    return { success: false, error: "Müşteri oluşturulurken bir hata oluştu." };
+  }
 }
 
 export async function updateCustomer(id: string, data: Partial<{

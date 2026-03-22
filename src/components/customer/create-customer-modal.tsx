@@ -45,24 +45,24 @@ export function CreateCustomerModal() {
 
   const onSubmit = async (data: CustomerFormValues) => {
     startTransition(async () => {
-      try {
-        await createCustomer({
-          name: data.name,
-          phone: data.phone,
-          email: data.email || undefined,
-          address: data.address || undefined,
-        });
+      const result = await createCustomer({
+        name: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        address: data.address || undefined,
+      });
 
+      if (result.success) {
         toast({
           title: "Başarılı",
           description: "Müşteri başarıyla oluşturuldu.",
         });
         setOpen(false);
         reset();
-      } catch (error) {
+      } else {
         toast({
           title: "Hata",
-          description: "Müşteri oluşturulurken bir hata oluştu.",
+          description: result.error || "Müşteri oluşturulurken bir hata oluştu.",
           variant: "destructive",
         });
       }

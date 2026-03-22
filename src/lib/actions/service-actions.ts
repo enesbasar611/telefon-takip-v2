@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { ServiceStatus } from "@prisma/client";
+import { serializePrisma } from "@/lib/utils";
 
 async function getOrCreateDevUser() {
   return await prisma.user.upsert({
@@ -24,61 +25,73 @@ export async function createServiceTicket(data: {
   problemDesc: string;
   estimatedCost: number;
 }) {
-  const user = await getOrCreateDevUser();
+  try {
+    const user = await getOrCreateDevUser();
 
-  // Find or create customer
-  const customer = await prisma.customer.upsert({
-    where: { phone: data.customerPhone },
-    update: { name: data.customerName },
-    create: {
-      name: data.customerName,
-      phone: data.customerPhone,
-    },
-  });
+    // Find or create customer
+    const customer = await prisma.customer.upsert({
+      where: { phone: data.customerPhone },
+      update: { name: data.customerName },
+      create: {
+        name: data.customerName,
+        phone: data.customerPhone,
+      },
+    });
 
-  const ticketCount = await prisma.serviceTicket.count();
-  const ticketNumber = `SRV-${1000 + ticketCount + 1}`;
+    const ticketCount = await prisma.serviceTicket.count();
+    const ticketNumber = `SRV-${1000 + ticketCount + 1}`;
 
-  const ticket = await prisma.serviceTicket.create({
-    data: {
-      ticketNumber,
-      customerId: customer.id,
-      deviceBrand: data.deviceBrand,
-      deviceModel: data.deviceModel,
-      imei: data.imei,
-      problemDesc: data.problemDesc,
-      estimatedCost: data.estimatedCost,
-      createdById: user.id,
-      status: ServiceStatus.PENDING,
-      logs: {
-        create: {
-          message: "Yeni servis kaydı oluşturuldu.",
-          status: ServiceStatus.PENDING,
+    const ticket = await prisma.serviceTicket.create({
+      data: {
+        ticketNumber,
+        customerId: customer.id,
+        deviceBrand: data.deviceBrand,
+        deviceModel: data.deviceModel,
+        imei: data.imei,
+        problemDesc: data.problemDesc,
+        estimatedCost: data.estimatedCost,
+        createdById: user.id,
+        status: ServiceStatus.PENDING,
+        logs: {
+          create: {
+            message: "Yeni servis kaydı oluşturuldu.",
+            status: ServiceStatus.PENDING,
+          }
         }
-      }
-    },
-  });
+      },
+    });
 
-  revalidatePath("/servis");
-  return ticket;
+    revalidatePath("/servis");
+    revalidatePath("/");
+    return { success: true, data: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("Error creating service ticket:", error);
+    return { success: false, error: "Servis kaydı oluşturulurken bir hata oluştu." };
+  }
 }
 
 export async function updateServiceStatus(ticketId: string, status: ServiceStatus) {
-  const ticket = await prisma.serviceTicket.update({
-    where: { id: ticketId },
-    data: {
-      status,
-      logs: {
-        create: {
-          message: `Durum güncellendi: ${status}`,
-          status: status,
+  try {
+    const ticket = await prisma.serviceTicket.update({
+      where: { id: ticketId },
+      data: {
+        status,
+        logs: {
+          create: {
+            message: `Durum güncellendi: ${status}`,
+            status: status,
+          }
         }
-      }
-    },
-  });
+      },
+    });
 
-  revalidatePath("/servis");
-  return ticket;
+    revalidatePath("/servis");
+    revalidatePath("/");
+    return { success: true, data: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("Error updating service status:", error);
+    return { success: false, error: "Durum güncellenirken bir hata oluştu." };
+  }
 }
 
 export async function deleteServiceTicket(id: string) {
@@ -90,7 +103,7 @@ export async function deleteServiceTicket(id: string) {
 
 export async function getServiceTickets() {
   try {
-    return await prisma.serviceTicket.findMany({
+    const tickets = await prisma.serviceTicket.findMany({
       include: {
         customer: true,
         technician: true,
@@ -99,8 +112,27 @@ export async function getServiceTickets() {
         createdAt: "desc",
       },
     });
+    return serializePrisma(tickets);
   } catch (error) {
     console.error("Error fetching service tickets:", error);
     return [];
+  }
+}
+
+export async function getServiceTicketById(id: string) {
+  try {
+    const ticket = await prisma.serviceTicket.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        technician: true,
+        logs: { orderBy: { createdAt: "desc" } },
+        usedParts: { include: { product: true } },
+      },
+    });
+    return serializePrisma(ticket);
+  } catch (error) {
+    console.error("Error fetching service ticket by id:", error);
+    return null;
   }
 }

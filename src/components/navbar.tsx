@@ -3,6 +3,7 @@
 import { Search, PlusCircle, ShoppingCart, User, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ModeToggle } from "@/components/mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CreateServiceModal } from "@/components/service/create-service-modal";
+import Link from "next/link";
 
 export function Navbar() {
   return (
@@ -27,16 +30,24 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" className="hidden md:flex gap-2">
-          <PlusCircle className="h-4 w-4" />
-          <span>Yeni Servis</span>
-        </Button>
-        <Button variant="outline" size="sm" className="hidden md:flex gap-2 text-primary">
-          <ShoppingCart className="h-4 w-4" />
-          <span>Hızlı Satış</span>
+        <CreateServiceModal
+          trigger={
+            <Button variant="outline" size="sm" className="hidden md:flex gap-2">
+              <PlusCircle className="h-4 w-4" />
+              <span>Yeni Servis</span>
+            </Button>
+          }
+        />
+        <Button asChild variant="outline" size="sm" className="hidden md:flex gap-2 text-primary border-primary hover:bg-primary/5">
+          <Link href="/satis">
+            <ShoppingCart className="h-4 w-4" />
+            <span>Hızlı Satış</span>
+          </Link>
         </Button>
 
         <div className="flex items-center gap-2">
+          <ModeToggle />
+
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
@@ -54,7 +65,9 @@ export function Navbar() {
               <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profil</DropdownMenuItem>
-              <DropdownMenuItem>Ayarlar</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/ayarlar">Ayarlar</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">Çıkış Yap</DropdownMenuItem>
             </DropdownMenuContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,7 +32,11 @@ const serviceSchema = z.object({
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
 
-export function CreateServiceModal() {
+interface CreateServiceModalProps {
+  trigger?: ReactNode;
+}
+
+export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -51,27 +55,27 @@ export function CreateServiceModal() {
 
   const onSubmit = async (data: ServiceFormValues) => {
     startTransition(async () => {
-      try {
-        await createServiceTicket({
-          customerName: data.customerName,
-          customerPhone: data.customerPhone,
-          deviceBrand: data.deviceBrand,
-          deviceModel: data.deviceModel,
-          imei: data.imei,
-          problemDesc: data.problemDesc,
-          estimatedCost: Number(data.estimatedCost),
-        });
+      const result = await createServiceTicket({
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        deviceBrand: data.deviceBrand,
+        deviceModel: data.deviceModel,
+        imei: data.imei,
+        problemDesc: data.problemDesc,
+        estimatedCost: Number(data.estimatedCost),
+      });
 
+      if (result.success) {
         toast({
           title: "Başarılı",
           description: "Servis kaydı başarıyla oluşturuldu.",
         });
         setOpen(false);
         reset();
-      } catch (error) {
+      } else {
         toast({
           title: "Hata",
-          description: "Kayıt oluşturulurken bir hata oluştu.",
+          description: result.error || "Kayıt oluşturulurken bir hata oluştu.",
           variant: "destructive",
         });
       }
@@ -81,10 +85,12 @@ export function CreateServiceModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          <span>Yeni Servis Kaydı</span>
-        </Button>
+        {trigger || (
+          <Button className="gap-2">
+            <PlusCircle className="h-4 w-4" />
+            <span>Yeni Servis Kaydı</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit(onSubmit)}>

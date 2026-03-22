@@ -1,13 +1,15 @@
 import { Product } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+import { serializePrisma } from "@/lib/utils";
 
 export async function getProducts() {
   try {
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
       include: { category: true },
       orderBy: { createdAt: "desc" },
     });
+    return serializePrisma(products);
   } catch (error) {
     console.error("Error fetching products:", error);
     return [];
@@ -16,7 +18,8 @@ export async function getProducts() {
 
 export async function getCategories() {
   try {
-    return await prisma.category.findMany();
+    const categories = await prisma.category.findMany();
+    return serializePrisma(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
     return [];
@@ -32,11 +35,16 @@ export async function createProduct(data: {
   sku?: string;
   barcode?: string;
 }) {
-  const product = await prisma.product.create({
-    data,
-  });
-  revalidatePath("/stok");
-  return product;
+  try {
+    const product = await prisma.product.create({
+      data,
+    });
+    revalidatePath("/stok");
+    return { success: true, data: serializePrisma(product) };
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return { success: false, error: "Ürün oluşturulurken bir hata oluştu." };
+  }
 }
 
 export async function deleteProduct(id: string) {
