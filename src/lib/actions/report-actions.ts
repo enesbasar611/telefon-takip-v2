@@ -55,20 +55,22 @@ export async function getDashboardStats() {
         const todayStart = startOfDay(new Date());
         const todayEnd = endOfDay(new Date());
 
-        const [activeServices, dailySales, criticalStock, customers] = await Promise.all([
+        const [activeServices, dailySales, products, customers] = await Promise.all([
             prisma.serviceTicket.count({ where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
             prisma.sale.aggregate({
                 where: { createdAt: { gte: todayStart, lte: todayEnd } },
                 _sum: { finalAmount: true }
             }),
-            prisma.product.count({ where: { stock: { lte: prisma.product.fields.criticalStock } } }),
+            prisma.product.findMany(),
             prisma.customer.count()
         ]);
+
+        const criticalStockCount = products.filter(p => p.stock <= p.criticalStock).length;
 
         return {
             activeServices,
             dailyRevenue: Number(dailySales._sum.finalAmount || 0),
-            criticalStockCount: criticalStock,
+            criticalStockCount: criticalStockCount,
             totalCustomers: customers
         };
     } catch (error) {

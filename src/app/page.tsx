@@ -1,7 +1,15 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, Package, ShoppingCart, Users, CreditCard, Smartphone, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Wrench,
+  Package,
+  ShoppingCart,
+  Users,
+  TrendingUp,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Wallet
+} from "lucide-react";
 import { getDashboardStats, getRecentServiceTickets } from "@/lib/actions/dashboard-actions";
 import { getSalesReport, getServiceMetrics } from "@/lib/actions/report-actions";
 import { format } from "date-fns";
@@ -34,11 +42,13 @@ export default async function Dashboard() {
 
   const stats = [
     { label: "Bugünkü Satış", value: statsData.todaySales, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
-    { label: "Tamir Cirosu", value: statsData.repairRevenue, icon: Wrench, color: "text-green-500", bg: "bg-green-50" },
+    { label: "Tamir Cirosu", value: statsData.repairRevenue, icon: Wrench, color: "text-indigo-500", bg: "bg-indigo-50" },
     { label: "Aktif Servis", value: statsData.activeServices, icon: TrendingUp, color: "text-orange-500", bg: "bg-orange-50" },
     { label: "Kritik Stok", value: statsData.criticalStock, icon: Package, color: "text-red-500", bg: "bg-red-50" },
     { label: "Toplam Müşteri", value: statsData.totalCustomers, icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
-    { label: "Genel Ciro", value: statsData.totalIncome, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50" },
+    { label: "Toplam Gelir", value: statsData.totalIncome, icon: ArrowUpCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
+    { label: "Toplam Gider", value: statsData.totalExpense, icon: ArrowDownCircle, color: "text-rose-500", bg: "bg-rose-50" },
+    { label: "Kasa Bakiyesi", value: statsData.cashBalance, icon: Wallet, color: "text-cyan-500", bg: "bg-cyan-50" },
   ];
 
   return (
@@ -54,7 +64,7 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label} className="hover:shadow-md transition-all border-none bg-card shadow-sm group hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -73,7 +83,7 @@ export default async function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="shadow-lg border-none">
           <CardHeader className="border-b pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 font-bold">
               <TrendingUp className="h-5 w-5 text-primary" />
               Haftalık Satış Trendi
             </CardTitle>
@@ -87,7 +97,7 @@ export default async function Dashboard() {
 
         <Card className="shadow-lg border-none">
           <CardHeader className="border-b pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 font-bold">
               <Wrench className="h-5 w-5 text-primary" />
               Servis Durum Dağılımı
             </CardTitle>
@@ -103,8 +113,7 @@ export default async function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-7">
         <Card className="col-span-4 shadow-lg border-none overflow-hidden">
           <CardHeader className="bg-muted/30 border-b pb-4">
-            <CardTitle className="text-lg">Son Servis İşlemleri</CardTitle>
-            <CardDescription>Teknik masadaki son hareketler.</CardDescription>
+            <CardTitle className="text-lg font-bold">Son Servis İşlemleri</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
@@ -146,33 +155,33 @@ export default async function Dashboard() {
 
         <Card className="col-span-3 shadow-lg border-none">
           <CardHeader className="bg-primary/5 border-b pb-4 text-primary">
-            <CardTitle className="text-lg">Kısayol İşlemleri</CardTitle>
+            <CardTitle className="text-lg font-bold">Kısayol İşlemleri</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4 pt-6">
-            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-primary hover:bg-primary/5 shadow-sm">
+            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-primary hover:bg-primary/5 shadow-sm transition-all">
               <div className="p-3 rounded-2xl bg-primary/10 group-hover:bg-primary group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <Wrench className="h-6 w-6" />
               </div>
               <span className="font-black text-[10px] uppercase tracking-[0.15em]">Yeni Servis</span>
-            </Button>
-            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-emerald-500 hover:bg-emerald-500/5 shadow-sm">
+            </button>
+            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-emerald-500 hover:bg-emerald-500/5 shadow-sm transition-all">
               <div className="p-3 rounded-2xl bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <ShoppingCart className="h-6 w-6" />
               </div>
               <span className="font-black text-[10px] uppercase tracking-[0.15em]">Hızlı Satış</span>
-            </Button>
-            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-blue-500 hover:bg-blue-500/5 shadow-sm">
+            </button>
+            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-blue-500 hover:bg-blue-500/5 shadow-sm transition-all">
               <div className="p-3 rounded-2xl bg-blue-500/10 group-hover:bg-blue-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
                 <Users className="h-6 w-6" />
               </div>
               <span className="font-black text-[10px] uppercase tracking-[0.15em]">Müşteri Ekle</span>
-            </Button>
-            <Button variant="outline" className="h-28 flex flex-col gap-3 group border-2 hover:border-amber-500 hover:bg-amber-500/5 shadow-sm">
+            </button>
+            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-amber-500 hover:bg-amber-500/5 shadow-sm transition-all">
               <div className="p-3 rounded-2xl bg-amber-500/10 group-hover:bg-amber-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
-                <Smartphone className="h-6 w-6" />
+                <Wallet className="h-6 w-6" />
               </div>
-              <span className="font-black text-[10px] uppercase tracking-[0.15em]">2. El Cihaz</span>
-            </Button>
+              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Finans</span>
+            </button>
           </CardContent>
         </Card>
       </div>
