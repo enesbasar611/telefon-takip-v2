@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Wallet, AlertCircle, TrendingDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard, Wallet, AlertCircle, History, CalendarClock } from "lucide-react";
 import { getDebts } from "@/lib/actions/debt-actions";
 
 export const dynamic = 'force-dynamic';
@@ -48,52 +49,100 @@ export default async function VeresiyePage() {
         </Card>
       </div>
 
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle>Alacak Listesi</CardTitle>
-          <CardDescription>Müşteri bazlı açık hesaplar ve ödeme durumları.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Müşteri</TableHead>
-                <TableHead>Vade Tarihi</TableHead>
-                <TableHead>Toplam Borç</TableHead>
-                <TableHead>Kalan Alacak</TableHead>
-                <TableHead className="text-right">Durum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {debts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground uppercase tracking-widest font-medium bg-gray-50/50">Açık alacak kaydı bulunamadı.</TableCell>
-                </TableRow>
-              ) : (
-                debts.map((debt: any) => (
-                  <TableRow key={debt.id} className="group">
-                    <TableCell className="font-medium group-hover:text-primary transition-colors">
-                      {debt.customer.name}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('tr-TR') : "-"}
-                    </TableCell>
-                    <TableCell>₺{Number(debt.amount).toLocaleString('tr-TR')}</TableCell>
-                    <TableCell className="font-bold text-red-600">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
-                    <TableCell className="text-right">
-                      {debt.isPaid ? (
-                        <Badge className="bg-green-100 text-green-800 border-none font-bold text-[10px] uppercase">ÖDENDİ</Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-800 border-none font-bold text-[10px] uppercase">BEKLEMEDE</Badge>
-                      )}
-                    </TableCell>
+      <Tabs defaultValue="open" className="w-full">
+        <TabsList className="bg-muted p-1 grid grid-cols-3 w-[450px]">
+          <TabsTrigger value="open" className="gap-2">
+            <CalendarClock className="h-4 w-4" />
+            Açık Alacaklar
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className="gap-2">
+            <AlertCircle className="h-4 w-4" />
+            Gecikenler
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            Tahsilat Geçmişi
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="open" className="mt-4">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle>Alacak Listesi</CardTitle>
+              <CardDescription>Müşteri bazlı açık hesaplar ve ödeme durumları.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Müşteri</TableHead>
+                    <TableHead>Vade Tarihi</TableHead>
+                    <TableHead>Toplam Borç</TableHead>
+                    <TableHead>Kalan Alacak</TableHead>
+                    <TableHead className="text-right">Durum</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {debts.filter((d: any) => !d.isPaid).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground uppercase tracking-widest font-medium bg-gray-50/50">Açık alacak kaydı bulunamadı.</TableCell>
+                    </TableRow>
+                  ) : (
+                    debts.filter((d: any) => !d.isPaid).map((debt: any) => (
+                      <TableRow key={debt.id} className="group">
+                        <TableCell className="font-medium group-hover:text-primary transition-colors">
+                          {debt.customer.name}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('tr-TR') : "-"}
+                        </TableCell>
+                        <TableCell>₺{Number(debt.amount).toLocaleString('tr-TR')}</TableCell>
+                        <TableCell className="font-bold text-red-600">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-amber-100 text-amber-800 border-none font-bold text-[10px] uppercase tracking-widest">BEKLEMEDE</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="overdue" className="mt-4">
+           <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle>Vadesi Geçenler</CardTitle>
+              <CardDescription>Ödeme tarihi üzerinden süre geçmiş alacaklar.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Müşteri</TableHead>
+                            <TableHead>Vade Tarihi</TableHead>
+                            <TableHead>Kalan Borç</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {debts.filter((d: any) => d.dueDate && new Date(d.dueDate) < new Date() && !d.isPaid).length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={3} className="h-24 text-center">Gecikmiş ödeme bulunmuyor.</TableCell>
+                            </TableRow>
+                        ) : (
+                            debts.filter((d: any) => d.dueDate && new Date(d.dueDate) < new Date() && !d.isPaid).map((debt: any) => (
+                                <TableRow key={debt.id}>
+                                    <TableCell className="font-bold">{debt.customer.name}</TableCell>
+                                    <TableCell className="text-red-500 font-medium">{new Date(debt.dueDate).toLocaleDateString('tr-TR')}</TableCell>
+                                    <TableCell className="font-black">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+           </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

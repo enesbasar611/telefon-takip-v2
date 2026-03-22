@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, UserCheck, Star, Users } from "lucide-react";
 import { getCustomers } from "@/lib/actions/customer-actions";
+import { CreateCustomerModal } from "@/components/customer/create-customer-modal";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,9 +12,12 @@ export default async function MusterilerPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Müşteri Yönetimi (CRM)</h1>
-        <p className="text-muted-foreground">Müşteri portföyünüzü ve işlem geçmişlerini yönetin.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Müşteri Yönetimi (CRM)</h1>
+          <p className="text-muted-foreground">Müşteri portföyünüzü ve işlem geçmişlerini yönetin.</p>
+        </div>
+        <CreateCustomerModal />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

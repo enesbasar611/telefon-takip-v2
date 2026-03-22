@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Wallet, CreditCard, Landmark } from "lucide-react";
 import { getTransactions, getFinancialSummary } from "@/lib/actions/finance-actions";
+import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -14,9 +15,12 @@ export default async function FinancePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Finansal Yönetim</h1>
-        <p className="text-muted-foreground">İşletmenizin gelir, gider ve kasa durumunu takip edin.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Finansal Yönetim</h1>
+          <p className="text-muted-foreground">İşletmenizin gelir, gider ve kasa durumunu takip edin.</p>
+        </div>
+        <CreateTransactionModal />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

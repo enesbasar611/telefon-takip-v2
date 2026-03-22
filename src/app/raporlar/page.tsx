@@ -58,25 +58,25 @@ export default async function RaporlarPage() {
           </CardContent>
         </Card>
         <Card className="bg-card hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aktif Müşteriler</CardTitle>
-              <Users className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">Toplam kayıtlı portföy.</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card hover:shadow-md transition-shadow border-l-4 border-l-red-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Kritik Stok Uyarıları</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.criticalStockCount}</div>
-              <p className="text-xs text-muted-foreground">Stokta azalan ürün adedi.</p>
-            </CardContent>
-          </Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aktif Müşteriler</CardTitle>
+            <Users className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+            <p className="text-xs text-muted-foreground">Toplam kayıtlı portföy.</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card hover:shadow-md transition-shadow border-l-4 border-l-red-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Kritik Stok Uyarıları</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.criticalStockCount}</div>
+            <p className="text-xs text-muted-foreground">Stokta azalan ürün adedi.</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="sales" className="space-y-4">

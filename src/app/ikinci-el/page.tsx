@@ -2,13 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { getSecondHandDevices } from "@/lib/actions/second-hand-actions";
+import { getCategories } from "@/lib/actions/product-actions";
 import { Smartphone, CheckCircle2 } from "lucide-react";
 import { DeviceTestModal } from "@/components/second-hand/device-test-modal";
+import { CreateSecondHandModal } from "@/components/second-hand/create-second-hand-modal";
 
 export const dynamic = 'force-dynamic';
 
 export default async function IkinciElPage() {
   const devices = await getSecondHandDevices();
+  const categories = await getCategories();
 
   return (
     <div className="flex flex-col gap-8">
@@ -17,6 +20,7 @@ export default async function IkinciElPage() {
           <h1 className="text-3xl font-bold tracking-tight">İkinci El Cihazlar</h1>
           <p className="text-muted-foreground">Alınan ve satılan ikinci el cihazların stok takibi.</p>
         </div>
+        <CreateSecondHandModal categories={categories} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
