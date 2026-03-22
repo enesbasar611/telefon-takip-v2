@@ -1,0 +1,104 @@
+"use client";
+
+import { useTransition } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Trash, Edit } from "lucide-react";
+import { deleteCustomer } from "@/lib/actions/customer-actions";
+import { useToast } from "@/hooks/use-toast";
+
+interface CustomerTableProps {
+  data: any[];
+}
+
+export function CustomerTable({ data }: CustomerTableProps) {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  const handleDelete = (id: string) => {
+    if (!confirm("Bu müşteriyi silmek istediğinize emin misiniz?")) return;
+    startTransition(async () => {
+      try {
+        await deleteCustomer(id);
+        toast({ title: "Başarılı", description: "Müşteri silindi." });
+      } catch (error: any) {
+        toast({ title: "Hata", description: error.message || "Müşteri silinirken bir hata oluştu.", variant: "destructive" });
+      }
+    });
+  };
+
+  return (
+    <div className="rounded-md border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Ad Soyad</TableHead>
+            <TableHead>Telefon</TableHead>
+            <TableHead>E-posta</TableHead>
+            <TableHead>Kayıt Tarihi</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                Müşteri bulunamadı.
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell className="font-medium">{customer.name}</TableCell>
+                <TableCell>{customer.phone}</TableCell>
+                <TableCell>{customer.email || "-"}</TableCell>
+                <TableCell className="text-xs">
+                  {format(new Date(customer.createdAt), "dd MMM yyyy", { locale: tr })}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0" disabled={isPending}>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Düzenle
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(customer.id)}>
+                        <Trash className="mr-2 h-4 w-4" />
+                        Sil
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
