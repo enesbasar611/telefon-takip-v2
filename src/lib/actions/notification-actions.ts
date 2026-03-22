@@ -1,3 +1,4 @@
+"use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 
