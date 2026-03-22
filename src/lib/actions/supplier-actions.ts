@@ -27,6 +27,16 @@ export async function createSupplier(data: { name: string; contact?: string; pho
   }
 }
 
+export async function deleteSupplier(id: string) {
+    try {
+      await prisma.supplier.delete({ where: { id } });
+      revalidatePath("/tedarikciler");
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Tedarikçi silinemedi." };
+    }
+}
+
 export async function getPurchaseOrders() {
   try {
     const orders = await prisma.purchaseOrder.findMany({

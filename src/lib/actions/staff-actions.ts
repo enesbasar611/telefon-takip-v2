@@ -20,6 +20,21 @@ export async function getStaff() {
   }
 }
 
+export async function createStaff(data: { name: string; email: string; role: "ADMIN" | "TECHNICIAN" | "STAFF"; commissionRate: number; password?: string }) {
+  try {
+    const user = await prisma.user.create({
+      data: {
+        ...data,
+        password: data.password || "password123",
+      }
+    });
+    revalidatePath("/personel");
+    return { success: true, user: serializePrisma(user) };
+  } catch (error) {
+    return { success: false, error: "Personel eklenemedi." };
+  }
+}
+
 export async function updateStaffCommission(userId: string, rate: number) {
   try {
     await prisma.user.update({
@@ -31,6 +46,16 @@ export async function updateStaffCommission(userId: string, rate: number) {
   } catch (error) {
     return { success: false, error: "Komisyon oranı güncellenemedi." };
   }
+}
+
+export async function deleteStaff(userId: string) {
+    try {
+      await prisma.user.delete({ where: { id: userId } });
+      revalidatePath("/personel");
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Personel silinemedi." };
+    }
 }
 
 export async function getStaffPerformance(userId: string) {
