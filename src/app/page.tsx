@@ -8,14 +8,25 @@ import {
   TrendingUp,
   ArrowUpCircle,
   ArrowDownCircle,
-  Wallet
+  Wallet,
+  Smartphone,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Banknote
 } from "lucide-react";
-import { getDashboardStats, getRecentServiceTickets } from "@/lib/actions/dashboard-actions";
+import {
+  getDashboardStats,
+  getRecentServiceTickets,
+  getRecentTransactions,
+  getTopSellingProducts
+} from "@/lib/actions/dashboard-actions";
 import { getSalesReport, getServiceMetrics } from "@/lib/actions/report-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { SalesTrendChart } from "@/components/charts/sales-trend-chart";
 import { ServiceStatusChart } from "@/components/charts/service-status-chart";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,162 +40,208 @@ const statusColors: Record<string, string> = {
   CANCELLED: "#ef4444",
 };
 
+const statusLabels: Record<string, string> = {
+  PENDING: "BEKLEMEDE",
+  APPROVED: "ONAYLANDI",
+  REPAIRING: "TAMİRDE",
+  WAITING_PART: "PARÇA BEKLİYOR",
+  READY: "HAZIR",
+  DELIVERED: "TESLİM EDİLDİ",
+  CANCELLED: "İPTAL EDİLDİ",
+};
+
 export default async function Dashboard() {
   const statsData = await getDashboardStats();
   const recentTicketsRaw = await getRecentServiceTickets();
+  const recentTransactions = await getRecentTransactions();
+  const topProducts = await getTopSellingProducts();
   const salesTrend = await getSalesReport();
   const serviceMetricsRaw = await getServiceMetrics();
 
-  const serviceMetrics = serviceMetricsRaw.map(m => ({
+  const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
     ...m,
+    name: statusLabels[m.name] || m.name,
     color: statusColors[m.name] || "#cbd5e1"
   }));
 
+  const totalServiceUnits = serviceMetricsRaw.reduce((acc: number, m: any) => acc + m.value, 0);
+
   const stats = [
-    { label: "Bugünkü Satış", value: statsData.todaySales, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50" },
-    { label: "Tamir Cirosu", value: statsData.repairRevenue, icon: Wrench, color: "text-indigo-500", bg: "bg-indigo-50" },
-    { label: "Aktif Servis", value: statsData.activeServices, icon: TrendingUp, color: "text-orange-500", bg: "bg-orange-50" },
-    { label: "Kritik Stok", value: statsData.criticalStock, icon: Package, color: "text-red-500", bg: "bg-red-50" },
-    { label: "Toplam Müşteri", value: statsData.totalCustomers, icon: Users, color: "text-purple-500", bg: "bg-purple-50" },
-    { label: "Toplam Gelir", value: statsData.totalIncome, icon: ArrowUpCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "Toplam Gider", value: statsData.totalExpense, icon: ArrowDownCircle, color: "text-rose-500", bg: "bg-rose-50" },
-    { label: "Kasa Bakiyesi", value: statsData.cashBalance, icon: Wallet, color: "text-cyan-500", bg: "bg-cyan-50" },
+    { label: "TODAY'S SALES", value: statsData.todaySales, icon: ShoppingCart, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "+12%" },
+    { label: "TODAY'S REPAIR INCOME", value: statsData.todayRepairIncome, icon: Wrench, color: "text-cyan-500", bg: "bg-cyan-500/10", trend: "+8%" },
+    { label: "COLLECTED PAYMENTS", value: statsData.collectedPayments, icon: Banknote, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "PENDING SERVICES", value: statsData.pendingServices, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10", badge: "Urgent" },
+    { label: "READY DEVICES", value: statsData.readyDevices, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "CRITICAL STOCK ALERTS", value: statsData.criticalStock, icon: AlertTriangle, color: "text-rose-500", bg: "bg-rose-500/10", badge: "Low" },
+    { label: "TOTAL DEBTS", value: statsData.totalDebts, icon: ArrowDownCircle, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "CASH BALANCE", value: statsData.cashBalance, icon: Wallet, color: "text-blue-600", bg: "bg-blue-600/10" },
   ];
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ana Panel</h1>
-          <p className="text-muted-foreground">İşletmenizin anlık performans ve teknik servis özeti.</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-muted-foreground">{format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })}</p>
-          <Badge variant="outline" className="mt-1 bg-primary/5 text-primary border-primary/20">Sistem Aktif</Badge>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-6 pb-10 bg-[#0a0a0b] text-white min-h-screen p-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="hover:shadow-md transition-all border-none bg-card shadow-sm group hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{stat.label}</CardTitle>
-              <div className={`${stat.bg} ${stat.color} p-2 rounded-lg transition-transform group-hover:rotate-12`}>
-                <stat.icon className="h-4 w-4" />
+        {stats.map((stat, idx) => (
+          <Card key={idx} className="bg-[#141416] border-none shadow-sm hover:ring-1 hover:ring-white/10 transition-all">
+            <CardContent className="p-5 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                {stat.trend && (
+                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    {stat.trend}
+                  </span>
+                )}
+                {stat.badge && (
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${stat.badge === 'Urgent' ? 'text-orange-500 bg-orange-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
+                    {stat.badge}
+                  </span>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-black tracking-tight">{stat.value}</div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{stat.label}</p>
+                <h3 className="text-2xl font-black tracking-tight">{stat.value}</h3>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-lg border-none">
-          <CardHeader className="border-b pb-4">
-            <CardTitle className="text-lg flex items-center gap-2 font-bold">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Haftalık Satış Trendi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="h-[300px] w-full">
-              <SalesTrendChart data={salesTrend} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2 bg-[#141416] border-none">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">Revenue Analysis</CardTitle>
+              <p className="text-xs text-gray-500">Daily performance comparison</p>
             </div>
+            <Badge variant="outline" className="bg-white/5 border-none text-[10px] text-gray-400 font-bold px-3">Last 7 Days</Badge>
+          </CardHeader>
+          <CardContent>
+             <SalesTrendChart data={salesTrend} />
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-none">
-          <CardHeader className="border-b pb-4">
-            <CardTitle className="text-lg flex items-center gap-2 font-bold">
-              <Wrench className="h-5 w-5 text-primary" />
-              Servis Durum Dağılımı
-            </CardTitle>
+        <Card className="bg-[#141416] border-none">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Service Status</CardTitle>
+            <p className="text-xs text-gray-500">Workload distribution</p>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="h-[300px] w-full">
-              <ServiceStatusChart data={serviceMetrics} />
-            </div>
+          <CardContent className="relative">
+             <div className="h-[250px]">
+                <ServiceStatusChart data={serviceMetrics} />
+             </div>
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-4">
+                <span className="text-3xl font-black block">{totalServiceUnits}</span>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Units</span>
+             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-7">
-        <Card className="col-span-4 shadow-lg border-none overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b pb-4">
-            <CardTitle className="text-lg font-bold">Son Servis İşlemleri</CardTitle>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="bg-[#141416] border-none">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-bold">Recent Transactions</CardTitle>
+            <Link href="/finans" className="text-xs font-bold text-blue-500 hover:underline">View All</Link>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y">
-              {recentTicketsRaw.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-10">Henüz servis kaydı bulunmuyor.</p>
-              ) : (
-                recentTicketsRaw.map((ticket: any) => (
-                  <div key={ticket.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary text-xl shadow-inner">
-                        {ticket.deviceBrand[0]}
-                      </div>
-                      <div>
-                        <div className="font-bold text-sm">{ticket.deviceBrand} {ticket.deviceModel}</div>
-                        <div className="text-xs text-muted-foreground font-medium">
-                          {ticket.customer?.name} • {ticket.customer?.phone}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] uppercase font-black px-2 py-0.5 tracking-tighter"
-                        style={{ backgroundColor: `${statusColors[ticket.status]}20`, color: statusColors[ticket.status], borderColor: `${statusColors[ticket.status]}40` }}
-                      >
-                        {ticket.status}
-                      </Badge>
-                      <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        {format(new Date(ticket.createdAt), "HH:mm")}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-white/5">
+                    <th className="px-6 py-4">Customer</th>
+                    <th className="px-6 py-4">Operation</th>
+                    <th className="px-6 py-4">Amount</th>
+                    <th className="px-6 py-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {recentTransactions.map((t: any) => (
+                    <tr key={t.id} className="text-sm group hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold">{t.sale?.customer?.name || "Hızlı Satış"}</div>
+                        <div className="text-[10px] text-gray-500 font-medium">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-400">{t.description}</td>
+                      <td className="px-6 py-4 font-black">₺{Number(t.amount).toLocaleString('tr-TR')}</td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className={`text-[9px] font-bold uppercase border-none ${t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                          {t.type === 'INCOME' ? 'PAID' : 'EXPENSE'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 shadow-lg border-none">
-          <CardHeader className="bg-primary/5 border-b pb-4 text-primary">
-            <CardTitle className="text-lg font-bold">Kısayol İşlemleri</CardTitle>
+        <Card className="bg-[#141416] border-none">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-bold">Recent Service Records</CardTitle>
+            <Link href="/servis/liste" className="text-xs font-bold text-blue-500 hover:underline">View All Tickets</Link>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 pt-6">
-            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-primary hover:bg-primary/5 shadow-sm transition-all">
-              <div className="p-3 rounded-2xl bg-primary/10 group-hover:bg-primary group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
-                <Wrench className="h-6 w-6" />
+          <CardContent className="space-y-4 px-6 pb-6">
+            {recentTicketsRaw.map((ticket: any) => (
+              <div key={ticket.id} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl group hover:bg-white/[0.05] transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Smartphone className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      {ticket.customer?.name} • <span className="text-blue-400">{ticket.problemDesc.substring(0, 20)}...</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] font-bold uppercase border-none mb-1"
+                    style={{ backgroundColor: `${statusColors[ticket.status]}20`, color: statusColors[ticket.status] }}
+                  >
+                    {statusLabels[ticket.status]}
+                  </Badge>
+                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                    Tech: {ticket.technician?.name || "Unassigned"}
+                  </p>
+                </div>
               </div>
-              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Yeni Servis</span>
-            </button>
-            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-emerald-500 hover:bg-emerald-500/5 shadow-sm transition-all">
-              <div className="p-3 rounded-2xl bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
-                <ShoppingCart className="h-6 w-6" />
-              </div>
-              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Hızlı Satış</span>
-            </button>
-            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-blue-500 hover:bg-blue-500/5 shadow-sm transition-all">
-              <div className="p-3 rounded-2xl bg-blue-500/10 group-hover:bg-blue-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
-                <Users className="h-6 w-6" />
-              </div>
-              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Müşteri Ekle</span>
-            </button>
-            <button className="h-28 flex flex-col items-center justify-center gap-3 group border-2 rounded-xl hover:border-amber-500 hover:bg-amber-500/5 shadow-sm transition-all">
-              <div className="p-3 rounded-2xl bg-amber-500/10 group-hover:bg-amber-500 group-hover:text-white transition-all transform group-hover:scale-110 shadow-sm">
-                <Wallet className="h-6 w-6" />
-              </div>
-              <span className="font-black text-[10px] uppercase tracking-[0.15em]">Finans</span>
-            </button>
+            ))}
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-[#141416] border-none mt-4">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold">Top Selling Inventory</CardTitle>
+          <p className="text-xs text-gray-500">Most moved items this month</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {topProducts.map((product: any) => (
+              <div key={product.id} className="flex flex-col gap-3 group">
+                <div className="aspect-square rounded-3xl bg-white/[0.03] flex items-center justify-center border border-white/5 overflow-hidden relative">
+                   <Package className="h-12 w-12 text-gray-700 group-hover:scale-110 transition-transform" />
+                   {product.stock <= product.criticalStock && (
+                      <span className="absolute top-3 right-3 bg-rose-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full">LOW STOCK</span>
+                   )}
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm truncate">{product.name}</h4>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">{product.category} • {product.sales} Sales</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm font-black text-blue-400">₺{product.price.toLocaleString('tr-TR')}</span>
+                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">In Stock</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

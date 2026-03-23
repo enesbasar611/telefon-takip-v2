@@ -24,7 +24,7 @@ export default async function RaporlarPage() {
   const salesData = await getSalesReport();
   const serviceMetricsRaw = await getServiceMetrics();
 
-  const serviceMetrics = serviceMetricsRaw.map(m => ({
+  const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
     ...m,
     color: statusColors[m.name] || "#cbd5e1"
   }));

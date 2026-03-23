@@ -26,7 +26,7 @@ export async function getSalesReport(startDate?: Date, endDate?: Date) {
       };
     });
 
-    return trend;
+    return serializePrisma(trend);
   } catch (error) {
     return [];
   }
@@ -44,7 +44,7 @@ export async function getServiceMetrics() {
       value: s._count
     }));
 
-    return metrics;
+    return serializePrisma(metrics);
   } catch (error) {
     return [];
   }
@@ -67,13 +67,13 @@ export async function getDashboardStats() {
 
         const criticalStockCount = products.filter(p => p.stock <= p.criticalStock).length;
 
-        return {
+        return serializePrisma({
             activeServices,
             dailyRevenue: Number(dailySales._sum.finalAmount || 0),
             criticalStockCount: criticalStockCount,
             totalCustomers: customers
-        };
+        });
     } catch (error) {
-        return { activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0 };
+        return serializePrisma({ activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0 });
     }
 }
