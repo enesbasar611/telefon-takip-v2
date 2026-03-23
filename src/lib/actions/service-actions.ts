@@ -19,9 +19,13 @@ const serviceSchema = z.object({
     .regex(/^\d+$/, "IMEI sadece rakamlardan oluşmalıdır")
     .optional()
     .or(z.literal("")),
+  serialNumber: z.string().optional().or(z.literal("")),
   problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
   cosmeticCondition: z.string().optional(),
   estimatedCost: z.number().min(0, "Geçerli bir ücret giriniz"),
+  notes: z.string().optional(),
+  technicianId: z.string().optional().or(z.literal("")),
+  estimatedDeliveryDate: z.string().optional().or(z.literal("")),
 });
 
 async function getOrCreateDevUser() {
@@ -62,9 +66,13 @@ export async function createServiceTicket(rawData: any) {
         deviceBrand: validatedData.deviceBrand,
         deviceModel: validatedData.deviceModel,
         imei: validatedData.imei || null,
+        serialNumber: validatedData.serialNumber || null,
         problemDesc: validatedData.problemDesc,
         cosmeticCondition: validatedData.cosmeticCondition || null,
+        notes: validatedData.notes || null,
         estimatedCost: validatedData.estimatedCost,
+        technicianId: validatedData.technicianId || null,
+        estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
         createdById: user.id,
         status: ServiceStatus.PENDING,
         logs: {

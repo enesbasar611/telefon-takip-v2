@@ -122,7 +122,7 @@ export default async function DashboardOzetPage() {
               <CardTitle className="text-lg font-bold">Gelir Analizi</CardTitle>
               <p className="text-xs text-gray-500">Günlük performans karşılaştırması</p>
             </div>
-            <Badge variant="outline" className="bg-white/5 border-none text-[10px] text-gray-400 font-bold px-3">Last 7 Days</Badge>
+            <Badge variant="outline" className="bg-white/5 border-none text-[10px] text-gray-400 font-bold px-3">Son 7 Gün</Badge>
           </CardHeader>
           <CardContent>
              <SalesTrendChart data={salesTrend} />
@@ -141,7 +141,7 @@ export default async function DashboardOzetPage() {
              </div>
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-4">
                 <span className="text-3xl font-black block">{totalServiceUnits}</span>
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Units</span>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Toplam Cihaz</span>
              </div>
           </CardContent>
         </Card>
@@ -160,10 +160,10 @@ export default async function DashboardOzetPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-white/5">
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Operation</th>
-                    <th className="px-6 py-4">Amount</th>
-                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Müşteri</th>
+                    <th className="px-6 py-4">İşlem</th>
+                    <th className="px-6 py-4">Tutar</th>
+                    <th className="px-6 py-4">Durum</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -177,13 +177,13 @@ export default async function DashboardOzetPage() {
                       <td className="px-6 py-4 font-black">₺{Number(t.amount).toLocaleString('tr-TR')}</td>
                       <td className="px-6 py-4">
                         <Badge variant="outline" className={`text-[9px] font-bold uppercase border-none ${t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                          {t.type === 'INCOME' ? 'PAID' : 'EXPENSE'}
+                          {t.type === 'INCOME' ? 'TAHSİLAT' : 'GİDER'}
                         </Badge>
                       </td>
                     </tr>
                   ))}
                   {recentTransactions.length === 0 && (
-                    <tr><td colSpan={4} className="px-6 py-10 text-center text-gray-500 text-xs">No recent transactions found.</td></tr>
+                    <tr><td colSpan={4} className="px-6 py-10 text-center text-gray-500 text-xs">Son işlem bulunamadı.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -195,7 +195,7 @@ export default async function DashboardOzetPage() {
         <Card className="bg-[#141416] border-none">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-bold">Son Servis Kayıtları</CardTitle>
-            <Link href="/servis/liste" className="text-xs font-bold text-blue-500 hover:underline">Hepsini Gör Tickets</Link>
+            <Link href="/servis/liste" className="text-xs font-bold text-blue-500 hover:underline">Tümünü Gör</Link>
           </CardHeader>
           <CardContent className="space-y-4 px-6 pb-6">
             {recentTicketsRaw.map((ticket: any) => (
@@ -220,13 +220,13 @@ export default async function DashboardOzetPage() {
                     {statusLabels[ticket.status]}
                   </Badge>
                   <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
-                    Tech: {ticket.technician?.name || "Unassigned"}
+                    Teknisyen: {ticket.technician?.name || "Atanmamış"}
                   </p>
                 </div>
               </div>
             ))}
             {recentTicketsRaw.length === 0 && (
-              <p className="text-center text-gray-500 text-xs py-10">No recent service records found.</p>
+              <p className="text-center text-gray-500 text-xs py-10">Son servis kaydı bulunamadı.</p>
             )}
           </CardContent>
         </Card>
@@ -245,21 +245,21 @@ export default async function DashboardOzetPage() {
                 <div className="aspect-square rounded-3xl bg-white/[0.03] flex items-center justify-center border border-white/5 overflow-hidden relative">
                    <Package className="h-12 w-12 text-gray-700 group-hover:scale-110 transition-transform" />
                    {product.stock <= product.criticalStock && (
-                      <span className="absolute top-3 right-3 bg-rose-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full">LOW STOCK</span>
+                      <span className="absolute top-3 right-3 bg-rose-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full">AZALAN STOK</span>
                    )}
                 </div>
                 <div>
                   <h4 className="font-bold text-sm truncate">{product.name}</h4>
-                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">{product.category} • {product.sales} Sales</p>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">{product.category} • {product.sales} Satış</p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-sm font-black text-blue-400">₺{product.price.toLocaleString('tr-TR')}</span>
-                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">In Stock</span>
+                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Stokta Var</span>
                   </div>
                 </div>
               </div>
             ))}
             {topProducts.length === 0 && (
-              <p className="col-span-full text-center text-gray-500 text-xs py-10">No product sales data yet.</p>
+              <p className="col-span-full text-center text-gray-500 text-xs py-10">Henüz satış verisi yok.</p>
             )}
           </div>
         </CardContent>

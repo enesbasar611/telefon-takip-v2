@@ -1,19 +1,35 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  PersonStanding,
+  Smartphone,
+  AlertCircle,
+  Receipt,
+  Camera,
+  CloudUpload,
+  Image as ImageIcon,
+  Plus,
+  Printer,
+  Loader2,
+  UserPlus
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Wrench, User, Smartphone, ClipboardCheck, Loader2 } from "lucide-react";
-import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+
+import { createServiceTicket } from "@/lib/actions/service-actions";
+import { getStaff } from "@/lib/actions/staff-actions";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -21,6 +37,7 @@ const serviceSchema = z.object({
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
     .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xxxxxxxxx)"),
+  customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
   imei: z.string()
@@ -28,177 +45,368 @@ const serviceSchema = z.object({
     .regex(/^\d+$/, "IMEI sadece rakamlardan oluşmalıdır")
     .optional()
     .or(z.literal("")),
+  serialNumber: z.string().optional().or(z.literal("")),
+  cosmeticConditions: z.array(z.string()),
+  cosmeticNotes: z.string().optional().or(z.literal("")),
   problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
-  cosmeticCondition: z.array(z.string()).optional(),
-  estimatedCost: z.string().refine((val) => !isNaN(Number(val)), "Geçerli bir sayı giriniz"),
-  notes: z.string().optional(),
+  accessories: z.array(z.string()),
+  estimatedCost: z.string().refine((val) => !isNaN(Number(val)), "Geçerli bir tutar giriniz"),
+  downPayment: z.string().optional().or(z.literal("")),
+  estimatedDeliveryDate: z.string().optional().or(z.literal("")),
+  technicianId: z.string().optional().or(z.literal("")),
 });
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
 
-const cosmeticChecklist = [
-  { id: "screen", label: "Ekran Kırık/Çizik" },
-  { id: "case", label: "Kasa Ezik/Çizik" },
-  { id: "battery", label: "Pil Şişmiş" },
-  { id: "buttons", label: "Tuşlar Basmıyor" },
-  { id: "port", label: "Şarj Soketi Sorunlu" },
-  { id: "water", label: "Sıvı Teması Var" },
-];
-
 export default function NewServicePage() {
   const [isPending, startTransition] = useTransition();
+  const [technicians, setTechnicians] = useState<any[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
-      estimatedCost: "0",
       customerPhone: "5",
-      cosmeticCondition: [],
+      estimatedCost: "0",
+      downPayment: "0",
+      cosmeticConditions: [],
+      accessories: [],
     }
   });
 
+  useEffect(() => {
+    async function loadStaff() {
+      const staff = await getStaff();
+      setTechnicians(staff.filter((s: any) => s.role === "ADMIN" || s.role === "TECHNICIAN"));
+    }
+    loadStaff();
+  }, []);
+
   const onSubmit = async (values: ServiceFormValues) => {
     startTransition(async () => {
+      // Merge cosmetic conditions and accessories into fields expected by the action
+      const cosmeticStr = [
+        ...values.cosmeticConditions,
+        values.cosmeticNotes
+      ].filter(Boolean).join(", ");
+
+      const notesStr = [
+        values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
+        values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
+      ].filter(Boolean).join(" | ");
+
       const result = await createServiceTicket({
-        ...values,
+        customerName: values.customerName,
+        customerPhone: values.customerPhone,
+        deviceBrand: values.deviceBrand,
+        deviceModel: values.deviceModel,
+        imei: values.imei,
+        serialNumber: values.serialNumber,
+        problemDesc: values.problemDesc,
+        cosmeticCondition: cosmeticStr,
         estimatedCost: Number(values.estimatedCost),
-        cosmeticCondition: values.cosmeticCondition?.join(", "),
+        notes: notesStr,
+        technicianId: values.technicianId,
+        estimatedDeliveryDate: values.estimatedDeliveryDate,
       });
 
       if (result.success) {
         toast({
           title: "Başarılı",
-          description: "Servis kaydı oluşturuldu, listeye yönlendiriliyorsunuz.",
+          description: "Yeni servis kaydı oluşturuldu.",
         });
-        router.push("/servis/liste");
+        router.push("/servis");
       } else {
         toast({
           title: "Hata",
           description: result.error,
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     });
   };
 
+  const currentEstimatedCost = form.watch("estimatedCost") || "0";
+
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
-          <Wrench className="h-10 w-10 text-primary" />
-          YENİ SERVİS KAYDI
-        </h1>
-        <p className="text-muted-foreground font-medium">Cihaz ve müşteri bilgilerini eksiksiz doldurarak kaydı başlatın.</p>
-      </div>
-
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Customer Info */}
-          <Card className="border-2 shadow-xl">
-            <CardHeader className="bg-muted/50 border-b pb-4">
-              <CardTitle className="text-sm uppercase tracking-[0.2em] flex items-center gap-2">
-                <User className="h-4 w-4" /> Müşteri Bilgileri
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName" className="font-bold">Müşteri Ad Soyad</Label>
-                <Input id="customerName" {...form.register("customerName")} placeholder="Örn: Ali Yılmaz" className="border-2 h-11" />
-                {form.formState.errors.customerName && <p className="text-xs text-red-500 font-bold">{form.formState.errors.customerName.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerPhone" className="font-bold">Telefon Numarası (5xxxxxxxxx)</Label>
-                <Input id="customerPhone" {...form.register("customerPhone")} placeholder="5XX XXX XX XX" maxLength={10} className="border-2 h-11" />
-                {form.formState.errors.customerPhone && <p className="text-xs text-red-500 font-bold">{form.formState.errors.customerPhone.message}</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Device Info */}
-          <Card className="border-2 shadow-xl">
-            <CardHeader className="bg-muted/50 border-b pb-4">
-              <CardTitle className="text-sm uppercase tracking-[0.2em] flex items-center gap-2">
-                <Smartphone className="h-4 w-4" /> Cihaz Bilgileri
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deviceBrand" className="font-bold">Marka</Label>
-                  <Input id="deviceBrand" {...form.register("deviceBrand")} placeholder="Apple..." className="border-2 h-11" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deviceModel" className="font-bold">Model</Label>
-                  <Input id="deviceModel" {...form.register("deviceModel")} placeholder="iPhone 13..." className="border-2 h-11" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="imei" className="font-bold">IMEI No (15 Hane)</Label>
-                <Input id="imei" {...form.register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="border-2 h-11" />
-                {form.formState.errors.imei && <p className="text-xs text-red-500 font-bold">{form.formState.errors.imei.message}</p>}
-              </div>
-            </CardContent>
-          </Card>
+    <main className="min-h-screen pb-32">
+      <div className="px-4 py-8 max-w-6xl mx-auto">
+        <div className="mb-8">
+          <p className="text-primary font-bold text-xs uppercase tracking-widest mb-1">Servis İşlemleri</p>
+          <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
         </div>
 
-        {/* Technical Info */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader className="bg-muted/50 border-b pb-4">
-            <CardTitle className="text-sm uppercase tracking-[0.2em] flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4" /> Teknik Detaylar & Kontrol Listesi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="problemDesc" className="font-bold">Arıza Açıklaması</Label>
-              <Textarea id="problemDesc" {...form.register("problemDesc")} placeholder="Cihazın problemini detaylıca yazın..." className="border-2 min-h-[100px]" />
-              {form.formState.errors.problemDesc && <p className="text-xs text-red-500 font-bold">{form.formState.errors.problemDesc.message}</p>}
-            </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-8">
+          {/* Left Column */}
+          <div className="col-span-12 lg:col-span-8 space-y-8">
 
-            <div className="space-y-4">
-              <Label className="font-bold">Cihaz Kozmetik Durumu (Checklist)</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border-2 p-4 rounded-xl bg-muted/20">
-                {cosmeticChecklist.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={item.id}
-                      onCheckedChange={(checked) => {
-                        const current = form.getValues("cosmeticCondition") || [];
-                        if (checked) {
-                          form.setValue("cosmeticCondition", [...current, item.label]);
-                        } else {
-                          form.setValue("cosmeticCondition", current.filter((val) => val !== item.label));
-                        }
-                      }}
-                    />
-                    <label htmlFor={item.id} className="text-sm font-bold cursor-pointer">{item.label}</label>
+            {/* Customer Information */}
+            <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <PersonStanding className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold text-lg">Müşteri Bilgileri</h3>
+                </div>
+                <Button variant="ghost" size="sm" className="text-primary font-bold hover:text-primary/80 gap-1 h-auto p-0" type="button">
+                  <UserPlus className="h-4 w-4" /> Yeni Müşteri Ekle
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Müşteri Ad Soyad</Label>
+                  <Input
+                    {...form.register("customerName")}
+                    placeholder="İsim giriniz..."
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                  {form.formState.errors.customerName && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.customerName.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Telefon Numarası</Label>
+                  <Input
+                    {...form.register("customerPhone")}
+                    placeholder="5xx xxx xxxx"
+                    maxLength={10}
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                  {form.formState.errors.customerPhone && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.customerPhone.message}</p>}
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">E-Posta Adresi (Opsiyonel)</Label>
+                  <Input
+                    {...form.register("customerEmail")}
+                    placeholder="ornek@mail.com"
+                    type="email"
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Device Details */}
+            <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <div className="flex items-center gap-2 mb-6">
+                <Smartphone className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-lg">Cihaz Detayları</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Marka</Label>
+                  <Input
+                    {...form.register("deviceBrand")}
+                    placeholder="Örn: Apple"
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Model</Label>
+                  <Input
+                    {...form.register("deviceModel")}
+                    placeholder="Örn: iPhone 15 Pro"
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">IMEI Numarası</Label>
+                  <Input
+                    {...form.register("imei")}
+                    placeholder="15 haneli IMEI"
+                    maxLength={15}
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                  {form.formState.errors.imei && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.imei.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Seri Numarası</Label>
+                  <Input
+                    {...form.register("serialNumber")}
+                    placeholder="Seri no (opsiyonel)"
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-3">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Kozmetik Durum</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {["Çizik", "Ezik", "Kırık Cam", "Sıvı Teması"].map((item) => (
+                      <label key={item} className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg cursor-pointer border border-transparent hover:border-primary/20 transition-all">
+                        <Checkbox
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues("cosmeticConditions");
+                            if (checked) {
+                              form.setValue("cosmeticConditions", [...current, item]);
+                            } else {
+                              form.setValue("cosmeticConditions", current.filter(i => i !== item));
+                            }
+                          }}
+                        />
+                        <span className="text-xs font-medium">{item}</span>
+                      </label>
+                    ))}
                   </div>
-                ))}
+                  <Textarea
+                    {...form.register("cosmeticNotes")}
+                    className="bg-muted/50 border-none focus-visible:ring-1 h-20"
+                    placeholder="Ek kozmetik notlar..."
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Problem Description */}
+            <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <div className="flex items-center gap-2 mb-6">
+                <AlertCircle className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-lg">Arıza Açıklaması</h3>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Detaylı Arıza Tanımı</Label>
+                  <Textarea
+                    {...form.register("problemDesc")}
+                    className="bg-muted/50 border-none focus-visible:ring-1 h-32"
+                    placeholder="Arızayı detaylıca tarif edin..."
+                  />
+                  {form.formState.errors.problemDesc && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.problemDesc.message}</p>}
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Teslim Alınan Aksesuarlar</Label>
+                  <div className="flex flex-wrap gap-4">
+                    {["Şarj Aleti", "Kutu", "Kılıf", "SIM Kart", "Hafıza Kart"].map((item) => (
+                      <label key={item} className="inline-flex items-center gap-2 group cursor-pointer">
+                        <Checkbox
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues("accessories");
+                            if (checked) {
+                              form.setValue("accessories", [...current, item]);
+                            } else {
+                              form.setValue("accessories", current.filter(i => i !== item));
+                            }
+                          }}
+                        />
+                        <span className="text-xs font-medium">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-12 lg:col-span-4 space-y-8">
+
+            {/* Service Quote */}
+            <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <div className="flex items-center gap-2 mb-6">
+                <Receipt className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-lg">Servis Teklifi</h3>
+              </div>
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Tahmini Ücret</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₺</span>
+                    <Input
+                      {...form.register("estimatedCost")}
+                      type="number"
+                      className="bg-muted/50 border-none py-3 pl-8 pr-4 text-sm font-bold focus-visible:ring-1"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Alınan Kapora</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₺</span>
+                    <Input
+                      {...form.register("downPayment")}
+                      type="number"
+                      className="bg-muted/50 border-none py-3 pl-8 pr-4 text-sm focus-visible:ring-1"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Beklenen Teslim Tarihi</Label>
+                  <Input
+                    {...form.register("estimatedDeliveryDate")}
+                    type="datetime-local"
+                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Atanan Teknisyen</Label>
+                  <Select onValueChange={(val) => form.setValue("technicianId", val)}>
+                    <SelectTrigger className="bg-muted/50 border-none focus-visible:ring-1">
+                      <SelectValue placeholder="Teknisyen Seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {technicians.map((tech) => (
+                        <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </section>
+
+            {/* Photo Upload */}
+            <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
+              <div className="flex items-center gap-2 mb-6">
+                <Camera className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-lg">Cihaz Fotoğrafları</h3>
+              </div>
+              <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center group hover:border-primary transition-colors cursor-pointer">
+                <CloudUpload className="h-10 w-10 text-muted-foreground mb-2 group-hover:scale-110 transition-transform" />
+                <p className="text-xs font-bold text-foreground mb-1">Fotoğraf Yükle</p>
+                <p className="text-[10px] text-muted-foreground">Cihazın mevcut hasarlarını çekin</p>
+                <input className="hidden" type="file" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="aspect-square bg-muted border-2 border-dashed border-border flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Sticky Footer */}
+          <footer className="fixed bottom-0 right-0 left-0 lg:left-64 bg-background/80 backdrop-blur-md border-t border-border px-4 py-4 z-40">
+            <div className="max-w-6xl mx-auto flex items-center justify-between">
+              <div className="hidden md:flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Kayıt Özeti</span>
+                <span className="text-sm font-semibold text-foreground">1 Cihaz • Tahmini ₺{currentEstimatedCost}</span>
+              </div>
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <Button
+                  variant="ghost"
+                  className="flex-1 md:flex-none px-6 font-bold"
+                  type="button"
+                  onClick={() => router.back()}
+                  disabled={isPending}
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="flex-1 md:flex-none px-8 py-6 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center gap-2"
+                >
+                  {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Printer className="h-5 w-5" />}
+                  Tümünü Kaydet ve Fiş Yazdır
+                </Button>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="estimatedCost" className="font-bold text-primary">Tahmini Tamir Ücreti (₺)</Label>
-                    <Input id="estimatedCost" type="number" {...form.register("estimatedCost")} className="border-2 border-primary/50 h-11 text-lg font-black" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="notes" className="font-bold">Ekstra Notlar</Label>
-                    <Input id="notes" {...form.register("notes")} placeholder="Kurye ile teslim edilecek vb." className="border-2 h-11" />
-                </div>
-            </div>
-          </CardContent>
-          <CardFooter className="bg-muted/30 border-t p-6 flex justify-end gap-4">
-            <Button type="button" variant="outline" size="lg" className="font-bold" onClick={() => router.back()} disabled={isPending}>Vazgeç</Button>
-            <Button type="submit" size="lg" className="px-10 h-14 text-lg font-black gap-2 shadow-2xl" disabled={isPending}>
-              {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wrench className="h-5 w-5" />}
-              KAYDI OLUŞTUR VE FİŞ YAZDIR
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
-    </div>
+          </footer>
+        </form>
+      </div>
+    </main>
   );
 }
