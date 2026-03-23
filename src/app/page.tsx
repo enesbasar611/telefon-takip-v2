@@ -67,14 +67,14 @@ export default async function Dashboard() {
   const totalServiceUnits = serviceMetricsRaw.reduce((acc: number, m: any) => acc + m.value, 0);
 
   const stats = [
-    { label: "TODAY'S SALES", value: statsData.todaySales, icon: ShoppingCart, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "+12%" },
-    { label: "TODAY'S REPAIR INCOME", value: statsData.todayRepairIncome, icon: Wrench, color: "text-cyan-500", bg: "bg-cyan-500/10", trend: "+8%" },
-    { label: "COLLECTED PAYMENTS", value: statsData.collectedPayments, icon: Banknote, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "PENDING SERVICES", value: statsData.pendingServices, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10", badge: "Urgent" },
-    { label: "READY DEVICES", value: statsData.readyDevices, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "CRITICAL STOCK ALERTS", value: statsData.criticalStock, icon: AlertTriangle, color: "text-rose-500", bg: "bg-rose-500/10", badge: "Low" },
-    { label: "TOTAL DEBTS", value: statsData.totalDebts, icon: ArrowDownCircle, color: "text-amber-500", bg: "bg-amber-500/10" },
-    { label: "CASH BALANCE", value: statsData.cashBalance, icon: Wallet, color: "text-blue-600", bg: "bg-blue-600/10" },
+    { label: "GÜNLÜK SATIŞ", value: statsData.todaySales, icon: ShoppingCart, color: "text-emerald-500", bg: "bg-emerald-500/10", trend: "+12%" },
+    { label: "TAMİR GELİRLERİ", value: statsData.todayRepairIncome, icon: Wrench, color: "text-cyan-500", bg: "bg-cyan-500/10", trend: "+8%" },
+    { label: "TAHSİLATLAR", value: statsData.collectedPayments, icon: Banknote, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "BEKLEYEN SERVİSLER", value: statsData.pendingServices, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10", badge: "Urgent" },
+    { label: "HAZIR CİHAZLAR", value: statsData.readyDevices, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "KRİTİK STOK UYARILARI", value: statsData.criticalStock, icon: AlertTriangle, color: "text-rose-500", bg: "bg-rose-500/10", badge: "Low" },
+    { label: "TOPLAM BORÇLAR", value: statsData.totalDebts, icon: ArrowDownCircle, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "KASA BAKİYESİ", value: statsData.cashBalance, icon: Wallet, color: "text-blue-600", bg: "bg-blue-600/10" },
   ];
 
   return (
@@ -111,8 +111,8 @@ export default async function Dashboard() {
         <Card className="lg:col-span-2 bg-[#141416] border-none">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold">Revenue Analysis</CardTitle>
-              <p className="text-xs text-gray-500">Daily performance comparison</p>
+              <CardTitle className="text-lg font-bold">Gelir Analizi</CardTitle>
+              <p className="text-xs text-gray-500">Günlük performans karşılaştırması</p>
             </div>
             <Badge variant="outline" className="bg-white/5 border-none text-[10px] text-gray-400 font-bold px-3">Last 7 Days</Badge>
           </CardHeader>
@@ -123,8 +123,8 @@ export default async function Dashboard() {
 
         <Card className="bg-[#141416] border-none">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Service Status</CardTitle>
-            <p className="text-xs text-gray-500">Workload distribution</p>
+            <CardTitle className="text-lg font-bold">Servis Durumları</CardTitle>
+            <p className="text-xs text-gray-500">İş yükü dağılımı</p>
           </CardHeader>
           <CardContent className="relative">
              <div className="h-[250px]">
@@ -141,8 +141,8 @@ export default async function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="bg-[#141416] border-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-bold">Recent Transactions</CardTitle>
-            <Link href="/finans" className="text-xs font-bold text-blue-500 hover:underline">View All</Link>
+            <CardTitle className="text-lg font-bold">Son İşlemler</CardTitle>
+            <Link href="/finans" className="text-xs font-bold text-blue-500 hover:underline">Hepsini Gör</Link>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -179,8 +179,8 @@ export default async function Dashboard() {
 
         <Card className="bg-[#141416] border-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-bold">Recent Service Records</CardTitle>
-            <Link href="/servis/liste" className="text-xs font-bold text-blue-500 hover:underline">View All Tickets</Link>
+            <CardTitle className="text-lg font-bold">Son Servis Kayıtları</CardTitle>
+            <Link href="/servis/liste" className="text-xs font-bold text-blue-500 hover:underline">Hepsini Gör Tickets</Link>
           </CardHeader>
           <CardContent className="space-y-4 px-6 pb-6">
             {recentTicketsRaw.map((ticket: any) => (
@@ -216,8 +216,8 @@ export default async function Dashboard() {
 
       <Card className="bg-[#141416] border-none mt-4">
         <CardHeader>
-          <CardTitle className="text-lg font-bold">Top Selling Inventory</CardTitle>
-          <p className="text-xs text-gray-500">Most moved items this month</p>
+          <CardTitle className="text-lg font-bold">En Çok Satan Ürünler</CardTitle>
+          <p className="text-xs text-gray-500">Bu ay en çok işlem gören ürünler</p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
