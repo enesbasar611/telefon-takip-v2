@@ -1,119 +1,157 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { UserPlus, UserCheck, Star, Users } from "lucide-react";
 import { getCustomers } from "@/lib/actions/customer-actions";
-import { CreateCustomerModal } from "@/components/customer/create-customer-modal";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 export const dynamic = 'force-dynamic';
 
-export default async function MusterilerPage() {
+export default async function CustomersPage() {
   const customers = await getCustomers();
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+    <div className="p-6 bg-[#0a0a0b] text-white min-h-screen space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Müşteri Yönetimi (CRM)</h1>
-          <p className="text-muted-foreground">Müşteri portföyünüzü ve işlem geçmişlerini yönetin.</p>
+          <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+             <Users className="h-8 w-8 text-blue-500" />
+             Müşteri Portföyü
+          </h1>
+          <p className="text-gray-500 text-sm mt-1 uppercase font-bold tracking-widest">TOPLAM {customers.length} KAYITLI MÜŞTERİ</p>
         </div>
-        <CreateCustomerModal />
+        <Link href="/musteriler/yeni">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 h-12 rounded-xl flex gap-2">
+            <Plus className="h-5 w-5" />
+            Yeni Müşteri Ekle
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Toplam Müşteri</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customers.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Yeni Müşteriler (Ay)</CardTitle>
-            <UserPlus className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers.filter((c: any) => new Date(c.createdAt) > new Date(new Date().setDate(1))).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktif İşlemler</CardTitle>
-            <UserCheck className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers.filter((c: any) => c.tickets.some((t: any) => t.status !== 'DELIVERED')).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sadık Müşteriler</CardTitle>
-            <Star className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customers.filter((c: any) => c.loyaltyPoints > 100).length}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+         <div className="relative group col-span-2">
+           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-hover:text-blue-500 transition-colors" />
+           <Input
+             placeholder="Müşteri adı veya telefon numarası ile ara..."
+             className="bg-[#141416] border-none h-14 pl-12 rounded-2xl text-lg font-medium placeholder:text-gray-700 focus:ring-blue-600 shadow-sm"
+           />
+         </div>
+         <div className="flex items-center gap-2">
+            <Button variant="outline" className="h-14 flex-1 bg-[#141416] border-none rounded-2xl font-bold uppercase text-[10px] tracking-widest text-gray-500 hover:text-white">VIP Müşteriler</Button>
+            <Button variant="outline" className="h-14 flex-1 bg-[#141416] border-none rounded-2xl font-bold uppercase text-[10px] tracking-widest text-gray-500 hover:text-white">Kurumsal</Button>
+         </div>
       </div>
 
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle>Müşteri Listesi</CardTitle>
-          <CardDescription>Müşteri iletişim bilgileri ve genel durumu.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ad Soyad</TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead>Son İşlem</TableHead>
-                <TableHead>Servis / Satış</TableHead>
-                <TableHead className="text-right">Durum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">Müşteri bulunamadı.</TableCell>
-                </TableRow>
-              ) : (
-                customers.map((customer: any) => (
-                  <TableRow key={customer.id} className="group cursor-pointer">
-                    <TableCell className="font-medium group-hover:text-primary transition-colors">
-                      {customer.name}
-                    </TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell className="text-xs">
-                      {customer.tickets.length > 0 ? (
-                        <span>{new Date(customer.tickets[0].createdAt).toLocaleDateString('tr-TR')}</span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Badge variant="secondary" className="text-[10px]">{customer.tickets.length} Servis</Badge>
-                        <Badge variant="outline" className="text-[10px]">{customer.sales.length} Satış</Badge>
+      <div className="bg-[#141416] rounded-3xl overflow-hidden border border-white/5 shadow-xl">
+        <Table>
+          <TableHeader className="bg-white/[0.02]">
+            <TableRow className="border-b border-white/5 hover:bg-transparent">
+              <TableHead className="text-gray-500 font-bold text-[10px] uppercase tracking-widest px-8 py-5">MÜŞTERİ BİLGİSİ</TableHead>
+              <TableHead className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">MÜŞTERİ TİPİ</TableHead>
+              <TableHead className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">İLETİŞİM</TableHead>
+              <TableHead className="text-gray-500 font-bold text-[10px] uppercase tracking-widest text-center">İŞLEMLER</TableHead>
+              <TableHead className="text-gray-500 font-bold text-[10px] uppercase tracking-widest text-right px-8">AKSİYON</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {customers.map((customer: any) => (
+              <TableRow key={customer.id} className="border-b border-white/5 group hover:bg-white/[0.01] transition-colors">
+                <TableCell className="px-8 py-5">
+                   <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center font-black text-blue-500 text-lg">
+                         {customer.name.charAt(0)}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge className="bg-blue-100 text-blue-800 border-none font-bold text-[10px] uppercase">AKTİF</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      <div>
+                         <div className="flex items-center gap-2">
+                            <span className="font-black text-lg uppercase tracking-tight">{customer.name}</span>
+                            {customer.isVip && (
+                               <Badge className="bg-amber-500/10 text-amber-500 border-none font-black text-[9px] px-1.5 py-0.5 rounded-full">VIP</Badge>
+                            )}
+                         </div>
+                         <div className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-2 mt-1">
+                            <Star className={`h-3 w-3 ${customer.isVip ? 'fill-amber-500 text-amber-500' : 'text-gray-700'}`} />
+                            Sadakat Puanı: {customer.loyaltyPoints}
+                         </div>
+                      </div>
+                   </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="border-white/10 text-gray-400 font-bold text-[10px] tracking-tight bg-white/[0.02] px-3 py-1">
+                    {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3 mr-1" /> : <UserCircle className="h-3 w-3 mr-1" />}
+                    {customer.type || "BİREYSEL"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                   <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-sm font-bold text-blue-400">
+                         <Phone className="h-3 w-3" />
+                         {customer.phone}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-medium">
+                         {customer.email || "E-posta yok"}
+                      </div>
+                   </div>
+                </TableCell>
+                <TableCell className="text-center">
+                   <div className="flex items-center justify-center gap-4 text-xs font-bold text-gray-500">
+                      <div className="flex flex-col items-center">
+                         <span className="text-white text-sm">{customer.tickets?.length || 0}</span>
+                         <span className="text-[8px] uppercase">Servis</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                         <span className="text-white text-sm">{customer.sales?.length || 0}</span>
+                         <span className="text-[8px] uppercase">Satış</span>
+                      </div>
+                   </div>
+                </TableCell>
+                <TableCell className="px-8 text-right">
+                   <div className="flex items-center justify-end gap-2">
+                      <Link href={`/musteriler/${customer.id}`}>
+                        <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl hover:bg-blue-600/10 hover:text-blue-500 transition-all">
+                           <Eye className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl hover:bg-white/5">
+                               <MoreHorizontal className="h-5 w-5" />
+                            </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[160px]">
+                            <DropdownMenuItem className="focus:bg-blue-600/10 focus:text-blue-500 rounded-lg cursor-pointer font-bold text-xs p-3">Profili Düzenle</DropdownMenuItem>
+                            <DropdownMenuItem className="focus:bg-emerald-600/10 focus:text-emerald-500 rounded-lg cursor-pointer font-bold text-xs p-3">WhatsApp'tan Yaz</DropdownMenuItem>
+                            <DropdownMenuItem className="focus:bg-rose-600/10 focus:text-rose-500 rounded-lg cursor-pointer font-bold text-xs p-3">Kalıcı Olarak Sil</DropdownMenuItem>
+                         </DropdownMenuContent>
+                      </DropdownMenu>
+                   </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {customers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-20 text-center text-gray-600">
+                   <Users className="h-12 w-12 mx-auto mb-4 opacity-10" />
+                   <p className="font-bold text-lg">Henüz kayıtlı müşteri bulunmuyor.</p>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

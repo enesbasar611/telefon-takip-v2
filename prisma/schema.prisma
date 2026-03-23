@@ -55,9 +55,13 @@ model Customer {
   id        String   @id @default(cuid())
   name      String
   phone     String   @unique
+  secondaryPhone String?
   email     String?
   address   String?
   notes     String?
+  photo     String?
+  type      String   @default("BIREYSEL") // BIREYSEL, KURUMSAL
+  isVip     Boolean  @default(false)
   loyaltyPoints Int  @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,6 +99,7 @@ model ServiceTicket {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   deliveredAt     DateTime?
+  warrantyExpiry  DateTime?
   estimatedDeliveryDate DateTime?
 
   logs            ServiceLog[]

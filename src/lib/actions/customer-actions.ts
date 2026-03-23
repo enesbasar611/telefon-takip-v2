@@ -25,7 +25,10 @@ export async function getCustomerById(id: string) {
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
-        tickets: { orderBy: { createdAt: "desc" } },
+        tickets: {
+          orderBy: { createdAt: "desc" },
+          include: { technician: true }
+        },
         sales: {
             include: { items: { include: { product: true } } },
             orderBy: { createdAt: "desc" }
@@ -35,17 +38,54 @@ export async function getCustomerById(id: string) {
     });
     return serializePrisma(customer);
   } catch (error) {
+    console.error("Error fetching customer:", error);
     return null;
   }
 }
 
-export async function createCustomer(data: { name: string; phone: string; email?: string; address?: string; notes?: string }) {
+export async function createCustomer(data: {
+  name: string;
+  phone: string;
+  secondaryPhone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  type?: string;
+  isVip?: boolean;
+  photo?: string;
+}) {
   try {
     const customer = await prisma.customer.create({ data });
     revalidatePath("/musteriler");
     return { success: true, customer: serializePrisma(customer) };
   } catch (error) {
+    console.error("Error creating customer:", error);
     return { success: false, error: "Müşteri oluşturulurken hata oluştu." };
+  }
+}
+
+export async function updateCustomer(id: string, data: {
+  name?: string;
+  phone?: string;
+  secondaryPhone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  type?: string;
+  isVip?: boolean;
+  photo?: string;
+}) {
+  try {
+    const customer = await prisma.customer.update({
+      where: { id },
+      data
+    });
+    revalidatePath("/musteriler");
+    revalidatePath(`/musteriler/${id}`);
+    return { success: true, customer: serializePrisma(customer) };
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    return { success: false, error: "Müşteri güncellenirken hata oluştu." };
   }
 }
 
