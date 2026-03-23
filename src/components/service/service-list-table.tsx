@@ -38,6 +38,8 @@ import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
+import { ServiceDetailsModal } from "./service-details-modal";
+import { ServiceStatusModal } from "./service-status-modal";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500" },
@@ -56,8 +58,9 @@ export const columns: ColumnDef<any>[] = [
     cell: ({ row }) => <div className="font-black text-xs bg-muted px-2 py-1 rounded w-fit">{row.getValue("ticketNumber")}</div>,
   },
   {
-    accessorKey: "customer.name",
+    accessorKey: "customer_name",
     header: "Müşteri",
+    accessorFn: (row) => row.customer?.name,
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className="font-bold text-sm">{row.original.customer?.name}</span>
@@ -68,6 +71,7 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "deviceModel",
     header: "Cihaz",
+    accessorFn: (row) => `${row.deviceBrand} ${row.deviceModel}`,
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className="font-bold text-sm">{row.original.deviceBrand}</span>
@@ -110,6 +114,8 @@ export const columns: ColumnDef<any>[] = [
     id: "actions",
     cell: ({ row }) => {
       const ticket = row.original;
+      const [showDetails, setShowDetails] = useState(false);
+      const [showStatus, setShowStatus] = useState(false);
 
       return (
         <div className="flex justify-end gap-2">
@@ -131,10 +137,10 @@ export const columns: ColumnDef<any>[] = [
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[180px]">
                     <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground">İşlemler</DropdownMenuLabel>
-                    <DropdownMenuItem className="text-xs font-bold gap-2">
+                    <DropdownMenuItem className="text-xs font-bold gap-2" onSelect={() => setShowDetails(true)}>
                         <Search className="h-3 w-3" /> Detayları Gör
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs font-bold gap-2">
+                    <DropdownMenuItem className="text-xs font-bold gap-2" onSelect={() => setShowStatus(true)}>
                         <Wrench className="h-3 w-3" /> Durum Güncelle
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -143,6 +149,9 @@ export const columns: ColumnDef<any>[] = [
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            <ServiceDetailsModal ticket={ticket} isOpen={showDetails} onClose={() => setShowDetails(false)} />
+            <ServiceStatusModal ticket={ticket} isOpen={showStatus} onClose={() => setShowStatus(false)} />
         </div>
       );
     },
@@ -154,11 +163,14 @@ export function ServiceListTable({ data }: { data: any[] }) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
+  const [globalFilter, setGlobalFilter] = useState("");
+
   const table = useReactTable({
     data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -168,6 +180,19 @@ export function ServiceListTable({ data }: { data: any[] }) {
       sorting,
       columnFilters,
       columnVisibility,
+      globalFilter,
+    },
+    globalFilterFn: (row, columnId, value) => {
+      const customerName = row.getValue("customer_name") as string;
+      const ticketNumber = row.getValue("ticketNumber") as string;
+      const imei = row.original.imei as string;
+
+      const search = value.toLowerCase();
+      return (
+        customerName?.toLowerCase().includes(search) ||
+        ticketNumber?.toLowerCase().includes(search) ||
+        imei?.toLowerCase().includes(search)
+      );
     },
   });
 
@@ -177,11 +202,9 @@ export function ServiceListTable({ data }: { data: any[] }) {
         <div className="flex-1 max-w-md relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="IMEI, Müşteri veya Cihaz Ara..."
-                value={(table.getColumn("customer_name")?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                    table.getColumn("customer_name")?.setFilterValue(event.target.value)
-                }
+                placeholder="Müşteri, Fiş No veya IMEI Ara..."
+                value={globalFilter ?? ""}
+                onChange={(event) => setGlobalFilter(event.target.value)}
                 className="pl-10 h-11 border-2 focus:border-primary transition-all shadow-sm"
             />
         </div>
