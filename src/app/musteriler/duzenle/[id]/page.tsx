@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { IMaskInput } from "react-imask";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,8 +10,7 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription
+  CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,14 +37,15 @@ import {
   Building2,
   UserCircle,
   Star,
-  StickyNote
+  StickyNote,
+  ChevronLeft
 } from "lucide-react";
-import { createCustomer } from "@/lib/actions/customer-actions";
+import { getCustomerById, updateCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Müşteri adı en az 2 karakter olmalıdır"),
-  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz (5XXXXXXXXX)"),
+  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz"),
   secondaryPhone: z.string().optional().or(z.literal("")),
   email: z.string().email("Geçerli bir e-posta adresi giriniz").optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
@@ -57,9 +57,12 @@ const customerSchema = z.object({
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
-export default function NewCustomerPage() {
+export default function EditCustomerPage() {
   const router = useRouter();
+  const params = useParams();
+  const customerId = params.id as string;
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +80,38 @@ export default function NewCustomerPage() {
       photo: "",
     },
   });
+
+  useEffect(() => {
+    async function loadCustomer() {
+      try {
+        const customer = await getCustomerById(customerId);
+        if (customer) {
+          form.reset({
+            name: customer.name,
+            phone: customer.phone,
+            secondaryPhone: customer.secondaryPhone || "",
+            email: customer.email || "",
+            address: customer.address || "",
+            notes: customer.notes || "",
+            type: customer.type || "BIREYSEL",
+            isVip: customer.isVip || false,
+            photo: customer.photo || "",
+          });
+          if (customer.photo) {
+            setPhotoPreview(customer.photo);
+          }
+        } else {
+          toast.error("Müşteri bulunamadı");
+          router.push("/musteriler");
+        }
+      } catch (error) {
+        toast.error("Müşteri yüklenirken hata oluştu");
+      } finally {
+        setInitialLoading(false);
+      }
+    }
+    loadCustomer();
+  }, [customerId, form, router]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,12 +139,12 @@ export default function NewCustomerPage() {
   async function onSubmit(values: CustomerFormValues) {
     setLoading(true);
     try {
-      const result = await createCustomer(values);
+      const result = await updateCustomer(customerId, values);
       if (result.success) {
-        toast.success("Müşteri başarıyla oluşturuldu");
-        router.push("/musteriler");
+        toast.success("Müşteri başarıyla güncellendi");
+        router.push(`/musteriler/${customerId}`);
       } else {
-        toast.error(result.error || "Müşteri oluşturulurken bir hata oluştu");
+        toast.error(result.error || "Güncelleme sırasında hata oluştu");
       }
     } catch (error) {
       toast.error("Bir hata oluştu");
@@ -118,14 +153,36 @@ export default function NewCustomerPage() {
     }
   }
 
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0a0b] text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Müşteri Bilgileri Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 bg-[#0a0a0b] text-white min-h-screen">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-black tracking-tight">Yeni Müşteri Kaydı</h1>
-              <p className="text-gray-500 text-sm mt-1">Sistem için yeni bir teknik servis ortağı veya bireysel müşteri tanımlayın.</p>
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="bg-[#141416] border-white/5 rounded-xl hover:bg-white/5"
+                onClick={() => router.back()}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-black tracking-tight">Müşteri Düzenle</h1>
+                <p className="text-gray-500 text-sm mt-1">{form.getValues("name")} bilgilerini güncelleyin.</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -142,7 +199,7 @@ export default function NewCustomerPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 font-bold flex gap-2"
               >
                 <Save className="h-4 w-4" />
-                {loading ? "Kaydediliyor..." : "Kaydet"}
+                {loading ? "Güncelleniyor..." : "Güncelle"}
               </Button>
             </div>
           </div>
@@ -151,8 +208,8 @@ export default function NewCustomerPage() {
             <div className="lg:col-span-2">
               <Tabs defaultValue="genel" className="w-full">
                 <TabsList className="bg-[#141416] border border-white/5 p-1 mb-6">
-                  <TabsTrigger value="genel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Genel Bilgiler</TabsTrigger>
-                  <TabsTrigger value="ek" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Ek Detaylar</TabsTrigger>
+                  <TabsTrigger value="genel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 text-xs font-bold uppercase tracking-wider">Genel Bilgiler</TabsTrigger>
+                  <TabsTrigger value="ek" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 text-xs font-bold uppercase tracking-wider">Ek Detaylar</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="genel" className="mt-0">
@@ -352,7 +409,7 @@ export default function NewCustomerPage() {
                       </>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 text-center px-4">JPG veya PNG, max. 2MB. Kimlik tanıma için önerilir.</p>
+                  <p className="text-[10px] text-gray-500 text-center px-4 uppercase font-bold">Resmi değiştirmek için tıklayın</p>
                 </CardContent>
               </Card>
 

@@ -132,7 +132,9 @@ export default async function CustomersPage() {
                             </Button>
                          </DropdownMenuTrigger>
                          <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[160px]">
-                            <DropdownMenuItem className="focus:bg-blue-600/10 focus:text-blue-500 rounded-lg cursor-pointer font-bold text-xs p-3">Profili Düzenle</DropdownMenuItem>
+                            <Link href={`/musteriler/duzenle/${customer.id}`}>
+                              <DropdownMenuItem className="focus:bg-blue-600/10 focus:text-blue-500 rounded-lg cursor-pointer font-bold text-xs p-3">Profili Düzenle</DropdownMenuItem>
+                            </Link>
                             <DropdownMenuItem className="focus:bg-emerald-600/10 focus:text-emerald-500 rounded-lg cursor-pointer font-bold text-xs p-3">WhatsApp'tan Yaz</DropdownMenuItem>
                             <DropdownMenuItem className="focus:bg-rose-600/10 focus:text-rose-500 rounded-lg cursor-pointer font-bold text-xs p-3">Kalıcı Olarak Sil</DropdownMenuItem>
                          </DropdownMenuContent>

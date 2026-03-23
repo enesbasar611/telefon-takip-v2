@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { IMaskInput } from "react-imask";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +37,7 @@ const serviceSchema = z.object({
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
-    .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xxxxxxxxx)"),
+    .min(10, "Geçerli bir Türkiye telefon numarası giriniz"),
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
@@ -164,11 +165,16 @@ export default function NewServicePage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Telefon Numarası</Label>
-                  <Input
-                    {...form.register("customerPhone")}
-                    placeholder="5xx xxx xxxx"
-                    maxLength={10}
-                    className="bg-muted/50 border-none focus-visible:ring-1"
+                  <IMaskInput
+                    mask="+90 (000) 000 00 00"
+                    definitions={{
+                      '0': /[0-9]/
+                    }}
+                    value={form.watch("customerPhone")}
+                    unmask={false}
+                    onAccept={(value) => form.setValue("customerPhone", value)}
+                    placeholder="+90 (5__) ___ __ __"
+                    className="flex h-10 w-full rounded-md border-none bg-muted/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {form.formState.errors.customerPhone && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.customerPhone.message}</p>}
                 </div>
