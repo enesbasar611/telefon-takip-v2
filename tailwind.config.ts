@@ -55,7 +55,15 @@ const config: Config = {
 			lg: 'var(--radius)',
 			md: 'calc(var(--radius) - 2px)',
 			sm: 'calc(var(--radius) - 4px)'
-		}
+		},
+        borderWidth: {
+            '0.5': '0.5px',
+        },
+        boxShadow: {
+            'cyan-sm': '0 0 15px rgba(6, 182, 212, 0.15)',
+            'cyan-strong': '0 0 25px rgba(6, 182, 212, 0.3)',
+            'obsidian': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        }
 	}
   },
   plugins: [require("tailwindcss-animate")],
