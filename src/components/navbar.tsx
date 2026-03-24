@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, PlusCircle, ShoppingCart, User, Bell, Command, Settings2 } from "lucide-react";
+import { useState } from "react";
+import { Search, PlusCircle, ShoppingCart, User, Bell, Command, Settings2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -14,8 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CreateServiceModal } from "@/components/service/create-service-modal";
 import Link from "next/link";
+import { ShortageList } from "@/components/navbar/shortage-list";
 
 export function Navbar() {
+  const [showFinance, setShowFinance] = useState(false);
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-white/5 bg-[#0a0a0b]/80 backdrop-blur-xl px-8 sticky top-0 z-10 shadow-2xl">
       <div className="flex w-1/3 items-center gap-6">
@@ -55,6 +59,16 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowFinance(!showFinance)}
+            className="h-10 w-10 rounded-xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-cyan-500 transition-all"
+          >
+            {showFinance ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+          </Button>
+
+          <ShortageList />
           <ModeToggle />
 
           <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-cyan-500 hover:bg-cyan-500/5 transition-all">

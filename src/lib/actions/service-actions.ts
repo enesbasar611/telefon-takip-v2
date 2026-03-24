@@ -112,7 +112,47 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       },
     });
 
+    // Financial and Inventory Sync
+    if (status === ServiceStatus.DELIVERED) {
+      const fullTicket = await prisma.serviceTicket.findUnique({
+        where: { id: ticketId },
+        include: { usedParts: true, customer: true, createdBy: true }
+      });
+
+      if (fullTicket) {
+        // Record Transaction
+        await prisma.transaction.create({
+          data: {
+            type: "INCOME",
+            amount: Number(fullTicket.actualCost) > 0 ? fullTicket.actualCost : fullTicket.estimatedCost,
+            description: `Servis Tahsilatı: ${fullTicket.ticketNumber} (${fullTicket.deviceBrand} ${fullTicket.deviceModel})`,
+            paymentMethod: "CASH", // Default to cash for now
+            userId: fullTicket.createdById,
+          }
+        });
+
+        // Sync Inventory (Deduct stock for parts used)
+        for (const part of fullTicket.usedParts) {
+          await prisma.product.update({
+            where: { id: part.productId },
+            data: {
+              stock: { decrement: part.quantity },
+              movements: {
+                create: {
+                  quantity: -part.quantity,
+                  type: "SERVICE_USE",
+                  notes: `Servis kullanımı: ${fullTicket.ticketNumber}`
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+
     revalidatePath("/servis");
+    revalidatePath("/stok");
+    revalidatePath("/finans");
     revalidatePath("/");
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
@@ -149,6 +189,29 @@ export async function deleteServiceTicket(id: string) {
   await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id } });
   await prisma.serviceTicket.delete({ where: { id } });
   revalidatePath("/servis");
+  revalidatePath("/");
+}
+
+export async function addPartToService(ticketId: string, productId: string, quantity: number) {
+  try {
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new Error("Ürün bulunamadı");
+
+    await prisma.serviceUsedPart.create({
+      data: {
+        ticketId,
+        productId,
+        quantity,
+        unitPrice: product.sellPrice,
+      }
+    });
+
+    revalidatePath(`/servis/${ticketId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error adding part to service:", error);
+    return { success: false, error: "Parça eklenirken bir hata oluştu." };
+  }
 }
 
 export async function getServiceTickets() {

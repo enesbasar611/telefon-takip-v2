@@ -1,4 +1,5 @@
 import { getServiceTicketById } from "@/lib/actions/service-actions";
+import { getProducts } from "@/lib/actions/product-actions";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ServicePartManager } from "@/components/service/service-part-manager";
+import { ServiceStatusUpdater } from "@/components/service/service-status-updater";
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +51,7 @@ const statusLabels: Record<string, string> = {
 
 export default async function ServiceDetailPage({ params }: { params: { id: string } }) {
   const ticket = await getServiceTicketById(params.id);
+  const products = await getProducts();
 
   if (!ticket) {
     notFound();
@@ -104,6 +108,13 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                     <div className="flex justify-between items-center">
                         <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">ARIZA TANIMI</span>
                         <span className="text-xs font-black text-blue-400 uppercase tracking-tighter">{ticket.problemDesc}</span>
+                    </div>
+                    <div className="pt-6 border-t border-white/[0.03]">
+                        <ServicePartManager
+                            ticketId={ticket.id}
+                            products={products}
+                            currentParts={ticket.usedParts}
+                        />
                     </div>
                 </CardContent>
              </Card>
@@ -208,9 +219,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         </div>
                     </div>
                     <div className="space-y-3 pt-2">
-                        <Button className="w-full h-12 rounded-2xl bg-cyan-500 text-black font-black uppercase tracking-widest hover:bg-cyan-400 shadow-cyan-strong transition-all">
-                           DURUMU GÜNCELLE
-                        </Button>
+                        <ServiceStatusUpdater ticketId={ticket.id} currentStatus={ticket.status} />
                         <Button variant="outline" className="w-full h-12 rounded-2xl border-white/5 bg-white/[0.03] text-white font-black uppercase tracking-widest hover:bg-white/5 transition-all">
                            FİŞ YAZDIR
                         </Button>

@@ -38,6 +38,7 @@ import { LiveActivityFeed } from "@/components/dashboard/live-activity-feed";
 import { SmartInsights } from "@/components/dashboard/smart-insights";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RevealFinancial } from "@/components/ui/reveal-financial";
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +140,11 @@ export default async function DashboardOzetPage() {
               <div>
                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-black tracking-tighter text-white group-hover:text-cyan-400 transition-colors">{stat.value}</h3>
+                    {typeof stat.value === 'string' && stat.value.includes('₺') ? (
+                        <RevealFinancial amount={stat.value} className="text-2xl font-black tracking-tighter text-white group-hover:text-cyan-400 transition-colors" />
+                    ) : (
+                        <h3 className="text-2xl font-black tracking-tighter text-white group-hover:text-cyan-400 transition-colors">{stat.value}</h3>
+                    )}
                 </div>
               </div>
             </CardContent>
@@ -241,7 +246,9 @@ export default async function DashboardOzetPage() {
                         <div className="text-[9px] text-gray-600 font-bold uppercase mt-0.5">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                       </td>
                       <td className="px-6 py-5 text-[10px] text-gray-500 font-bold uppercase tracking-tighter">{t.description}</td>
-                      <td className="px-6 py-5 font-black text-sm text-white">₺{Number(t.amount).toLocaleString('tr-TR')}</td>
+                      <td className="px-6 py-5">
+                         <RevealFinancial amount={t.amount} className="text-sm font-black text-white" />
+                      </td>
                       <td className="px-8 py-5 text-right">
                         <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-3 py-1.5 rounded-xl shadow-cyan-sm ${t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/5'}`}>
                           {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
