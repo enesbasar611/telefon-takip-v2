@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListTodo, CheckCircle2, PackagePlus, Loader2 } from "lucide-react";
+import { ListTodo, CheckCircle2, PackagePlus, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { getShortageItems, resolveShortageItem, addShortageItem } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,55 @@ export function ShortageList() {
     }
   };
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const content = `
+      <html>
+        <head>
+          <title>Eksikler Listesi</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; }
+            h1 { border-bottom: 2px solid #000; padding-bottom: 10px; text-transform: uppercase; font-size: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f2f2f2; font-size: 12px; }
+            td { font-size: 14px; font-weight: bold; }
+            .date { font-size: 10px; color: #666; margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <h1>Eksikler Listesi / Tedarik Formu</h1>
+          <p class="date">Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>ÜRÜN ADI</th>
+                <th>SKU / KOD</th>
+                <th>ADET</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.product?.sku || '-'}</td>
+                  <td>1</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p style="margin-top: 40px; font-size: 10px; text-align: center; border-top: 1px solid #eee; padding-top: 10px;">Takip V2 - Mobil Servis & ERP tarafından otomatik oluşturulmuştur.</p>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -90,7 +140,7 @@ export function ShortageList() {
           </Button>
         </form>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
           ) : items.length === 0 ? (
@@ -114,6 +164,18 @@ export function ShortageList() {
             ))
           )}
         </div>
+
+        {items.length > 0 && (
+          <>
+            <Separator className="my-4 bg-white/5" />
+            <Button
+                onClick={handlePrint}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
+            >
+                <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
+            </Button>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );

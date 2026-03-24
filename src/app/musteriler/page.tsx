@@ -24,7 +24,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const getLoyaltyTier = (points: number) => {
-    if (points >= 1000) return { label: "PLATİN", color: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20 shadow-cyan-sm", icon: Gem };
+    if (points >= 1000) return { label: "PLATİN", color: "text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-amber-sm", icon: Gem };
     if (points >= 500) return { label: "ALTIN", color: "text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-amber-400/10", icon: Crown };
     if (points >= 200) return { label: "GÜMÜŞ", color: "text-gray-300 bg-gray-300/10 border-gray-300/20", icon: ShieldCheck };
     return { label: "BRONZ", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star };
@@ -38,16 +38,16 @@ export default async function CustomersPage() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-6">
-            <div className="h-14 w-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-cyan-sm transition-transform hover:scale-110">
-                <Users className="h-7 w-7 text-cyan-500" />
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-amber-sm transition-transform hover:scale-110">
+                <Users className="h-7 w-7 text-amber-500" />
             </div>
             <div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase">Müşteri <span className="text-cyan-500">Portföyü</span></h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase">Müşteri <span className="text-amber-500">Portföyü</span></h1>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-1 italic">STRATEJİK CRM & SADAKAT YÖNETİMİ • {customers.length} KAYIT</p>
             </div>
         </div>
         <Link href="/musteriler/yeni">
-          <Button className="bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest px-8 h-12 rounded-2xl shadow-cyan-strong transition-all hover:-translate-y-1 flex gap-3">
+          <Button className="bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest px-8 h-12 rounded-2xl shadow-amber-strong transition-all hover:-translate-y-1 flex gap-3">
             <Plus className="h-5 w-5 stroke-[3px]" />
             YENİ MÜŞTERİ TANIMLA
           </Button>
@@ -58,11 +58,11 @@ export default async function CustomersPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
          <div className="lg:col-span-3 relative group">
            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-             <Search className="h-5 w-5 text-gray-600 group-focus-within:text-cyan-500 transition-colors" />
+             <Search className="h-5 w-5 text-gray-600 group-focus-within:text-amber-500 transition-colors" />
            </div>
            <Input
              placeholder="Müşteri adı veya telefon numarası ile ara..."
-             className="bg-white/[0.02] border-white/5 h-16 pl-12 rounded-[1.5rem] text-sm font-black uppercase tracking-widest placeholder:text-gray-700 focus:ring-1 focus:ring-cyan-500/20 focus:bg-white/[0.04] shadow-2xl transition-all"
+             className="bg-white/[0.02] border-white/5 h-16 pl-12 rounded-[1.5rem] text-sm font-black uppercase tracking-widest placeholder:text-gray-700 focus:ring-1 focus:ring-amber-500/20 focus:bg-white/[0.04] shadow-2xl transition-all"
            />
          </div>
          <div className="flex items-center gap-3">
@@ -94,19 +94,19 @@ export default async function CustomersPage() {
                            {customer.photo ? (
                                <img src={customer.photo} alt={customer.name} className="h-full w-full object-cover" />
                            ) : (
-                               <UserCircle className="h-8 w-8 text-gray-700 group-hover:text-cyan-500 transition-colors" />
+                               <UserCircle className="h-8 w-8 text-gray-700 group-hover:text-amber-500 transition-colors" />
                            )}
                            {customer.isVip && (
-                              <div className="absolute top-0 right-0 h-4 w-4 bg-cyan-500 flex items-center justify-center rounded-bl-lg shadow-cyan-sm">
+                              <div className="absolute top-0 right-0 h-4 w-4 bg-amber-500 flex items-center justify-center rounded-bl-lg shadow-amber-sm">
                                  <Zap className="h-2 w-2 text-black fill-black" />
                               </div>
                            )}
                         </div>
                         <div>
                            <div className="flex items-center gap-3">
-                              <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">{customer.name}</span>
+                              <span className="font-black text-sm text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">{customer.name}</span>
                               {customer.isVip && (
-                                 <Badge className="bg-cyan-500/10 text-cyan-500 border-none font-black text-[8px] px-2 py-1 rounded-lg animate-pulse shadow-cyan-sm">VIP</Badge>
+                                 <Badge className="bg-amber-500/10 text-amber-500 border-none font-black text-[8px] px-2 py-1 rounded-lg animate-pulse shadow-amber-sm">VIP</Badge>
                               )}
                            </div>
                            <div className="text-[9px] text-gray-600 font-bold uppercase flex items-center gap-2 mt-1 tracking-widest">
@@ -124,7 +124,7 @@ export default async function CustomersPage() {
                   </TableCell>
                   <TableCell>
                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-xs font-black text-cyan-500 shadow-cyan-sm uppercase tracking-tighter">
+                        <div className="flex items-center gap-2 text-xs font-black text-amber-500 shadow-amber-sm uppercase tracking-tighter">
                            <Phone className="h-3 w-3" />
                            {customer.phone}
                         </div>
@@ -136,7 +136,7 @@ export default async function CustomersPage() {
                   <TableCell className="text-center">
                      <div className="flex items-center justify-center gap-6">
                         <div className="flex flex-col items-center">
-                           <span className="text-white text-base font-black shadow-cyan-sm">{customer.tickets?.length || 0}</span>
+                           <span className="text-white text-base font-black shadow-amber-sm">{customer.tickets?.length || 0}</span>
                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mt-1">Servis</span>
                         </div>
                         <div className="flex flex-col items-center border-l border-white/5 pl-6">
@@ -148,7 +148,7 @@ export default async function CustomersPage() {
                   <TableCell className="px-8 text-right">
                      <div className="flex items-center justify-end gap-2">
                         <Link href={`/musteriler/${customer.id}`}>
-                          <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-cyan-500 hover:bg-cyan-500/5 transition-all">
+                          <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-amber-500 hover:bg-amber-500/5 transition-all">
                              <Eye className="h-5 w-5" />
                           </Button>
                         </Link>
@@ -163,7 +163,7 @@ export default async function CustomersPage() {
                               <DropdownMenuSeparator className="bg-white/5" />
                               <Link href={`/musteriler/duzenle/${customer.id}`}>
                                 <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center uppercase tracking-widest">
-                                   <UserCircle className="h-4 w-4 text-cyan-500" /> Profili Düzenle
+                                   <UserCircle className="h-4 w-4 text-amber-500" /> Profili Düzenle
                                 </DropdownMenuItem>
                               </Link>
                               <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center uppercase tracking-widest group">

@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Package, AlertCircle, Barcode as BarcodeIcon, Layers, TrendingUp, Search, Filter, MoreHorizontal, ArrowUpRight } from "lucide-react";
+import { Package, AlertCircle, Barcode as BarcodeIcon, Layers, TrendingUp, Search, Filter, MoreHorizontal, ArrowUpRight, Plus } from "lucide-react";
 import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { CreateProductModal } from "@/components/product/create-product-modal";
+import { RevealFinancial } from "@/components/ui/reveal-financial";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { addShortageItem } from "@/lib/actions/shortage-actions";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,13 +16,21 @@ export default async function StokPage() {
   const products = await getProducts();
   const categories = await getCategories();
 
+  const handleAddToShortage = async (formData: FormData) => {
+    "use server";
+    const productId = formData.get("productId") as string;
+    const name = formData.get("name") as string;
+    await addShortageItem({ productId, name, quantity: 1 });
+    revalidatePath("/stok");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500/80">Envanter Sistemi</span>
+            <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80">Envanter Sistemi</span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Stok Yönetimi</h1>
           <p className="text-sm text-gray-500 font-medium max-w-md mt-1">Yedek parça, aksesuar ve cihaz envanterini profesyonel düzeyde takip edin.</p>
@@ -31,12 +42,12 @@ export default async function StokPage() {
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {[
-          { label: "TOPLAM ÜRÜN", value: products.length, icon: Package, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-          { label: "KRİTİK STOK", value: products.filter((p: any) => p.stock <= p.criticalStock).length, icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
-          { label: "KATEGORİ", value: categories.length, icon: Layers, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "TOPLAM ÜRÜN", value: products.length, icon: Package, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "KRİTİK STOK", value: products.filter((p: any) => p.stock <= 2).length, icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
+          { label: "KATEGORİ", value: categories.length, icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "BARKODLU", value: products.filter((p: any) => p.barcode).length, icon: BarcodeIcon, color: "text-emerald-500", bg: "bg-emerald-500/10" }
         ].map((stat, i) => (
-          <Card key={i} className="bg-white/[0.02] border-white/5 whisper-border shadow-2xl overflow-hidden group">
+          <Card key={i} className="bg-[#151921] border-white/5 whisper-border shadow-2xl overflow-hidden group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} transition-transform group-hover:scale-110 duration-500`}>
@@ -53,13 +64,13 @@ export default async function StokPage() {
         ))}
       </div>
 
-      <Card className="bg-white/[0.02] border-white/5 whisper-border shadow-2xl overflow-hidden">
+      <Card className="bg-[#151921] border-white/5 whisper-border shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.01]">
           <div className="relative flex-1 max-w-md">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
              <Input
                placeholder="Ürün adı, SKU veya barkod ara..."
-               className="pl-10 bg-black/40 border-white/5 rounded-xl text-xs font-bold"
+               className="pl-10 bg-[#0e1116] border-white/5 rounded-xl text-xs font-bold"
              />
           </div>
           <div className="flex items-center gap-2">
@@ -79,7 +90,7 @@ export default async function StokPage() {
                 <TableHead className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-4">KATEGORİ</TableHead>
                 <TableHead className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-4">STOK DURUMU</TableHead>
                 <TableHead className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-4">FİYATLANDIRMA</TableHead>
-                <TableHead className="text-right pr-6"></TableHead>
+                <TableHead className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-4 text-right">AKSİYON</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,7 +103,7 @@ export default async function StokPage() {
                   <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
                     <TableCell className="py-4 pl-6">
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-white group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{product.name}</span>
+                        <span className="text-sm font-black text-white group-hover:text-amber-500 transition-colors uppercase tracking-tight">{product.name}</span>
                         <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">SKU: {product.sku || 'BELİRTİLMEDİ'}</span>
                       </div>
                     </TableCell>
@@ -104,17 +115,19 @@ export default async function StokPage() {
                     <TableCell>
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                           <span className={`text-sm font-black ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>{product.stock}</span>
+                           <span className={`text-sm font-black ${product.stock <= 2 ? 'text-rose-500' : 'text-white'}`}>{product.stock}</span>
                            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">ADET</span>
                         </div>
                         <div className="w-24 h-1 bg-white/5 rounded-full overflow-hidden">
                            <div
-                             className={`h-full rounded-full ${product.stock <= product.criticalStock ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' : 'bg-emerald-500'}`}
-                             style={{ width: `${Math.min((product.stock / (product.criticalStock * 2)) * 100, 100)}%` }}
+                             className={`h-full rounded-full ${product.stock <= 2 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' : 'bg-emerald-500'}`}
+                             style={{ width: `${Math.min((product.stock / 10) * 100, 100)}%` }}
                            />
                         </div>
-                        {product.stock <= product.criticalStock && (
-                          <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest animate-pulse">KRİTİK SEVİYE</span>
+                        {product.stock <= 2 && (
+                          <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest animate-pulse">
+                            {product.stock === 0 ? 'STOK TÜKENDİ' : 'KRİTİK SEVİYE'}
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -124,13 +137,29 @@ export default async function StokPage() {
                             <span className="text-xs font-black text-white italic">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                             <ArrowUpRight className="h-3 w-3 text-emerald-500" />
                          </div>
-                         <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Maliyet: ₺{Number(product.buyPrice).toLocaleString('tr-TR')}</span>
+                         <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">Maliyet:</span>
+                            <RevealFinancial amount={product.buyPrice} className="text-[9px] text-gray-500 font-bold" />
+                         </div>
+                         <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">Kâr:</span>
+                            <RevealFinancial amount={Number(product.sellPrice) - Number(product.buyPrice)} className="text-[9px] text-emerald-600 font-black" />
+                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                       <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/5 text-gray-600 hover:text-white">
-                         <MoreHorizontal className="h-4 w-4" />
-                       </Button>
+                       <div className="flex items-center justify-end gap-2">
+                         <form action={handleAddToShortage}>
+                            <input type="hidden" name="productId" value={product.id} />
+                            <input type="hidden" name="name" value={product.name} />
+                            <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-amber-500/5 text-amber-500 border border-amber-500/10 hover:bg-amber-500/20 hover:text-amber-400 transition-all shadow-amber-sm" title="Eksik Listesine Ekle">
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                         </form>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/5 text-gray-600 hover:text-white">
+                           <MoreHorizontal className="h-4 w-4" />
+                         </Button>
+                       </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -138,13 +167,6 @@ export default async function StokPage() {
             </TableBody>
           </Table>
         </CardContent>
-        <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
-           <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">TOPLAM {products.length} KAYIT GÖSTERİLİYOR</p>
-           <div className="flex items-center gap-1">
-             <Button disabled variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-gray-700 bg-white/[0.01] border border-white/5 rounded-lg px-4 hover:bg-white/5">Geri</Button>
-             <Button disabled variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-gray-700 bg-white/[0.01] border border-white/5 rounded-lg px-4 hover:bg-white/5">İleri</Button>
-           </div>
-        </div>
       </Card>
     </div>
   );

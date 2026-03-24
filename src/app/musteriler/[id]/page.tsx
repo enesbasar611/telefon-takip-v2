@@ -48,7 +48,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const getLoyaltyTier = (points: number) => {
-    if (points >= 1000) return { label: "PLATİN", color: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20 shadow-cyan-sm", icon: Gem, next: 0, percent: 100 };
+    if (points >= 1000) return { label: "PLATİN", color: "text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-amber-sm", icon: Gem, next: 0, percent: 100 };
     if (points >= 500) return { label: "ALTIN", color: "text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-amber-400/10", icon: Crown, next: 1000, percent: (points/1000)*100 };
     if (points >= 200) return { label: "GÜMÜŞ", color: "text-gray-300 bg-gray-300/10 border-gray-300/20", icon: ShieldCheck, next: 500, percent: (points/500)*100 };
     return { label: "BRONZ", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star, next: 200, percent: (points/200)*100 };
@@ -79,14 +79,14 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 <ChevronLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="h-28 w-28 rounded-[2rem] bg-cyan-500/10 border-4 border-[#141416] flex items-center justify-center relative shadow-2xl overflow-hidden group hover:scale-105 transition-all">
+          <div className="h-28 w-28 rounded-[2rem] bg-amber-500/10 border-4 border-[#141416] flex items-center justify-center relative shadow-2xl overflow-hidden group hover:scale-105 transition-all">
             {customer.photo ? (
               <img src={customer.photo} alt={customer.name} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
             ) : (
-              <UserCircle className="h-12 w-12 text-cyan-500" />
+              <UserCircle className="h-12 w-12 text-amber-500" />
             )}
             {customer.isVip && (
-              <div className="absolute top-0 right-0 h-6 w-6 bg-cyan-500 flex items-center justify-center rounded-bl-xl border-4 border-[#141416] shadow-cyan-sm">
+              <div className="absolute top-0 right-0 h-6 w-6 bg-amber-500 flex items-center justify-center rounded-bl-xl border-4 border-[#141416] shadow-amber-sm">
                 <Zap className="h-3 w-3 text-black fill-black" />
               </div>
             )}
@@ -95,23 +95,23 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
             <div className="flex items-center gap-4 mb-2">
               <h1 className="text-4xl font-black tracking-tighter uppercase text-white">{customer.name}</h1>
               {customer.isVip && (
-                <Badge className="bg-cyan-500/10 text-cyan-500 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-xl shadow-cyan-sm animate-pulse">VIP ÜYE</Badge>
+                <Badge className="bg-amber-500/10 text-amber-500 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-xl shadow-amber-sm animate-pulse">VIP ÜYE</Badge>
               )}
             </div>
             <div className="flex flex-wrap gap-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">
               <div className="flex items-center gap-2 group cursor-pointer hover:text-white transition-colors">
-                <Phone className="h-4 w-4 text-cyan-500" />
+                <Phone className="h-4 w-4 text-amber-500" />
                 <span>{customer.phone}</span>
               </div>
               {customer.email && (
                 <div className="flex items-center gap-2 group cursor-pointer hover:text-white transition-colors">
-                  <Mail className="h-4 w-4 text-cyan-500" />
+                  <Mail className="h-4 w-4 text-amber-500" />
                   <span className="truncate max-w-[200px]">{customer.email}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-[9px] font-black border-white/10 text-gray-400 bg-white/[0.02] px-3 py-1 rounded-lg">
-                  {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3 mr-2 text-cyan-500" /> : <UserCircle className="h-3 w-3 mr-2 text-cyan-500" />}
+                  {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3 mr-2 text-amber-500" /> : <UserCircle className="h-3 w-3 mr-2 text-amber-500" />}
                   {customer.type || "BİREYSEL"}
                 </Badge>
               </div>
@@ -121,9 +121,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         <div className="flex gap-3">
            <Link href={`/musteriler/duzenle/${customer.id}`}>
-             <Button className="bg-white/[0.03] whisper-border border-white/5 text-gray-400 hover:text-cyan-500 hover:bg-cyan-500/5 px-6 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl">PROFİLİ DÜZENLE</Button>
+             <Button className="bg-white/[0.03] whisper-border border-white/5 text-gray-400 hover:text-amber-500 hover:bg-amber-500/5 px-6 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl">PROFİLİ DÜZENLE</Button>
            </Link>
-           <Button className="bg-cyan-500 text-black px-6 h-12 rounded-2xl font-black uppercase tracking-widest shadow-cyan-strong hover:bg-cyan-400 transition-all">SATIŞ YAP</Button>
+           <Button className="bg-amber-500 text-black px-6 h-12 rounded-2xl font-black uppercase tracking-widest shadow-amber-strong hover:bg-amber-400 transition-all">SATIŞ YAP</Button>
         </div>
       </div>
 
@@ -131,10 +131,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Loyalty Panel */}
         <Card className="lg:col-span-1 bg-[#141416] border-white/5 shadow-2xl group overflow-hidden relative">
-            <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-cyan-500" />
+            <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-amber-500" />
             <CardHeader className="border-b border-white/[0.03] pb-6 bg-white/[0.01]">
                 <div className="flex items-center gap-3">
-                    <TrendingUp className="h-4 w-4 text-cyan-500 shadow-cyan-sm" />
+                    <TrendingUp className="h-4 w-4 text-amber-500 shadow-amber-sm" />
                     <CardTitle className="text-xs font-black uppercase tracking-widest text-white">Sadakat Seviyesi</CardTitle>
                 </div>
             </CardHeader>
@@ -150,9 +150,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Gelişim Puanı</span>
-                        <span className="text-xs font-black text-cyan-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
+                        <span className="text-xs font-black text-amber-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
                     </div>
-                    <Progress value={tier.percent} className="h-2 bg-white/[0.03] [&>div]:bg-cyan-500 shadow-cyan-sm" />
+                    <Progress value={tier.percent} className="h-2 bg-white/[0.03] [&>div]:bg-amber-500 shadow-amber-sm" />
                     {tier.next > 0 && (
                         <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest italic text-center">
                            Bir sonraki seviye için {tier.next - customer.loyaltyPoints} puan daha gerekiyor.
@@ -207,9 +207,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
             <div className="col-span-1 md:col-span-3">
                 <Tabs defaultValue="history" className="w-full">
                     <TabsList className="bg-transparent border-b border-white/5 w-full justify-start rounded-none h-auto p-0 gap-10 mb-8">
-                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-500 data-[state=active]:bg-transparent data-[state=active]:text-cyan-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">İŞLEM ARŞİVİ</TabsTrigger>
-                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-500 data-[state=active]:bg-transparent data-[state=active]:text-cyan-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">AKTİF GARANTİLER</TabsTrigger>
-                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-500 data-[state=active]:bg-transparent data-[state=active]:text-cyan-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">MÜŞTERİ NOTLARI</TabsTrigger>
+                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">İŞLEM ARŞİVİ</TabsTrigger>
+                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">AKTİF GARANTİLER</TabsTrigger>
+                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">MÜŞTERİ NOTLARI</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="history" className="space-y-4 outline-none">
@@ -223,24 +223,24 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-white/10 animate-pulse border-2 border-[#141416]" />
                                         </div>
                                         <div>
-                                            <h4 className="font-black text-sm text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
+                                            <h4 className="font-black text-sm text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">
                                             {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (TEKNİK SERVİS)` : `${item.saleNumber} (ÜRÜN SATIŞI)`}
                                             </h4>
                                             <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1 italic">
-                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-cyan-500">#{item.ticketNumber || item.saleNumber}</span>
+                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-amber-500">#{item.ticketNumber || item.saleNumber}</span>
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-12">
                                         <div className="text-right">
                                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1.5">DURUM SINIFI</p>
-                                            <Badge variant="outline" className={`text-[9px] font-black border-none px-4 py-1.5 rounded-xl shadow-lg ${item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-cyan-500/10 text-cyan-500 shadow-cyan-500/5'}`}>
+                                            <Badge variant="outline" className={`text-[9px] font-black border-none px-4 py-1.5 rounded-xl shadow-lg ${item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-amber-500/10 text-amber-500 shadow-amber-500/5'}`}>
                                             {item.status ? statusLabels[item.status] : "TAMAMLANDI"}
                                             </Badge>
                                         </div>
                                         <div className="text-right min-w-[120px]">
                                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1.5">NET TUTAR</p>
-                                            <span className="text-xl font-black text-white shadow-cyan-sm">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
+                                            <span className="text-xl font-black text-white shadow-amber-sm">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -264,7 +264,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                         <CardHeader className="pb-4 border-b border-white/[0.03] bg-white/[0.01]">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500 shadow-cyan-sm">
+                                                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-amber-sm">
                                                         <ShieldCheck className="h-5 w-5" />
                                                     </div>
                                                     <div>
@@ -287,10 +287,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             <Progress value={percent} className={`h-2 bg-white/[0.03] shadow-inner ${isExpired ? '[&>div]:bg-rose-500' : '[&>div]:bg-emerald-500'}`} />
                                             <div className="flex items-center justify-between mt-5">
                                                 <div className="flex items-center gap-2 text-[9px] font-black text-gray-600 uppercase tracking-widest">
-                                                    <Calendar className="h-3.5 w-3.5 text-cyan-500" />
+                                                    <Calendar className="h-3.5 w-3.5 text-amber-500" />
                                                     <span>BİTİŞ: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
                                                 </div>
-                                                <Button variant="ghost" className="text-[8px] font-black uppercase text-cyan-500 hover:bg-cyan-500/5 px-0 h-auto">
+                                                <Button variant="ghost" className="text-[8px] font-black uppercase text-amber-500 hover:bg-amber-500/5 px-0 h-auto">
                                                     DETAYI GÖR <ArrowUpRight className="h-2 w-2 ml-1" />
                                                 </Button>
                                             </div>
@@ -305,12 +305,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         <Card className="bg-[#141416] border-white/5 shadow-2xl obsidian">
                             <CardHeader className="border-b border-white/[0.03] bg-white/[0.01]">
                                 <div className="flex items-center gap-3">
-                                    <FileText className="h-4 w-4 text-cyan-500" />
+                                    <FileText className="h-4 w-4 text-amber-500" />
                                     <CardTitle className="text-xs font-black uppercase tracking-widest text-white">Stratejik Müşteri Notları</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-10">
-                                <div className="bg-[#0a0a0b] p-8 rounded-[2rem] border border-white/5 min-h-[250px] text-gray-400 text-xs font-medium leading-relaxed whisper-border italic group hover:border-cyan-500/20 transition-all">
+                                <div className="bg-[#0a0a0b] p-8 rounded-[2rem] border border-white/5 min-h-[250px] text-gray-400 text-xs font-medium leading-relaxed whisper-border italic group hover:border-amber-500/20 transition-all">
                                     {customer.notes || "Bu profil için henüz stratejik bir not girişi yapılmamıştır."}
                                 </div>
                             </CardContent>

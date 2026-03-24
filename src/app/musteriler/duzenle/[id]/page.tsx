@@ -148,7 +148,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
   }
 
   if (fetching) {
-     return <div className="p-20 text-center"><Loader2 className="h-10 w-10 animate-spin mx-auto text-cyan-500" /></div>;
+     return <div className="p-20 text-center"><Loader2 className="h-10 w-10 animate-spin mx-auto text-amber-500" /></div>;
   }
 
   return (
@@ -168,7 +168,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                 <ArrowLeft className="h-6 w-6" />
               </Button>
               <div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase">Profil <span className="text-cyan-500">Düzenleme</span></h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase">Profil <span className="text-amber-500">Düzenleme</span></h1>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-1 italic">CRM • Müşteri Kimlik Yönetimi</p>
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 h-14 rounded-2xl font-black uppercase tracking-widest shadow-cyan-strong transition-all flex gap-3"
+                className="bg-amber-500 hover:bg-amber-400 text-black px-10 h-14 rounded-2xl font-black uppercase tracking-widest shadow-amber-strong transition-all flex gap-3"
               >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 stroke-[3px]" />}
                 DEĞİŞİKLİKLERİ KAYDET
@@ -188,8 +188,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
             <div className="lg:col-span-2 space-y-8">
               <Tabs defaultValue="genel" className="w-full">
                 <TabsList className="bg-transparent border-b border-white/5 w-full justify-start rounded-none h-auto p-0 gap-10 mb-8">
-                  <TabsTrigger value="genel" className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-500 data-[state=active]:bg-transparent data-[state=active]:text-cyan-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">TEMEL VERİLER</TabsTrigger>
-                  <TabsTrigger value="ek" className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-500 data-[state=active]:bg-transparent data-[state=active]:text-cyan-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">EK İLETİŞİM</TabsTrigger>
+                  <TabsTrigger value="genel" className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">TEMEL VERİLER</TabsTrigger>
+                  <TabsTrigger value="ek" className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:text-amber-400 px-0 py-4 font-black uppercase text-[10px] tracking-[0.2em] transition-all">EK İLETİŞİM</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="genel" className="mt-0 outline-none">
@@ -204,8 +204,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                               <FormLabel className="text-gray-600 font-black text-[10px] uppercase tracking-widest">MÜŞTERİ ADI SOYADI</FormLabel>
                               <FormControl>
                                 <div className="relative group">
-                                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-cyan-500 transition-colors" />
-                                  <Input placeholder="Ahmet Yılmaz" {...field} className="bg-[#0a0a0b] border-white/5 h-14 pl-12 rounded-xl font-bold focus:ring-1 focus:ring-cyan-500/20" />
+                                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-amber-500 transition-colors" />
+                                  <Input placeholder="Ahmet Yılmaz" {...field} className="bg-[#0a0a0b] border-white/5 h-14 pl-12 rounded-xl font-bold focus:ring-1 focus:ring-amber-500/20" />
                                 </div>
                               </FormControl>
                               <FormMessage className="text-[10px] font-black uppercase tracking-widest text-rose-500" />
@@ -225,7 +225,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                   variant="ghost"
                                   className={cn(
                                     "flex-1 gap-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg",
-                                    field.value === "BIREYSEL" ? "bg-cyan-500 text-black shadow-cyan-sm" : "text-gray-500 hover:text-white"
+                                    field.value === "BIREYSEL" ? "bg-amber-500 text-black shadow-amber-sm" : "text-gray-500 hover:text-white"
                                   )}
                                   onClick={() => field.onChange("BIREYSEL")}
                                 >
@@ -237,7 +237,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                   variant="ghost"
                                   className={cn(
                                     "flex-1 gap-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg",
-                                    field.value === "KURUMSAL" ? "bg-cyan-500 text-black shadow-cyan-sm" : "text-gray-500 hover:text-white"
+                                    field.value === "KURUMSAL" ? "bg-amber-500 text-black shadow-amber-sm" : "text-gray-500 hover:text-white"
                                   )}
                                   onClick={() => field.onChange("KURUMSAL")}
                                 >
@@ -258,14 +258,14 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                               <FormLabel className="text-gray-600 font-black text-[10px] uppercase tracking-widest">BİRİNCİL İLETİŞİM</FormLabel>
                               <FormControl>
                                 <div className="relative group">
-                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-cyan-500 transition-colors z-10" />
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-amber-500 transition-colors z-10" />
                                   <IMaskInput
                                     mask="+90 (000) 000 00 00"
                                     definitions={{ '0': /[0-9]/ }}
                                     value={field.value}
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
-                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm font-bold ring-offset-background placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-cyan-500/20 pl-12 transition-all"
+                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm font-bold ring-offset-background placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-amber-500/20 pl-12 transition-all"
                                   />
                                 </div>
                               </FormControl>
@@ -282,8 +282,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                               <FormLabel className="text-gray-600 font-black text-[10px] uppercase tracking-widest">E-POSTA ADRESİ</FormLabel>
                               <FormControl>
                                 <div className="relative group">
-                                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-cyan-500 transition-colors" />
-                                  <Input placeholder="example@domain.com" {...field} className="bg-[#0a0a0b] border-white/5 h-14 pl-12 rounded-xl font-bold focus:ring-1 focus:ring-cyan-500/20" />
+                                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-amber-500 transition-colors" />
+                                  <Input placeholder="example@domain.com" {...field} className="bg-[#0a0a0b] border-white/5 h-14 pl-12 rounded-xl font-bold focus:ring-1 focus:ring-amber-500/20" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -300,10 +300,10 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                             <FormLabel className="text-gray-600 font-black text-[10px] uppercase tracking-widest">LOKASYON BİLGİSİ</FormLabel>
                             <FormControl>
                               <div className="relative group">
-                                <MapPin className="absolute left-4 top-6 h-5 w-5 text-gray-700 group-focus-within:text-cyan-500 transition-colors" />
+                                <MapPin className="absolute left-4 top-6 h-5 w-5 text-gray-700 group-focus-within:text-amber-500 transition-colors" />
                                 <Textarea
                                   placeholder="Sokak, Mahalle ve Şehir bilgileri..."
-                                  className="bg-[#0a0a0b] border-white/5 pl-12 min-h-[140px] rounded-[1.5rem] font-bold focus:ring-1 focus:ring-cyan-500/20 py-5"
+                                  className="bg-[#0a0a0b] border-white/5 pl-12 min-h-[140px] rounded-[1.5rem] font-bold focus:ring-1 focus:ring-amber-500/20 py-5"
                                   {...field}
                                 />
                               </div>
@@ -327,14 +327,14 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                             <FormLabel className="text-gray-600 font-black text-[10px] uppercase tracking-widest">YEDEK TELEFON</FormLabel>
                             <FormControl>
                                 <div className="relative group">
-                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-cyan-500 transition-colors z-10" />
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-amber-500 transition-colors z-10" />
                                   <IMaskInput
                                     mask="+90 (000) 000 00 00"
                                     definitions={{ '0': /[0-9]/ }}
                                     value={field.value}
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
-                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-cyan-500/20 pl-12 transition-all"
+                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-amber-500/20 pl-12 transition-all"
                                   />
                                 </div>
                             </FormControl>
@@ -375,18 +375,18 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                     onChange={handlePhotoChange}
                   />
                   <div
-                    className="h-40 w-40 rounded-[2.5rem] whisper-border border-white/10 flex items-center justify-center relative mb-6 group cursor-pointer hover:border-cyan-500/50 transition-all overflow-hidden shadow-2xl"
+                    className="h-40 w-40 rounded-[2.5rem] whisper-border border-white/10 flex items-center justify-center relative mb-6 group cursor-pointer hover:border-amber-500/50 transition-all overflow-hidden shadow-2xl"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {photoPreview ? (
                       <img src={photoPreview} alt="Preview" className="h-full w-full object-cover transition-transform group-hover:scale-110" />
                     ) : (
                       <div className="flex flex-col items-center gap-3">
-                        <Camera className="h-10 w-10 text-gray-700 group-hover:text-cyan-500 transition-colors" />
+                        <Camera className="h-10 w-10 text-gray-700 group-hover:text-amber-500 transition-colors" />
                         <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest">YÜKLEME YAP</span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <p className="text-[10px] text-gray-600 text-center font-bold uppercase tracking-widest italic px-4 leading-relaxed">GÖRSEL TANIMA SİSTEMİ İÇİN PNG/JPG FORMATI ÖNERİLİR (MAX 2MB).</p>
                 </CardContent>
@@ -403,9 +403,9 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                         <div className="flex items-center gap-5">
                           <div className={cn(
                              "p-3 rounded-2xl transition-all shadow-xl",
-                             field.value ? "bg-cyan-500/10 text-cyan-500 border border-cyan-500/20" : "bg-gray-500/10 text-gray-500 border border-gray-500/10"
+                             field.value ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-gray-500/10 text-gray-500 border border-gray-500/10"
                           )}>
-                            <Star className={cn("h-6 w-6", field.value && "fill-cyan-500 animate-pulse")} />
+                            <Star className={cn("h-6 w-6", field.value && "fill-amber-500 animate-pulse")} />
                           </div>
                           <div>
                             <FormLabel className="text-xs font-black uppercase tracking-widest text-white">VIP ÜYELİK STATÜSÜ</FormLabel>
@@ -416,7 +416,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-cyan-500 h-7 w-12"
+                            className="data-[state=checked]:bg-amber-500 h-7 w-12"
                           />
                         </FormControl>
                       </FormItem>
@@ -429,7 +429,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               <Card className="bg-[#141416] border-white/5 shadow-2xl obsidian flex-1">
                 <CardHeader className="pb-4 px-8 border-b border-white/[0.03] bg-white/[0.01]">
                    <div className="flex items-center gap-3">
-                      <StickyNote className="h-4 w-4 text-cyan-500 shadow-cyan-sm" />
+                      <StickyNote className="h-4 w-4 text-amber-500 shadow-amber-sm" />
                       <CardTitle className="text-gray-600 font-black text-[10px] uppercase tracking-[0.2em]">STRATEJİK NOTLAR</CardTitle>
                    </div>
                 </CardHeader>
@@ -442,7 +442,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                         <FormControl>
                           <Textarea
                             placeholder="Teknik geçmiş, özel protokoller veya hatırlatmalar..."
-                            className="bg-[#0a0a0b] border-white/5 min-h-[160px] rounded-2xl text-xs font-bold leading-relaxed focus:ring-1 focus:ring-cyan-500/20 p-6 italic"
+                            className="bg-[#0a0a0b] border-white/5 min-h-[160px] rounded-2xl text-xs font-bold leading-relaxed focus:ring-1 focus:ring-amber-500/20 p-6 italic"
                             {...field}
                           />
                         </FormControl>

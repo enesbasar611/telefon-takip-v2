@@ -86,7 +86,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 h-10 px-6 bg-cyan-500 text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 shadow-cyan-strong transition-all">
+        <Button className="gap-2 h-10 px-6 bg-amber-500 text-black font-black uppercase tracking-widest rounded-xl hover:bg-amber-400 shadow-amber-strong transition-all">
           <PlusCircle className="h-4 w-4" />
           <span>YENİ ÜRÜN EKLE</span>
         </Button>
@@ -96,8 +96,8 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
           <div className="p-8 space-y-8">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
-                 <div className="h-10 w-10 rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                    <Package className="h-5 w-5 text-cyan-500" />
+                 <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                    <Package className="h-5 w-5 text-amber-500" />
                  </div>
                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Envanter Tanımlama</DialogTitle>
               </div>
@@ -174,7 +174,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 rounded-xl text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">
                 İptal Et
             </Button>
-            <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-cyan-500 text-black font-black uppercase tracking-widest px-8 hover:bg-cyan-400 shadow-cyan-strong transition-all">
+            <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-amber-500 text-black font-black uppercase tracking-widest px-8 hover:bg-amber-400 shadow-amber-strong transition-all">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
               KAYDI TAMAMLA
             </Button>

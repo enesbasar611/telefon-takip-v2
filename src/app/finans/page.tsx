@@ -20,7 +20,7 @@ export default async function FinancePage() {
   const stats = [
     { label: "TOPLAM GELİR", value: summary.totalIncome, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
     { label: "TOPLAM GİDER", value: summary.totalExpense, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" },
-    { label: "KASA (NAKİT)", value: summary.cashBalance, icon: Wallet, color: "text-cyan-500", bg: "bg-cyan-500/10", border: "border-cyan-500/20" },
+    { label: "KASA (NAKİT)", value: summary.cashBalance, icon: Wallet, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
     { label: "BANKA / POS", value: summary.bankBalance, icon: Landmark, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" }
   ];
 
@@ -29,8 +29,8 @@ export default async function FinancePage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500/80">Finans Merkezi</span>
+            <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80">Finans Merkezi</span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Kasa & Muhasebe</h1>
           <p className="text-sm text-gray-500 font-medium max-w-md mt-1">İşletmenizin finansal sağlığını ve nakit akışını gerçek zamanlı izleyin.</p>
@@ -41,7 +41,7 @@ export default async function FinancePage() {
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {stats.map((stat, i) => (
           <Card key={i} className="bg-white/[0.02] border-white/5 whisper-border shadow-2xl group overflow-hidden relative">
-            <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-cyan-500 group-hover:opacity-10 transition-opacity" />
+            <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-amber-500 group-hover:opacity-10 transition-opacity" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} transition-transform group-hover:scale-110 duration-500`}>
@@ -61,8 +61,8 @@ export default async function FinancePage() {
       <Card className="bg-white/[0.02] border-white/5 whisper-border shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.01]">
           <div className="flex items-center gap-3">
-             <div className="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-cyan-sm">
-                <History className="h-4 w-4 text-cyan-500" />
+             <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-amber-sm">
+                <History className="h-4 w-4 text-amber-500" />
              </div>
              <div>
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Finansal Hareketler</CardTitle>
@@ -112,7 +112,7 @@ export default async function FinancePage() {
                       <span className="text-xs font-black text-gray-400 uppercase tracking-tight group-hover:text-white transition-colors">{t.description}</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-white/[0.03] border-white/5 text-[9px] font-black text-gray-400 py-0.5 px-3 rounded-xl uppercase tracking-widest group-hover:text-cyan-400 group-hover:border-cyan-500/20 transition-all">
+                      <Badge variant="outline" className="bg-white/[0.03] border-white/5 text-[9px] font-black text-gray-400 py-0.5 px-3 rounded-xl uppercase tracking-widest group-hover:text-amber-400 group-hover:border-amber-500/20 transition-all">
                         {t.paymentMethod === 'CASH' ? 'NAKİT' : t.paymentMethod === 'CARD' ? 'KART' : 'HAVALE'}
                       </Badge>
                     </TableCell>
@@ -141,7 +141,7 @@ export default async function FinancePage() {
         </CardContent>
         <div className="p-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
            <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">TOPLAM {transactions.length} İŞLEM LİSTELENİYOR</p>
-           <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-cyan-500 bg-cyan-500/5 border border-cyan-500/20 rounded-lg px-6 hover:bg-cyan-500/10 shadow-cyan-sm">TÜM ARŞİVİ GÖR</Button>
+           <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-amber-500 bg-amber-500/5 border border-amber-500/20 rounded-lg px-6 hover:bg-amber-500/10 shadow-amber-sm">TÜM ARŞİVİ GÖR</Button>
         </div>
       </Card>
     </div>

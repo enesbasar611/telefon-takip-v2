@@ -27,13 +27,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const menuItems = [
   {
     icon: LayoutDashboard,
-    label: "Panel",
-    href: "/",
-    subItems: [
-      { label: "Canlı Kontrol", href: "/" },
-      { label: "Günlük Özet", href: "/dashboard/ozet" },
-      { label: "Kritik Uyarılar", href: "/dashboard/uyarilar" },
-    ]
+    label: "Komuta Merkezi",
+    href: "/dashboard",
   },
   {
     icon: Wrench,
@@ -94,7 +89,7 @@ export function Sidebar() {
 
   useEffect(() => {
     const activeMenu = menuItems.find(item =>
-      item.subItems?.some(sub => sub.href === pathname) || (item.href !== "/" && pathname.startsWith(item.href))
+      item.subItems?.some(sub => sub.href === pathname) || (item.href !== "/dashboard" && pathname.startsWith(item.href))
     );
     if (activeMenu && !openMenus.includes(activeMenu.label)) {
       setOpenMenus(prev => [...prev, activeMenu.label]);
@@ -108,14 +103,14 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-[#0a0a0b] border-r border-white/5 shadow-2xl z-20 overflow-hidden">
+    <div className="flex h-screen w-64 flex-col bg-[#0e1116] border-r border-white/5 shadow-2xl z-20 overflow-hidden">
       <div className="flex h-20 items-center px-6 border-b border-white/5 bg-white/[0.01] flex-shrink-0">
         <Link href="/" className="flex flex-col group">
           <div className="flex items-center gap-2 font-black text-xl tracking-tighter text-white">
-            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-all shadow-cyan-sm">
-                <Zap className="h-5 w-5 text-cyan-500" />
+            <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500/20 transition-all shadow-amber-sm">
+                <Zap className="h-5 w-5 text-amber-500" />
             </div>
-            <span>BAŞAR <span className="text-cyan-500">TEKNİK</span></span>
+            <span>BAŞAR <span className="text-amber-500">TEKNİK</span></span>
           </div>
           <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mt-1 ml-10">
             Command Center V2.0
@@ -138,11 +133,11 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all group whisper-border border-transparent",
                       isActive && !isOpen
-                        ? "bg-cyan-500/5 text-cyan-400 border-cyan-500/20 shadow-cyan-sm"
+                        ? "bg-amber-500/5 text-amber-400 border-amber-500/20 shadow-amber-sm"
                         : "text-gray-500 hover:bg-white/[0.03] hover:text-white"
                     )}
                   >
-                    <item.icon className={cn("h-4 w-4", isActive && !isOpen ? "text-cyan-400" : "text-gray-600 group-hover:text-white")} />
+                    <item.icon className={cn("h-4 w-4", isActive && !isOpen ? "text-amber-400" : "text-gray-600 group-hover:text-white")} />
                     <span className="flex-1 text-left uppercase tracking-widest">{item.label}</span>
                     {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   </button>
@@ -152,7 +147,7 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all whisper-border",
                       isActive
-                        ? "bg-cyan-500 text-black shadow-cyan-strong border-cyan-400"
+                        ? "bg-amber-500 text-black shadow-amber-strong border-amber-400"
                         : "text-gray-500 hover:bg-white/[0.03] hover:text-white border-transparent"
                     )}
                   >
@@ -170,7 +165,7 @@ export function Sidebar() {
                         className={cn(
                           "px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tighter",
                           pathname === sub.href
-                            ? "text-cyan-400 bg-cyan-400/5"
+                            ? "text-amber-400 bg-amber-400/5"
                             : "text-gray-600 hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -187,14 +182,14 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-white/5 bg-white/[0.01]">
         <div className="flex items-center gap-3 rounded-2xl whisper-border border-white/5 bg-white/[0.02] p-3 shadow-xl">
-          <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center font-black text-sm text-cyan-500 border border-cyan-500/20">
+          <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center font-black text-sm text-amber-500 border border-amber-500/20">
             JD
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="text-xs font-black text-white truncate uppercase tracking-tighter">John Doe</span>
             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Baş Teknisyen</span>
           </div>
-          <div className="ml-auto h-2 w-2 rounded-full bg-cyan-500 animate-pulse shadow-cyan-sm" />
+          <div className="ml-auto h-2 w-2 rounded-full bg-amber-500 animate-pulse shadow-amber-sm" />
         </div>
       </div>
     </div>

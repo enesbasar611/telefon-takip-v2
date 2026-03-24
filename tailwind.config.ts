@@ -43,13 +43,6 @@ const config: Config = {
 			border: 'hsl(var(--border))',
 			input: 'hsl(var(--input))',
 			ring: 'hsl(var(--ring))',
-			chart: {
-				'1': 'hsl(var(--chart-1))',
-				'2': 'hsl(var(--chart-2))',
-				'3': 'hsl(var(--chart-3))',
-				'4': 'hsl(var(--chart-4))',
-				'5': 'hsl(var(--chart-5))'
-			}
 		},
 		borderRadius: {
 			lg: 'var(--radius)',
@@ -60,9 +53,9 @@ const config: Config = {
             '0.5': '0.5px',
         },
         boxShadow: {
-            'cyan-sm': '0 0 15px rgba(6, 182, 212, 0.15)',
-            'cyan-strong': '0 0 25px rgba(6, 182, 212, 0.3)',
-            'obsidian': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+            'amber-sm': '0 0 20px rgba(245, 158, 11, 0.15)',
+            'amber-strong': '0 0 35px rgba(245, 158, 11, 0.3)',
+            'obsidian': '0 12px 48px 0 rgba(0, 0, 0, 0.5)',
         }
 	}
   },

@@ -113,7 +113,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     });
 
     // Financial and Inventory Sync
-    if (status === ServiceStatus.DELIVERED) {
+    if (status === ServiceStatus.READY || status === ServiceStatus.DELIVERED) {
       const fullTicket = await prisma.serviceTicket.findUnique({
         where: { id: ticketId },
         include: { usedParts: true, customer: true, createdBy: true }

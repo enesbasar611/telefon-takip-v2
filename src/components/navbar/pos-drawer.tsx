@@ -1,0 +1,70 @@
+"use client";
+
+import { ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { POSInterface } from "@/components/pos/pos-interface";
+import { useEffect, useState } from "react";
+import { getProducts } from "@/lib/actions/product-actions";
+import { getCustomers } from "@/lib/actions/customer-actions";
+
+export function POSDrawer() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const [p, c] = await Promise.all([getProducts(), getCustomers()]);
+      setProducts(p);
+      setCustomers(c);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Sheet onOpenChange={(open) => open && fetchData()}>
+      <SheetTrigger asChild>
+        <Button
+            variant="ghost"
+            size="sm"
+            className="hidden md:flex gap-2 text-xs font-black text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 shadow-xl transition-all group"
+        >
+          <ShoppingCart className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
+          <span className="uppercase tracking-widest">HIZLI SATIŞ</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full sm:max-w-[800px] bg-[#0e1116] border-white/5 p-0 overflow-hidden">
+        <div className="p-8 h-full flex flex-col">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-white">Hızlı Satış Terminali</SheetTitle>
+            <SheetDescription className="text-gray-500 font-medium uppercase text-[10px] tracking-widest">
+              Anlık işlem yapın ve faturanızı kesin.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden">
+            {loading ? (
+                <div className="h-full flex items-center justify-center text-gray-600 font-black uppercase tracking-widest animate-pulse">
+                    Veriler Yükleniyor...
+                </div>
+            ) : (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
+                   <POSInterface products={products} customers={customers} />
+                </div>
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
