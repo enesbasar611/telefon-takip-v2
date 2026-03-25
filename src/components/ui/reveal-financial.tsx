@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUI } from "@/lib/context/ui-context";
 
 interface RevealFinancialProps {
   amount: string | number;
@@ -11,7 +11,7 @@ interface RevealFinancialProps {
 }
 
 export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFinancialProps) {
-  const [isVisible, setIsVisible] = useState(false);
+  const { isFinancialVisible } = useUI();
 
   const formattedAmount = typeof amount === "number"
     ? amount.toLocaleString('tr-TR')
@@ -20,16 +20,14 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
   return (
     <div
       className={cn("relative group cursor-pointer inline-flex items-center gap-2", className)}
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
     >
       <span className={cn(
         "transition-all duration-300 font-black tracking-tighter",
-        !isVisible && "blur-md select-none opacity-40"
+        !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
         {prefix}{formattedAmount}
       </span>
-      {!isVisible && (
+      {!isFinancialVisible && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
            <EyeOff className="h-4 w-4 text-gray-600/50" />
         </div>

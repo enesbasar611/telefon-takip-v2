@@ -123,7 +123,7 @@ export function POSInterface({ products, customers }: { products: any[]; custome
                   className="flex flex-col text-left bg-slate-900/40 border border-slate-800/50 rounded-[1.5rem] p-5 hover:border-blue-500/40 hover:bg-blue-600/[0.03] transition-all group disabled:opacity-30 relative overflow-hidden"
                 >
                   <div className="text-[9px] font-black text-slate-600 mb-2 uppercase tracking-widest">{product.category.name}</div>
-                  <div className="font-black text-xs text-slate-200 line-clamp-2 mb-4 group-hover:text-blue-400 transition-colors uppercase leading-tight tracking-tight">
+                  <div className="font-black text-xs text-slate-200 line-clamp-2 mb-4 group-hover:text-blue-400 transition-colors leading-tight tracking-tight">
                     {product.name}
                   </div>
                   <div className="mt-auto flex items-center justify-between">
@@ -142,107 +142,102 @@ export function POSInterface({ products, customers }: { products: any[]; custome
       {/* Cart and Checkout Area */}
       <div className="lg:col-span-5 flex flex-col gap-4 overflow-hidden">
         <div className="flex flex-col flex-1 overflow-hidden matte-card border-slate-800/50 rounded-[2rem]">
-          <div className="p-6 border-b border-slate-800/50 bg-slate-900/20 flex items-center justify-between">
+          <div className="p-8 border-b border-slate-800/50 bg-slate-900/20 flex items-center justify-between">
             <div className="flex items-center gap-3">
-                <ShoppingCart className="h-5 w-5 text-blue-500" />
-                <span className="text-sm font-black uppercase tracking-widest text-white">Sepet ({cart.length})</span>
+                <ShoppingCart className="h-6 w-6 text-blue-500" />
+                <span className="text-lg font-black uppercase tracking-tighter text-white">SEPET ({cart.length})</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-8 text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500/10">
+            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-8 text-[11px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500/10">
               TEMİZLE
             </Button>
           </div>
+
           <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
-            <Table>
-              <TableHeader className="bg-slate-900/40 sticky top-0 z-10">
-                <TableRow className="border-slate-800/50">
-                  <TableHead className="w-[50%] text-[10px] font-black uppercase tracking-widest text-slate-500 py-4 pl-6">Ürün</TableHead>
-                  <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-slate-500 py-4">Adet</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 py-4 pr-6">Tutar</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="bg-slate-950/40 flex px-8 py-3 border-b border-slate-800/50">
+                <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-slate-500">ÜRÜN</span>
+                <span className="w-24 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">ADET</span>
+                <span className="w-24 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">TUTAR</span>
+            </div>
+
+            <div className="divide-y divide-slate-800/30">
                 {cart.length === 0 ? (
-                  <TableRow className="border-none">
-                    <TableCell colSpan={3} className="h-40 text-center text-slate-600 font-bold uppercase text-[10px] tracking-widest italic">
-                      Sepet şu an boş...
-                    </TableCell>
-                  </TableRow>
+                  <div className="h-40 flex items-center justify-center text-slate-600 font-bold uppercase text-[10px] tracking-widest italic">
+                    Sepet şu an boş...
+                  </div>
                 ) : (
                   cart.map((item) => (
-                    <TableRow key={item.id} className="border-slate-800/50 group">
-                      <TableCell className="py-4 pl-6">
-                         <span className="text-[11px] font-black text-white uppercase block leading-tight">{item.name}</span>
-                         <span className="text-[9px] text-slate-600 font-bold block mt-1 uppercase">₺{item.sellPrice.toLocaleString('tr-TR')} / BİRİM</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-3">
+                    <div key={item.id} className="p-8 flex items-center hover:bg-blue-600/[0.02] transition-colors group">
+                      <div className="flex-1">
+                         <span className="text-[13px] font-black text-white block leading-tight mb-1">{item.name}</span>
+                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight italic">
+                            ₺{item.sellPrice.toLocaleString('tr-TR')} / BİRİM
+                         </span>
+                      </div>
+                      <div className="w-32 flex items-center justify-center gap-4">
                           <button
                             onClick={() => updateQuantity(item.id, -1)}
-                            className="h-6 w-6 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                            className="h-8 w-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-blue-500/50 transition-all"
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-4 w-4" />
                           </button>
-                          <span className="text-xs font-black text-blue-500">{item.quantity}</span>
+                          <span className="text-sm font-black text-blue-500 w-4 text-center">{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.id, 1)}
-                            className="h-6 w-6 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                            className="h-8 w-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-blue-500/50 transition-all"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-4 w-4" />
                           </button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                         <div className="flex items-center justify-end gap-3">
-                            <span className="text-xs font-black text-white italic">₺{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}</span>
-                            <button
-                              className="h-7 w-7 rounded-lg text-slate-700 hover:text-rose-500 transition-colors"
-                              onClick={() => removeFromCart(item.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="w-32 text-right flex items-center justify-end gap-4">
+                         <span className="text-lg font-black text-white italic tracking-tighter">₺{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}</span>
+                         <button
+                           className="h-8 w-8 rounded-lg text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                           onClick={() => removeFromCart(item.id)}
+                         >
+                           <Trash2 className="h-4 w-4" />
+                         </button>
+                      </div>
+                    </div>
                   ))
                 )}
-              </TableBody>
-            </Table>
+            </div>
           </div>
-          <div className="border-t border-slate-800/50 p-8 bg-slate-900/20 flex flex-col gap-6">
-            <div className="grid grid-cols-3 gap-3">
+
+          <div className="p-8 bg-slate-900/30 border-t border-slate-800/50 mt-auto">
+            <div className="grid grid-cols-3 gap-4 mb-8">
                 <Button
                   variant="ghost"
-                  className={`h-12 flex flex-col gap-1 rounded-2xl border transition-all ${paymentMethod === "CASH" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500"}`}
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "CASH" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
                   onClick={() => setPaymentMethod("CASH")}
                 >
-                  <Banknote className="h-4 w-4" />
-                  <span className="text-[9px] font-black uppercase">NAKİT</span>
+                  <Banknote className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">NAKİT</span>
                 </Button>
                 <Button
                   variant="ghost"
-                  className={`h-12 flex flex-col gap-1 rounded-2xl border transition-all ${paymentMethod === "CREDIT_CARD" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500"}`}
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "CREDIT_CARD" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
                   onClick={() => setPaymentMethod("CREDIT_CARD")}
                 >
-                  <CreditCard className="h-4 w-4" />
-                  <span className="text-[9px] font-black uppercase">KART</span>
+                  <CreditCard className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">KART</span>
                 </Button>
                 <Button
                   variant="ghost"
-                  className={`h-12 flex flex-col gap-1 rounded-2xl border transition-all ${paymentMethod === "BANK_TRANSFER" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500"}`}
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "BANK_TRANSFER" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
                   onClick={() => setPaymentMethod("BANK_TRANSFER")}
                 >
-                  <Landmark className="h-4 w-4" />
-                  <span className="text-[9px] font-black uppercase">HAVALE</span>
+                  <Landmark className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">HAVALE</span>
                 </Button>
             </div>
 
-            <div className="flex items-center justify-between">
-                <div>
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">ÖDENECEK TOPLAM</span>
-                    <span className="text-4xl font-black text-white italic tracking-tighter">₺{total.toLocaleString('tr-TR')}</span>
+            <div className="flex items-end justify-between">
+                <div className="flex flex-col">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">ÖDENECEK TOPLAM</span>
+                    <span className="text-6xl font-black text-white italic tracking-tighter leading-none">₺{total.toLocaleString('tr-TR')}</span>
                 </div>
                 <Button
-                    className="h-16 px-10 text-xs font-black uppercase tracking-[0.2em] gap-3 rounded-[1.5rem] bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-sm transition-all italic"
+                    className="h-20 px-12 text-sm font-black uppercase tracking-[0.2em] gap-4 rounded-[2rem] bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-sm transition-all italic"
                     disabled={cart.length === 0 || isProcessing}
                     onClick={handleCheckout}
                 >
@@ -251,7 +246,7 @@ export function POSInterface({ products, customers }: { products: any[]; custome
                     ) : (
                         <>
                         SATIŞI TAMAMLA
-                        <CheckCircle className="h-5 w-5" />
+                        <CheckCircle className="h-6 w-6" />
                         </>
                     )}
                 </Button>

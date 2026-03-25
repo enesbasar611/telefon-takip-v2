@@ -38,10 +38,10 @@ export function POSDrawer() {
         <Button
             variant="ghost"
             size="sm"
-            className="hidden md:flex gap-2 text-xs font-black text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-xl transition-all group"
+            className="hidden md:flex gap-2 text-xs font-bold text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-xl transition-all group"
         >
           <ShoppingCart className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-          <span className="uppercase tracking-widest">HIZLI SATIŞ</span>
+          <span>Hızlı Satış</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-[850px] bg-[#020617] border-slate-800 p-0 overflow-hidden">

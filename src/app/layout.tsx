@@ -7,6 +7,7 @@ import { Navbar } from "@/components/navbar";
 import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UIProvider } from "@/lib/context/ui-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,19 +30,21 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen bg-[#020617]">
-            <Sidebar className="hidden lg:flex" />
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <Navbar />
-              <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
-                <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
-                  {children}
-                </div>
-              </main>
+          <UIProvider>
+            <div className="flex min-h-screen bg-[#020617]">
+              <Sidebar className="hidden lg:flex" />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <Navbar />
+                <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
+                  <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
+                    {children}
+                  </div>
+                </main>
+              </div>
+              <BottomNav />
             </div>
-            <BottomNav />
-          </div>
-          <Toaster position="top-right" expand={false} richColors />
+            <Toaster position="top-right" expand={false} richColors />
+          </UIProvider>
         </ThemeProvider>
       </body>
     </html>
