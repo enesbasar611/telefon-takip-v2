@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { IMaskInput } from "react-imask";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -399,7 +400,7 @@ export default function NewServicePage() {
                                     <span className="text-[8px] font-bold text-slate-600 uppercase">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM", { locale: tr })}</span>
                                 </div>
                                 <div className="text-right">
-                                    <Badge variant="ghost" className="text-[8px] font-black uppercase p-0 text-blue-500">{t.status}</Badge>
+                                    <Badge variant="outline" className="border-none text-[8px] font-black uppercase p-0 text-blue-500">{t.status}</Badge>
                                 </div>
                             </div>
                         ))}
