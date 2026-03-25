@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: 222 15% 5%;
-    --foreground: 0 0% 98%;
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
 
-    --card: 222 15% 7%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 47% 4%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 222 15% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 4%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 38 92% 50%;
-    --primary-foreground: 222 15% 5%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 222 15% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 222 15% 12%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 222 15% 5%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 222 15% 15%;
-    --input: 222 15% 15%;
-    --ring: 38 92% 50%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 224 76% 48%;
 
-    --radius: 1.5rem;
+    --radius: 1rem;
   }
 }
 
@@ -41,30 +41,30 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#0e1116] text-foreground antialiased selection:bg-amber-500/30;
+    @apply bg-[#020617] text-foreground antialiased selection:bg-blue-500/30;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] shadow-2xl;
+    @apply bg-slate-900/50 backdrop-blur-lg border border-slate-800/50 shadow-2xl;
   }
 
-  .obsidian {
-    @apply bg-[#151921] border border-white/[0.03] shadow-2xl;
+  .matte-card {
+    @apply bg-[#0f172a] border border-slate-800/60 shadow-xl transition-all duration-300;
   }
 
   .whisper-border {
     border-width: 0.5px;
   }
 
-  .amber-glow {
-    @apply shadow-[0_0_20px_rgba(245,158,11,0.15)];
+  .blue-glow {
+    @apply shadow-[0_0_20px_rgba(59,130,246,0.15)];
   }
 
-  .amber-glow-strong {
-    @apply shadow-[0_0_35px_rgba(245,158,11,0.3)];
+  .blue-glow-strong {
+    @apply shadow-[0_0_35px_rgba(59,130,246,0.3)];
   }
 }
 
@@ -79,20 +79,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #232a35;
+  background: #1e293b;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e3745;
+  background: #334155;
 }
 
 /* Animations */
-@keyframes pulse-amber {
+@keyframes pulse-blue {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
-.animate-pulse-amber {
-  animation: pulse-amber 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-pulse-blue {
+  animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

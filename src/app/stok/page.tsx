@@ -29,8 +29,8 @@ export default async function StokPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80">Envanter Sistemi</span>
+            <div className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500/80">Envanter Sistemi</span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Stok Yönetimi</h1>
           <p className="text-sm text-gray-500 font-medium max-w-md mt-1">Yedek parça, aksesuar ve cihaz envanterini profesyonel düzeyde takip edin.</p>
@@ -42,7 +42,7 @@ export default async function StokPage() {
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {[
-          { label: "TOPLAM ÜRÜN", value: products.length, icon: Package, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "TOPLAM ÜRÜN", value: products.length, icon: Package, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "KRİTİK STOK", value: products.filter((p: any) => p.stock <= 2).length, icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
           { label: "KATEGORİ", value: categories.length, icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10" },
           { label: "BARKODLU", value: products.filter((p: any) => p.barcode).length, icon: BarcodeIcon, color: "text-emerald-500", bg: "bg-emerald-500/10" }
@@ -103,7 +103,7 @@ export default async function StokPage() {
                   <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
                     <TableCell className="py-4 pl-6">
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-white group-hover:text-amber-500 transition-colors uppercase tracking-tight">{product.name}</span>
+                        <span className="text-sm font-black text-white group-hover:text-blue-500 transition-colors uppercase tracking-tight">{product.name}</span>
                         <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">SKU: {product.sku || 'BELİRTİLMEDİ'}</span>
                       </div>
                     </TableCell>
@@ -152,7 +152,7 @@ export default async function StokPage() {
                          <form action={handleAddToShortage}>
                             <input type="hidden" name="productId" value={product.id} />
                             <input type="hidden" name="name" value={product.name} />
-                            <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-amber-500/5 text-amber-500 border border-amber-500/10 hover:bg-amber-500/20 hover:text-amber-400 transition-all shadow-amber-sm" title="Eksik Listesine Ekle">
+                            <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-blue-500/5 text-blue-500 border border-blue-500/10 hover:bg-blue-500/20 hover:text-blue-400 transition-all shadow-blue-sm" title="Eksik Listesine Ekle">
                                 <Plus className="h-4 w-4" />
                             </Button>
                          </form>

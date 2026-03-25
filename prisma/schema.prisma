@@ -154,7 +154,31 @@ model Product {
   saleItems       SaleItem[]
   usedInServices  ServiceUsedPart[]
   shortageItems   ShortageItem[]
-  secondHandInfo  SecondHandDevice?
+  deviceInfo      DeviceHubInfo?
+}
+
+model DeviceHubInfo {
+  id              String    @id @default(cuid())
+  productId       String    @unique
+  product         Product   @relation(fields: [productId], references: [id])
+
+  imei            String    @unique
+  serialNumber    String?
+  color           String?
+  capacity        String?
+  batteryHealth   Int?
+  cosmeticScore   Int       @default(10) // 1-10
+  condition       String    @default("NEW") // NEW, USED
+
+  expertChecklist Json?     // Diagnostic results
+
+  purchaseDate    DateTime?
+  purchasedFrom   String?
+  buyBackPrice    Decimal?  @db.Decimal(10, 2)
+  buyBackMonths   Int?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model ShortageItem {
@@ -169,25 +193,6 @@ model ShortageItem {
   updatedAt   DateTime @updatedAt
 }
 
-model SecondHandDevice {
-  id              String    @id @default(cuid())
-  productId       String    @unique
-  product         Product   @relation(fields: [productId], references: [id])
-
-  imei            String    @unique
-  color           String?
-  capacity        String?   // e.g., 128GB
-  batteryHealth   Int?
-
-  purchaseDate    DateTime?
-  purchasedFrom   String?   // Can be linked to Customer or Supplier if needed
-
-  testResults     Json?     // Checklist results
-  warrantyStatus  String?
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
 
 model InventoryMovement {
   id          String   @id @default(cuid())

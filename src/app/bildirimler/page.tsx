@@ -13,7 +13,7 @@ export default async function BildirimlerPage() {
   const getIcon = (type: string) => {
     switch (type) {
       case 'CRITICAL_STOCK': return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      case 'OVERDUE_SERVICE': return <Clock className="h-5 w-5 text-amber-500" />;
+      case 'OVERDUE_SERVICE': return <Clock className="h-5 w-5 text-blue-500" />;
       default: return <Bell className="h-5 w-5 text-blue-500" />;
     }
   };
@@ -35,7 +35,7 @@ export default async function BildirimlerPage() {
           </Card>
         ) : (
           notifications.map((n: any) => (
-            <Card key={n.id} className={`hover:shadow-md transition-shadow border-l-4 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-amber-500'}`}>
+            <Card key={n.id} className={`hover:shadow-md transition-shadow border-l-4 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
               <CardHeader className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

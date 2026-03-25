@@ -53,9 +53,9 @@ const config: Config = {
             '0.5': '0.5px',
         },
         boxShadow: {
-            'amber-sm': '0 0 20px rgba(245, 158, 11, 0.15)',
-            'amber-strong': '0 0 35px rgba(245, 158, 11, 0.3)',
-            'obsidian': '0 12px 48px 0 rgba(0, 0, 0, 0.5)',
+            'blue-sm': '0 0 20px rgba(59, 130, 246, 0.15)',
+            'blue-strong': '0 0 35px rgba(59, 130, 246, 0.3)',
+            'matte': '0 12px 48px 0 rgba(0, 0, 0, 0.5)',
         }
 	}
   },

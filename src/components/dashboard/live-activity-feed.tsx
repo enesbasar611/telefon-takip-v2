@@ -27,15 +27,15 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
     <Card className="bg-[#141416] border-white/5 shadow-2xl h-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-            <Activity className="h-4 w-4 text-amber-500" />
+          <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+            <Activity className="h-4 w-4 text-blue-500" />
           </div>
           <div>
             <CardTitle className="text-sm font-black uppercase tracking-widest">Canlı Akış</CardTitle>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Sistem Etkinlikleri</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] font-black border-amber-500/20 text-amber-500 bg-amber-500/5 px-2 animate-pulse">
+        <Badge variant="outline" className="text-[10px] font-black border-blue-500/20 text-blue-500 bg-blue-500/5 px-2 animate-pulse">
           LIVE
         </Badge>
       </CardHeader>

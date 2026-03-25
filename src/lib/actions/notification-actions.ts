@@ -11,7 +11,7 @@ export async function getSystemNotifications() {
       include: { category: true }
     });
 
-    const criticalStock = products.filter(p => p.stock <= 2);
+    const criticalStock = products.filter(p => p.stock <= p.criticalStock);
 
     criticalStock.forEach(p => {
       notifications.push({

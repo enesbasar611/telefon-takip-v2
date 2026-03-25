@@ -50,7 +50,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
         <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Kullanılan Parçalar</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 px-3">
+            <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 px-3">
               <Plus className="h-3 w-3 mr-1" /> PARÇA EKLE
             </Button>
           </DialogTrigger>
@@ -83,7 +83,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                   className="bg-white/[0.03] border-white/5 rounded-xl h-12"
                 />
               </div>
-              <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-amber-500 text-black font-black uppercase h-12 rounded-xl mt-4">
+              <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-blue-500 text-black font-black uppercase h-12 rounded-xl mt-4">
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "EKLEMAYI TAMAMLA"}
               </Button>
             </div>
@@ -103,7 +103,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                 <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
               </div>
             </div>
-            <span className="text-xs font-black text-amber-500">₺{(Number(part.unitPrice) * part.quantity).toLocaleString('tr-TR')}</span>
+            <span className="text-xs font-black text-blue-500">₺{(Number(part.unitPrice) * part.quantity).toLocaleString('tr-TR')}</span>
           </div>
         ))}
         {currentParts.length === 0 && (

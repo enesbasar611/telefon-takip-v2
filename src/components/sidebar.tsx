@@ -74,7 +74,7 @@ const menuItems = [
     ]
   },
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
-  { icon: Smartphone, label: "2. El Takas", href: "/ikinci-el" },
+  { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
   { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
   { icon: Banknote, label: "Finansal Akış", href: "/finans" },
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
@@ -103,14 +103,14 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-[#0e1116] border-r border-white/5 shadow-2xl z-20 overflow-hidden">
-      <div className="flex h-20 items-center px-6 border-b border-white/5 bg-white/[0.01] flex-shrink-0">
+    <div className="flex h-screen w-64 flex-col bg-[#020617] border-r border-slate-800/50 shadow-2xl z-20 overflow-hidden">
+      <div className="flex h-20 items-center px-6 border-b border-slate-800/50 bg-white/[0.01] flex-shrink-0">
         <Link href="/" className="flex flex-col group">
           <div className="flex items-center gap-2 font-black text-xl tracking-tighter text-white">
-            <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500/20 transition-all shadow-amber-sm">
-                <Zap className="h-5 w-5 text-amber-500" />
+            <div className="h-8 w-8 rounded-lg bg-blue-600/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all shadow-blue-sm">
+                <Zap className="h-5 w-5 text-blue-500" />
             </div>
-            <span>BAŞAR <span className="text-amber-500">TEKNİK</span></span>
+            <span className="tracking-widest">BAŞAR <span className="text-blue-500">TEKNİK</span></span>
           </div>
           <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mt-1 ml-10">
             Command Center V2.0
@@ -131,42 +131,42 @@ export function Sidebar() {
                   <button
                     onClick={() => toggleMenu(item.label)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all group whisper-border border-transparent",
+                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all group whisper-border border-transparent",
                       isActive && !isOpen
-                        ? "bg-amber-500/5 text-amber-400 border-amber-500/20 shadow-amber-sm"
-                        : "text-gray-500 hover:bg-white/[0.03] hover:text-white"
+                        ? "bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-blue-sm"
+                        : "text-slate-400 hover:bg-slate-800/40 hover:text-white"
                     )}
                   >
-                    <item.icon className={cn("h-4 w-4", isActive && !isOpen ? "text-amber-400" : "text-gray-600 group-hover:text-white")} />
-                    <span className="flex-1 text-left uppercase tracking-widest">{item.label}</span>
+                    <item.icon className={cn("h-4 w-4", isActive && !isOpen ? "text-blue-400" : "text-slate-500 group-hover:text-white")} />
+                    <span className="flex-1 text-left uppercase tracking-wider">{item.label}</span>
                     {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   </button>
                 ) : (
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all whisper-border",
+                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all whisper-border",
                       isActive
-                        ? "bg-amber-500 text-black shadow-amber-strong border-amber-400"
-                        : "text-gray-500 hover:bg-white/[0.03] hover:text-white border-transparent"
+                        ? "bg-blue-600 text-white shadow-blue-strong border-blue-500"
+                        : "text-slate-400 hover:bg-slate-800/40 hover:text-white border-transparent"
                     )}
                   >
-                    <item.icon className={cn("h-4 w-4", isActive ? "text-black" : "text-gray-600")} />
-                    <span className="flex-1 uppercase tracking-widest">{item.label}</span>
+                    <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-slate-500")} />
+                    <span className="flex-1 uppercase tracking-wider">{item.label}</span>
                   </Link>
                 )}
 
                 {hasSubItems && isOpen && (
-                  <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-white/5 pl-4">
+                  <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-slate-800 pl-4">
                     {item.subItems.map((sub) => (
                       <Link
                         key={sub.label}
                         href={sub.href}
                         className={cn(
-                          "px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-tighter",
+                          "px-4 py-2 text-[10px] font-medium rounded-lg transition-all uppercase tracking-tighter",
                           pathname === sub.href
-                            ? "text-amber-400 bg-amber-400/5"
-                            : "text-gray-600 hover:text-white hover:bg-white/5"
+                            ? "text-blue-400 bg-blue-600/5"
+                            : "text-slate-500 hover:text-white hover:bg-slate-800/40"
                         )}
                       >
                         {sub.label}
@@ -180,16 +180,16 @@ export function Sidebar() {
         </nav>
       </ScrollArea>
 
-      <div className="p-4 border-t border-white/5 bg-white/[0.01]">
-        <div className="flex items-center gap-3 rounded-2xl whisper-border border-white/5 bg-white/[0.02] p-3 shadow-xl">
-          <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center font-black text-sm text-amber-500 border border-amber-500/20">
+      <div className="p-4 border-t border-slate-800/50 bg-white/[0.01]">
+        <div className="flex items-center gap-3 rounded-2xl whisper-border border-slate-800/50 bg-slate-900/40 p-3 shadow-xl">
+          <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center font-black text-sm text-blue-500 border border-blue-500/20">
             JD
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="text-xs font-black text-white truncate uppercase tracking-tighter">John Doe</span>
             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Baş Teknisyen</span>
           </div>
-          <div className="ml-auto h-2 w-2 rounded-full bg-amber-500 animate-pulse shadow-amber-sm" />
+          <div className="ml-auto h-2 w-2 rounded-full bg-blue-500 animate-pulse shadow-blue-sm" />
         </div>
       </div>
     </div>

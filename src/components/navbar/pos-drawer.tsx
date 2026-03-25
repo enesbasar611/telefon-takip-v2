@@ -38,18 +38,23 @@ export function POSDrawer() {
         <Button
             variant="ghost"
             size="sm"
-            className="hidden md:flex gap-2 text-xs font-black text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20 shadow-xl transition-all group"
+            className="hidden md:flex gap-2 text-xs font-black text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-xl transition-all group"
         >
-          <ShoppingCart className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
+          <ShoppingCart className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           <span className="uppercase tracking-widest">HIZLI SATIŞ</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-[800px] bg-[#0e1116] border-white/5 p-0 overflow-hidden">
-        <div className="p-8 h-full flex flex-col">
-          <SheetHeader className="mb-6">
-            <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-white">Hızlı Satış Terminali</SheetTitle>
-            <SheetDescription className="text-gray-500 font-medium uppercase text-[10px] tracking-widest">
-              Anlık işlem yapın ve faturanızı kesin.
+      <SheetContent side="right" className="w-full sm:max-w-[850px] bg-[#020617] border-slate-800 p-0 overflow-hidden">
+        <div className="p-10 h-full flex flex-col">
+          <SheetHeader className="mb-10">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
+                    <ShoppingCart className="h-6 w-6 text-blue-500" />
+                </div>
+                <SheetTitle className="text-3xl font-black uppercase tracking-tighter text-white italic">HIZLI <span className="text-blue-500">SATIŞ</span></SheetTitle>
+            </div>
+            <SheetDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+              Orgelux POS Terminali v2.0 — Anlık Stok ve Finans Entegrasyonu
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-hidden">

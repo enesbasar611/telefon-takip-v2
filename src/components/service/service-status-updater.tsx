@@ -22,7 +22,7 @@ const statusMap: Record<ServiceStatus, { label: string; color: string }> = {
   REPAIRING: { label: "TAMİRDE", color: "bg-orange-500" },
   WAITING_PART: { label: "PARÇA BEKLİYOR", color: "bg-purple-500" },
   READY: { label: "HAZIR", color: "bg-emerald-500" },
-  DELIVERED: { label: "TESLİM EDİLDİ", color: "bg-amber-500" },
+  DELIVERED: { label: "TESLİM EDİLDİ", color: "bg-blue-500" },
   CANCELLED: { label: "İPTAL EDİLDİ", color: "bg-rose-500" },
 };
 
@@ -45,7 +45,7 @@ export function ServiceStatusUpdater({ ticketId, currentStatus }: { ticketId: st
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-amber-500 text-black font-black uppercase tracking-widest hover:bg-amber-400 shadow-amber-strong transition-all flex items-center justify-center gap-2">
+        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-blue-500 text-black font-black uppercase tracking-widest hover:bg-blue-400 shadow-blue-strong transition-all flex items-center justify-center gap-2">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "DURUMU GÜNCELLE"}
           {!isPending && <ChevronDown className="h-4 w-4" />}
         </Button>

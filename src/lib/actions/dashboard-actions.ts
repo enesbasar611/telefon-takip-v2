@@ -60,7 +60,7 @@ export async function getDashboardStats() {
       prisma.transaction.findMany()
     ]);
 
-    const lowStockCount = products.filter(p => p.stock <= 2).length;
+    const lowStockCount = products.filter(p => p.stock <= p.criticalStock).length;
 
     // Financial calculations for CASH BALANCE (Total Income - Total Expense)
     const financialSummary = allTransactions.reduce((acc, t) => {

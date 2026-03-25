@@ -31,6 +31,11 @@ import { useToast } from "@/hooks/use-toast";
 
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { findCustomerByPhone } from "@/lib/actions/customer-lookup-actions";
+import { searchDeviceModels } from "@/lib/actions/model-lookup-actions";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -62,13 +67,19 @@ type ServiceFormValues = z.infer<typeof serviceSchema>;
 export default function NewServicePage() {
   const [isPending, startTransition] = useTransition();
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [foundCustomer, setFoundCustomer] = useState<any>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   const { toast } = useToast();
   const router = useRouter();
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
-      customerPhone: "5",
+      customerPhone: "",
       estimatedCost: "0",
       downPayment: "0",
       cosmeticConditions: [],
@@ -83,6 +94,44 @@ export default function NewServicePage() {
     }
     loadStaff();
   }, []);
+
+  const watchModel = form.watch("deviceModel");
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (watchModel && watchModel.length >= 2) {
+        const models = await searchDeviceModels(watchModel);
+        setModelSuggestions(models);
+        setShowSuggestions(models.length > 0);
+      } else {
+        setModelSuggestions([]);
+        setShowSuggestions(false);
+      }
+    };
+    fetchModels();
+  }, [watchModel]);
+
+  const watchPhone = form.watch("customerPhone");
+  useEffect(() => {
+    const lookup = async () => {
+      const purePhone = watchPhone.replace(/\D/g, "");
+      if (purePhone.length === 10) { // 5xx xxx xx xx
+        setIsLookingUp(true);
+        const customer = await findCustomerByPhone(purePhone);
+        if (customer) {
+          setFoundCustomer(customer);
+          form.setValue("customerName", customer.name);
+          toast({
+            title: "Müşteri Tanındı",
+            description: `${customer.name} sistemde kayıtlı. Geçmiş veriler yüklendi.`,
+          });
+        } else {
+          setFoundCustomer(null);
+        }
+        setIsLookingUp(false);
+      }
+    };
+    lookup();
+  }, [watchPhone, form]);
 
   const onSubmit = async (values: ServiceFormValues) => {
     startTransition(async () => {
@@ -166,12 +215,12 @@ export default function NewServicePage() {
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Telefon Numarası</Label>
                   <IMaskInput
-                    mask="+90 (000) 000 00 00"
+                    mask="+90 (500) 000 00 00"
                     definitions={{
                       '0': /[0-9]/
                     }}
                     value={form.watch("customerPhone")}
-                    unmask={false}
+                    unmask={true}
                     onAccept={(value) => form.setValue("customerPhone", value)}
                     placeholder="+90 (5__) ___ __ __"
                     className="flex h-10 w-full rounded-md border-none bg-muted/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
@@ -205,13 +254,31 @@ export default function NewServicePage() {
                     className="bg-muted/50 border-none focus-visible:ring-1"
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative">
                   <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Model</Label>
                   <Input
                     {...form.register("deviceModel")}
                     placeholder="Örn: iPhone 15 Pro"
                     className="bg-muted/50 border-none focus-visible:ring-1"
+                    onFocus={() => modelSuggestions.length > 0 && setShowSuggestions(true)}
                   />
+                  {showSuggestions && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        {modelSuggestions.map((model) => (
+                            <button
+                                key={model}
+                                type="button"
+                                onClick={() => {
+                                    form.setValue("deviceModel", model);
+                                    setShowSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-3 text-[10px] font-black uppercase text-slate-400 hover:bg-blue-600/10 hover:text-blue-500 transition-all border-b border-slate-800/50 last:border-none"
+                            >
+                                {model}
+                            </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">IMEI Numarası</Label>
@@ -301,6 +368,53 @@ export default function NewServicePage() {
 
           {/* Right Column */}
           <div className="col-span-12 lg:col-span-4 space-y-8">
+
+            {/* Customer Intelligence Panel */}
+            {foundCustomer && (
+              <section className="bg-blue-600/5 p-8 rounded-[2rem] border border-blue-500/20 animate-in slide-in-from-right-4 duration-500">
+                <div className="flex items-center gap-3 mb-6">
+                   <div className="h-2 w-2 rounded-full bg-blue-500 shadow-blue-sm" />
+                   <h3 className="text-xs font-black text-white uppercase tracking-widest italic">Personel İstihbarat Paneli</h3>
+                </div>
+
+                <div className="space-y-6">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Müşteri Sadakati</p>
+                        <div className="flex items-center gap-2">
+                            <Badge className="bg-blue-600 text-white border-none text-[10px] font-black uppercase tracking-widest px-3 py-1">
+                                {foundCustomer.isVip ? "VIP MÜŞTERİ" : "DÜZENLİ MÜŞTERİ"}
+                            </Badge>
+                            <span className="text-[10px] font-bold text-slate-400">Son İşlem: {format(new Date(foundCustomer.updatedAt), "dd MMM yyyy", { locale: tr })}</span>
+                        </div>
+                    </div>
+
+                    <Separator className="bg-blue-500/10" />
+
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Son Servis Geçmişi</p>
+                        {foundCustomer.tickets.map((t: any) => (
+                            <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-800/50">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-white uppercase">{t.deviceBrand} {t.deviceModel}</span>
+                                    <span className="text-[8px] font-bold text-slate-600 uppercase">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM", { locale: tr })}</span>
+                                </div>
+                                <div className="text-right">
+                                    <Badge variant="ghost" className="text-[8px] font-black uppercase p-0 text-blue-500">{t.status}</Badge>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <Button
+                        type="button"
+                        onClick={() => window.open(`/musteriler/${foundCustomer.id}`, '_blank')}
+                        className="w-full h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-500 font-black uppercase tracking-widest text-[10px] hover:bg-blue-500 hover:text-white transition-all"
+                    >
+                        TAM PROFİLİ GÖRÜNTÜLE
+                    </Button>
+                </div>
+              </section>
+            )}
 
             {/* Service Quote */}
             <section className="bg-card p-6 rounded-xl shadow-sm border border-border">

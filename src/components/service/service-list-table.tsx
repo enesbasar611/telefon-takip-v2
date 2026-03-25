@@ -110,55 +110,13 @@ export const columns: ColumnDef<any>[] = [
       return <div className="text-right font-black text-primary">₺{amount.toLocaleString('tr-TR')}</div>;
     },
   },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const ticket = row.original;
-      const [showDetails, setShowDetails] = useState(false);
-      const [showStatus, setShowStatus] = useState(false);
-
-      return (
-        <div className="flex justify-end gap-2">
-            <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50">
-                    <MessageCircle className="h-4 w-4" />
-                </Button>
-            </Link>
-            <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
-                    <Printer className="h-4 w-4" />
-                </Button>
-            </Link>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[180px]">
-                    <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground">İşlemler</DropdownMenuLabel>
-                    <DropdownMenuItem className="text-xs font-bold gap-2" onSelect={() => setShowDetails(true)}>
-                        <Search className="h-3 w-3" /> Detayları Gör
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs font-bold gap-2" onSelect={() => setShowStatus(true)}>
-                        <Wrench className="h-3 w-3" /> Durum Güncelle
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-xs font-bold gap-2 text-red-600 hover:bg-red-50">
-                        Kaydı Sil
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <ServiceDetailsModal ticket={ticket} isOpen={showDetails} onClose={() => setShowDetails(false)} />
-            <ServiceStatusModal ticket={ticket} isOpen={showStatus} onClose={() => setShowStatus(false)} />
-        </div>
-      );
-    },
-  },
 ];
 
 export function ServiceListTable({ data }: { data: any[] }) {
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -167,7 +125,55 @@ export function ServiceListTable({ data }: { data: any[] }) {
 
   const table = useReactTable({
     data,
-    columns,
+    columns: [
+        ...columns,
+        {
+            id: "actions",
+            cell: ({ row }) => {
+                const ticket = row.original;
+                return (
+                    <div className="flex justify-end gap-2">
+                        <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50">
+                                <MessageCircle className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                        <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
+                                <Printer className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[180px] bg-[#141416] border-white/5 text-white">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-500 p-3">İşlemler</DropdownMenuLabel>
+                                <DropdownMenuItem className="text-xs font-bold gap-3 p-3 cursor-pointer focus:bg-white/5" onSelect={() => {
+                                    setSelectedTicket(ticket);
+                                    setShowDetails(true);
+                                }}>
+                                    <Search className="h-4 w-4 text-blue-500" /> Detayları Gör
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs font-bold gap-3 p-3 cursor-pointer focus:bg-white/5" onSelect={() => {
+                                    setSelectedTicket(ticket);
+                                    setShowStatus(true);
+                                }}>
+                                    <Wrench className="h-4 w-4 text-blue-500" /> Durum Güncelle
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-white/5" />
+                                <DropdownMenuItem className="text-xs font-bold gap-3 p-3 cursor-pointer text-red-500 focus:bg-red-500/10 focus:text-red-500">
+                                    Kaydı Sil
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                );
+            },
+        },
+    ],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -183,7 +189,7 @@ export function ServiceListTable({ data }: { data: any[] }) {
       globalFilter,
     },
     globalFilterFn: (row, columnId, value) => {
-      const customerName = row.getValue("customer_name") as string;
+      const customerName = row.original.customer?.name as string;
       const ticketNumber = row.getValue("ticketNumber") as string;
       const imei = row.original.imei as string;
 
@@ -237,6 +243,28 @@ export function ServiceListTable({ data }: { data: any[] }) {
             </DropdownMenu>
         </div>
       </div>
+
+      {selectedTicket && (
+        <>
+            <ServiceDetailsModal
+                ticket={selectedTicket}
+                isOpen={showDetails}
+                onClose={() => {
+                    setShowDetails(false);
+                    setSelectedTicket(null);
+                }}
+            />
+            <ServiceStatusModal
+                ticket={selectedTicket}
+                isOpen={showStatus}
+                onClose={() => {
+                    setShowStatus(false);
+                    setSelectedTicket(null);
+                }}
+            />
+        </>
+      )}
+
       <div className="rounded-2xl border shadow-xl bg-card overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/30">

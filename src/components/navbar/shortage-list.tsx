@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListTodo, CheckCircle2, PackagePlus, Loader2, Printer } from "lucide-react";
+import { ClipboardList, CheckCircle2, PackagePlus, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -113,17 +113,19 @@ export function ShortageList() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-white/[0.02] border border-white/5 text-gray-500 hover:text-amber-500 hover:bg-amber-500/5 transition-all">
-          <ListTodo className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-slate-800/50 text-slate-500 hover:text-blue-500 transition-all">
+          <ClipboardList className="h-5 w-5" />
           {items.length > 0 && (
-            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-blue-600 text-[10px] font-black text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
+              {items.length}
+            </span>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 bg-[#141416] border-white/5 p-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black uppercase tracking-widest text-amber-500">Eksikler Listesi</h3>
-          <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold">
+          <h3 className="text-xs font-black uppercase tracking-widest text-blue-500">Eksikler Listesi</h3>
+          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold">
             {items.length} ÜRÜN
           </span>
         </div>
@@ -135,7 +137,7 @@ export function ShortageList() {
             onChange={(e) => setNewName(e.target.value)}
             className="h-8 bg-white/[0.03] border-white/5 text-[10px] rounded-lg"
           />
-          <Button type="submit" size="icon" disabled={adding} className="h-8 w-8 bg-amber-500 hover:bg-amber-600 text-black shrink-0 rounded-lg">
+          <Button type="submit" size="icon" disabled={adding} className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-black shrink-0 rounded-lg">
             {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackagePlus className="h-4 w-4" />}
           </Button>
         </form>
@@ -147,7 +149,7 @@ export function ShortageList() {
             <p className="text-[10px] text-center text-gray-600 py-4 italic">Şu an eksik ürün bulunmuyor.</p>
           ) : (
             items.map((item) => (
-              <div key={item.id} className="group flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-amber-500/20 transition-all">
+              <div key={item.id} className="group flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-blue-500/20 transition-all">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-gray-300 uppercase">{item.name}</span>
                   {item.product && <span className="text-[8px] text-gray-600 font-medium">SKU: {item.product.sku}</span>}
@@ -170,7 +172,7 @@ export function ShortageList() {
             <Separator className="my-4 bg-white/5" />
             <Button
                 onClick={handlePrint}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-black font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
             >
                 <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
             </Button>

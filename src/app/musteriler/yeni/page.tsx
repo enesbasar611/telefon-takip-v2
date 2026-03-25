@@ -365,8 +365,8 @@ export default function NewCustomerPage() {
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between space-y-0">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl ${field.value ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                            <Star className={`h-5 w-5 ${field.value ? 'fill-amber-500' : ''}`} />
+                          <div className={`p-2 rounded-xl ${field.value ? 'bg-blue-500/10 text-blue-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                            <Star className={`h-5 w-5 ${field.value ? 'fill-blue-500' : ''}`} />
                           </div>
                           <div>
                             <FormLabel className="text-sm font-bold block">VIP Müşteri</FormLabel>

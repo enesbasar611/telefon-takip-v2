@@ -29,13 +29,13 @@ export default async function VeresiyePage() {
             <div className="text-2xl font-bold text-red-600">₺{totalOpenDebt.toLocaleString('tr-TR')}</div>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-amber-500">
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Geciken Tahsilatlar</CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertCircle className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{overdueCount}</div>
+            <div className="text-2xl font-bold text-blue-600">{overdueCount}</div>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
@@ -98,7 +98,7 @@ export default async function VeresiyePage() {
                         <TableCell>₺{Number(debt.amount).toLocaleString('tr-TR')}</TableCell>
                         <TableCell className="font-bold text-red-600">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
                         <TableCell className="text-right">
-                          <Badge className="bg-amber-100 text-amber-800 border-none font-bold text-[10px] uppercase tracking-widest">BEKLEMEDE</Badge>
+                          <Badge className="bg-blue-100 text-blue-800 border-none font-bold text-[10px] uppercase tracking-widest">BEKLEMEDE</Badge>
                         </TableCell>
                       </TableRow>
                     ))

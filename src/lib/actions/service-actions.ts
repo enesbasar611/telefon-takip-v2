@@ -249,3 +249,24 @@ export async function getServiceTicketById(id: string) {
     return null;
   }
 }
+
+export async function queryServiceStatus(ticketNumber: string, phone: string) {
+  try {
+    const ticket = await prisma.serviceTicket.findFirst({
+      where: {
+        ticketNumber: ticketNumber.toUpperCase(),
+        customer: {
+          phone: phone.replace(/\s+/g, '')
+        }
+      },
+      include: {
+        customer: true,
+        logs: { orderBy: { createdAt: "desc" } },
+      }
+    });
+    return serializePrisma(ticket);
+  } catch (error) {
+    console.error("Query service status error:", error);
+    return null;
+  }
+}

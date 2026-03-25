@@ -50,7 +50,7 @@ export async function createProduct(data: {
         barcode: data.barcode,
         sku: data.sku,
         isSecondHand: data.isSecondHand || false,
-        secondHandInfo: data.isSecondHand ? {
+        deviceInfo: data.isSecondHand ? {
             create: {
                 imei: data.imei || `GEN-${Date.now()}`,
                 color: data.color,

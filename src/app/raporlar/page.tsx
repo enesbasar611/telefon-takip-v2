@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 const statusColors: Record<string, string> = {
   PENDING: "#94a3b8",
   APPROVED: "#3b82f6",
-  REPAIRING: "#f59e0b",
+  REPAIRING: "#3b82f6",
   WAITING_PART: "#8b5cf6",
   READY: "#10b981",
   DELIVERED: "#059669",

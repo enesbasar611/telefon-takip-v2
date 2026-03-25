@@ -35,7 +35,7 @@ const statusColors: Record<string, string> = {
   REPAIRING: "text-orange-500 bg-orange-500/10 border-orange-500/20",
   WAITING_PART: "text-purple-500 bg-purple-500/10 border-purple-500/20",
   READY: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
-  DELIVERED: "text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-amber-sm",
+  DELIVERED: "text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-blue-sm",
   CANCELLED: "text-rose-500 bg-rose-500/10 border-rose-500/20",
 };
 
@@ -69,7 +69,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
           </Link>
           <div className="flex flex-col">
             <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-black tracking-tighter uppercase">{ticket.deviceBrand} <span className="text-amber-500">{ticket.deviceModel}</span></h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase">{ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span></h1>
                 <Badge variant="outline" className={`text-[10px] font-black px-4 py-1 rounded-xl whisper-border ${statusColors[ticket.status]}`}>
                     {statusLabels[ticket.status]}
                 </Badge>
@@ -78,7 +78,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
           </div>
         </div>
         <div className="flex items-center gap-3">
-             <Button variant="ghost" className="text-[10px] font-black uppercase text-amber-500 bg-amber-500/5 border border-amber-500/20 h-10 rounded-xl px-6 hover:bg-amber-500/10 transition-all shadow-amber-sm">
+             <Button variant="ghost" className="text-[10px] font-black uppercase text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all shadow-blue-sm">
                 PROFİLİ DÜZENLE
              </Button>
         </div>
@@ -148,15 +148,15 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
           <Card className="bg-[#141416] border-white/5 shadow-2xl">
             <CardHeader className="border-b border-white/[0.03] pb-6 bg-white/[0.01]">
                 <div className="flex items-center gap-3">
-                    <Activity className="h-4 w-4 text-amber-500 shadow-amber-sm" />
+                    <Activity className="h-4 w-4 text-blue-500 shadow-blue-sm" />
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Servis Yolculuğu</CardTitle>
                 </div>
             </CardHeader>
             <CardContent className="p-8">
-                <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-amber-500 before:via-blue-500 before:to-transparent">
+                <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:via-blue-500 before:to-transparent">
                     {ticket.logs.map((log: any, idx: number) => (
                         <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-[#0a0a0b] text-amber-500 shadow-xl z-10 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 group-hover:scale-110 group-hover:border-amber-500/50 transition-all">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-[#0a0a0b] text-blue-500 shadow-xl z-10 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 group-hover:scale-110 group-hover:border-blue-500/50 transition-all">
                                 {idx === 0 ? <CheckCircle2 className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
                             </div>
                             <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-5 rounded-2xl whisper-border border-white/5 bg-white/[0.02] shadow-2xl group-hover:bg-white/[0.04] transition-all">
@@ -176,10 +176,10 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
         {/* Right Column: Financial & Actions */}
         <div className="space-y-8">
             <Card className="bg-[#141416] border-white/5 shadow-2xl group overflow-hidden relative">
-                <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-amber-500" />
+                <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-blue-500" />
                 <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                     <div className="flex items-center gap-3">
-                        <CreditCard className="h-4 w-4 text-amber-500 shadow-amber-sm" />
+                        <CreditCard className="h-4 w-4 text-blue-500 shadow-blue-sm" />
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-white">Finansal Özet</CardTitle>
                     </div>
                 </CardHeader>
@@ -195,7 +195,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         </div>
                         <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 text-center">
                             <p className="text-[8px] font-black text-gray-600 uppercase mb-1">KALAN TUTAR</p>
-                            <p className="text-sm font-black text-amber-500 font-black">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
+                            <p className="text-sm font-black text-blue-500 font-black">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
                         </div>
                     </div>
                 </CardContent>

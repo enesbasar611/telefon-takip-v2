@@ -53,7 +53,7 @@ const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any
   REPAIRING: { label: "TAMİRDE", color: "text-orange-500 bg-orange-500/10 border-orange-500/20", icon: WrenchIcon, glow: "" },
   WAITING_PART: { label: "PARÇA BEKLİYOR", color: "text-purple-500 bg-purple-500/10 border-purple-500/20", icon: PackageIcon, glow: "" },
   READY: { label: "HAZIR", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle, glow: "shadow-emerald-500/20" },
-  DELIVERED: { label: "TESLİM EDİLDİ", color: "text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-amber-sm", icon: CheckCircle, glow: "shadow-amber-500/30 animate-pulse" },
+  DELIVERED: { label: "TESLİM EDİLDİ", color: "text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-blue-sm", icon: CheckCircle, glow: "shadow-blue-500/30 animate-pulse" },
   CANCELLED: { label: "İPTAL EDİLDİ", color: "text-rose-500 bg-rose-500/10 border-rose-500/20", icon: XCircle, glow: "" },
 };
 
@@ -121,18 +121,18 @@ export function ServiceTable({ data }: ServiceTableProps) {
             data.map((ticket) => (
               <TableRow key={ticket.id} className="border-b border-white/[0.03] group hover:bg-white/[0.01] transition-colors">
                 <TableCell className="px-8 py-6">
-                    <span className="font-black text-xs text-white uppercase tracking-tighter shadow-amber-sm">#{ticket.ticketNumber}</span>
+                    <span className="font-black text-xs text-white uppercase tracking-tighter shadow-blue-sm">#{ticket.ticketNumber}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-black text-xs text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">{ticket.customer.name}</span>
+                    <span className="font-black text-xs text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
                     <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">{ticket.customer.phone}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-white/[0.02] whisper-border border-white/5 flex items-center justify-center group-hover:bg-white/5 transition-all">
-                        <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-amber-500 transition-colors" />
+                        <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
                         <span className="font-black text-xs text-white uppercase tracking-tight">{ticket.deviceBrand} {ticket.deviceModel}</span>
@@ -157,7 +157,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-amber-500 hover:bg-amber-500/5 transition-all"
+                            className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
                             title="Detayları Görüntüle"
                         >
                         <Eye className="h-4 w-4" />
@@ -195,7 +195,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                         <DropdownMenuSeparator className="bg-white/5" />
                         <DropdownMenuItem asChild className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center uppercase tracking-widest">
                             <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank" className="w-full flex items-center gap-3">
-                                <Printer className="h-4 w-4 text-amber-500" /> Formu Yazdır
+                                <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center uppercase tracking-widest" onClick={() => handleDelete(ticket.id)}>

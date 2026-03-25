@@ -45,7 +45,7 @@ export const dynamic = 'force-dynamic';
 const statusColors: Record<string, string> = {
   PENDING: "#94a3b8",      // Grey
   APPROVED: "#3b82f6",     // Blue
-  REPAIRING: "#f59e0b",    // Orange
+  REPAIRING: "#3b82f6",    // Orange
   WAITING_PART: "#8b5cf6", // Purple
   READY: "#10b981",        // Green
   DELIVERED: "#059669",    // Dark Green
@@ -81,25 +81,25 @@ export default async function DashboardOzetPage() {
 
   const stats = [
     { label: "GÜNLÜK SATIŞ", value: statsData.todaySales, icon: ShoppingCart, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/10", trend: "+12%" },
-    { label: "TAMİR GELİRLERİ", value: statsData.todayRepairIncome, icon: Wrench, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/10", trend: "+8%" },
+    { label: "TAMİR GELİRLERİ", value: statsData.todayRepairIncome, icon: Wrench, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/10", trend: "+8%" },
     { label: "TAHSİLATLAR", value: statsData.collectedPayments, icon: Banknote, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/10" },
     { label: "BEKLEYEN SERVİSLER", value: statsData.pendingServices, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/10", badge: "URGENT" },
     { label: "HAZIR CİHAZLAR", value: statsData.readyDevices, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/10" },
     { label: "KRİTİK STOK UYARILARI", value: statsData.criticalStock, icon: AlertTriangle, color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/10", badge: "CRITICAL" },
-    { label: "TOPLAM BORÇLAR", value: statsData.totalDebts, icon: ArrowDownCircle, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/10" },
+    { label: "TOPLAM BORÇLAR", value: statsData.totalDebts, icon: ArrowDownCircle, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/10" },
     { label: "KASA BAKİYESİ", value: statsData.cashBalance, icon: Wallet, color: "text-blue-600", bg: "bg-blue-600/10", border: "border-blue-600/10" },
   ];
 
   return (
-    <div className="flex flex-col gap-8 pb-20 bg-[#0a0a0b] text-white min-h-screen p-8">
+    <div className="flex flex-col gap-8 pb-20 bg-[#020617] text-white min-h-screen p-8">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-amber-sm">
-                <LayoutDashboard className="h-6 w-6 text-amber-500" />
+            <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
+                <LayoutDashboard className="h-6 w-6 text-blue-500" />
             </div>
             <div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase">Komuta <span className="text-amber-500">Merkezi</span></h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase">Komuta <span className="text-blue-500">Merkezi</span></h1>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em] mt-1 italic">Operasyonel Kontrol ve Canlı Analitik</p>
             </div>
         </div>
@@ -115,9 +115,9 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* 8 Stats Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
-          <Card key={idx} className="bg-[#141416] border border-white/[0.03] shadow-2xl hover:border-white/[0.1] transition-all group overflow-hidden relative">
+          <Card key={idx} className="matte-card hover:bg-slate-900/40 group overflow-hidden relative border-slate-800/50">
             <div className={`absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full ${stat.bg}`} />
             <CardContent className="p-6 flex flex-col justify-between h-full relative z-10">
               <div className="flex items-center justify-between mb-6">
@@ -126,12 +126,12 @@ export default async function DashboardOzetPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                     {stat.trend && (
-                    <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-amber-sm">
+                    <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-blue-sm">
                         {stat.trend}
                     </span>
                     )}
                     {stat.badge && (
-                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg border shadow-amber-sm ${stat.badge === 'URGENT' ? 'text-orange-500 bg-orange-500/10 border-orange-500/20' : 'text-rose-500 bg-rose-500/10 border-rose-500/20'}`}>
+                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg border shadow-blue-sm ${stat.badge === 'URGENT' ? 'text-orange-500 bg-orange-500/10 border-orange-500/20' : 'text-rose-500 bg-rose-500/10 border-rose-500/20'}`}>
                         {stat.badge}
                     </span>
                     )}
@@ -141,9 +141,9 @@ export default async function DashboardOzetPage() {
                 <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
                     {typeof stat.value === 'string' && stat.value.includes('₺') ? (
-                        <RevealFinancial amount={stat.value} className="text-2xl font-black tracking-tighter text-white group-hover:text-amber-400 transition-colors" />
+                        <RevealFinancial amount={stat.value} className="text-2xl font-black tracking-tighter text-white group-hover:text-blue-400 transition-colors" />
                     ) : (
-                        <h3 className="text-2xl font-black tracking-tighter text-white group-hover:text-amber-400 transition-colors">{stat.value}</h3>
+                        <h3 className="text-2xl font-black tracking-tighter text-white group-hover:text-blue-400 transition-colors">{stat.value}</h3>
                     )}
                 </div>
               </div>
@@ -153,16 +153,16 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Analytics Center & Live Control */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Sales Trend Bar Chart */}
-        <Card className="lg:col-span-2 bg-[#141416] border border-white/[0.03] shadow-2xl overflow-hidden group">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+        <Card className="lg:col-span-2 matte-card border-slate-800/50 overflow-hidden group">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div>
               <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Gelir Analizi & Tahminleme</CardTitle>
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Günlük finansal performans eğrisi</p>
             </div>
             <div className="flex items-center gap-2 bg-[#0a0a0b] px-3 py-1.5 rounded-xl border border-white/5">
-                <Activity className="h-3 w-3 text-amber-500" />
+                <Activity className="h-3 w-3 text-blue-500" />
                 <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Son 7 Gün</span>
             </div>
           </CardHeader>
@@ -178,15 +178,15 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Operational Overview & Predictive Insights */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Service Metrics Chart */}
-        <Card className="bg-[#141416] border border-white/[0.03] shadow-2xl overflow-hidden group">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+        <Card className="matte-card border-slate-800/50 overflow-hidden group">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div>
               <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Servis Kapasite Analizi</CardTitle>
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">İş yükü dağılımı ve verimlilik</p>
             </div>
-            <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-amber-sm">
+            <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
                 <Target className="h-4 w-4 text-blue-500" />
             </div>
           </CardHeader>
@@ -208,12 +208,12 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Operational Hub */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2">
         {/* Recent Transactions Table */}
-        <Card className="bg-[#141416] border border-white/[0.03] shadow-2xl overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+        <Card className="matte-card border-slate-800/50 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-amber-sm">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-blue-sm">
                     <History className="h-4 w-4 text-emerald-500" />
                 </div>
                 <div>
@@ -222,7 +222,7 @@ export default async function DashboardOzetPage() {
                 </div>
             </div>
             <Link href="/finans">
-                <Button variant="ghost" className="text-[10px] font-black uppercase text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 group h-8 rounded-xl px-4 transition-all">
+                <Button variant="ghost" className="text-[10px] font-black uppercase text-blue-500 hover:bg-blue-500/10 hover:text-blue-400 group h-8 rounded-xl px-4 transition-all">
                     Arşive Git <ChevronRight className="h-3 w-3 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
             </Link>
@@ -242,7 +242,7 @@ export default async function DashboardOzetPage() {
                   {recentTransactions.map((t: any) => (
                     <tr key={t.id} className="text-sm group hover:bg-white/[0.01] transition-colors">
                       <td className="px-8 py-5">
-                        <div className="font-black text-white text-xs uppercase tracking-tight group-hover:text-amber-400 transition-colors">{t.sale?.customer?.name || "Hızlı Satış"}</div>
+                        <div className="font-black text-white text-xs uppercase tracking-tight group-hover:text-blue-400 transition-colors">{t.sale?.customer?.name || "Hızlı Satış"}</div>
                         <div className="text-[9px] text-gray-600 font-bold uppercase mt-0.5">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                       </td>
                       <td className="px-6 py-5 text-[10px] text-gray-500 font-bold uppercase tracking-tighter">{t.description}</td>
@@ -250,7 +250,7 @@ export default async function DashboardOzetPage() {
                          <RevealFinancial amount={t.amount} className="text-sm font-black text-white" />
                       </td>
                       <td className="px-8 py-5 text-right">
-                        <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-3 py-1.5 rounded-xl shadow-amber-sm ${t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/5'}`}>
+                        <Badge variant="outline" className={`text-[9px] font-black uppercase border-none px-3 py-1.5 rounded-xl shadow-blue-sm ${t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/5'}`}>
                           {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
                         </Badge>
                       </td>
@@ -263,10 +263,10 @@ export default async function DashboardOzetPage() {
         </Card>
 
         {/* Recent Service Tickets List */}
-        <Card className="bg-[#141416] border border-white/[0.03] shadow-2xl overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+        <Card className="matte-card border-slate-800/50 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-amber-sm">
+                <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
                     <Smartphone className="h-4 w-4 text-blue-500" />
                 </div>
                 <div>
@@ -275,7 +275,7 @@ export default async function DashboardOzetPage() {
                 </div>
             </div>
             <Link href="/servis/liste">
-                <Button variant="ghost" className="text-[10px] font-black uppercase text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 group h-8 rounded-xl px-4 transition-all">
+                <Button variant="ghost" className="text-[10px] font-black uppercase text-blue-500 hover:bg-blue-500/10 hover:text-blue-400 group h-8 rounded-xl px-4 transition-all">
                     Kuyruğu Yönet <ChevronRight className="h-3 w-3 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
             </Link>
@@ -286,10 +286,10 @@ export default async function DashboardOzetPage() {
                 <div className="flex items-center gap-5">
                   <div className="h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:scale-105 transition-transform relative">
                     <Smartphone className="h-7 w-7 text-blue-500" />
-                    <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-500 animate-pulse border-2 border-[#141416] shadow-amber-sm" />
+                    <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500 animate-pulse border-2 border-[#141416] shadow-blue-sm" />
                   </div>
                   <div>
-                    <h4 className="font-black text-sm text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                    <h4 className="font-black text-sm text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tighter">
                       {ticket.customer?.name} • <span className="text-blue-400 italic">#{ticket.ticketNumber}</span>
                     </p>
@@ -314,11 +314,11 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Top Products Grid */}
-      <Card className="bg-[#141416] border border-white/[0.03] shadow-2xl overflow-hidden mt-4">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+      <Card className="matte-card border-slate-800/50 overflow-hidden mt-4">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
           <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-amber-sm">
-                  <TrendingUp className="h-4 w-4 text-amber-500" />
+              <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
               </div>
               <div>
                   <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Trend Ürünler</CardTitle>
@@ -330,20 +330,20 @@ export default async function DashboardOzetPage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {topProducts.map((product: any) => (
               <div key={product.id} className="flex flex-col gap-4 group">
-                <div className="aspect-square rounded-[2rem] bg-white/[0.02] whisper-border border-white/5 flex items-center justify-center group-hover:bg-white/[0.04] group-hover:border-amber-500/20 transition-all relative shadow-2xl overflow-hidden">
-                   <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                   <Package className="h-16 w-16 text-gray-800 group-hover:text-amber-500/40 group-hover:scale-110 transition-transform" />
+                <div className="aspect-square rounded-[2rem] bg-white/[0.02] whisper-border border-white/5 flex items-center justify-center group-hover:bg-white/[0.04] group-hover:border-blue-500/20 transition-all relative shadow-2xl overflow-hidden">
+                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                   <Package className="h-16 w-16 text-gray-800 group-hover:text-blue-500/40 group-hover:scale-110 transition-transform" />
                    {product.stock <= product.criticalStock && (
                       <div className="absolute top-4 right-4 bg-rose-500 text-white text-[8px] font-black px-3 py-1 rounded-xl shadow-rose-500/20 uppercase tracking-widest">AZALAN STOK</div>
                    )}
                 </div>
                 <div>
-                  <h4 className="font-black text-sm truncate text-white uppercase tracking-tight group-hover:text-amber-400 transition-colors">{product.name}</h4>
+                  <h4 className="font-black text-sm truncate text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">{product.name}</h4>
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
                      {product.category} <span className="h-1 w-1 rounded-full bg-gray-700" /> {product.sales} Satış
                   </p>
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-lg font-black text-amber-500 tracking-tighter shadow-amber-sm">₺{product.price.toLocaleString('tr-TR')}</span>
+                    <span className="text-lg font-black text-blue-500 tracking-tighter shadow-blue-sm">₺{product.price.toLocaleString('tr-TR')}</span>
                     <Badge variant="outline" className="text-[8px] font-black text-emerald-500 uppercase tracking-widest border-emerald-500/10 bg-emerald-500/5 px-2.5 py-1 rounded-lg">Stokta Var</Badge>
                   </div>
                 </div>
