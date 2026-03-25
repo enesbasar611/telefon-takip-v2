@@ -217,6 +217,7 @@ export async function deleteServiceTicket(id: string) {
 
 export async function addPartToService(ticketId: string, productId: string, quantity: number) {
   try {
+    const user = await getOrCreateDevUser();
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new Error("Ürün bulunamadı");
     if (product.stock < quantity) throw new Error("Yetersiz stok.");
@@ -241,6 +242,14 @@ export async function addPartToService(ticketId: string, productId: string, quan
               type: "SERVICE_USE",
               notes: `Servis kullanımı: ${ticketId}`,
               serviceTicketId: ticketId
+            }
+          },
+          inventoryLogs: {
+            create: {
+              userId: user.id,
+              quantity: -quantity,
+              type: "SERVICE_USE",
+              notes: `Servis kaydına parça eklendi: ${ticketId}`
             }
           }
         }
