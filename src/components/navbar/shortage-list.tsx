@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClipboardList, CheckCircle2, PackagePlus, Loader2, Printer } from "lucide-react";
+import { ClipboardList, CheckCircle2, PackagePlus, Loader2, Printer, XCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { getShortageItems, resolveShortageItem, addShortageItem } from "@/lib/actions/shortage-actions";
+import { getShortageItems, approveShortageItem, deleteShortageItem, addShortageItem } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
@@ -35,11 +35,29 @@ export function ShortageList() {
     fetchItems();
   }, []);
 
-  const handleResolve = async (id: string) => {
+  const handleApprove = async (id: string, qty: number) => {
     try {
-      await resolveShortageItem(id);
-      setItems(items.filter(i => i.id !== id));
-      toast.success("Eksik ürün tamamlandı olarak işaretlendi.");
+      const res = await approveShortageItem(id, qty);
+      if (res.success) {
+        setItems(items.filter(i => i.id !== id));
+        toast.success("Stok başarıyla güncellendi", { position: "bottom-right" });
+      } else {
+        toast.error(res.error);
+      }
+    } catch (error) {
+      toast.error("Bir hata oluştu.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await deleteShortageItem(id);
+      if (res.success) {
+        setItems(items.filter(i => i.id !== id));
+        toast.success("Listeden kaldırıldı", { position: "bottom-right" });
+      } else {
+        toast.error(res.error);
+      }
     } catch (error) {
       toast.error("Bir hata oluştu.");
     }
@@ -122,7 +140,7 @@ export function ShortageList() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 bg-[#141416] border-white/5 p-4 shadow-2xl">
+      <PopoverContent align="end" className="w-80 bg-[#141416] border-2 border-red-600 p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-black uppercase tracking-widest text-blue-500">Eksikler Listesi</h3>
           <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold">
@@ -149,19 +167,40 @@ export function ShortageList() {
             <p className="text-[10px] text-center text-gray-600 py-4 italic">Şu an eksik ürün bulunmuyor.</p>
           ) : (
             items.map((item) => (
-              <div key={item.id} className="group flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-blue-500/20 transition-all">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-gray-300 uppercase">{item.name}</span>
-                  {item.product && <span className="text-[8px] text-gray-600 font-medium">SKU: {item.product.sku}</span>}
+              <div key={item.id} className="group flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all">
+                <div className="flex flex-col flex-1 mr-2">
+                  <span className="text-[10px] font-bold text-gray-300 uppercase leading-tight mb-1">{item.name}</span>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      defaultValue={item.quantity || 1}
+                      id={`qty-${item.id}`}
+                      className="h-6 w-12 bg-slate-900 border-white/5 text-[9px] px-1 text-center font-black text-blue-500"
+                    />
+                    <span className="text-[8px] text-gray-600 font-black uppercase">ADET</span>
+                  </div>
                 </div>
-                <Button
-                  onClick={() => handleResolve(item.id)}
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/10"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                    <Button
+                        onClick={() => {
+                            const qtyInput = document.getElementById(`qty-${item.id}`) as HTMLInputElement;
+                            handleApprove(item.id, parseInt(qtyInput.value) || 1);
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-md"
+                    >
+                        <CheckCircle2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        onClick={() => handleDelete(item.id)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-md"
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
               </div>
             ))
           )}

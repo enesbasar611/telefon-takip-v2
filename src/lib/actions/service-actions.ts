@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { ServiceStatus } from "@prisma/client";
 import { serializePrisma } from "@/lib/utils";
 import * as z from "zod";
+import { addShortageItem } from "./shortage-actions";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -222,8 +223,8 @@ export async function addPartToService(ticketId: string, productId: string, quan
     if (!product) throw new Error("Ürün bulunamadı");
     if (product.stock < quantity) throw new Error("Yetersiz stok.");
 
-    await prisma.$transaction([
-      prisma.serviceUsedPart.create({
+    const result = await prisma.$transaction(async (tx) => {
+      const part = await tx.serviceUsedPart.create({
         data: {
           ticketId,
           productId,
@@ -231,8 +232,9 @@ export async function addPartToService(ticketId: string, productId: string, quan
           unitPrice: product.sellPrice,
           costPrice: product.buyPrice,
         }
-      }),
-      prisma.product.update({
+      });
+
+      const updatedProduct = await tx.product.update({
         where: { id: productId },
         data: {
           stock: { decrement: quantity },
@@ -253,8 +255,19 @@ export async function addPartToService(ticketId: string, productId: string, quan
             }
           }
         }
-      })
-    ]);
+      });
+
+      return { part, updatedProduct };
+    });
+
+    if (result.updatedProduct.stock <= 0) {
+      await addShortageItem({
+        productId: productId,
+        name: product.name,
+        quantity: 1,
+        notes: `Servis kullanımı sonucu stok tükendi: ${ticketId}`
+      });
+    }
 
     revalidatePath(`/servis/${ticketId}`);
     revalidatePath("/stok");
