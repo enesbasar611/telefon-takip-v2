@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { addPartToService } from "@/lib/actions/service-actions";
+import { Badge } from "@/components/ui/badge";
+import { addPartToService, removePartFromService } from "@/lib/actions/service-actions";
 import { toast } from "sonner";
 
 export function ServicePartManager({ ticketId, products, currentParts }: { ticketId: string; products: any[]; currentParts: any[] }) {
@@ -39,6 +40,17 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
       } else {
         toast.error(res.error);
       }
+    });
+  };
+
+  const handleRemove = (partId: string) => {
+    startTransition(async () => {
+        const res = await removePartFromService(partId);
+        if (res.success) {
+            toast.success("Parça çıkarıldı.");
+        } else {
+            toast.error(res.error);
+        }
     });
   };
 
@@ -93,17 +105,44 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
 
       <div className="space-y-2">
         {currentParts.map((part) => (
-          <div key={part.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] group hover:border-white/10 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-white/[0.03] flex items-center justify-center">
-                <Package className="h-4 w-4 text-gray-500" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-black text-white uppercase tracking-tight">{part.product.name}</span>
-                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
-              </div>
+          <div key={part.id} className="flex flex-col gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] group hover:border-white/10 transition-all">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-white/[0.03] flex items-center justify-center">
+                    <Package className="h-4 w-4 text-gray-500" />
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[11px] font-black text-white uppercase tracking-tight">{part.product.name}</span>
+                    <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
+                </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-blue-500">₺{(Number(part.unitPrice) * part.quantity).toLocaleString('tr-TR')}</span>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemove(part.id)}
+                        disabled={isPending}
+                        className="h-6 w-6 rounded-md hover:bg-rose-500/10 hover:text-rose-500 text-gray-600"
+                    >
+                        {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    </Button>
+                </div>
             </div>
-            <span className="text-xs font-black text-blue-500">₺{(Number(part.unitPrice) * part.quantity).toLocaleString('tr-TR')}</span>
+
+            {/* Margin Indicator */}
+            <div className="mt-1 pt-2 border-t border-white/[0.03] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Kar Analizi</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-[8px] font-bold text-gray-600 uppercase">Maliyet: ₺{Number(part.costPrice).toLocaleString('tr-TR')}</span>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 border-emerald-500/20 text-emerald-500 bg-emerald-500/5">
+                        Önerilen Min: ₺{(Number(part.costPrice) * 1.5).toLocaleString('tr-TR')}
+                    </Badge>
+                </div>
+            </div>
           </div>
         ))}
         {currentParts.length === 0 && (

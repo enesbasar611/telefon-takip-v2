@@ -30,6 +30,7 @@ import {
 } from "@/lib/actions/dashboard-actions";
 import { getSalesReport, getServiceMetrics } from "@/lib/actions/report-actions";
 import { getLiveActivity } from "@/lib/actions/live-actions";
+import { getProfitMatrix, getTopRepairedModels } from "@/lib/actions/analytics-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { SalesTrendChart } from "@/components/charts/sales-trend-chart";
@@ -70,6 +71,8 @@ export default async function DashboardOzetPage() {
   const salesTrend = await getSalesReport();
   const serviceMetricsRaw = await getServiceMetrics();
   const liveActivity = await getLiveActivity();
+  const profitMatrix = await getProfitMatrix("THIS_MONTH");
+  const topModels = await getTopRepairedModels(5);
 
   const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
     ...m,
@@ -157,13 +160,26 @@ export default async function DashboardOzetPage() {
         {/* Sales Trend Bar Chart */}
         <Card className="lg:col-span-2 matte-card border-slate-800/50 overflow-hidden group w-full">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
-            <div>
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Gelir Analizi & Tahminleme</CardTitle>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Günlük finansal performans eğrisi</p>
+            <div className="flex items-center gap-4">
+              <div>
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Net Kar Analizi</CardTitle>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter italic">Bu ayki finansal verimlilik</p>
+              </div>
+              <div className="h-px w-12 bg-slate-800" />
+              <div className="flex gap-4">
+                  <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Toplam Gelir</span>
+                      <span className="text-xs font-black text-white">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
+                  </div>
+                  <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Net Kar</span>
+                      <span className="text-xs font-black text-emerald-500">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
+                  </div>
+              </div>
             </div>
             <div className="flex items-center gap-2 bg-[#0a0a0b] px-3 py-1.5 rounded-xl border border-white/5">
                 <Activity className="h-3 w-3 text-blue-500" />
-                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Son 7 Gün</span>
+                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Bu Ay</span>
             </div>
           </CardHeader>
           <CardContent className="pt-8">
@@ -179,24 +195,36 @@ export default async function DashboardOzetPage() {
 
       {/* Operational Overview & Predictive Insights */}
       <div className="grid gap-8 lg:grid-cols-3 grid-cols-1">
-        {/* Service Metrics Chart */}
+        {/* Top Repaired Models Chart */}
         <Card className="matte-card border-slate-800/50 overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div>
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Servis Kapasite Analizi</CardTitle>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">İş yükü dağılımı ve verimlilik</p>
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-white">En Çok Tamir Edilenler</CardTitle>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Model bazlı servis yoğunluğu</p>
             </div>
             <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
-                <Target className="h-4 w-4 text-blue-500" />
+                <Smartphone className="h-4 w-4 text-blue-500" />
             </div>
           </CardHeader>
-          <CardContent className="relative pt-8">
-             <div className="h-[250px]">
-                <ServiceStatusChart data={serviceMetrics} />
-             </div>
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-8">
-                <span className="text-4xl font-black block text-white drop-shadow-2xl">{totalServiceUnits}</span>
-                <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em]">Cihaz Yükü</span>
+          <CardContent className="pt-8">
+             <div className="space-y-4">
+                {topModels.map((m: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black text-slate-500">0{idx + 1}</span>
+                            <span className="text-xs font-black text-white uppercase">{m.model}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="h-1 w-24 bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 rounded-full"
+                                    style={{ width: `${(m.count / topModels[0].count) * 100}%` }}
+                                />
+                            </div>
+                            <span className="text-[10px] font-black text-blue-500">{m.count} Adet</span>
+                        </div>
+                    </div>
+                ))}
              </div>
           </CardContent>
         </Card>

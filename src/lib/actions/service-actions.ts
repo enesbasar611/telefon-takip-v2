@@ -185,10 +185,33 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
 }
 
 export async function deleteServiceTicket(id: string) {
+  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id } });
+
+  // Restore stock before deletion
+  for (const part of usedParts) {
+    await prisma.product.update({
+      where: { id: part.productId },
+      data: {
+        stock: { increment: part.quantity },
+        movements: {
+          create: {
+            quantity: part.quantity,
+            type: "ADJUSTMENT",
+            notes: `Servis silindiği için stok iade edildi: ${id}`,
+            serviceTicketId: id
+          }
+        }
+      }
+    });
+  }
+
   await prisma.serviceLog.deleteMany({ where: { ticketId: id } });
   await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id } });
+  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id } });
   await prisma.serviceTicket.delete({ where: { id } });
+
   revalidatePath("/servis");
+  revalidatePath("/stok");
   revalidatePath("/");
 }
 
@@ -196,21 +219,78 @@ export async function addPartToService(ticketId: string, productId: string, quan
   try {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new Error("Ürün bulunamadı");
+    if (product.stock < quantity) throw new Error("Yetersiz stok.");
 
-    await prisma.serviceUsedPart.create({
-      data: {
-        ticketId,
-        productId,
-        quantity,
-        unitPrice: product.sellPrice,
-      }
-    });
+    await prisma.$transaction([
+      prisma.serviceUsedPart.create({
+        data: {
+          ticketId,
+          productId,
+          quantity,
+          unitPrice: product.sellPrice,
+          costPrice: product.buyPrice,
+        }
+      }),
+      prisma.product.update({
+        where: { id: productId },
+        data: {
+          stock: { decrement: quantity },
+          movements: {
+            create: {
+              quantity: -quantity,
+              type: "SERVICE_USE",
+              notes: `Servis kullanımı: ${ticketId}`,
+              serviceTicketId: ticketId
+            }
+          }
+        }
+      })
+    ]);
 
     revalidatePath(`/servis/${ticketId}`);
+    revalidatePath("/stok");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding part to service:", error);
-    return { success: false, error: "Parça eklenirken bir hata oluştu." };
+    return { success: false, error: error.message || "Parça eklenirken bir hata oluştu." };
+  }
+}
+
+export async function removePartFromService(partId: string) {
+  try {
+    const part = await prisma.serviceUsedPart.findUnique({
+      where: { id: partId },
+      include: { product: true }
+    });
+
+    if (!part) throw new Error("Kayıt bulunamadı.");
+
+    await prisma.$transaction([
+      prisma.product.update({
+        where: { id: part.productId },
+        data: {
+          stock: { increment: part.quantity },
+          movements: {
+            create: {
+              quantity: part.quantity,
+              type: "ADJUSTMENT",
+              notes: `Servisten parça çıkarıldı: ${part.ticketId}`,
+              serviceTicketId: part.ticketId
+            }
+          }
+        }
+      }),
+      prisma.serviceUsedPart.delete({
+        where: { id: partId }
+      })
+    ]);
+
+    revalidatePath(`/servis/${part.ticketId}`);
+    revalidatePath("/stok");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error removing part from service:", error);
+    return { success: false, error: error.message || "Parça çıkarılırken bir hata oluştu." };
   }
 }
 
