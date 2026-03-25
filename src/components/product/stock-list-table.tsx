@@ -123,7 +123,66 @@ export function StockListTable({ products, categories }: { products: any[], cate
       </div>
 
       <div className="p-0">
-          <Table>
+          <div className="block lg:hidden space-y-4 p-4">
+            {filteredProducts.length === 0 ? (
+                <p className="text-center py-10 text-slate-500 font-bold italic">Ürün bulunamadı.</p>
+            ) : (
+                filteredProducts.map((product: any) => (
+                    <div key={product.id} className="matte-card p-5 rounded-2xl border-slate-800/50 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h3 className="font-black text-white uppercase text-sm leading-tight">{product.name}</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">SKU: {product.sku || '-'}</p>
+                            </div>
+                            <Badge variant="outline" className="bg-slate-900 border-slate-800 text-[8px] font-black text-slate-500 uppercase px-2 py-0.5">
+                                {product.category.name}
+                            </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
+                                <p className="text-[8px] font-black text-slate-600 uppercase mb-1">STOK DURUMU</p>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-sm font-black ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>{product.stock}</span>
+                                    <span className="text-[8px] text-slate-600 font-bold uppercase">ADET</span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50 text-right">
+                                <p className="text-[8px] font-black text-slate-600 uppercase mb-1">SATIŞ FİYATI</p>
+                                <div className="flex items-center justify-end gap-1">
+                                    <span className="text-sm font-black text-blue-500 italic">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/50">
+                            <div className="flex items-center gap-1">
+                                <span className="text-[8px] text-slate-600 font-bold uppercase">MALİYET:</span>
+                                <RevealFinancial amount={product.buyPrice} className="text-[10px] text-slate-400 font-bold" />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={() => onAddToShortage(product)} variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-blue-500/5 text-blue-500 border border-blue-500/10">
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white w-48">
+                                        <DropdownMenuItem className="text-[10px] font-black uppercase p-3 gap-3"><Edit className="h-4 w-4 text-blue-500" /> DÜZENLE</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-[10px] font-black uppercase p-3 gap-3 text-rose-500"><Trash2 className="h-4 w-4" /> SİL</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+                    </div>
+                ))
+            )}
+          </div>
+
+          <Table className="hidden lg:table">
             <TableHeader className="bg-slate-900/40">
               <TableRow className="border-slate-800/50 hover:bg-transparent">
                 <TableHead className="text-[10px] font-black text-slate-500 uppercase tracking-widest py-4 pl-8">ÜRÜN BİLGİSİ</TableHead>

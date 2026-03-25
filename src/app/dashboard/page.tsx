@@ -91,9 +91,9 @@ export default async function DashboardOzetPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-8 pb-20 bg-[#020617] text-white min-h-screen p-8">
+    <div className="flex flex-col gap-8 pb-20 bg-[#020617] text-white min-h-screen lg:p-8 p-4">
       {/* Header Section */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-blue-sm">
                 <LayoutDashboard className="h-6 w-6 text-blue-500" />
@@ -115,7 +115,7 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* 8 Stats Cards Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
           <Card key={idx} className="matte-card hover:bg-slate-900/40 group overflow-hidden relative border-slate-800/50">
             <div className={`absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full ${stat.bg}`} />
@@ -153,9 +153,9 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Analytics Center & Live Control */}
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3 grid-cols-1">
         {/* Sales Trend Bar Chart */}
-        <Card className="lg:col-span-2 matte-card border-slate-800/50 overflow-hidden group">
+        <Card className="lg:col-span-2 matte-card border-slate-800/50 overflow-hidden group w-full">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
             <div>
               <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Gelir Analizi & Tahminleme</CardTitle>
@@ -178,7 +178,7 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Operational Overview & Predictive Insights */}
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3 grid-cols-1">
         {/* Service Metrics Chart */}
         <Card className="matte-card border-slate-800/50 overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">
@@ -208,7 +208,7 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Operational Hub */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2 grid-cols-1">
         {/* Recent Transactions Table */}
         <Card className="matte-card border-slate-800/50 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800/50 pb-6 bg-slate-900/20">

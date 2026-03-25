@@ -19,14 +19,18 @@ import { ShortageList } from "@/components/navbar/shortage-list";
 import { POSDrawer } from "@/components/navbar/pos-drawer";
 import { CurrencyDisplay } from "@/components/navbar/currency-display";
 import { GlobalSearch } from "@/components/navbar/global-search";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 
 export function Navbar() {
   const [showFinance, setShowFinance] = useState(false);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-800/50 bg-[#020617]/80 backdrop-blur-xl px-8 sticky top-0 z-10 shadow-2xl">
-      <div className="flex w-1/3 items-center gap-6">
-        <GlobalSearch />
+    <header className="flex h-16 items-center justify-between border-b border-slate-800/50 bg-[#020617]/80 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-10 shadow-2xl">
+      <div className="flex items-center gap-4 lg:w-1/3">
+        <MobileSidebar />
+        <div className="hidden lg:block w-full">
+            <GlobalSearch />
+        </div>
       </div>
 
       <div className="flex items-center gap-6">

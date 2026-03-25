@@ -188,9 +188,9 @@ export default function NewServicePage() {
           <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-12 gap-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
           {/* Left Column */}
-          <div className="col-span-12 lg:col-span-8 space-y-8">
+          <div className="lg:col-span-8 space-y-6 lg:space-y-8">
 
             {/* Customer Information */}
             <section className="bg-card p-6 rounded-xl shadow-sm border border-border">
@@ -499,16 +499,16 @@ export default function NewServicePage() {
           </div>
 
           {/* Sticky Footer */}
-          <footer className="fixed bottom-0 right-0 left-0 lg:left-64 bg-background/80 backdrop-blur-md border-t border-border px-4 py-4 z-40">
-            <div className="max-w-6xl mx-auto flex items-center justify-between">
-              <div className="hidden md:flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Kayıt Özeti</span>
-                <span className="text-sm font-semibold text-foreground">1 Cihaz • Tahmini ₺{currentEstimatedCost}</span>
+          <footer className="fixed bottom-0 lg:bottom-0 bottom-16 right-0 left-0 lg:left-64 bg-[#020617]/90 backdrop-blur-xl border-t border-slate-800/50 px-4 py-4 z-40">
+            <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+              <div className="hidden sm:flex flex-col">
+                <span className="text-[10px] uppercase font-black text-slate-500 tracking-widest">Kayıt Özeti</span>
+                <span className="text-sm font-black text-white italic">₺{currentEstimatedCost}</span>
               </div>
-              <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button
                   variant="ghost"
-                  className="flex-1 md:flex-none px-6 font-bold"
+                  className="flex-1 sm:flex-none px-6 font-black uppercase text-[10px] text-slate-500 hover:text-white"
                   type="button"
                   onClick={() => router.back()}
                   disabled={isPending}
@@ -518,10 +518,10 @@ export default function NewServicePage() {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 md:flex-none px-8 py-6 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center gap-2"
+                  className="flex-[2] sm:flex-none h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-600 text-white shadow-blue-strong hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
                 >
-                  {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Printer className="h-5 w-5" />}
-                  Tümünü Kaydet ve Fiş Yazdır
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                  KAYDET VE YAZDIR
                 </Button>
               </div>
             </div>

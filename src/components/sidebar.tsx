@@ -83,7 +83,7 @@ const menuItems = [
   { icon: Settings, label: "Sistem Ayarları", href: "/ayarlar" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
@@ -103,7 +103,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-[#020617] border-r border-slate-800/50 shadow-2xl z-20 overflow-hidden">
+    <div className={cn("flex h-screen w-64 flex-col bg-[#020617] border-r border-slate-800/50 shadow-2xl z-20 overflow-hidden", className)}>
       <div className="flex h-20 items-center px-6 border-b border-slate-800/50 bg-white/[0.01] flex-shrink-0">
         <Link href="/" className="flex flex-col group">
           <div className="flex items-center gap-2 font-black text-xl tracking-tighter text-white">
