@@ -55,9 +55,13 @@ model Customer {
   id        String   @id @default(cuid())
   name      String
   phone     String   @unique
+  secondaryPhone String?
   email     String?
   address   String?
   notes     String?
+  photo     String?
+  type      String   @default("BIREYSEL") // BIREYSEL, KURUMSAL
+  isVip     Boolean  @default(false)
   loyaltyPoints Int  @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,6 +99,7 @@ model ServiceTicket {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   deliveredAt     DateTime?
+  warrantyExpiry  DateTime?
   estimatedDeliveryDate DateTime?
 
   logs            ServiceLog[]
@@ -148,28 +153,46 @@ model Product {
   movements       InventoryMovement[]
   saleItems       SaleItem[]
   usedInServices  ServiceUsedPart[]
-  secondHandInfo  SecondHandDevice?
+  shortageItems   ShortageItem[]
+  deviceInfo      DeviceHubInfo?
 }
 
-model SecondHandDevice {
+model DeviceHubInfo {
   id              String    @id @default(cuid())
   productId       String    @unique
   product         Product   @relation(fields: [productId], references: [id])
 
   imei            String    @unique
+  serialNumber    String?
   color           String?
-  capacity        String?   // e.g., 128GB
+  capacity        String?
   batteryHealth   Int?
+  cosmeticScore   Int       @default(10) // 1-10
+  condition       String    @default("NEW") // NEW, USED
+
+  expertChecklist Json?     // Diagnostic results
 
   purchaseDate    DateTime?
-  purchasedFrom   String?   // Can be linked to Customer or Supplier if needed
-
-  testResults     Json?     // Checklist results
-  warrantyStatus  String?
+  purchasedFrom   String?
+  buyBackPrice    Decimal?  @db.Decimal(10, 2)
+  buyBackMonths   Int?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
+
+model ShortageItem {
+  id          String   @id @default(cuid())
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  name        String   // Fallback if not linked to a product
+  quantity    Int      @default(1)
+  notes       String?
+  isResolved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 
 model InventoryMovement {
   id          String   @id @default(cuid())

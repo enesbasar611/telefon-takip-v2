@@ -1,93 +1,63 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSystemNotifications } from "@/lib/actions/notification-actions";
-import { AlertTriangle, AlertCircle, Wrench, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Bell, AlertTriangle, Clock, ShieldAlert } from "lucide-react";
+import { getSystemNotifications } from "@/lib/actions/notification-actions";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardUyarilarPage() {
+export default async function BildirimlerPage() {
   const notifications = await getSystemNotifications();
 
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'CRITICAL_STOCK': return <AlertTriangle className="h-5 w-5 text-red-500" />;
+      case 'OVERDUE_SERVICE': return <Clock className="h-5 w-5 text-blue-500" />;
+      default: return <Bell className="h-5 w-5 text-blue-500" />;
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kritik Uyarılar</h1>
-          <p className="text-muted-foreground">İşletmenizin dikkat etmesi gereken önemli noktalar.</p>
-        </div>
-        <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-4 py-2 rounded-lg border border-red-200 dark:border-red-800 flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5" />
-          <span className="font-bold">Toplam {notifications.length} Kritik Uyarı</span>
-        </div>
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Sistem Bildirimleri</h1>
+        <p className="text-muted-foreground">İşletmenizin kritik uyarılarını ve operasyonel hatırlatıcılarını takip edin.</p>
       </div>
 
-      <div className="grid gap-6">
-        <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-lg font-bold">Stok Seviyesi Kritik Ürünler</CardTitle>
-            <Package className="h-5 w-5 text-red-500" />
-          </CardHeader>
-          <CardDescription className="px-6">Aşağıdaki ürünlerin stok miktarı kritik seviyenin altına düşmüştür.</CardDescription>
-          <CardContent className="pt-4">
-            <div className="space-y-4">
-              {notifications.filter((n: any) => n.type === 'CRITICAL_STOCK').length > 0 ? (
-                notifications.filter((n: any) => n.type === 'CRITICAL_STOCK').map((n: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-red-50/10 hover:bg-red-50/20 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="text-lg font-extrabold uppercase tracking-tight">{n.title}</span>
-                      <span className="text-sm text-muted-foreground">{n.message}</span>
+      <div className="grid gap-4">
+        {notifications.length === 0 ? (
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="text-center py-12">
+              <ShieldAlert className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
+              <CardTitle className="mt-4 text-muted-foreground uppercase tracking-widest font-medium">Şu an için yeni bir bildirim bulunmuyor.</CardTitle>
+            </CardHeader>
+          </Card>
+        ) : (
+          notifications.map((n: any) => (
+            <Card key={n.id} className={`hover:shadow-md transition-shadow border-l-4 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
+              <CardHeader className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {getIcon(n.type)}
+                    <div>
+                      <CardTitle className="text-lg font-extrabold uppercase tracking-tight">{n.title}</CardTitle>
+                      <CardDescription className="text-sm">{n.message}</CardDescription>
                     </div>
-                    <Badge variant="destructive" className="font-bold">Hemen Sipariş Ver</Badge>
                   </div>
-                ))
-              ) : (
-                <div className="p-8 text-center border-2 border-dashed rounded-lg bg-muted/20 text-muted-foreground">
-                  Kritik stok seviyesinde ürün bulunmuyor. Her şey yolunda!
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-lg font-bold">Geciken Servis Kayıtları</CardTitle>
-            <Wrench className="h-5 w-5 text-orange-500" />
-          </CardHeader>
-          <CardDescription className="px-6">Aşağıdaki cihazların teknik servis süresi 3 günü aşmıştır.</CardDescription>
-          <CardContent className="pt-4">
-            <div className="space-y-4">
-              {notifications.filter((n: any) => n.type === 'OVERDUE_SERVICE').length > 0 ? (
-                notifications.filter((n: any) => n.type === 'OVERDUE_SERVICE').map((n: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50/10 hover:bg-orange-50/20 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{n.title}</span>
-                      <span className="text-xs text-muted-foreground">{n.message}</span>
-                    </div>
-                    <Badge className="bg-orange-500 font-bold hover:bg-orange-600">Hemen İncele</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider">
+                      {n.priority === 'HIGH' ? 'KRİTİK' : 'NORMAL'}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">
+                      {format(new Date(n.createdAt), "dd MMM yyyy HH:mm", { locale: tr })}
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="p-8 text-center border-2 border-dashed rounded-lg bg-muted/20 text-muted-foreground">
-                  Geciken herhangi bir servis kaydı bulunmuyor. Teknik masa mükemmel çalışıyor!
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-lg font-bold">Tahsilat & Ödeme Hatırlatmaları</CardTitle>
-            <AlertCircle className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardDescription className="px-6">Vadesi yaklaşan veya geçen ödemeler.</CardDescription>
-          <CardContent className="pt-4">
-             <div className="p-8 text-center border-2 border-dashed rounded-lg bg-muted/20 text-muted-foreground">
-                Gelecek dönem ödemeleri ve taksit hatırlatmaları burada görünecektir.
-             </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );

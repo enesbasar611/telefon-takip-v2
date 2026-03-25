@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { GeistSans } from 'geist/font/sans';
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { Navbar } from "@/components/navbar";
-import { Toaster } from "@/components/ui/toaster";
+import { BottomNav } from "@/components/bottom-nav";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UIProvider } from "@/lib/context/ui-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,24 +22,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground`}>
+    <html lang="tr" suppressHydrationWarning className={GeistSans.className}>
+      <body className="bg-background text-foreground antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex flex-1 flex-col">
-              <Navbar />
-              <main className="flex-1 p-8 overflow-auto">
-                {children}
-              </main>
+          <UIProvider>
+            <div className="flex min-h-screen bg-[#020617]">
+              <Sidebar className="hidden lg:flex" />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <Navbar />
+                <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
+                  <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
+                    {children}
+                  </div>
+                </main>
+              </div>
+              <BottomNav />
             </div>
-          </div>
-          <Toaster />
+            <Toaster position="top-right" expand={false} richColors />
+          </UIProvider>
         </ThemeProvider>
       </body>
     </html>

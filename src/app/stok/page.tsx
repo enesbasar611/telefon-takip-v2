@@ -1,9 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Package, AlertCircle, Barcode as BarcodeIcon, Layers } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Package, AlertCircle, Barcode as BarcodeIcon, Layers, TrendingUp } from "lucide-react";
 import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { CreateProductModal } from "@/components/product/create-product-modal";
+import { StockListTable } from "@/components/product/stock-list-table";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,99 +11,56 @@ export default async function StokPage() {
   const categories = await getCategories();
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Stok ve Ürün Yönetimi</h1>
-          <p className="text-muted-foreground">Yedek parça, aksesuar ve telefon stoklarını yönetin.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-2 w-2 rounded-full bg-blue-500 shadow-blue-sm" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Envanter Sistemi</span>
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">STOK <span className="text-blue-500">YÖNETİMİ</span></h1>
+          <p className="text-sm text-slate-500 font-medium max-w-md mt-1">Yedek parça, aksesuar ve cihaz envanterini profesyonel düzeyde takip edin.</p>
         </div>
-        <CreateProductModal categories={categories} />
+        <div className="flex items-center gap-3">
+             <CreateProductModal categories={categories} />
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Toplam Ürün</CardTitle>
-            <Package className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{products.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kritik Stok</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {products.filter((p: any) => p.stock <= p.criticalStock).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kategoriler</CardTitle>
-            <Layers className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{categories.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Barkodlu Ürünler</CardTitle>
-            <BarcodeIcon className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{products.filter((p: any) => p.barcode).length}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+        {[
+          { label: "TOPLAM ÜRÜN", value: products.length, icon: Package, color: "text-blue-500", bg: "bg-blue-500/10" },
+          { label: "KRİTİK STOK", value: products.filter((p: any) => p.stock <= p.criticalStock).length, icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10" },
+          { label: "KATEGORİ", value: categories.length, icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10" },
+          { label: "BARKODLU", value: products.filter((p: any) => p.barcode).length, icon: BarcodeIcon, color: "text-emerald-500", bg: "bg-emerald-500/10" }
+        ].map((stat, i) => (
+          <Card key={i} className="matte-card border-slate-800/50 shadow-2xl overflow-hidden group">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} transition-transform group-hover:scale-110 duration-500`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-slate-800" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-500 tracking-widest uppercase">{stat.label}</p>
+                <p className={`text-3xl font-black mt-1 ${stat.label === 'KRİTİK STOK' && stat.value > 0 ? 'text-rose-500' : 'text-white'}`}>{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle>Ürün Listesi</CardTitle>
-          <CardDescription>Mevcut stok durumu ve fiyatlandırma.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ürün Adı</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Stok</TableHead>
-                <TableHead>Alış Fiyatı</TableHead>
-                <TableHead className="text-right">Satış Fiyatı</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">Ürün bulunamadı.</TableCell>
-                </TableRow>
-              ) : (
-                products.map((product: any) => (
-                  <TableRow key={product.id} className="group">
-                    <TableCell className="font-medium group-hover:text-primary transition-colors">
-                      {product.name}
-                      {product.stock <= product.criticalStock && (
-                        <Badge variant="destructive" className="ml-2 text-[8px] h-4">KRİTİK</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{product.category.name}</TableCell>
-                    <TableCell className="font-bold">{product.stock} Adet</TableCell>
-                    <TableCell>₺{Number(product.buyPrice).toLocaleString('tr-TR')}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      ₺{Number(product.sellPrice).toLocaleString('tr-TR')}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="matte-card border-slate-800/50 rounded-[2.5rem] overflow-hidden">
+        <StockListTable products={products} categories={categories} />
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .matte-card {
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+      `}} />
     </div>
   );
 }

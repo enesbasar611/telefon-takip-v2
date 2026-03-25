@@ -95,172 +95,164 @@ export function POSInterface({ products, customers }: { products: any[]; custome
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-220px)] overflow-hidden">
       {/* Product Selection Area */}
       <div className="lg:col-span-7 flex flex-col gap-4 overflow-hidden">
-        <Card className="flex flex-col flex-1 overflow-hidden">
-          <CardHeader className="pb-3 border-b">
+        <div className="flex flex-col flex-1 overflow-hidden matte-card border-slate-800/50 rounded-[2rem]">
+          <div className="p-6 border-b border-slate-800/50 bg-slate-900/20">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <Input
-                  placeholder="Ürün adı veya barkod ara..."
-                  className="pl-9"
+                  placeholder="Ürün adı veya barkod okutun..."
+                  className="pl-12 bg-slate-900/60 border-slate-800 h-12 rounded-2xl text-xs font-bold text-white placeholder:text-slate-600 focus:ring-blue-500/20 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoFocus
                 />
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
                 <button
                   key={product.id}
                   onClick={() => addToCart(product)}
                   disabled={product.stock <= 0}
-                  className="flex flex-col text-left border rounded-lg p-3 hover:border-primary hover:bg-primary/5 transition-all group disabled:opacity-50"
+                  className="flex flex-col text-left bg-slate-900/40 border border-slate-800/50 rounded-[1.5rem] p-5 hover:border-blue-500/40 hover:bg-blue-600/[0.03] transition-all group disabled:opacity-30 relative overflow-hidden"
                 >
-                  <div className="text-xs font-bold text-muted-foreground mb-1">{product.category.name}</div>
-                  <div className="font-medium text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                  <div className="text-[9px] font-black text-slate-600 mb-2 uppercase tracking-widest">{product.category.name}</div>
+                  <div className="font-black text-xs text-slate-200 line-clamp-2 mb-4 group-hover:text-blue-400 transition-colors leading-tight tracking-tight">
                     {product.name}
                   </div>
-                  <div className="mt-auto flex items-center justify-between gap-2">
-                    <div className="font-bold text-primary">₺{product.sellPrice}</div>
-                    <Badge variant={product.stock > 5 ? "outline" : "destructive"} className="text-[10px] px-1.5 h-5">
-                      {product.stock} Adet
-                    </Badge>
+                  <div className="mt-auto flex items-center justify-between">
+                    <div className="font-black text-blue-500 text-lg italic tracking-tighter">₺{product.sellPrice.toLocaleString('tr-TR')}</div>
+                    <div className={`text-[8px] font-black px-2 py-0.5 rounded-lg border uppercase ${product.stock > 2 ? 'border-emerald-500/20 text-emerald-500' : 'border-rose-500/20 text-rose-500'}`}>
+                      {product.stock} ADET
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Cart and Checkout Area */}
       <div className="lg:col-span-5 flex flex-col gap-4 overflow-hidden">
-        <Card className="flex flex-col flex-1 overflow-hidden">
-          <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Sepet ({cart.length})
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50">
-              Temizle
+        <div className="flex flex-col flex-1 overflow-hidden matte-card border-slate-800/50 rounded-[2rem]">
+          <div className="p-8 border-b border-slate-800/50 bg-slate-900/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <ShoppingCart className="h-6 w-6 text-blue-500" />
+                <span className="text-lg font-black uppercase tracking-tighter text-white">SEPET ({cart.length})</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-8 text-[11px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-500/10">
+              TEMİZLE
             </Button>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-0">
-            <Table>
-              <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="w-[45%]">Ürün</TableHead>
-                  <TableHead className="text-center">Adet</TableHead>
-                  <TableHead className="text-right">Tutar</TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cart.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-40 text-center text-muted-foreground">
-                      Sepet henüz boş.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  cart.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium text-sm">{item.name}</TableCell>
-                      <TableCell className="p-0">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => updateQuantity(item.id, -1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => updateQuantity(item.id, 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-sm">₺{item.sellPrice * item.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-red-500"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="border-t p-4 bg-muted/20 flex flex-col gap-4">
-            <div className="w-full space-y-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={paymentMethod === "CASH" ? "default" : "outline"}
-                  className="flex-1 h-12 flex flex-col gap-1"
-                  onClick={() => setPaymentMethod("CASH")}
-                >
-                  <Banknote className="h-4 w-4" />
-                  <span className="text-[10px] font-bold">NAKİT</span>
-                </Button>
-                <Button
-                  variant={paymentMethod === "CREDIT_CARD" ? "default" : "outline"}
-                  className="flex-1 h-12 flex flex-col gap-1"
-                  onClick={() => setPaymentMethod("CREDIT_CARD")}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  <span className="text-[10px] font-bold">KART</span>
-                </Button>
-                <Button
-                  variant={paymentMethod === "BANK_TRANSFER" ? "default" : "outline"}
-                  className="flex-1 h-12 flex flex-col gap-1"
-                  onClick={() => setPaymentMethod("BANK_TRANSFER")}
-                >
-                  <Landmark className="h-4 w-4" />
-                  <span className="text-[10px] font-bold">HAVALE</span>
-                </Button>
-              </div>
+          </div>
 
-              <div className="flex items-center justify-between border-t pt-3">
-                <span className="text-muted-foreground font-medium">Toplam Tutar:</span>
-                <span className="text-2xl font-black text-primary">₺{total.toLocaleString('tr-TR')}</span>
-              </div>
+          <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
+            <div className="bg-slate-950/40 flex px-8 py-3 border-b border-slate-800/50">
+                <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-slate-500">ÜRÜN</span>
+                <span className="w-24 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">ADET</span>
+                <span className="w-24 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">TUTAR</span>
             </div>
 
-            <Button
-              className="w-full h-14 text-lg font-black uppercase tracking-widest gap-2 shadow-lg hover:shadow-xl transition-all"
-              disabled={cart.length === 0 || isProcessing}
-              onClick={handleCheckout}
-            >
-              {isProcessing ? (
-                "İŞLENİYOR..."
-              ) : (
-                <>
-                  <CheckCircle className="h-6 w-6" />
-                  SATIŞI TAMAMLA
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+            <div className="divide-y divide-slate-800/30">
+                {cart.length === 0 ? (
+                  <div className="h-40 flex items-center justify-center text-slate-600 font-bold uppercase text-[10px] tracking-widest italic">
+                    Sepet şu an boş...
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div key={item.id} className="p-8 flex items-center hover:bg-blue-600/[0.02] transition-colors group">
+                      <div className="flex-1">
+                         <span className="text-[13px] font-black text-white block leading-tight mb-1">{item.name}</span>
+                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight italic">
+                            ₺{item.sellPrice.toLocaleString('tr-TR')} / BİRİM
+                         </span>
+                      </div>
+                      <div className="w-32 flex items-center justify-center gap-4">
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="h-8 w-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-blue-500/50 transition-all"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="text-sm font-black text-blue-500 w-4 text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="h-8 w-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-blue-500/50 transition-all"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                      </div>
+                      <div className="w-32 text-right flex items-center justify-end gap-4">
+                         <span className="text-lg font-black text-white italic tracking-tighter">₺{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}</span>
+                         <button
+                           className="h-8 w-8 rounded-lg text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                           onClick={() => removeFromCart(item.id)}
+                         >
+                           <Trash2 className="h-4 w-4" />
+                         </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+            </div>
+          </div>
+
+          <div className="p-8 bg-slate-900/30 border-t border-slate-800/50 mt-auto">
+            <div className="grid grid-cols-3 gap-4 mb-8">
+                <Button
+                  variant="ghost"
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "CASH" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
+                  onClick={() => setPaymentMethod("CASH")}
+                >
+                  <Banknote className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">NAKİT</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "CREDIT_CARD" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
+                  onClick={() => setPaymentMethod("CREDIT_CARD")}
+                >
+                  <CreditCard className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">KART</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`h-16 flex flex-col gap-1 rounded-2xl border-2 transition-all ${paymentMethod === "BANK_TRANSFER" ? "bg-blue-600 border-blue-500 text-white shadow-blue-sm" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700"}`}
+                  onClick={() => setPaymentMethod("BANK_TRANSFER")}
+                >
+                  <Landmark className="h-5 w-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">HAVALE</span>
+                </Button>
+            </div>
+
+            <div className="flex items-end justify-between">
+                <div className="flex flex-col">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">ÖDENECEK TOPLAM</span>
+                    <span className="text-6xl font-black text-white italic tracking-tighter leading-none">₺{total.toLocaleString('tr-TR')}</span>
+                </div>
+                <Button
+                    className="h-20 px-12 text-sm font-black uppercase tracking-[0.2em] gap-4 rounded-[2rem] bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-sm transition-all italic"
+                    disabled={cart.length === 0 || isProcessing}
+                    onClick={handleCheckout}
+                >
+                    {isProcessing ? (
+                        "İŞLENİYOR..."
+                    ) : (
+                        <>
+                        SATIŞI TAMAMLA
+                        <CheckCircle className="h-6 w-6" />
+                        </>
+                    )}
+                </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

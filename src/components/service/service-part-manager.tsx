@@ -1,0 +1,124 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Plus, Package, Trash2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { addPartToService } from "@/lib/actions/service-actions";
+import { toast } from "sonner";
+
+export function ServicePartManager({ ticketId, products, currentParts }: { ticketId: string; products: any[]; currentParts: any[] }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+
+  const handleAdd = () => {
+    if (!selectedProductId) return;
+    startTransition(async () => {
+      const res = await addPartToService(ticketId, selectedProductId, Number(quantity));
+      if (res.success) {
+        toast.success("Parça eklendi.");
+        setOpen(false);
+        setSelectedProductId("");
+        setQuantity("1");
+      } else {
+        toast.error(res.error);
+      }
+    });
+  };
+
+  const totalPartsCost = currentParts.reduce((acc, part) => acc + (Number(part.unitPrice) * part.quantity), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Kullanılan Parçalar</h3>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 px-3">
+              <Plus className="h-3 w-3 mr-1" /> PARÇA EKLE
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-[#141416] border-white/5 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-black uppercase tracking-widest">Servise Parça Ekle</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ürün Seçin</label>
+                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                  <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12">
+                    <SelectValue placeholder="Envanterden ürün seçin..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#141416] border-white/5 text-white">
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs font-bold uppercase py-3">
+                        {p.name} (Stok: {p.stock}) - ₺{Number(p.sellPrice).toLocaleString('tr-TR')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Adet</label>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="bg-white/[0.03] border-white/5 rounded-xl h-12"
+                />
+              </div>
+              <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-blue-500 text-black font-black uppercase h-12 rounded-xl mt-4">
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "EKLEMAYI TAMAMLA"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="space-y-2">
+        {currentParts.map((part) => (
+          <div key={part.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] group hover:border-white/10 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-white/[0.03] flex items-center justify-center">
+                <Package className="h-4 w-4 text-gray-500" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-white uppercase tracking-tight">{part.product.name}</span>
+                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
+              </div>
+            </div>
+            <span className="text-xs font-black text-blue-500">₺{(Number(part.unitPrice) * part.quantity).toLocaleString('tr-TR')}</span>
+          </div>
+        ))}
+        {currentParts.length === 0 && (
+          <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
+             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] italic">Henüz parça eklenmedi.</p>
+          </div>
+        )}
+      </div>
+
+      {currentParts.length > 0 && (
+        <div className="pt-2 flex justify-between items-center border-t border-white/5">
+           <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">TOPLAM PARÇA MALİYETİ</span>
+           <span className="text-sm font-black text-white">₺{totalPartsCost.toLocaleString('tr-TR')}</span>
+        </div>
+      )}
+    </div>
+  );
+}
