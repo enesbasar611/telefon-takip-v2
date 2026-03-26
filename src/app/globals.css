@@ -100,6 +100,15 @@
     @apply font-inter normal-case tracking-normal;
   }
 
+  /* Kill all global uppercase classes */
+  .uppercase {
+    text-transform: none !important;
+  }
+
+  .tracking-widest {
+    letter-spacing: -0.025em !important;
+  }
+
   .helper-text {
     @apply text-slate-500 font-medium;
   }

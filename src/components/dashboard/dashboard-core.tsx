@@ -71,18 +71,18 @@ export function DashboardCore({
   const totalServiceUnits = serviceMetricsRaw.reduce((acc: number, m: any) => acc + m.value, 0);
 
   const stats = [
-    { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, color: "text-white", bg: "bg-blue-600", trend: "+12%" },
-    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, color: "text-white", bg: "bg-emerald-600", trend: "+8%" },
-    { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, color: "text-white", bg: "bg-amber-600" },
-    { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, color: "text-blue-500", bg: "bg-card", badge: "Acil" },
-    { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-card" },
-    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, color: "text-rose-500", bg: "bg-card", badge: "Kritik" },
-    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, color: "text-blue-500", bg: "bg-card" },
-    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, color: "text-white", bg: "bg-slate-900 dark:bg-slate-950" },
+    { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, accent: "primary", bg: "bg-gradient-to-br from-primary to-primary/80 text-white", trend: "+12%" },
+    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, accent: "secondary", bg: "bg-gradient-to-br from-secondary to-secondary/80 text-white", trend: "+8%" },
+    { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, accent: "tertiary", bg: "bg-gradient-to-br from-tertiary to-tertiary/80 text-white" },
+    { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, accent: "primary", bg: "bg-card text-foreground", badge: "Acil" },
+    { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, accent: "secondary", bg: "bg-card text-foreground" },
+    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", bg: "bg-card text-foreground", badge: "Kritik" },
+    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", bg: "bg-card text-foreground" },
+    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, accent: "primary", bg: "bg-slate-900 dark:bg-slate-950 text-white" },
   ];
 
   return (
-    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8 font-inter">
       {/* Editorial Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
         <div className="flex items-center gap-6">
@@ -109,21 +109,22 @@ export function DashboardCore({
       <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
           <Card key={idx} className={cn(
-            "rounded-2xl border-none transition-all duration-500 hover:translate-y-[-6px] group",
+            "rounded-[2rem] border-none transition-all duration-500 hover:translate-y-[-8px] group relative overflow-hidden",
             stat.bg,
             idx < 3 || idx === 7
-              ? "text-white shadow-2xl shadow-primary/20 bg-gradient-to-br from-primary to-primary/80"
-              : "text-foreground shadow-xl shadow-slate-200/50 dark:shadow-black/40 bg-card border-none"
+              ? "shadow-2xl shadow-primary/30"
+              : "shadow-xl shadow-slate-200/50 dark:shadow-black/40"
           )}>
-            <CardContent className="p-10 flex flex-col justify-between min-h-[240px] relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+            <CardContent className="p-10 flex flex-col justify-between min-h-[260px] relative z-10">
+              {/* Background Ghost Icon */}
+              <stat.icon className="absolute top-6 right-6 h-24 w-24 opacity-10 -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110" />
 
-              <div className="flex items-center justify-between relative z-10">
+              <div className="flex items-center justify-between relative">
                 <div className={cn(
-                    "p-4 rounded-2xl border shadow-inner transition-transform duration-500 group-hover:scale-110",
-                    idx < 3 || idx === 7 ? "bg-white/10 border-white/20" : "bg-slate-50 border-slate-100"
+                    "p-4 rounded-2xl border whisper-border shadow-inner transition-transform duration-500 group-hover:scale-110",
+                    idx < 3 || idx === 7 ? "bg-white/20 border-white/20" : "bg-muted/50 border-white/5"
                 )}>
-                  <stat.icon className={cn("h-8 w-8", idx < 3 || idx === 7 ? "text-white" : stat.color)} />
+                  <stat.icon className={cn("h-8 w-8", idx < 3 || idx === 7 ? "text-white" : "text-primary")} />
                 </div>
                 <div className="flex flex-col items-end">
                     {stat.trend && (
@@ -142,9 +143,9 @@ export function DashboardCore({
                 </div>
               </div>
 
-              <div className="mt-12 relative z-10">
+              <div className="mt-12 relative">
                 <p className={cn(
-                    "text-xs font-bold mb-3 uppercase tracking-widest opacity-70",
+                    "text-xs font-black mb-3 opacity-70 tracking-tight",
                     idx < 3 || idx === 7 ? "text-white" : "text-slate-500"
                 )}>{stat.label}</p>
                 <div className="flex items-baseline gap-2">
@@ -250,18 +251,18 @@ export function DashboardCore({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-[10px] font-bold text-muted-foreground border-b border-border bg-muted/30">
-                        <th className="px-8 py-5">Müşteri & Tarih</th>
-                        <th className="px-6 py-5">İşlem Detayı</th>
-                        <th className="px-6 py-5">Net Tutar</th>
-                        <th className="px-8 py-5 text-right">Durum sınıfı</th>
+                      <tr className="text-[10px] font-black text-muted-foreground bg-muted/10">
+                        <th className="px-8 py-5 tracking-tight">Müşteri & Tarih</th>
+                        <th className="px-6 py-5 tracking-tight">İşlem Detayı</th>
+                        <th className="px-6 py-5 tracking-tight">Net Tutar</th>
+                        <th className="px-8 py-5 text-right tracking-tight">Durum sınıfı</th>
                       </tr>
                     </thead>
                     <tbody>
                       {recentTransactions.map((t: any, idx: number) => (
                         <tr key={t.id} className={cn(
                           "text-sm group transition-all duration-300",
-                          idx % 2 === 0 ? "bg-transparent" : "bg-slate-50/50 dark:bg-white/[0.02]"
+                          idx % 2 === 0 ? "bg-transparent" : "bg-slate-50 dark:bg-white/[0.03]"
                         )}>
                           <td className="px-8 py-6">
                             <div className="font-extrabold text-foreground text-sm group-hover:text-primary transition-colors">{t.sale?.customer?.name || "Hızlı Satış"}</div>
@@ -295,19 +296,22 @@ export function DashboardCore({
                         <Smartphone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-lg font-bold">Servis kuyruğu</CardTitle>
+                    <CardTitle className="text-lg font-extrabold">Servis kuyruğu</CardTitle>
                         <p className="text-xs text-muted-foreground font-medium mt-1">İşlemdeki son cihazlar</p>
                     </div>
                 </div>
                 <Link href="/servis/liste">
-                    <Button variant="ghost" className="text-xs font-bold text-blue-500 hover:bg-blue-500/10 group h-10 rounded-2xl px-6 transition-all border border-blue-500/10">
+                <Button variant="ghost" className="text-xs font-black text-primary hover:bg-primary/10 group h-10 rounded-2xl px-6 transition-all">
                         Kuyruğu yönet <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                 </Link>
               </CardHeader>
               <CardContent className="space-y-4 p-8">
-                {(recentTicketsRaw ?? []).map((ticket: any) => (
-                  <div key={ticket.id} className="flex items-center justify-between p-6 bg-slate-50/50 dark:bg-white/[0.02] rounded-3xl group hover:bg-white dark:hover:bg-white/[0.05] transition-all duration-300 shadow-sm hover:shadow-md border-none">
+            {(recentTicketsRaw ?? []).map((ticket: any, idx: number) => (
+              <div key={ticket.id} className={cn(
+                  "flex items-center justify-between p-6 rounded-3xl group transition-all duration-300 shadow-none border-none",
+                  idx % 2 === 0 ? "bg-slate-50 dark:bg-white/[0.03]" : "bg-transparent"
+              )}>
                     <div className="flex items-center gap-6">
                       <div className="h-16 w-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform relative shadow-inner">
                         <Smartphone className="h-8 w-8 text-primary" />
