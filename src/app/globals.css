@@ -132,6 +132,12 @@
   }
 }
 
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

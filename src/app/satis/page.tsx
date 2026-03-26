@@ -1,5 +1,5 @@
 import { POSInterface } from "@/components/pos/pos-interface";
-import { getProducts } from "@/lib/actions/product-actions";
+import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { getCustomers } from "@/lib/actions/customer-actions";
 import { ShoppingCart } from "lucide-react";
 
@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function POSPage() {
   const products = await getProducts();
   const customers = await getCustomers();
+  const categories = await getCategories();
 
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
@@ -27,8 +28,8 @@ export default async function POSPage() {
         </div>
       </div>
 
-      <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none p-1">
-        <POSInterface products={products} customers={customers} />
+      <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border-none p-1">
+        <POSInterface products={products} customers={customers} categories={categories} />
       </div>
     </div>
   );
