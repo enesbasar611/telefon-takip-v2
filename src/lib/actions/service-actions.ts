@@ -98,26 +98,53 @@ export async function createServiceTicket(rawData: any) {
   }
 }
 
-export async function updateServiceStatus(ticketId: string, status: ServiceStatus) {
+export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH") {
   try {
-    const ticket = await prisma.serviceTicket.update({
+    const user = await getOrCreateDevUser();
+
+    // Fetch current ticket to calculate costs if delivering
+    const currentTicket = await prisma.serviceTicket.findUnique({
       where: { id: ticketId },
-      data: {
-        status,
-        logs: {
-          create: {
-            message: `Durum güncellendi: ${status}`,
-            status: status,
-          }
-        }
-      },
+      include: { usedParts: true }
     });
 
-    // Logic for double-deduction and redundant transaction creation removed.
-    // Stock is already deducted in addPartToService.
-    // Transactions should be recorded via a dedicated payment/checkout flow or explicitly on DELIVERED if not already present.
+    if (!currentTicket) throw new Error("Servis kaydı bulunamadı.");
 
-    // For now, let's keep it simple and only log the status change.
+    const updateData: any = {
+      status,
+      logs: {
+        create: {
+          message: `Durum güncellendi: ${status}`,
+          status: status,
+        }
+      }
+    };
+
+    if (status === ServiceStatus.DELIVERED) {
+      updateData.deliveredAt = new Date();
+
+      // Calculate total revenue from this service
+      const partsTotal = currentTicket.usedParts.reduce((acc, part) => acc + (Number(part.unitPrice) * part.quantity), 0);
+      const laborTotal = Number(currentTicket.actualCost) || Number(currentTicket.estimatedCost);
+      const totalRevenue = partsTotal + laborTotal;
+
+      if (totalRevenue > 0) {
+        await prisma.transaction.create({
+          data: {
+            type: "INCOME",
+            amount: totalRevenue,
+            description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}`,
+            paymentMethod: paymentMethod as any,
+            userId: user.id,
+          }
+        });
+      }
+    }
+
+    const ticket = await prisma.serviceTicket.update({
+      where: { id: ticketId },
+      data: updateData,
+    });
 
     revalidatePath("/servis");
     revalidatePath("/stok");

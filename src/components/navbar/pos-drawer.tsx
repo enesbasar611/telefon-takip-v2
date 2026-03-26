@@ -12,19 +12,21 @@ import {
 } from "@/components/ui/sheet";
 import { POSInterface } from "@/components/pos/pos-interface";
 import { useEffect, useState } from "react";
-import { getProducts } from "@/lib/actions/product-actions";
+import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { getCustomers } from "@/lib/actions/customer-actions";
 
 export function POSDrawer() {
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [p, c] = await Promise.all([getProducts(), getCustomers()]);
+      const [p, c, cats] = await Promise.all([getProducts(), getCustomers(), getCategories()]);
       setProducts(p);
       setCustomers(c);
+      setCategories(cats);
     } catch (error) {
       console.error(error);
     } finally {
@@ -64,7 +66,7 @@ export function POSDrawer() {
                 </div>
             ) : (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
-                   <POSInterface products={products} customers={customers} />
+                   <POSInterface products={products} customers={customers} categories={categories} />
                 </div>
             )}
           </div>

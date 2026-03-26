@@ -4,8 +4,10 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%; /* #f8fafc - Temiz zemin */
-    --foreground: 225 35% 6%; /* #0a0e16 - Kesin Siyah */
+    /* Design System Tokens - The Luminous Prism (Light Mode) */
+    --background: 210 20% 96%; /* slate-50 base layer */
+    --foreground: 220 43% 6%; /* #080C14 - Neutral Deep Black */
+
     --card: 0 0% 100%;
     --card-foreground: 225 35% 6%;
     --border: 214 32% 91%;
