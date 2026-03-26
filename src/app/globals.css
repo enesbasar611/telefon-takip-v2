@@ -6,7 +6,7 @@
   :root {
     /* Design System Tokens - The Luminous Prism (Light Mode) */
     --background: 210 20% 96%; /* slate-50 base layer */
-    --foreground: 225 35% 6%; /* #0a0e16 - Deep Black for Editorial Edge */
+    --foreground: 220 43% 6%; /* #080C14 - Neutral Deep Black */
 
     --card: 0 0% 100%;
     --card-foreground: 225 35% 6%;
