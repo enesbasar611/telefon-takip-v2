@@ -24,42 +24,42 @@ import { tr } from "date-fns/locale";
 
 export function LiveActivityFeed({ activity }: { activity: any[] }) {
   return (
-    <Card className="bg-[#141416] border-white/5 shadow-none h-full overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-            <Activity className="h-4 w-4 text-blue-500" />
+    <Card className="bg-card border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/40 h-full overflow-hidden rounded-2xl">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-white/5 p-8 pb-6 bg-muted/20">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm shadow-primary/5">
+            <Activity className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-sm font-black  ">Canlı Akış</CardTitle>
-            <p className="text-[10px] text-gray-500 font-bold  ">Sistem Etkinlikleri</p>
+            <CardTitle className="text-lg font-bold font-manrope">Canlı akış</CardTitle>
+            <p className="text-xs text-slate-500 font-medium mt-1">Gerçek zamanlı etkinlik trafiği</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] font-black border-blue-500/20 text-blue-500 bg-blue-500/5 px-2 animate-pulse">
+        <Badge variant="outline" className="text-[10px] font-extrabold border-primary/20 text-primary bg-primary/5 px-3 py-1 rounded-full animate-pulse tracking-widest">
           LIVE
         </Badge>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-slate-100 dark:divide-white/5">
           {activity.map((item) => (
-            <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-colors group">
-              <div className="flex items-start gap-4">
-                <div className={`mt-1 h-8 w-8 rounded-lg flex items-center justify-center border ${
+            <div key={item.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 group">
+              <div className="flex items-start gap-5">
+                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${
                   item.type === 'SERVICE'
-                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-500'
-                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+                    ? 'bg-primary/10 border-primary/20 text-primary'
+                    : 'bg-secondary/10 border-secondary/20 text-secondary'
                 }`}>
-                  {item.type === 'SERVICE' ? <Wrench className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
+                  {item.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h4 className="text-xs font-black text-white  truncate">{item.title}</h4>
-                    <span className="text-[9px] font-bold text-gray-600  whitespace-nowrap">
+                  <div className="flex items-center justify-between gap-4 mb-1.5">
+                    <h4 className="text-sm font-extrabold text-foreground truncate font-manrope">{item.title}</h4>
+                    <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-tighter">
                       {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: tr })}
                     </span>
                   </div>
-                  <p className="text-[10px] font-medium text-gray-500 truncate group-hover:text-gray-300 transition-colors">
-                    {item.user} • {item.message}
+                  <p className="text-xs font-medium text-slate-500 truncate group-hover:text-foreground transition-colors leading-relaxed">
+                    <span className="font-bold text-slate-600 dark:text-slate-400">{item.user}</span> • {item.message}
                   </p>
                 </div>
               </div>

@@ -119,7 +119,7 @@ export default function NewCustomerPage() {
   }
 
   return (
-    <div className="p-6 bg-[#0a0a0b] text-white min-h-screen">
+    <div className="p-6 bg-background text-white min-h-screen">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex items-center justify-between">
@@ -150,13 +150,13 @@ export default function NewCustomerPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Tabs defaultValue="genel" className="w-full">
-                <TabsList className="bg-[#141416] border border-white/5 p-1 mb-6">
+                <TabsList className="bg-card border border-white/5 p-1 mb-6">
                   <TabsTrigger value="genel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Genel Bilgiler</TabsTrigger>
                   <TabsTrigger value="ek" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Ek Detaylar</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="genel" className="mt-0">
-                  <Card className="bg-[#141416] border-none shadow-sm p-2">
+                  <Card className="bg-card border-none shadow-sm p-2">
                     <CardContent className="pt-6 space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
@@ -168,7 +168,7 @@ export default function NewCustomerPage() {
                               <FormControl>
                                 <div className="relative">
                                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                  <Input placeholder="Örn: Ahmet Yılmaz" {...field} className="bg-[#0a0a0b] border-white/5 pl-10 focus:ring-blue-600" />
+                                  <Input placeholder="Örn: Ahmet Yılmaz" {...field} className="bg-background border-white/5 pl-10 focus:ring-blue-600" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -182,7 +182,7 @@ export default function NewCustomerPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-gray-500 font-bold text-[10px]  ">MÜŞTERİ TİPİ</FormLabel>
-                              <div className="flex gap-2 p-1 bg-[#0a0a0b] rounded-lg border border-white/5">
+                              <div className="flex gap-2 p-1 bg-background rounded-lg border border-white/5">
                                 <Button
                                   type="button"
                                   variant={field.value === "BIREYSEL" ? "secondary" : "ghost"}
@@ -225,7 +225,7 @@ export default function NewCustomerPage() {
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
                                     placeholder="+90 (5__) ___ __ __"
-                                    className="flex h-10 w-full rounded-md border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                                    className="flex h-10 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
                                   />
                                 </div>
                               </FormControl>
@@ -243,7 +243,7 @@ export default function NewCustomerPage() {
                               <FormControl>
                                 <div className="relative">
                                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                  <Input placeholder="example@domain.com" {...field} className="bg-[#0a0a0b] border-white/5 pl-10 focus:ring-blue-600" />
+                                  <Input placeholder="example@domain.com" {...field} className="bg-background border-white/5 pl-10 focus:ring-blue-600" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -263,7 +263,7 @@ export default function NewCustomerPage() {
                                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                 <Textarea
                                   placeholder="Sokak, Mahalle, Kat/Daire ve Şehir bilgileri..."
-                                  className="bg-[#0a0a0b] border-white/5 pl-10 min-h-[100px] focus:ring-blue-600"
+                                  className="bg-background border-white/5 pl-10 min-h-[100px] focus:ring-blue-600"
                                   {...field}
                                 />
                               </div>
@@ -277,7 +277,7 @@ export default function NewCustomerPage() {
                 </TabsContent>
 
                 <TabsContent value="ek">
-                  <Card className="bg-[#141416] border-none shadow-sm p-2">
+                  <Card className="bg-card border-none shadow-sm p-2">
                     <CardContent className="pt-6 space-y-6">
                       <FormField
                         control={form.control}
@@ -297,7 +297,7 @@ export default function NewCustomerPage() {
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
                                     placeholder="+90 (5__) ___ __ __"
-                                    className="flex h-10 w-full rounded-md border border-white/5 bg-[#0a0a0b] px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                                    className="flex h-10 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
                                   />
                                 </div>
                             </FormControl>
@@ -314,7 +314,7 @@ export default function NewCustomerPage() {
 
             <div className="space-y-6">
               {/* Profile Photo Card */}
-              <Card className="bg-[#141416] border-none shadow-sm overflow-hidden">
+              <Card className="bg-card border-none shadow-sm overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between px-6">
                   <CardTitle className="text-gray-500 font-bold text-[10px]  ">MÜŞTERİ FOTOĞRAFI</CardTitle>
                   {photoPreview && (
@@ -357,7 +357,7 @@ export default function NewCustomerPage() {
               </Card>
 
               {/* VIP Status Card */}
-              <Card className="bg-[#141416] border-none shadow-sm">
+              <Card className="bg-card border-none shadow-sm">
                 <CardContent className="p-4">
                   <FormField
                     control={form.control}
@@ -387,7 +387,7 @@ export default function NewCustomerPage() {
               </Card>
 
               {/* Notes Card */}
-              <Card className="bg-[#141416] border-none shadow-sm h-full">
+              <Card className="bg-card border-none shadow-sm h-full">
                 <CardHeader className="pb-2 flex flex-row items-center gap-2">
                    <StickyNote className="h-4 w-4 text-gray-500" />
                    <CardTitle className="text-gray-500 font-bold text-[10px]  ">ÖZEL NOTLAR</CardTitle>
@@ -401,7 +401,7 @@ export default function NewCustomerPage() {
                         <FormControl>
                           <Textarea
                             placeholder="Teknik geçmiş, özel istekler veya hatırlatmalar..."
-                            className="bg-[#0a0a0b] border-white/5 min-h-[150px] text-sm focus:ring-blue-600"
+                            className="bg-background border-white/5 min-h-[150px] text-sm focus:ring-blue-600"
                             {...field}
                           />
                         </FormControl>

@@ -17,7 +17,7 @@ export default function ServiceIadePage() {
       </div>
 
       <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="rounded-[2rem] border-emerald-500/10 bg-emerald-500/5 shadow-sm">
+        <Card className="rounded-xl border-emerald-500/10 bg-emerald-500/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
             <CardTitle className="text-sm font-bold text-emerald-600">Aktif garantiler</CardTitle>
             <ShieldCheck className="h-5 w-5 text-emerald-600" />
@@ -27,7 +27,7 @@ export default function ServiceIadePage() {
             <p className="text-xs text-emerald-600/60 font-medium mt-2">Süresi devam eden cihazlar</p>
           </CardContent>
         </Card>
-        <Card className="rounded-[2rem] border-amber-500/10 bg-amber-500/5 shadow-sm">
+        <Card className="rounded-xl border-amber-500/10 bg-amber-500/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
             <CardTitle className="text-sm font-bold text-amber-600">Biten garantiler</CardTitle>
             <History className="h-5 w-5 text-amber-600" />
@@ -37,7 +37,7 @@ export default function ServiceIadePage() {
             <p className="text-xs text-amber-600/60 font-medium mt-2">Süresi dolan eski tamirler</p>
           </CardContent>
         </Card>
-        <Card className="rounded-[2rem] border-rose-500/10 bg-rose-500/5 shadow-sm">
+        <Card className="rounded-xl border-rose-500/10 bg-rose-500/5 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
             <CardTitle className="text-sm font-bold text-rose-600">İade talepleri</CardTitle>
             <AlertCircle className="h-5 w-5 text-rose-600" />
@@ -49,7 +49,7 @@ export default function ServiceIadePage() {
         </Card>
       </div>
 
-      <Card className="rounded-[2rem] border-border shadow-sm bg-card overflow-hidden">
+      <Card className="rounded-xl border-border shadow-sm bg-card overflow-hidden">
         <CardHeader className="p-8 border-b border-border">
           <CardTitle className="text-xl font-extrabold">Son iade hareketleri</CardTitle>
           <CardDescription className="text-sm font-medium mt-1">Garanti kapsamındaki son işlemler</CardDescription>

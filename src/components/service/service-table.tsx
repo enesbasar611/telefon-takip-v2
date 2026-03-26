@@ -97,7 +97,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
   };
 
   return (
-    <div className="rounded-[2rem] obsidian overflow-hidden whisper-border border-white/5 shadow-none">
+    <div className="rounded-xl obsidian overflow-hidden whisper-border border-white/5 shadow-none">
       <Table>
         <TableHeader className="bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
@@ -113,7 +113,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-40 text-center text-[10px] font-black text-gray-600   bg-[#141416]/50">
+              <TableCell colSpan={7} className="h-40 text-center text-[10px] font-black text-gray-600   bg-card/50">
                 Kayıtlı veri bulunamadı.
               </TableCell>
             </TableRow>
@@ -178,7 +178,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[200px] shadow-none">
+                      <DropdownMenuContent align="end" className="bg-card border-white/5 text-white p-2 min-w-[200px] shadow-none">
                         <DropdownMenuLabel className="text-[10px]   font-black text-gray-500 p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/5" />
                         {Object.entries(statusMap).map(([status, info]) => (

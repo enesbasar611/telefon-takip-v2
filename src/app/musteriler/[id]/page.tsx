@@ -92,7 +92,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 <ChevronLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="h-28 w-28 rounded-[2rem] bg-blue-500/10 border-4 border-background flex items-center justify-center relative shadow-none overflow-hidden group hover:scale-105 transition-all">
+          <div className="h-28 w-28 rounded-xl bg-blue-500/10 border-4 border-background flex items-center justify-center relative shadow-none overflow-hidden group hover:scale-105 transition-all">
             {customer.photo ? (
               <img src={customer.photo} alt={customer.name} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
             ) : (
@@ -143,7 +143,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
       {/* Main Grid: CRM Analiz & Sadakat */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Loyalty Panel */}
-        <Card className="lg:col-span-1 border-border shadow-sm group overflow-hidden relative bg-card rounded-[2rem]">
+        <Card className="lg:col-span-1 border-border shadow-sm group overflow-hidden relative bg-card rounded-xl">
             <CardHeader className="border-b border-border pb-6 bg-muted/10">
                 <div className="flex items-center gap-3">
                     <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -152,7 +152,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
             </CardHeader>
             <CardContent className="p-10 space-y-8">
                 <div className="flex flex-col items-center text-center">
-                    <div className={cn("h-24 w-24 rounded-[2rem] flex items-center justify-center border-none shadow-lg mb-4 group-hover:scale-110 transition-transform", tier.color)}>
+                    <div className={cn("h-24 w-24 rounded-xl flex items-center justify-center border-none shadow-lg mb-4 group-hover:scale-110 transition-transform", tier.color)}>
                         <tier.icon className="h-12 w-12" />
                     </div>
                     <h3 className="text-2xl font-extrabold">{tier.label}</h3>
@@ -176,7 +176,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         {/* Financial & Summary Cards */}
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+            <Card className="border-border shadow-sm group bg-card rounded-xl hover:translate-y-[-4px] transition-all overflow-hidden relative">
                 <CardContent className="p-10 flex flex-col gap-6">
                     <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-lg shadow-emerald-500/5 group-hover:scale-110 transition-transform">
                         <Wallet className="h-7 w-7" />
@@ -188,7 +188,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 </CardContent>
             </Card>
 
-            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+            <Card className="border-border shadow-sm group bg-card rounded-xl hover:translate-y-[-4px] transition-all overflow-hidden relative">
                 <CardContent className="p-10 flex flex-col gap-6">
                     <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-lg shadow-blue-500/5 group-hover:scale-110 transition-transform">
                         <Wrench className="h-7 w-7" />
@@ -200,7 +200,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 </CardContent>
             </Card>
 
-            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+            <Card className="border-border shadow-sm group bg-card rounded-xl hover:translate-y-[-4px] transition-all overflow-hidden relative">
                 <CardContent className="p-10 flex flex-col gap-6">
                     <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-lg shadow-rose-500/5 group-hover:scale-110 transition-transform">
                         <ArrowDownCircle className="h-7 w-7" />
@@ -226,7 +226,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         {[...(customer.tickets || []), ...(customer.sales || [])]
                             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .map((item: any, idx: number) => (
-                                <div key={idx} className="bg-card p-8 rounded-[2rem] border border-border flex items-center justify-between hover:bg-muted/10 transition-all group shadow-sm">
+                                <div key={idx} className="bg-card p-8 rounded-xl border border-border flex items-center justify-between hover:bg-muted/10 transition-all group shadow-sm">
                                     <div className="flex items-center gap-6">
                                         <div className={cn(
                                             "h-16 w-16 rounded-[1.25rem] flex items-center justify-center relative shadow-sm",
@@ -266,12 +266,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
                     <TabsContent value="parts" className="space-y-6 outline-none">
                         {usedParts.length === 0 ? (
-                            <div className="p-20 text-center bg-card rounded-[2rem] border border-border border-dashed">
+                            <div className="p-20 text-center bg-card rounded-xl border border-border border-dashed">
                                 <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
                                 <p className="text-sm font-bold text-muted-foreground">Henüz parça kullanımı kaydedilmemiş</p>
                             </div>
                         ) : (
-                            <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
+                            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                                 <table className="w-full text-left">
                                     <thead className="bg-muted/30 border-b border-border">
                                         <tr>
@@ -327,7 +327,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 const isExpired = daysLeft < 0;
 
                                 return (
-                                    <Card key={ticket.id} className="bg-card border-border shadow-sm overflow-hidden group rounded-[2rem]">
+                                    <Card key={ticket.id} className="bg-card border-border shadow-sm overflow-hidden group rounded-xl">
                                         <CardHeader className="pb-4 border-b border-border bg-muted/10">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
@@ -375,7 +375,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </TabsContent>
 
                     <TabsContent value="notes" className="outline-none">
-                        <Card className="bg-card border-border shadow-sm rounded-[2rem] overflow-hidden">
+                        <Card className="bg-card border-border shadow-sm rounded-xl overflow-hidden">
                             <CardHeader className="border-b border-border bg-muted/10">
                                 <div className="flex items-center gap-3">
                                     <FileText className="h-4 w-4 text-blue-500" />
@@ -383,7 +383,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 </div>
                             </CardHeader>
                             <CardContent className="p-10">
-                                <div className="bg-muted/30 p-10 rounded-[2rem] border border-border min-h-[250px] text-muted-foreground text-sm font-medium leading-relaxed italic group hover:border-blue-500/20 transition-all">
+                                <div className="bg-muted/30 p-10 rounded-xl border border-border min-h-[250px] text-muted-foreground text-sm font-medium leading-relaxed italic group hover:border-blue-500/20 transition-all">
                                     {customer.notes || "Bu profil için henüz stratejik bir not girişi yapılmamıştır."}
                                 </div>
                             </CardContent>

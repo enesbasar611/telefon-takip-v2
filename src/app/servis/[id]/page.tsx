@@ -58,7 +58,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-20 bg-[#0a0a0b] text-white min-h-screen p-8">
+    <div className="flex flex-col gap-8 pb-20 bg-background text-white min-h-screen p-8">
       {/* Header Profile Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
@@ -88,7 +88,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
         {/* Left Column: Device & Customer Info */}
         <div className="lg:col-span-2 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <Card className="bg-[#141416] border-white/5 shadow-none group overflow-hidden relative">
+             <Card className="bg-card border-white/5 shadow-none group overflow-hidden relative">
                 <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-blue-500" />
                 <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                     <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                 </CardContent>
              </Card>
 
-             <Card className="bg-[#141416] border-white/5 shadow-none group overflow-hidden relative">
+             <Card className="bg-card border-white/5 shadow-none group overflow-hidden relative">
                 <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-emerald-500" />
                 <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                     <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
           </div>
 
           {/* Vertical Journey Timeline */}
-          <Card className="bg-[#141416] border-white/5 shadow-none">
+          <Card className="bg-card border-white/5 shadow-none">
             <CardHeader className="border-b border-white/[0.03] pb-6 bg-white/[0.01]">
                 <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-blue-500 " />
@@ -156,7 +156,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                 <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:via-blue-500 before:to-transparent">
                     {ticket.logs.map((log: any, idx: number) => (
                         <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-[#0a0a0b] text-blue-500 shadow-none z-10 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 group-hover:scale-110 group-hover:border-blue-500/50 transition-all">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-background text-blue-500 shadow-none z-10 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 group-hover:scale-110 group-hover:border-blue-500/50 transition-all">
                                 {idx === 0 ? <CheckCircle2 className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
                             </div>
                             <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-5 rounded-2xl whisper-border border-white/5 bg-white/[0.02] shadow-none group-hover:bg-white/[0.04] transition-all">
@@ -175,7 +175,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
 
         {/* Right Column: Financial & Actions */}
         <div className="space-y-8">
-            <Card className="bg-[#141416] border-white/5 shadow-none group overflow-hidden relative">
+            <Card className="bg-card border-white/5 shadow-none group overflow-hidden relative">
                 <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-blue-500" />
                 <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                     <div className="flex items-center gap-3">
@@ -201,7 +201,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                 </CardContent>
             </Card>
 
-            <Card className="bg-[#141416] border-white/5 shadow-none group overflow-hidden relative">
+            <Card className="bg-card border-white/5 shadow-none group overflow-hidden relative">
                 <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                     <div className="flex items-center gap-3">
                         <UserCog className="h-4 w-4 text-blue-500" />

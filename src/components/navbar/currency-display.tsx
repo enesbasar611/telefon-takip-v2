@@ -29,7 +29,7 @@ export function CurrencyDisplay() {
     );
   }
 
-  const badgeClass = "h-10 px-4 bg-muted border border-border rounded-xl text-xs font-bold text-muted-foreground hover:text-blue-500 hover:border-blue-500/20 transition-all flex items-center gap-3 shadow-sm group";
+  const badgeClass = "h-10 px-4 bg-surface-container-low border-none rounded-xl text-xs font-bold text-foreground hover:bg-surface-container-highest transition-all flex items-center gap-3 shadow-sm group";
 
   return (
     <div className="flex items-center gap-3">
@@ -37,11 +37,11 @@ export function CurrencyDisplay() {
         rates={rates}
         trigger={
           <button className={badgeClass}>
-            <div className="flex items-center gap-1.5 border-r border-border pr-3 group-hover:border-blue-500/20 transition-colors">
-              <DollarSign className="h-3.5 w-3.5 text-emerald-500" strokeWidth={1.5} />
-              <span className="text-foreground">Dolar:</span>
+            <div className="flex items-center gap-1.5 border-r border-foreground/10 pr-3 group-hover:border-foreground/20 transition-colors">
+              <DollarSign className="h-3.5 w-3.5 text-secondary" strokeWidth={1.5} />
+              <span className="text-foreground font-semibold">Dolar:</span>
             </div>
-            <span className="text-foreground">₺{rates.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold">₺{rates.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
           </button>
         }
       />
@@ -50,11 +50,11 @@ export function CurrencyDisplay() {
         rates={rates}
         trigger={
           <button className={badgeClass}>
-            <div className="flex items-center gap-1.5 border-r border-border pr-3 group-hover:border-blue-500/20 transition-colors">
-              <Euro className="h-3.5 w-3.5 text-blue-500" strokeWidth={1.5} />
-              <span className="text-foreground">Euro:</span>
+            <div className="flex items-center gap-1.5 border-r border-foreground/10 pr-3 group-hover:border-foreground/20 transition-colors">
+              <Euro className="h-3.5 w-3.5 text-primary" strokeWidth={1.5} />
+              <span className="text-foreground font-semibold">Euro:</span>
             </div>
-            <span className="text-foreground">₺{rates.eur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold">₺{rates.eur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
           </button>
         }
       />
@@ -63,11 +63,11 @@ export function CurrencyDisplay() {
         rates={rates}
         trigger={
           <button className={badgeClass}>
-            <div className="flex items-center gap-1.5 border-r border-border pr-3 group-hover:border-blue-500/20 transition-colors">
-              <Coins className="h-3.5 w-3.5 text-amber-500" strokeWidth={1.5} />
-              <span className="text-foreground">Altın:</span>
+            <div className="flex items-center gap-1.5 border-r border-foreground/10 pr-3 group-hover:border-foreground/20 transition-colors">
+              <Coins className="h-3.5 w-3.5 text-tertiary" strokeWidth={1.5} />
+              <span className="text-foreground font-semibold">Altın:</span>
             </div>
-            <span className="text-foreground">₺{rates.ga.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold">₺{rates.ga.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
           </button>
         }
       />

@@ -36,7 +36,7 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
             content={({ active, payload, label }) => {
               if (active && payload && payload.length) {
                 return (
-                  <div className="bg-[#141416] border border-white/10 p-3 rounded-xl shadow-none">
+                  <div className="bg-card border border-white/10 p-3 rounded-xl shadow-none">
                     <p className="text-[10px] font-black text-gray-500   mb-1">{label}</p>
                     <p className="text-sm font-black text-blue-500">₺{Number(payload[0].value).toLocaleString('tr-TR')}</p>
                   </div>

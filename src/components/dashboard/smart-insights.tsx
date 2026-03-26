@@ -62,7 +62,7 @@ export function SmartInsights({ stats }: { stats: any }) {
   ].filter(i => i.show);
 
   return (
-    <Card className="bg-card border-border shadow-sm h-full overflow-hidden rounded-[2rem]">
+    <Card className="bg-card border-border shadow-sm h-full overflow-hidden rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 ">

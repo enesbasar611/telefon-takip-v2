@@ -19,7 +19,7 @@ export default async function ServiceListPage() {
         </div>
       </div>
 
-      <div className="matte-card p-8 rounded-[2.5rem] border-slate-800/50">
+      <div className="matte-card p-8 rounded-2xl border-border/10/50">
         <ServiceListTable data={tickets} />
       </div>
 

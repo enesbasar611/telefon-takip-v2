@@ -22,13 +22,22 @@ export async function syncAllRates() {
       return { success: false, error: `Çok sık güncelleme yapıldı. Lütfen ${remainingTime} dakika sonra tekrar deneyin.` };
     }
 
-    // Parallel fetch
+    // Parallel fetch with headers to bypass basic bot protection
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "Cache-Control": "no-cache"
+    };
+
     const [dovizRes, altinRes] = await Promise.all([
-      fetch("https://api.genelpara.com/json/?list=doviz&sembol=USD,EUR"),
-      fetch("https://api.genelpara.com/json/?list=altin&sembol=GA")
+      fetch("https://api.genelpara.com/json/?list=doviz&sembol=USD,EUR", { headers }),
+      fetch("https://api.genelpara.com/json/?list=altin&sembol=GA", { headers })
     ]);
 
-    if (!dovizRes.ok || !altinRes.ok) throw new Error("API hatası");
+    if (!dovizRes.ok || !altinRes.ok) {
+        console.error("API Error Status:", dovizRes.status, altinRes.status);
+        throw new Error("API sunucusu yanıt vermiyor.");
+    }
 
     const dovizData = await dovizRes.json();
     const altinData = await altinRes.json();

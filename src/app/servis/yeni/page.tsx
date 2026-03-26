@@ -264,7 +264,7 @@ export default function NewServicePage() {
                     onFocus={() => modelSuggestions.length > 0 && setShowSuggestions(true)}
                   />
                   {showSuggestions && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-none overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-slate-900 border border-border/10 rounded-xl shadow-none overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         {modelSuggestions.map((model) => (
                             <button
                                 key={model}
@@ -273,7 +273,7 @@ export default function NewServicePage() {
                                     form.setValue("deviceModel", model);
                                     setShowSuggestions(false);
                                 }}
-                                className="w-full text-left px-4 py-3 text-[10px] font-black  text-slate-400 hover:bg-blue-600/10 hover:text-blue-500 transition-all border-b border-slate-800/50 last:border-none"
+                                className="w-full text-left px-4 py-3 text-[10px] font-black  text-slate-400 hover:bg-blue-600/10 hover:text-blue-500 transition-all border-b border-border/10/50 last:border-none"
                             >
                                 {model}
                             </button>
@@ -372,7 +372,7 @@ export default function NewServicePage() {
 
             {/* Customer Intelligence Panel */}
             {foundCustomer && (
-              <section className="bg-blue-600/5 p-8 rounded-[2rem] border border-blue-500/20 animate-in slide-in-from-right-4 duration-500">
+              <section className="bg-blue-600/5 p-8 rounded-xl border border-blue-500/20 animate-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center gap-3 mb-6">
                    <div className="h-2 w-2 rounded-full bg-blue-500 " />
                    <h3 className="text-xs font-black text-white   italic">Personel İstihbarat Paneli</h3>
@@ -394,7 +394,7 @@ export default function NewServicePage() {
                     <div className="space-y-4">
                         <p className="text-[10px] font-black text-slate-500  ">Son Servis Geçmişi</p>
                         {foundCustomer.tickets.map((t: any) => (
-                            <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-800/50">
+                            <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-border/10/50">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-white ">{t.deviceBrand} {t.deviceModel}</span>
                                     <span className="text-[8px] font-bold text-slate-600 ">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM", { locale: tr })}</span>
@@ -499,7 +499,7 @@ export default function NewServicePage() {
           </div>
 
           {/* Sticky Footer */}
-          <footer className="fixed bottom-0 lg:bottom-0 bottom-16 right-0 left-0 lg:left-64 bg-[#020617]/90 backdrop-blur-xl border-t border-slate-800/50 px-4 py-4 z-40">
+          <footer className="fixed bottom-0 lg:bottom-0 bottom-16 right-0 left-0 lg:left-64 bg-background/90 backdrop-blur-xl border-t border-border/10/50 px-4 py-4 z-40">
             <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
               <div className="hidden sm:flex flex-col">
                 <span className="text-[10px]  font-black text-slate-500 ">Kayıt Özeti</span>

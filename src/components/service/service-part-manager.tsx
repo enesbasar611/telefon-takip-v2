@@ -66,7 +66,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
               <Plus className="h-3 w-3 mr-1" /> PARÇA EKLE
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#141416] border-white/5 text-white">
+          <DialogContent className="bg-card border-white/5 text-white">
             <DialogHeader>
               <DialogTitle className="text-sm font-black  ">Servise Parça Ekle</DialogTitle>
             </DialogHeader>
@@ -77,7 +77,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                   <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12">
                     <SelectValue placeholder="Envanterden ürün seçin..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#141416] border-white/5 text-white">
+                  <SelectContent className="bg-card border-white/5 text-white">
                     {products.map((p) => (
                       <SelectItem key={p.id} value={p.id} className="text-xs font-bold  py-3">
                         {p.name} (Stok: {p.stock}) - ₺{Number(p.sellPrice).toLocaleString('tr-TR')}

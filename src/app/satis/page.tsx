@@ -10,19 +10,26 @@ export default async function POSPage() {
   const customers = await getCustomers();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold ">Hızlı Satış (POS)</h1>
-          <p className="text-muted-foreground">Ürün seçin, sepeti oluşturun ve hızlıca tahsilat yapın.</p>
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-4">
+        <div className="flex items-center gap-6">
+            <div className="h-16 w-16 rounded-[1.5rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5">
+                <ShoppingCart className="h-8 w-8 text-secondary" />
+            </div>
+            <div>
+                <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Hızlı satış (POS)</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Anlık perakende satış ve sepet yönetimi</p>
+            </div>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-600 rounded-full font-bold text-xs  ">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Kasa Açık (Online)
+        <div className="flex items-center gap-3 px-6 py-3 bg-secondary/5 text-secondary border border-secondary/10 rounded-2xl font-bold text-xs shadow-sm">
+          <div className="h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" />
+          Sistem Online
         </div>
       </div>
 
-      <POSInterface products={products} customers={customers} />
+      <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none p-1">
+        <POSInterface products={products} customers={customers} />
+      </div>
     </div>
   );
 }

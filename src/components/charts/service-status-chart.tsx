@@ -42,7 +42,7 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
             content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-[#141416] border border-white/10 p-3 rounded-xl shadow-none">
+                    <div className="bg-card border border-white/10 p-3 rounded-xl shadow-none">
                       <p className="text-[10px] font-black   mb-1" style={{ color: payload[0].payload.color }}>{payload[0].name}</p>
                       <p className="text-sm font-black text-white">{payload[0].value} Cihaz</p>
                     </div>

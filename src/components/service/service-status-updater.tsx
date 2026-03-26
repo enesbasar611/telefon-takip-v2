@@ -50,7 +50,7 @@ export function ServiceStatusUpdater({ ticketId, currentStatus }: { ticketId: st
           {!isPending && <ChevronDown className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[220px] shadow-none">
+      <DropdownMenuContent align="end" className="bg-card border-white/5 text-white p-2 min-w-[220px] shadow-none">
         <DropdownMenuLabel className="text-[10px]   font-black text-gray-500 p-3">Yeni Durum Seçin</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-white/5" />
         {Object.entries(statusMap).map(([status, info]) => (

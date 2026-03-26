@@ -44,7 +44,7 @@ export function POSDrawer() {
           <span>Hızlı Satış</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-[850px] bg-[#020617] border-slate-800 p-0 overflow-hidden">
+      <SheetContent side="right" className="w-full sm:max-w-[850px] bg-background border-border/10 p-0 overflow-hidden">
         <div className="p-10 h-full flex flex-col">
           <SheetHeader className="mb-10">
             <div className="flex items-center gap-4 mb-2">

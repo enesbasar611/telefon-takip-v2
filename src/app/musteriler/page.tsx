@@ -34,7 +34,7 @@ export default async function CustomersPage() {
   const customers = await getCustomers();
 
   return (
-    <div className="p-8 bg-[#0a0a0b] text-white min-h-screen space-y-8">
+    <div className="p-8 bg-background text-white min-h-screen space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-6">
@@ -72,7 +72,7 @@ export default async function CustomersPage() {
       </div>
 
       {/* Main Table */}
-      <div className="rounded-[2rem] obsidian whisper-border border-white/5 shadow-none overflow-hidden">
+      <div className="rounded-xl obsidian whisper-border border-white/5 shadow-none overflow-hidden">
         <Table>
           <TableHeader className="bg-white/[0.01]">
             <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
@@ -158,7 +158,7 @@ export default async function CustomersPage() {
                                  <MoreHorizontal className="h-5 w-5" />
                               </Button>
                            </DropdownMenuTrigger>
-                           <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[200px] shadow-none">
+                           <DropdownMenuContent align="end" className="bg-card border-white/5 text-white p-2 min-w-[200px] shadow-none">
                               <DropdownMenuLabel className="text-[10px]   font-black text-gray-500 p-3 text-center">Profil Yönetimi</DropdownMenuLabel>
                               <DropdownMenuSeparator className="bg-white/5" />
                               <Link href={`/musteriler/duzenle/${customer.id}`}>
@@ -184,7 +184,7 @@ export default async function CustomersPage() {
             })}
             {customers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-24 text-center text-gray-600 bg-[#141416]/50">
+                <TableCell colSpan={5} className="py-24 text-center text-gray-600 bg-card/50">
                    <div className="flex flex-col items-center gap-4">
                         <Users className="h-16 w-16 opacity-5 animate-pulse" />
                         <p className="font-black text-lg  ">Henüz kayıtlı müşteri bulunmuyor.</p>

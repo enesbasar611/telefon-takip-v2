@@ -67,11 +67,11 @@ export function DeviceInspectionModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 hover:text-blue-500 hover:bg-blue-600/10 transition-all">
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-slate-900 border border-border/10 text-slate-500 hover:text-blue-500 hover:bg-blue-600/10 transition-all">
           <ShieldCheck className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-[#020617] border-slate-800 text-white p-0 overflow-hidden rounded-[2rem]">
+      <DialogContent className="sm:max-w-[600px] bg-background border-border/10 text-white p-0 overflow-hidden rounded-xl">
         <div className="p-8 space-y-8">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -112,7 +112,7 @@ export function DeviceInspectionModal({
                         ? 'bg-emerald-600/5 border-emerald-500/20'
                         : results[item.id] === "FAIL"
                         ? 'bg-rose-600/5 border-rose-500/20'
-                        : 'bg-slate-900/40 border-slate-800/60 hover:border-slate-700'
+                        : 'bg-slate-900/40 border-border/10/60 hover:border-slate-700'
                     }`}
                 >
                   <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ export function DeviceInspectionModal({
           </div>
         </div>
 
-        <div className="p-8 border-t border-slate-800/50 bg-slate-900/20 flex items-center justify-between">
+        <div className="p-8 border-t border-border/10/50 bg-slate-900/20 flex items-center justify-between">
            <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                 <span className="text-[9px] font-black text-slate-500  ">Sistem Onayına Hazır</span>

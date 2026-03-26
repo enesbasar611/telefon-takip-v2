@@ -149,7 +149,7 @@ export function ServiceListTable({ data }: { data: any[] }) {
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[180px] bg-[#141416] border-white/5 text-white">
+                            <DropdownMenuContent align="end" className="w-[180px] bg-card border-white/5 text-white">
                                 <DropdownMenuLabel className="text-[10px] font-black   text-gray-500 p-3">İşlemler</DropdownMenuLabel>
                                 <DropdownMenuItem className="text-xs font-bold gap-3 p-3 cursor-pointer focus:bg-white/5" onSelect={() => {
                                     setSelectedTicket(ticket);
@@ -272,10 +272,10 @@ export function ServiceListTable({ data }: { data: any[] }) {
                 const status = ticket.status as ServiceStatus;
                 const config = statusConfig[status];
                 return (
-                    <div key={row.id} className="matte-card p-5 rounded-2xl border-slate-800/50 space-y-4">
+                    <div key={row.id} className="matte-card p-5 rounded-2xl border-border/10/50 space-y-4">
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded w-fit mb-2  ">{ticket.ticketNumber}</span>
+                                <span className="text-[10px] font-black bg-slate-900 border border-border/10 text-slate-400 px-2 py-0.5 rounded w-fit mb-2  ">{ticket.ticketNumber}</span>
                                 <h3 className="font-black text-white  text-sm leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
                                 <p className="text-[10px] text-slate-500 font-bold  mt-1">{ticket.customer?.name}</p>
                             </div>
@@ -284,12 +284,12 @@ export function ServiceListTable({ data }: { data: any[] }) {
                             </Badge>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
+                        <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50">
                             <p className="text-[8px] font-black text-slate-600  mb-1">ARIZA TANIMI</p>
                             <p className="text-[10px] text-slate-300 font-medium italic truncate">"{ticket.problemDesc}"</p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/50">
+                        <div className="flex items-center justify-between pt-2 border-t border-border/10/50">
                             <div className="flex flex-col">
                                 <span className="text-[8px] text-slate-600 font-bold  ">TAHMİNİ ÜCRET</span>
                                 <span className="text-sm font-black text-blue-500 italic">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
@@ -302,11 +302,11 @@ export function ServiceListTable({ data }: { data: any[] }) {
                                 </Link>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-border/10">
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white w-48">
+                                    <DropdownMenuContent align="end" className="bg-card border-white/5 text-white w-48">
                                         <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3" onSelect={() => {
                                             setSelectedTicket(ticket);
                                             setShowDetails(true);

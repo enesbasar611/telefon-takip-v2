@@ -52,7 +52,7 @@ export function GlobalSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => query.length >= 2 && setIsOpen(true)}
-        className="w-full bg-slate-900/40 border-slate-800/50 pl-10 h-10 rounded-xl text-xs font-medium text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-slate-900/60 transition-all"
+        className="w-full bg-slate-900/40 border-border/10/50 pl-10 h-10 rounded-xl text-xs font-medium text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-slate-900/60 transition-all"
       />
       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
         <div className="h-5 w-5 rounded border border-white/10 flex items-center justify-center bg-white/[0.02] text-[10px] text-gray-700 font-black">
@@ -61,7 +61,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && results && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#020617] border border-slate-800/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-xl">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border/10/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-xl">
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
 
             {results.customers.length > 0 && (

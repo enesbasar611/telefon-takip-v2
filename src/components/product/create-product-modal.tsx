@@ -120,7 +120,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
           <span>YENİ ÜRÜN EKLE</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px] bg-[#141416] border-white/5 text-white p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[550px] bg-card border-white/5 text-white p-0 overflow-hidden">
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="p-8 space-y-8">
             <DialogHeader>
@@ -149,7 +149,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm font-bold">
                       <SelectValue placeholder="Seçiniz" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#141416] border-white/5 text-white">
+                    <SelectContent className="bg-card border-white/5 text-white">
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id} className="text-xs font-bold  py-3">{cat.name}</SelectItem>
                       ))}

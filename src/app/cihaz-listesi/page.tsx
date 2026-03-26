@@ -28,7 +28,7 @@ export default async function DeviceHubPage() {
       </div>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-        <div className="matte-card p-6 lg:p-8 rounded-[2rem] flex flex-col gap-6 relative overflow-hidden group">
+        <div className="matte-card p-6 lg:p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-blue-600/5 rounded-full" />
             <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform">
                 <Smartphone className="h-6 w-6" />
@@ -39,7 +39,7 @@ export default async function DeviceHubPage() {
             </div>
         </div>
 
-        <div className="matte-card p-8 rounded-[2rem] flex flex-col gap-6 relative overflow-hidden group">
+        <div className="matte-card p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-emerald-600/5 rounded-full" />
             <div className="h-12 w-12 rounded-2xl bg-emerald-600/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
                 <CheckCircle2 className="h-6 w-6" />
@@ -50,7 +50,7 @@ export default async function DeviceHubPage() {
             </div>
         </div>
 
-        <div className="matte-card p-8 rounded-[2rem] flex flex-col gap-6 relative overflow-hidden group">
+        <div className="matte-card p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-purple-600/5 rounded-full" />
             <div className="h-12 w-12 rounded-2xl bg-purple-600/10 flex items-center justify-center text-purple-500 border border-purple-500/20 group-hover:scale-110 transition-transform">
                 <ShieldCheck className="h-6 w-6" />
@@ -62,8 +62,8 @@ export default async function DeviceHubPage() {
         </div>
       </div>
 
-      <div className="matte-card rounded-[2rem] overflow-hidden">
-        <div className="p-6 lg:p-8 border-b border-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/20">
+      <div className="matte-card rounded-xl overflow-hidden">
+        <div className="p-6 lg:p-8 border-b border-border/10/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/20">
             <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20 ">
                     <Activity className="h-4 w-4 text-blue-500" />
@@ -80,10 +80,10 @@ export default async function DeviceHubPage() {
                 <p className="text-center py-10 text-slate-500 font-bold italic  text-xs">Cihaz bulunamadı.</p>
             ) : (
                 devices.map((device: any) => (
-                    <div key={device.id} className="matte-card p-5 rounded-2xl border-slate-800/50 space-y-4">
+                    <div key={device.id} className="matte-card p-5 rounded-2xl border-border/10/50 space-y-4">
                         <div className="flex justify-between items-start">
                             <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center relative">
+                                <div className="h-12 w-12 rounded-xl bg-slate-900 border border-border/10 flex items-center justify-center relative">
                                     <Smartphone className="h-6 w-6 text-slate-500" />
                                     {device.deviceInfo?.condition === "NEW" && (
                                         <div className="absolute -top-1 -right-1 h-3 w-3 bg-blue-500 rounded-full " />
@@ -94,13 +94,13 @@ export default async function DeviceHubPage() {
                                     <p className="text-[10px] text-slate-500 font-bold  mt-1">IMEI: {device.deviceInfo?.imei || '-'}</p>
                                 </div>
                             </div>
-                            <Badge variant="outline" className="bg-slate-900 border-slate-800 text-[8px] font-black text-slate-500  px-2 py-0.5">
+                            <Badge variant="outline" className="bg-slate-900 border-border/10 text-[8px] font-black text-slate-500  px-2 py-0.5">
                                 {device.category.name}
                             </Badge>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
+                            <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50">
                                 <p className="text-[8px] font-black text-slate-600  mb-1 text-center">KONDİSYON</p>
                                 <div className="flex gap-0.5 justify-center">
                                     {[...Array(10)].map((_, i) => (
@@ -108,13 +108,13 @@ export default async function DeviceHubPage() {
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50 text-right">
+                            <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50 text-right">
                                 <p className="text-[8px] font-black text-slate-600  mb-1">SATIŞ FİYATI</p>
                                 <span className="text-sm font-black text-white italic">₺{Number(device.sellPrice).toLocaleString('tr-TR')}</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/50">
+                        <div className="flex items-center justify-between pt-2 border-t border-border/10/50">
                             <span className="text-[9px] text-slate-600 font-bold ">MALİYET: ₺{Number(device.buyPrice).toLocaleString('tr-TR')}</span>
                             <DeviceInspectionModal
                                 deviceId={device.deviceInfo?.id}
@@ -130,7 +130,7 @@ export default async function DeviceHubPage() {
 
         <Table className="hidden lg:table">
           <TableHeader className="bg-slate-900/40">
-            <TableRow className="border-slate-800/50 hover:bg-transparent">
+            <TableRow className="border-border/10/50 hover:bg-transparent">
               <TableHead className="py-6 pl-8 text-[10px] font-black text-slate-400  ">Cihaz Bilgisi</TableHead>
               <TableHead className="py-6 text-[10px] font-black text-slate-400  ">Sınıflandırma</TableHead>
               <TableHead className="py-6 text-[10px] font-black text-slate-400   text-center">Durum / Kondisyon</TableHead>
@@ -147,10 +147,10 @@ export default async function DeviceHubPage() {
               </TableRow>
             ) : (
               devices.map((device: any) => (
-                <TableRow key={device.id} className="border-slate-800/50 group hover:bg-slate-900/30 transition-colors">
+                <TableRow key={device.id} className="border-border/10/50 group hover:bg-slate-900/30 transition-colors">
                   <TableCell className="py-6 pl-8 font-medium">
                     <div className="flex items-center gap-5">
-                        <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center relative shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
+                        <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-border/10 flex items-center justify-center relative shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
                            <Smartphone className="h-7 w-7 text-slate-500 group-hover:text-blue-500" />
                            {device.deviceInfo?.condition === "NEW" && (
                               <div className="absolute top-0 right-0 h-4 w-4 bg-blue-500 flex items-center justify-center rounded-bl-lg ">
@@ -165,7 +165,7 @@ export default async function DeviceHubPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                     <Badge variant="outline" className="bg-slate-900 border-slate-800 text-[9px] font-black text-slate-500   py-1.5 px-4 rounded-xl">
+                     <Badge variant="outline" className="bg-slate-900 border-border/10 text-[9px] font-black text-slate-500   py-1.5 px-4 rounded-xl">
                         {device.category.name}
                      </Badge>
                   </TableCell>

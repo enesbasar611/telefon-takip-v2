@@ -13,14 +13,14 @@ export default async function StokPage() {
 
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
-        <div className="flex items-center gap-5">
-            <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 ">
-                <Package className="h-7 w-7 text-blue-500" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-4">
+        <div className="flex items-center gap-6">
+            <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+                <Package className="h-8 w-8 text-primary" />
             </div>
             <div>
-                <h1 className="text-4xl font-extrabold tracking-tight">Envanter yönetimi</h1>
-                <p className="text-xs text-muted-foreground font-medium mt-1">Yedek parça, aksesuar ve cihaz envanter takibi</p>
+                <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Envanter yönetimi</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Yedek parça, aksesuar ve global stok envanteri</p>
             </div>
         </div>
         <div className="flex items-center gap-3">
@@ -30,23 +30,23 @@ export default async function StokPage() {
 
       <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Toplam ürün", value: products.length, icon: Package, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+          { label: "Toplam ürün", value: products.length, icon: Package, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
           { label: "Kritik stok", value: products.filter((p: any) => p.stock <= p.criticalStock).length, icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" },
-          { label: "Kategori sayısı", value: categories.length, icon: Layers, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          { label: "Barkodlu ürünler", value: products.filter((p: any) => p.barcode).length, icon: BarcodeIcon, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }
+          { label: "Kategori sayısı", value: categories.length, icon: Layers, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
+          { label: "Barkodlu ürünler", value: products.filter((p: any) => p.barcode).length, icon: BarcodeIcon, color: "text-secondary", bg: "bg-secondary/10", border: "border-secondary/20" }
         ].map((stat, i) => (
-          <Card key={i} className="rounded-[2rem] border-border shadow-sm bg-card transition-all hover:translate-y-[-4px]">
-            <CardContent className="p-10 flex flex-col justify-between min-h-[180px]">
+          <Card key={i} className="rounded-xl border-none shadow-xl shadow-slate-200/50 dark:shadow-black/40 bg-card transition-all duration-500 hover:translate-y-[-6px]">
+            <CardContent className="p-10 flex flex-col justify-between min-h-[220px]">
               <div className="flex items-center justify-between">
-                <div className={cn("p-4 rounded-[1.25rem] border", stat.bg, stat.border)}>
-                  <stat.icon className={cn("h-7 w-7", stat.color)} />
+                <div className={cn("p-4 rounded-2xl border shadow-inner transition-transform group-hover:scale-110", stat.bg, stat.border)}>
+                  <stat.icon className={cn("h-8 w-8", stat.color)} />
                 </div>
-                <TrendingUp className="h-5 w-5 text-muted-foreground/20" />
+                <TrendingUp className="h-6 w-6 text-slate-200" />
               </div>
               <div className="mt-8">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{stat.label}</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
                 <p className={cn(
-                    "text-4xl font-extrabold tracking-tight",
+                    "text-5xl font-extrabold tracking-tighter font-manrope",
                     stat.label === 'Kritik stok' && stat.value > 0 ? 'text-rose-500' : 'text-foreground'
                 )}>{stat.value}</p>
               </div>
@@ -55,7 +55,7 @@ export default async function StokPage() {
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
+      <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none">
         <StockListTable products={products} categories={categories} />
       </div>
     </div>

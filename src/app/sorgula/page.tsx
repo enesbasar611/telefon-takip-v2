@@ -37,7 +37,7 @@ export default function SorgulaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col items-center p-6 md:p-20 font-sans">
+    <div className="min-h-screen bg-background text-white flex flex-col items-center p-6 md:p-20 font-sans">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -49,7 +49,7 @@ export default function SorgulaPage() {
         </div>
 
         {/* Search Form */}
-        <Card className="matte-card border-slate-800/50 mb-8 rounded-[2rem] overflow-hidden">
+        <Card className="matte-card border-border/10/50 mb-8 rounded-xl overflow-hidden">
             <CardContent className="p-8">
                 <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -58,7 +58,7 @@ export default function SorgulaPage() {
                             value={ticketNumber}
                             onChange={(e) => setTicketNumber(e.target.value)}
                             placeholder="Fiş üzerindeki no"
-                            className="bg-slate-900/60 border-slate-800 h-14 rounded-2xl text-sm font-black  "
+                            className="bg-slate-900/60 border-border/10 h-14 rounded-2xl text-sm font-black  "
                             required
                         />
                     </div>
@@ -68,7 +68,7 @@ export default function SorgulaPage() {
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="5xx xxx xx xx"
-                            className="bg-slate-900/60 border-slate-800 h-14 rounded-2xl text-sm font-black "
+                            className="bg-slate-900/60 border-border/10 h-14 rounded-2xl text-sm font-black "
                             required
                         />
                     </div>
@@ -88,7 +88,7 @@ export default function SorgulaPage() {
 
         {/* Results */}
         {searched && !ticket && !isPending && (
-            <div className="matte-card border-rose-500/20 bg-rose-500/5 p-8 rounded-[2rem] text-center">
+            <div className="matte-card border-rose-500/20 bg-rose-500/5 p-8 rounded-xl text-center">
                 <AlertCircle className="h-8 w-8 text-rose-500 mx-auto mb-4" />
                 <p className="text-sm font-black text-rose-500  ">Kayıt Bulunamadı</p>
                 <p className="text-xs text-slate-500 mt-2 font-medium">Lütfen servis numarasını ve telefonunuzu kontrol ediniz.</p>
@@ -97,8 +97,8 @@ export default function SorgulaPage() {
 
         {ticket && (
             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                <Card className="matte-card border-slate-800/50 rounded-[2.5rem] overflow-hidden">
-                    <div className="bg-blue-600/10 p-10 border-b border-slate-800/50">
+                <Card className="matte-card border-border/10/50 rounded-2xl overflow-hidden">
+                    <div className="bg-blue-600/10 p-10 border-b border-border/10/50">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
                                 <Badge className={`${statusConfig[ticket.status].color} border-none text-[10px] font-black   px-4 py-1.5 mb-4`}>
@@ -119,7 +119,7 @@ export default function SorgulaPage() {
                                 <div className="h-2 w-2 rounded-full bg-blue-500 " />
                                 <h3 className="text-xs font-black text-white  ">GÜNCEL DURUM ANALİZİ</h3>
                             </div>
-                            <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800">
+                            <div className="p-6 rounded-3xl bg-slate-900/60 border border-border/10">
                                 <p className="text-sm font-medium text-slate-200 leading-relaxed italic">
                                     "{statusConfig[ticket.status].desc}"
                                 </p>
@@ -127,17 +127,17 @@ export default function SorgulaPage() {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/50">
+                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
                                 <Calendar className="h-4 w-4 text-blue-500 mb-4" />
                                 <p className="text-[9px] font-black text-slate-500   mb-1">Kayıt Tarihi</p>
                                 <p className="text-xs font-black text-white">{format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
                             </div>
-                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/50">
+                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
                                 <Clock className="h-4 w-4 text-blue-500 mb-4" />
                                 <p className="text-[9px] font-black text-slate-500   mb-1">Teslim Tarihi</p>
                                 <p className="text-xs font-black text-white">{ticket.estimatedDeliveryDate ? format(new Date(ticket.estimatedDeliveryDate), "dd MMMM yyyy", { locale: tr }) : "BELİRSİZ"}</p>
                             </div>
-                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/50">
+                            <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
                                 <p className="text-blue-500 font-black text-lg mb-2 italic">₺</p>
                                 <p className="text-[9px] font-black text-slate-500   mb-1">Tahmini Tutar</p>
                                 <p className="text-xs font-black text-white">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
@@ -153,7 +153,7 @@ export default function SorgulaPage() {
                                 {ticket.logs.map((log: any, i: number) => (
                                     <div key={log.id} className="flex gap-4 relative">
                                         {i !== ticket.logs.length - 1 && <div className="absolute left-2.5 top-6 bottom-0 w-[1px] bg-slate-800" />}
-                                        <div className={`h-5 w-5 rounded-full border-2 ${i === 0 ? 'bg-blue-600 border-blue-400 ' : 'bg-slate-900 border-slate-800'} shrink-0`} />
+                                        <div className={`h-5 w-5 rounded-full border-2 ${i === 0 ? 'bg-blue-600 border-blue-400 ' : 'bg-slate-900 border-border/10'} shrink-0`} />
                                         <div className="pb-4">
                                             <p className={`text-xs font-black  ${i === 0 ? 'text-white' : 'text-slate-500'}`}>{log.message}</p>
                                             <p className="text-[9px] font-bold text-slate-600 mt-1  ">{format(new Date(log.createdAt), "dd MMM yyyy - HH:mm", { locale: tr })}</p>

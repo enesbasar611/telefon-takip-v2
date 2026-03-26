@@ -15,6 +15,33 @@ export async function getProducts() {
   }
 }
 
+export async function searchProducts(query: string) {
+  try {
+    if (!query || query.length < 2) return [];
+
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { sku: { contains: query, mode: 'insensitive' } },
+          { barcode: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        sku: true
+      },
+      take: 5
+    });
+
+    return serializePrisma(products);
+  } catch (error) {
+    return [];
+  }
+}
+
 export async function getCategories() {
   try {
     const categories = await prisma.category.findMany();

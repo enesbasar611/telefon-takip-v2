@@ -32,7 +32,7 @@ export default async function BildirimlerPage() {
 
       <div className="grid gap-6">
         {notifications.length === 0 ? (
-          <Card className="rounded-[2rem] border-border shadow-sm bg-card">
+          <Card className="rounded-xl border-border shadow-sm bg-card">
             <CardHeader className="text-center py-20">
               <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-20" />
               <CardTitle className="mt-6 text-muted-foreground font-bold">Şu an için yeni bir bildirim bulunmuyor</CardTitle>
@@ -40,7 +40,7 @@ export default async function BildirimlerPage() {
           </Card>
         ) : (
           notifications.map((n: any) => (
-            <Card key={n.id} className={`rounded-[2rem] border-border shadow-sm transition-all hover:translate-y-[-2px] bg-card border-l-8 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
+            <Card key={n.id} className={`rounded-xl border-border shadow-sm transition-all hover:translate-y-[-2px] bg-card border-l-8 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
               <CardHeader className="p-10">
                 <div className="flex items-center justify-between gap-6">
                   <div className="flex items-center gap-6">
