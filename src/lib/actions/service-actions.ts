@@ -113,43 +113,11 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       },
     });
 
-    // Financial and Inventory Sync
-    if (status === ServiceStatus.READY || status === ServiceStatus.DELIVERED) {
-      const fullTicket = await prisma.serviceTicket.findUnique({
-        where: { id: ticketId },
-        include: { usedParts: true, customer: true, createdBy: true }
-      });
+    // Logic for double-deduction and redundant transaction creation removed.
+    // Stock is already deducted in addPartToService.
+    // Transactions should be recorded via a dedicated payment/checkout flow or explicitly on DELIVERED if not already present.
 
-      if (fullTicket) {
-        // Record Transaction
-        await prisma.transaction.create({
-          data: {
-            type: "INCOME",
-            amount: Number(fullTicket.actualCost) > 0 ? fullTicket.actualCost : fullTicket.estimatedCost,
-            description: `Servis Tahsilatı: ${fullTicket.ticketNumber} (${fullTicket.deviceBrand} ${fullTicket.deviceModel})`,
-            paymentMethod: "CASH", // Default to cash for now
-            userId: fullTicket.createdById,
-          }
-        });
-
-        // Sync Inventory (Deduct stock for parts used)
-        for (const part of fullTicket.usedParts) {
-          await prisma.product.update({
-            where: { id: part.productId },
-            data: {
-              stock: { decrement: part.quantity },
-              movements: {
-                create: {
-                  quantity: -part.quantity,
-                  type: "SERVICE_USE",
-                  notes: `Servis kullanımı: ${fullTicket.ticketNumber}`
-                }
-              }
-            }
-          });
-        }
-      }
-    }
+    // For now, let's keep it simple and only log the status change.
 
     revalidatePath("/servis");
     revalidatePath("/stok");

@@ -22,29 +22,29 @@ export async function syncAllRates() {
       return { success: false, error: `Çok sık güncelleme yapıldı. Lütfen ${remainingTime} dakika sonra tekrar deneyin.` };
     }
 
-    // Parallel fetch with headers to bypass basic bot protection
-    const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "application/json",
-      "Cache-Control": "no-cache"
-    };
+    // Fetch from a more stable TR financial API
+    const response = await fetch("https://finans.truncgil.com/today.json", {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json",
+        "Cache-Control": "no-cache"
+      },
+      next: { revalidate: 0 }
+    });
 
-    const [dovizRes, altinRes] = await Promise.all([
-      fetch("https://api.genelpara.com/json/?list=doviz&sembol=USD,EUR", { headers }),
-      fetch("https://api.genelpara.com/json/?list=altin&sembol=GA", { headers })
-    ]);
-
-    if (!dovizRes.ok || !altinRes.ok) {
-        console.error("API Error Status:", dovizRes.status, altinRes.status);
-        throw new Error("API sunucusu yanıt vermiyor.");
+    if (!response.ok) {
+        console.error("Currency API Error Status:", response.status);
+        throw new Error("Kur servisi şu an kullanılamıyor.");
     }
 
-    const dovizData = await dovizRes.json();
-    const altinData = await altinRes.json();
+    const data = await response.json();
 
-    const usdRate = dovizData.USD?.satis || "1";
-    const eurRate = dovizData.EUR?.satis || "1";
-    const gaRate = altinData.GA?.satis || "1";
+    // Helper to parse TR format (e.g. "44,3705" or "6.315,82")
+    const parseTR = (val: string) => val ? val.replace(/\./g, '').replace(',', '.') : "1";
+
+    const usdRate = parseTR(data.USD?.Satış);
+    const eurRate = parseTR(data.EUR?.Satış);
+    const gaRate = parseTR(data["gram-altin"]?.Satış);
 
     // Update DB
     await prisma.$transaction([

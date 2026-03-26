@@ -4,6 +4,7 @@ import { Bell, AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 import { getSystemNotifications } from "@/lib/actions/notification-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,9 +72,4 @@ export default async function BildirimlerPage() {
       </div>
     </div>
   );
-}
-
-// Utility for conditional classes since it was missing in imports
-function cn(...inputs: any[]) {
-    return inputs.filter(Boolean).join(' ');
 }

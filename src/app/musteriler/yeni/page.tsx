@@ -347,7 +347,7 @@ export default function NewCustomerPage() {
                       <>
                         <Camera className="h-8 w-8 text-gray-700 group-hover:text-blue-500" />
                         <div className="absolute bottom-0 right-0 bg-blue-600 p-1.5 rounded-full border-4 border-[#141416]">
-                          <Plus className="h-3 w-3 text-white" />
+                          <PlusIcon className="h-3 w-3 text-white" />
                         </div>
                       </>
                     )}
@@ -419,7 +419,7 @@ export default function NewCustomerPage() {
   );
 }
 
-function Plus({ className }: { className?: string }) {
+function PlusIcon({ className }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
