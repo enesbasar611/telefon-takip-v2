@@ -27,31 +27,33 @@ import {
   ChevronLeft,
   ArrowUpRight,
   TrendingUp,
-  Zap
+  Zap,
+  Package
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
 const statusLabels: Record<string, string> = {
-  PENDING: "BEKLEMEDE",
-  APPROVED: "ONAYLANDI",
-  REPAIRING: "TAMİRDE",
-  WAITING_PART: "PARÇA BEKLİYOR",
-  READY: "HAZIR",
-  DELIVERED: "TESLİM EDİLDİ",
-  CANCELLED: "İPTAL EDİLDİ",
+  PENDING: "Beklemede",
+  APPROVED: "Onaylandı",
+  REPAIRING: "Tamirde",
+  WAITING_PART: "Parça bekliyor",
+  READY: "Hazır",
+  DELIVERED: "Teslim edildi",
+  CANCELLED: "İptal edildi",
 };
 
 const getLoyaltyTier = (points: number) => {
-    if (points >= 1000) return { label: "PLATİN", color: "text-blue-400 bg-blue-400/10 border-blue-400/20 ", icon: Gem, next: 0, percent: 100 };
-    if (points >= 500) return { label: "ALTIN", color: "text-blue-400 bg-blue-400/10 border-blue-400/20 shadow-blue-400/10", icon: Crown, next: 1000, percent: (points/1000)*100 };
-    if (points >= 200) return { label: "GÜMÜŞ", color: "text-gray-300 bg-gray-300/10 border-gray-300/20", icon: ShieldCheck, next: 500, percent: (points/500)*100 };
-    return { label: "BRONZ", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star, next: 200, percent: (points/200)*100 };
+    if (points >= 1000) return { label: "Platin", color: "text-blue-400 bg-blue-400/10 border-blue-400/20 ", icon: Gem, next: 0, percent: 100 };
+    if (points >= 500) return { label: "Altın", color: "text-blue-400 bg-blue-400/10 border-blue-400/20 shadow-blue-400/10", icon: Crown, next: 1000, percent: (points/1000)*100 };
+    if (points >= 200) return { label: "Gümüş", color: "text-gray-300 bg-gray-300/10 border-gray-300/20", icon: ShieldCheck, next: 500, percent: (points/500)*100 };
+    return { label: "Bronz", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star, next: 200, percent: (points/200)*100 };
 };
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
@@ -69,50 +71,61 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   const totalDebt = customer.debts?.reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0) || 0;
   const tier = getLoyaltyTier(customer.loyaltyPoints);
 
+  // Collect used parts from service tickets
+  const usedParts = customer.tickets?.flatMap((t: any) =>
+    (t.usedParts || []).map((p: any) => ({
+      ...p,
+      ticketNumber: t.ticketNumber,
+      ticketId: t.id,
+      date: t.deliveredAt || t.createdAt,
+      warrantyExpiry: t.warrantyExpiry
+    }))
+  ).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [];
+
   return (
-    <div className="p-8 space-y-8 bg-[#0a0a0b] text-white min-h-screen">
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
       {/* Header Profile Section */}
-      <div className="flex flex-col md:flex-row gap-8 items-start justify-between mb-10">
+      <div className="flex flex-col md:flex-row gap-8 items-start justify-between mb-4">
         <div className="flex gap-8 items-center">
           <Link href="/musteriler">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/5 text-gray-500 hover:text-white transition-all">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-muted border border-border text-muted-foreground hover:text-foreground transition-all">
                 <ChevronLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="h-28 w-28 rounded-[2rem] bg-blue-500/10 border-4 border-[#141416] flex items-center justify-center relative shadow-none overflow-hidden group hover:scale-105 transition-all">
+          <div className="h-28 w-28 rounded-[2rem] bg-blue-500/10 border-4 border-background flex items-center justify-center relative shadow-none overflow-hidden group hover:scale-105 transition-all">
             {customer.photo ? (
               <img src={customer.photo} alt={customer.name} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
             ) : (
               <UserCircle className="h-12 w-12 text-blue-500" />
             )}
             {customer.isVip && (
-              <div className="absolute top-0 right-0 h-6 w-6 bg-blue-500 flex items-center justify-center rounded-bl-xl border-4 border-[#141416] ">
-                <Zap className="h-3 w-3 text-black fill-black" />
+              <div className="absolute top-0 right-0 h-6 w-6 bg-blue-500 flex items-center justify-center rounded-bl-xl border-4 border-background">
+                <Zap className="h-3 w-3 text-white fill-white" />
               </div>
             )}
           </div>
           <div>
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-4xl font-black   text-white">{customer.name}</h1>
+              <h1 className="text-4xl font-extrabold tracking-tight">{customer.name}</h1>
               {customer.isVip && (
-                <Badge className="bg-blue-500/10 text-blue-500 border-none font-black text-[10px]  px-4 py-1.5 rounded-xl  animate-pulse">VIP ÜYE</Badge>
+                <Badge className="bg-blue-500 text-white border-none font-bold text-[10px] px-4 py-1.5 rounded-xl animate-pulse">Vip üye</Badge>
               )}
             </div>
-            <div className="flex flex-wrap gap-6 text-[10px] font-black text-gray-500  ">
-              <div className="flex items-center gap-2 group cursor-pointer hover:text-white transition-colors">
+            <div className="flex flex-wrap gap-6 text-xs font-bold text-muted-foreground">
+              <div className="flex items-center gap-2 group cursor-pointer hover:text-foreground transition-colors">
                 <Phone className="h-4 w-4 text-blue-500" />
                 <span>{customer.phone}</span>
               </div>
               {customer.email && (
-                <div className="flex items-center gap-2 group cursor-pointer hover:text-white transition-colors">
+                <div className="flex items-center gap-2 group cursor-pointer hover:text-foreground transition-colors">
                   <Mail className="h-4 w-4 text-blue-500" />
                   <span className="truncate max-w-[200px]">{customer.email}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[9px] font-black border-white/10 text-gray-400 bg-white/[0.02] px-3 py-1 rounded-lg">
+                <Badge variant="outline" className="text-[10px] font-bold border-border text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg">
                   {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3 mr-2 text-blue-500" /> : <UserCircle className="h-3 w-3 mr-2 text-blue-500" />}
-                  {customer.type || "BİREYSEL"}
+                  {customer.type === 'KURUMSAL' ? "Kurumsal" : "Bireysel"}
                 </Badge>
               </div>
             </div>
@@ -121,40 +134,39 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         <div className="flex gap-3">
            <Link href={`/musteriler/duzenle/${customer.id}`}>
-             <Button className="bg-white/[0.03] whisper-border border-white/5 text-gray-400 hover:text-blue-500 hover:bg-blue-500/5 px-6 h-12 rounded-2xl font-black   transition-all shadow-none">PROFİLİ DÜZENLE</Button>
+             <Button variant="outline" className="border-border bg-muted hover:bg-blue-500/10 hover:text-blue-500 px-6 h-12 rounded-2xl font-bold transition-all shadow-none">Profili düzenle</Button>
            </Link>
-           <Button className="bg-blue-500 text-black px-6 h-12 rounded-2xl font-black    hover:bg-blue-400 transition-all">SATIŞ YAP</Button>
+           <Button className="bg-blue-600 text-white px-6 h-12 rounded-2xl font-bold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20">Satış yap</Button>
         </div>
       </div>
 
       {/* Main Grid: CRM Analiz & Sadakat */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Loyalty Panel */}
-        <Card className="lg:col-span-1 bg-[#141416] border-white/5 shadow-none group overflow-hidden relative">
-            <div className="absolute top-0 right-0 h-32 w-32 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-blue-500" />
-            <CardHeader className="border-b border-white/[0.03] pb-6 bg-white/[0.01]">
+        <Card className="lg:col-span-1 border-border shadow-sm group overflow-hidden relative bg-card rounded-[2rem]">
+            <CardHeader className="border-b border-border pb-6 bg-muted/10">
                 <div className="flex items-center gap-3">
-                    <TrendingUp className="h-4 w-4 text-blue-500 " />
-                    <CardTitle className="text-xs font-black   text-white">Sadakat Seviyesi</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    <CardTitle className="text-sm font-bold">Sadakat seviyesi</CardTitle>
                 </div>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="p-10 space-y-8">
                 <div className="flex flex-col items-center text-center">
-                    <div className={`h-24 w-24 rounded-3xl ${tier.color} flex items-center justify-center border-none shadow-none mb-4 group-hover:scale-110 transition-transform`}>
+                    <div className={cn("h-24 w-24 rounded-[2rem] flex items-center justify-center border-none shadow-lg mb-4 group-hover:scale-110 transition-transform", tier.color)}>
                         <tier.icon className="h-12 w-12" />
                     </div>
-                    <h3 className="text-2xl font-black text-white  ">{tier.label}</h3>
-                    <p className="text-[10px] font-black text-gray-600   mt-1 italic">Aktif Üyelik Seviyesi</p>
+                    <h3 className="text-2xl font-extrabold">{tier.label}</h3>
+                    <p className="text-xs font-bold text-muted-foreground mt-1">Aktif üyelik seviyesi</p>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-gray-500  ">Gelişim Puanı</span>
-                        <span className="text-xs font-black text-blue-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
+                        <span className="text-xs font-bold text-muted-foreground">Gelişim puanı</span>
+                        <span className="text-sm font-bold text-blue-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
                     </div>
-                    <Progress value={tier.percent} className="h-2 bg-white/[0.03] [&>div]:bg-blue-500 " />
+                    <Progress value={tier.percent} className="h-2 bg-muted [&>div]:bg-blue-500 rounded-full" />
                     {tier.next > 0 && (
-                        <p className="text-[9px] text-gray-600 font-bold   italic text-center">
+                        <p className="text-[10px] text-muted-foreground font-medium italic text-center">
                            Bir sonraki seviye için {tier.next - customer.loyaltyPoints} puan daha gerekiyor.
                         </p>
                     )}
@@ -163,42 +175,39 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
         </Card>
 
         {/* Financial & Summary Cards */}
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-[#141416] border-white/5 shadow-none group obsidian hover:-translate-y-1 transition-all overflow-hidden relative h-fit">
-                <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-emerald-500" />
-                <CardContent className="p-8 flex flex-col gap-6">
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-emerald-500/10 group-hover:scale-110 transition-transform">
-                        <Wallet className="h-6 w-6" />
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+                <CardContent className="p-10 flex flex-col gap-6">
+                    <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-lg shadow-emerald-500/5 group-hover:scale-110 transition-transform">
+                        <Wallet className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-500   mb-1">TOPLAM İŞLEM HACMİ</p>
-                        <h3 className="text-3xl font-black  text-white">₺{totalRevenue.toLocaleString('tr-TR')}</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Toplam işlem hacmi</p>
+                        <h3 className="text-4xl font-extrabold tracking-tight">₺{totalRevenue.toLocaleString('tr-TR')}</h3>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="bg-[#141416] border-white/5 shadow-none group obsidian hover:-translate-y-1 transition-all overflow-hidden relative h-fit">
-                <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-blue-500" />
-                <CardContent className="p-8 flex flex-col gap-6">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-blue-500/10 group-hover:scale-110 transition-transform">
-                        <Wrench className="h-6 w-6" />
+            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+                <CardContent className="p-10 flex flex-col gap-6">
+                    <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-lg shadow-blue-500/5 group-hover:scale-110 transition-transform">
+                        <Wrench className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-500   mb-1">AKTİF SERVİS ADEDİ</p>
-                        <h3 className="text-3xl font-black  text-white">{activeTicketsCount} Cihaz</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Aktif servis adedi</p>
+                        <h3 className="text-4xl font-extrabold tracking-tight">{activeTicketsCount} cihaz</h3>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="bg-[#141416] border-white/5 shadow-none group obsidian hover:-translate-y-1 transition-all overflow-hidden relative h-fit">
-                <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-5 rounded-full bg-rose-500" />
-                <CardContent className="p-8 flex flex-col gap-6">
-                    <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-rose-500/10 group-hover:scale-110 transition-transform">
-                        <ArrowDownCircle className="h-6 w-6" />
+            <Card className="border-border shadow-sm group bg-card rounded-[2rem] hover:translate-y-[-4px] transition-all overflow-hidden relative">
+                <CardContent className="p-10 flex flex-col gap-6">
+                    <div className="h-14 w-14 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 shadow-lg shadow-rose-500/5 group-hover:scale-110 transition-transform">
+                        <ArrowDownCircle className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-500   mb-1">GÜNCEL BORÇ BAKİYESİ</p>
-                        <h3 className="text-3xl font-black  text-rose-500">₺{totalDebt.toLocaleString('tr-TR')}</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Güncel borç bakiyesi</p>
+                        <h3 className="text-4xl font-extrabold tracking-tight text-rose-500">₺{totalDebt.toLocaleString('tr-TR')}</h3>
                     </div>
                 </CardContent>
             </Card>
@@ -206,41 +215,48 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
             {/* History Tabs */}
             <div className="col-span-1 md:col-span-3">
                 <Tabs defaultValue="history" className="w-full">
-                    <TabsList className="bg-transparent border-b border-white/5 w-full justify-start rounded-none h-auto p-0 gap-10 mb-8">
-                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-400 px-0 py-4 font-black  text-[10px]  transition-all">İŞLEM ARŞİVİ</TabsTrigger>
-                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-400 px-0 py-4 font-black  text-[10px]  transition-all">AKTİF GARANTİLER</TabsTrigger>
-                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-400 px-0 py-4 font-black  text-[10px]  transition-all">MÜŞTERİ NOTLARI</TabsTrigger>
+                    <TabsList className="bg-muted/30 border-b border-border w-full justify-start rounded-none h-auto p-0 gap-10 mb-8 overflow-x-auto">
+                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">İşlem arşivi</TabsTrigger>
+                        <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Kullanılan parçalar</TabsTrigger>
+                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Aktif garantiler</TabsTrigger>
+                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Müşteri notları</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="history" className="space-y-4 outline-none">
+                    <TabsContent value="history" className="space-y-6 outline-none">
                         {[...(customer.tickets || []), ...(customer.sales || [])]
                             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .map((item: any, idx: number) => (
-                                <div key={idx} className="bg-[#141416] p-6 rounded-3xl whisper-border border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-all group shadow-none">
+                                <div key={idx} className="bg-card p-8 rounded-[2rem] border border-border flex items-center justify-between hover:bg-muted/10 transition-all group shadow-sm">
                                     <div className="flex items-center gap-6">
-                                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center relative shadow-none ${item.ticketNumber ? 'bg-blue-600/10 text-blue-500 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
-                                            {item.ticketNumber ? <Wrench className="h-6 w-6" /> : <ShoppingCart className="h-6 w-6" />}
-                                            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-white/10 animate-pulse border-2 border-[#141416]" />
+                                        <div className={cn(
+                                            "h-16 w-16 rounded-[1.25rem] flex items-center justify-center relative shadow-sm",
+                                            item.ticketNumber ? 'bg-blue-600/10 text-blue-500 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                        )}>
+                                            {item.ticketNumber ? <Wrench className="h-7 w-7" /> : <ShoppingCart className="h-7 w-7" />}
+                                            <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-blue-500 border-4 border-card" />
                                         </div>
                                         <div>
-                                            <h4 className="font-black text-sm text-white   group-hover:text-blue-400 transition-colors">
-                                            {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (TEKNİK SERVİS)` : `${item.saleNumber} (ÜRÜN SATIŞI)`}
+                                            <h4 className="font-bold text-lg group-hover:text-blue-600 transition-colors">
+                                            {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)` : `${item.saleNumber} (Ürün satışı)`}
                                             </h4>
-                                            <p className="text-[10px] text-gray-600 font-bold   mt-1 italic">
-                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500">#{item.ticketNumber || item.saleNumber}</span>
+                                            <p className="text-xs text-muted-foreground font-bold mt-1">
+                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold tracking-tight">#{item.ticketNumber || item.saleNumber}</span>
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-12">
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black text-gray-700   mb-1.5">DURUM SINIFI</p>
-                                            <Badge variant="outline" className={`text-[9px] font-black border-none px-4 py-1.5 rounded-xl shadow-lg ${item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5' : 'bg-blue-500/10 text-blue-500 shadow-blue-500/5'}`}>
-                                            {item.status ? statusLabels[item.status] : "TAMAMLANDI"}
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-tight">Durum sınıfı</p>
+                                            <Badge variant="outline" className={cn(
+                                                "text-[10px] font-bold border-none px-4 py-1.5 rounded-xl shadow-sm",
+                                                item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                                            )}>
+                                            {item.status ? statusLabels[item.status] : "Tamamlandı"}
                                             </Badge>
                                         </div>
                                         <div className="text-right min-w-[120px]">
-                                            <p className="text-[9px] font-black text-gray-700   mb-1.5">NET TUTAR</p>
-                                            <span className="text-xl font-black text-white ">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
+                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-tight">Net tutar</p>
+                                            <span className="text-2xl font-extrabold tracking-tight">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -248,8 +264,59 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         }
                     </TabsContent>
 
+                    <TabsContent value="parts" className="space-y-6 outline-none">
+                        {usedParts.length === 0 ? (
+                            <div className="p-20 text-center bg-card rounded-[2rem] border border-border border-dashed">
+                                <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+                                <p className="text-sm font-bold text-muted-foreground">Henüz parça kullanımı kaydedilmemiş</p>
+                            </div>
+                        ) : (
+                            <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
+                                <table className="w-full text-left">
+                                    <thead className="bg-muted/30 border-b border-border">
+                                        <tr>
+                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Parça adı</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Tarih</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Servis no</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Fiyat</th>
+                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight text-right">Garanti durumu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {usedParts.map((p: any) => {
+                                            const isExpired = p.warrantyExpiry && new Date(p.warrantyExpiry) < new Date();
+                                            return (
+                                                <tr key={p.id} className="hover:bg-muted/10 transition-colors">
+                                                    <td className="px-8 py-6">
+                                                        <div className="font-bold text-sm">{p.product?.name}</div>
+                                                        <div className="text-[10px] text-muted-foreground font-medium mt-1 uppercase tracking-tight">{p.product?.category?.name}</div>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-xs font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</td>
+                                                    <td className="px-6 py-6 text-xs font-bold text-blue-500">#{p.ticketNumber}</td>
+                                                    <td className="px-6 py-6 font-extrabold text-sm">₺{Number(p.unitPrice).toLocaleString('tr-TR')}</td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        {p.warrantyExpiry ? (
+                                                            <Badge variant="outline" className={cn(
+                                                                "text-[10px] font-bold border-none px-3 py-1 rounded-full",
+                                                                isExpired ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"
+                                                            )}>
+                                                                {isExpired ? "Süresi doldu" : "Devam ediyor"}
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-muted-foreground">Belirtilmemiş</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </TabsContent>
+
                     <TabsContent value="warranty" className="space-y-6 outline-none">
-                        <div className="grid gap-6 md:grid-cols-2">
+                        <div className="grid gap-8 md:grid-cols-2">
                             {customer.tickets?.filter((t: any) => t.warrantyExpiry).map((ticket: any) => {
                                 const now = new Date();
                                 const expiry = new Date(ticket.warrantyExpiry);
@@ -260,38 +327,44 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 const isExpired = daysLeft < 0;
 
                                 return (
-                                    <Card key={ticket.id} className="bg-[#141416] border-white/5 shadow-none overflow-hidden group">
-                                        <CardHeader className="pb-4 border-b border-white/[0.03] bg-white/[0.01]">
+                                    <Card key={ticket.id} className="bg-card border-border shadow-sm overflow-hidden group rounded-[2rem]">
+                                        <CardHeader className="pb-4 border-b border-border bg-muted/10">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 ">
+                                                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
                                                         <ShieldCheck className="h-5 w-5" />
                                                     </div>
                                                     <div>
-                                                        <CardTitle className="text-xs font-black text-white  ">{ticket.deviceBrand} {ticket.deviceModel}</CardTitle>
-                                                        <CardDescription className="text-[9px] font-bold   text-gray-600">SERVİS NO: {ticket.ticketNumber}</CardDescription>
+                                                        <CardTitle className="text-xs font-bold">{ticket.deviceBrand} {ticket.deviceModel}</CardTitle>
+                                                        <CardDescription className="text-[10px] font-bold uppercase tracking-tight">Servis no: {ticket.ticketNumber}</CardDescription>
                                                     </div>
                                                 </div>
-                                                <Badge className={`${isExpired ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5'} border-none font-black text-[8px]   px-3 py-1.5 rounded-xl`}>
-                                                    {isExpired ? 'GARANTİ SONLANDI' : 'AKTİF KORUMA'}
+                                                <Badge variant="outline" className={cn(
+                                                    "border-none font-bold text-[10px] px-3 py-1.5 rounded-xl",
+                                                    isExpired ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10'
+                                                )}>
+                                                    {isExpired ? 'Garanti sonlandı' : 'Aktif koruma'}
                                                 </Badge>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="pt-8">
+                                        <CardContent className="pt-10">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-[9px] font-black text-gray-500  ">KORUMA PERİYODU</span>
-                                                <span className={`text-[9px] font-black   ${isExpired ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                                    {isExpired ? '0 GÜN' : `${daysLeft} GÜN KALDI`}
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Koruma periyodu</span>
+                                                <span className={cn(
+                                                    "text-[10px] font-extrabold",
+                                                    isExpired ? 'text-rose-500' : 'text-emerald-500'
+                                                )}>
+                                                    {isExpired ? '0 gün' : `${daysLeft} gün kaldı`}
                                                 </span>
                                             </div>
-                                            <Progress value={percent} className={`h-2 bg-white/[0.03] shadow-inner ${isExpired ? '[&>div]:bg-rose-500' : '[&>div]:bg-emerald-500'}`} />
-                                            <div className="flex items-center justify-between mt-5">
-                                                <div className="flex items-center gap-2 text-[9px] font-black text-gray-600  ">
+                                            <Progress value={percent} className="h-2 bg-muted rounded-full" />
+                                            <div className="flex items-center justify-between mt-6">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground italic">
                                                     <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                                                    <span>BİTİŞ: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
+                                                    <span>Bitiş: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
                                                 </div>
-                                                <Button variant="ghost" className="text-[8px] font-black  text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
-                                                    DETAYI GÖR <ArrowUpRight className="h-2 w-2 ml-1" />
+                                                <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto uppercase tracking-tight">
+                                                    Detayı gör <ArrowUpRight className="h-3 w-3 ml-1" />
                                                 </Button>
                                             </div>
                                         </CardContent>
@@ -302,15 +375,15 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </TabsContent>
 
                     <TabsContent value="notes" className="outline-none">
-                        <Card className="bg-[#141416] border-white/5 shadow-none obsidian">
-                            <CardHeader className="border-b border-white/[0.03] bg-white/[0.01]">
+                        <Card className="bg-card border-border shadow-sm rounded-[2rem] overflow-hidden">
+                            <CardHeader className="border-b border-border bg-muted/10">
                                 <div className="flex items-center gap-3">
                                     <FileText className="h-4 w-4 text-blue-500" />
-                                    <CardTitle className="text-xs font-black   text-white">Stratejik Müşteri Notları</CardTitle>
+                                    <CardTitle className="text-sm font-bold">Stratejik müşteri notları</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-10">
-                                <div className="bg-[#0a0a0b] p-8 rounded-[2rem] border border-white/5 min-h-[250px] text-gray-400 text-xs font-medium leading-relaxed whisper-border italic group hover:border-blue-500/20 transition-all">
+                                <div className="bg-muted/30 p-10 rounded-[2rem] border border-border min-h-[250px] text-muted-foreground text-sm font-medium leading-relaxed italic group hover:border-blue-500/20 transition-all">
                                     {customer.notes || "Bu profil için henüz stratejik bir not girişi yapılmamıştır."}
                                 </div>
                             </CardContent>

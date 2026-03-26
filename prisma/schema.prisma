@@ -161,6 +161,8 @@ model Product {
   isSecondHand    Boolean   @default(false)
   isChronic       Boolean   @default(false)
   supplierId      String?
+  location        String?
+  warrantyMonths  Int       @default(0)
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

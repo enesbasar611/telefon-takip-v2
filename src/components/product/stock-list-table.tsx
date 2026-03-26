@@ -20,7 +20,8 @@ import {
     Edit,
     Trash2,
     ClipboardList,
-    MoreVertical
+    MoreVertical,
+    ShoppingCart
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addShortageItem } from "@/lib/actions/shortage-actions";
+import { quickSellProduct } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 
 export function StockListTable({ products, categories }: { products: any[], categories: any[] }) {
@@ -84,6 +86,27 @@ export function StockListTable({ products, categories }: { products: any[], cate
         toast.success(`${product.name} eksikler listesine eklendi.`);
     } catch (error) {
         toast.error("İşlem başarısız.");
+    }
+  };
+
+  const onQuickSell = async (product: any) => {
+    if (product.stock <= 0) {
+        toast.error("Stokta ürün bulunmuyor.");
+        return;
+    }
+
+    const confirm = window.confirm(`${product.name} için 1 adet hızlı satış yapılacak. Onaylıyor musunuz?`);
+    if (!confirm) return;
+
+    try {
+        const res = await quickSellProduct(product.id, 1);
+        if (res.success) {
+            toast.success("Hızlı satış işlemi tamamlandı.");
+        } else {
+            toast.error(res.error);
+        }
+    } catch (error) {
+        toast.error("Satış işlemi sırasında bir hata oluştu.");
     }
   };
 
@@ -171,6 +194,10 @@ export function StockListTable({ products, categories }: { products: any[], cate
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white w-48">
+                                    <DropdownMenuItem onClick={() => onQuickSell(product)} className="text-[10px] font-black  p-3 gap-3 cursor-pointer focus:bg-white/5">
+                                        <ShoppingCart className="h-4 w-4 text-emerald-500" /> HIZLI SATIŞ
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="bg-white/5" />
                                         <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3"><Edit className="h-4 w-4 text-blue-500" /> DÜZENLE</DropdownMenuItem>
                                         <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3 text-rose-500"><Trash2 className="h-4 w-4" /> SİL</DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -257,6 +284,9 @@ export function StockListTable({ products, categories }: { products: any[], cate
                             <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white w-48">
                                 <DropdownMenuLabel className="text-[10px] font-black  text-slate-500 p-3">Ürün İşlemleri</DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-white/5" />
+                                    <DropdownMenuItem onClick={() => onQuickSell(product)} className="text-[10px] font-black  p-3 gap-3 cursor-pointer focus:bg-white/5">
+                                        <ShoppingCart className="h-4 w-4 text-emerald-500" /> HIZLI SATIŞ YAP
+                                    </DropdownMenuItem>
                                 <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3 cursor-pointer focus:bg-white/5">
                                     <Edit className="h-4 w-4 text-blue-500" /> ÜRÜNÜ DÜZENLE
                                 </DropdownMenuItem>

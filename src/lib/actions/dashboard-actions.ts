@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { getDeadStockCount } from "./product-actions";
 
 export async function getDashboardStats() {
   try {
@@ -16,6 +17,8 @@ export async function getDashboardStats() {
       todayTransactions,
       totalDebts,
       allTransactions,
+      pendingProcurementCount,
+      deadStockCount,
     ] = await Promise.all([
       // PENDING SERVICES
       prisma.serviceTicket.count({
@@ -57,7 +60,11 @@ export async function getDashboardStats() {
         _sum: { remainingAmount: true }
       }),
       // For CASH BALANCE
-      prisma.transaction.findMany()
+      prisma.transaction.findMany(),
+      // For PENDING PROCUREMENT
+      prisma.shortageItem.count({ where: { isResolved: false } }),
+      // For DEAD STOCK
+      getDeadStockCount()
     ]);
 
     const lowStockCount = products.filter(p => p.stock <= p.criticalStock).length;
@@ -82,6 +89,8 @@ export async function getDashboardStats() {
       criticalStock: lowStockCount.toString(),
       totalDebts: `₺${(Number(totalDebts._sum.remainingAmount) || 0).toLocaleString('tr-TR')}`,
       cashBalance: `₺${financialSummary.balance.toLocaleString('tr-TR')}`,
+      pendingProcurementCount: pendingProcurementCount.toString(),
+      deadStockCount: deadStockCount.toString(),
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
