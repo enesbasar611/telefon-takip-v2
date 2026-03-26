@@ -12,15 +12,22 @@ export async function getShortageItems() {
 }
 
 export async function addShortageItem(data: { productId?: string; name: string; quantity: number; notes?: string }) {
-  await prisma.shortageItem.create({
-    data: {
-      productId: data.productId,
-      name: data.name,
-      quantity: data.quantity,
-      notes: data.notes,
-    },
-  });
-  revalidatePath("/");
+  try {
+    await prisma.shortageItem.create({
+      data: {
+        productId: data.productId,
+        name: data.name,
+        quantity: data.quantity,
+        notes: data.notes,
+      },
+    });
+    revalidatePath("/");
+    revalidatePath("/stok");
+    return { success: true };
+  } catch (error) {
+    console.error("Add shortage item error:", error);
+    return { success: false, error: "Ekleme başarısız oldu." };
+  }
 }
 
 export async function approveShortageItem(id: string, quantity: number) {

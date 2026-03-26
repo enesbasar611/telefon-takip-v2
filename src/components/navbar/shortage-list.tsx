@@ -101,13 +101,17 @@ export function ShortageList() {
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      await addShortageItem({ name: newName, quantity: 1 });
-      setNewName("");
-      setShowResults(false);
-      fetchItems();
-      toast.success("Eksik listesine eklendi.");
+      const res = await addShortageItem({ name: newName, quantity: 1 });
+      if (res.success) {
+        setNewName("");
+        setShowResults(false);
+        fetchItems();
+        toast.success("Eksik listesine eklendi.");
+      } else {
+        toast.error(res.error || "Ekleme başarısız.");
+      }
     } catch (error) {
-      toast.error("Ekleme başarısız.");
+      toast.error("Bir hata oluştu.");
     } finally {
       setAdding(false);
     }
@@ -116,17 +120,21 @@ export function ShortageList() {
   const handleSelectProduct = async (product: any) => {
     setAdding(true);
     try {
-      await addShortageItem({
+      const res = await addShortageItem({
         productId: product.id,
         name: product.name,
         quantity: 1
       });
-      setNewName("");
-      setShowResults(false);
-      fetchItems();
-      toast.success(`${product.name} eksik listesine eklendi.`);
+      if (res.success) {
+        setNewName("");
+        setShowResults(false);
+        fetchItems();
+        toast.success(`${product.name} eksik listesine eklendi.`);
+      } else {
+        toast.error(res.error || "Ekleme başarısız.");
+      }
     } catch (error) {
-      toast.error("Ekleme başarısız.");
+      toast.error("Bir hata oluştu.");
     } finally {
       setAdding(false);
     }
@@ -184,10 +192,10 @@ export function ShortageList() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-border/10/50 text-slate-500 hover:text-blue-500 transition-all">
-          <ClipboardList className={cn("h-5 w-5", items.length > 0 && "text-rose-500")} />
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-border/10 text-slate-500 hover:text-blue-500 transition-all">
+          <ClipboardList className={cn("h-5 w-5", items.length > 0 && "text-red-600 fill-red-600/10")} />
           {items.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-rose-600 text-[10px] font-black text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px] font-black text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
               {items.length}
             </span>
           )}
@@ -234,17 +242,17 @@ export function ShortageList() {
                   <button
                     key={p.id}
                     onClick={() => handleSelectProduct(p)}
-                    className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0"
+                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0"
                   >
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-gray-200">{p.name}</span>
-                      <span className="text-[8px] text-gray-500 uppercase">{p.sku || 'SKU YOK'}</span>
+                      <span className="text-[10px] font-black text-blue-400">{p.name}</span>
+                      <span className="text-[8px] text-gray-500 uppercase font-bold">{p.sku || 'SKU YOK'}</span>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className={cn("text-[9px] font-black", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
-                        {p.stock} ADET
+                    <div className="flex flex-col items-end bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5">
+                      <span className={cn("text-[10px] font-black tracking-tight", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                        {p.stock}
                       </span>
-                      <span className="text-[7px] text-gray-600 font-bold">STOKTA</span>
+                      <span className="text-[7px] text-gray-600 font-black uppercase">ADET</span>
                     </div>
                   </button>
                 ))
