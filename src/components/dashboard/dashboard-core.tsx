@@ -54,13 +54,13 @@ export function DashboardCore({
   // Yanyana ve Premium Tasarım Yapısı
   const stats = [
     { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, bg: "bg-gradient-to-br from-[#F5F7FF] to-[#EEF2FF] dark:from-[#1e2635] dark:to-[#0f172a] border-blue-100/50", color: "text-[#4C6FFF]", trend: "+12%" },
-    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, bg: "bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] dark:from-[#064e3b]/20 dark:to-[#022c22]/20 border-emerald-100/50", color: "text-[#10B981]", trend: "+8%" },
+    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, bg: "bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white shadow-xl shadow-blue-900/10", color: "text-blue-400" },
     { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, bg: "bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] dark:from-[#451a03]/20 dark:to-[#78350f]/10 border-amber-100/50", color: "text-[#F59E0B]" },
+    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, bg: "bg-gradient-to-br from-slate-100 to-slate-200/50 dark:from-slate-800 dark:to-slate-900 border-slate-300/30", color: "text-[#64748b]" }, 
+    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, bg: "bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] dark:from-[#064e3b]/20 dark:to-[#022c22]/20 border-emerald-100/50", color: "text-[#10B981]", trend: "+8%" },
     { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, bg: "bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE] dark:from-[#2e1065]/10 dark:to-[#4c1d95]/10 border-purple-100/50", color: "text-[#8B5CF6]", badge: "Acil" },
     { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, bg: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 border-slate-200/50", color: "text-[#10B981]" },
     { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, bg: "bg-gradient-to-br from-[#FFF1F2] to-[#FFE4E6] dark:from-[#4c0519]/20 dark:to-[#881337]/10 border-rose-100/50", color: "text-[#F43F5E]", badge: "Kritik" },
-    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, bg: "bg-gradient-to-br from-slate-100 to-slate-200/50 dark:from-slate-800 dark:to-slate-900 border-slate-300/30", color: "text-[#64748b]" },
-    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, bg: "bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white shadow-xl shadow-blue-900/10", color: "text-blue-400" },
   ];
 
   return (
