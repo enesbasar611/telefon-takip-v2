@@ -4,159 +4,44 @@
 
 @layer base {
   :root {
-    /* Design System Tokens - The Luminous Prism (Light Mode) */
-    --background: 210 20% 96%; /* slate-50 base layer */
-    --foreground: 225 35% 6%; /* #0a0e16 - Deep Black for Editorial Edge */
-
+    --background: 210 20% 98%; /* #f8fafc - Temiz zemin */
+    --foreground: 225 35% 6%; /* #0a0e16 - Kesin Siyah */
     --card: 0 0% 100%;
     --card-foreground: 225 35% 6%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 35% 6%;
-
-    --primary: 228 100% 65%; /* #4C6FFF - Vivid blue */
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 161 84% 39%; /* #10B981 - Fresh green */
-    --secondary-foreground: 210 40% 98%;
-
-    --tertiary: 38 92% 50%; /* #F59E0B - Warm orange */
-    --tertiary-foreground: 210 40% 98%;
-
-    --muted: 210 20% 90%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 228 100% 96%;
-    --accent-foreground: 228 100% 65%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 210 20% 88%; /* Subdued borders for Light Mode */
-    --input: 210 20% 94%;
-    --ring: 228 100% 65%;
-
-    --surface-container-low: 210 20% 93%; /* slate-100 */
-    --surface-container-highest: 210 20% 88%; /* slate-200 */
-
-    --radius: 1rem; /* Moderate Level 2 Roundedness */
+    --border: 214 32% 91%;
+    --primary: 228 100% 65%; 
+    --radius: 2rem; /* Daha yumuşak köşeler */
   }
 
-  /* Design System Tokens - The Luminous Prism (Dark Mode) */
   .dark {
-    --background: 225 35% 6%; /* #0a0e16 - The Void */
+    --background: 225 35% 6%; /* #0a0e16 - Derinlik */
     --foreground: 210 40% 98%;
-
-    --card: 225 35% 8%; /* surface_container_low approx */
+    --card: 225 35% 9%; /* Kartlar zeminden bir tık daha açık */
     --card-foreground: 210 40% 98%;
-
-    --popover: 225 35% 8%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 228 80% 75%; /* #8197ff - Light source blue */
-    --primary-foreground: 225 35% 6%;
-
-    --secondary: 158 75% 58%; /* #4edea3 - Success glow */
-    --secondary-foreground: 225 35% 6%;
-
-    --tertiary: 34 100% 69%; /* #ffb95f - Attention glow */
-    --tertiary-foreground: 225 35% 6%;
-
-    --muted: 225 35% 12%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 225 35% 15%;
-    --accent-foreground: 210 40% 98%;
-
-    --border: 225 35% 15%; /* Outline variant at 15% opacity logic */
-    --input: 225 35% 12%;
-    --ring: 228 80% 75%;
-
-    --surface-container-low: 225 35% 8%; /* #0e131d */
-    --surface-container-highest: 225 35% 16%; /* #1e2635 */
+    --border: 225 35% 15%; /* Görünür ama zarif border */
   }
-}
 
-@layer base {
-  * {
-    /* The No-Line Rule: Default borders are subdued, hierarchy is through tonal layering */
-    @apply border-border/10;
-  }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 font-inter;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply font-inter antialiased bg-background text-foreground;
   }
-  /* Design System Typography Rules */
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-manrope normal-case tracking-tight font-extrabold;
-    color: hsl(var(--foreground));
   }
 
-  body {
-    color: hsl(var(--foreground));
-  }
-
-  button, label, span, p {
-    @apply font-inter normal-case tracking-normal;
-  }
-
-  /* Kill all global uppercase classes */
+  /* Büyük harf yasağı */
   .uppercase {
     text-transform: none !important;
-  }
-
-  .tracking-widest {
-    letter-spacing: -0.025em !important;
-  }
-
-  .helper-text {
-    @apply text-slate-500 font-medium;
   }
 }
 
 @layer components {
-  .glass {
-    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-none;
-  }
-
-  .matte-card {
-    @apply bg-card border-none shadow-xl shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300;
-  }
-
-  .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-white/5 shadow-none;
-  }
-
   .whisper-border {
-    border-width: 0.5px;
+    @apply border border-border/40 dark:border-white/5;
   }
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
-}
-
-/* Animations */
-@keyframes pulse-blue {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-pulse-blue {
-  animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  /* Kartların havada durma efekti */
+  .premium-card {
+    @apply bg-card whisper-border shadow-xl shadow-slate-200/40 dark:shadow-black/60 transition-all duration-500 hover:-translate-y-2;
+  }
 }
