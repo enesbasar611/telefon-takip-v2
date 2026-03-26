@@ -31,56 +31,36 @@ import { Button } from "@/components/ui/button";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
 
 const statusColors: Record<string, string> = {
-  PENDING: "#94a3b8",      // Grey
-  APPROVED: "#3b82f6",     // Blue
-  REPAIRING: "#3b82f6",    // Orange
-  WAITING_PART: "#8b5cf6", // Purple
-  READY: "#10b981",        // Green
-  DELIVERED: "#059669",    // Dark Green
-  CANCELLED: "#ef4444",    // Red
+  PENDING: "#94a3b8", APPROVED: "#3b82f6", REPAIRING: "#3b82f6", 
+  WAITING_PART: "#8b5cf6", READY: "#10b981", DELIVERED: "#059669", CANCELLED: "#ef4444",
 };
 
 const statusLabels: Record<string, string> = {
-  PENDING: "Beklemede",
-  APPROVED: "Onaylandı",
-  REPAIRING: "Tamirde",
-  WAITING_PART: "Parça bekliyor",
-  READY: "Hazır",
-  DELIVERED: "Teslim edildi",
-  CANCELLED: "İptal edildi",
+  PENDING: "Beklemede", APPROVED: "Onaylandı", REPAIRING: "Tamirde", 
+  WAITING_PART: "Parça bekliyor", READY: "Hazır", DELIVERED: "Teslim edildi", CANCELLED: "İptal edildi",
 };
 
 export function DashboardCore({
-  statsData,
-  recentTicketsRaw,
-  recentTransactions,
-  topProducts,
-  salesTrend,
-  serviceMetricsRaw,
-  liveActivity,
-  profitMatrix,
-  title = "Komuta merkezi",
-  subtitle = "Operasyonel kontrol ve anlık iş zekası raporu",
-  showFullDetails = true
+  statsData, recentTicketsRaw, recentTransactions, topProducts, 
+  salesTrend, serviceMetricsRaw, liveActivity, profitMatrix, 
+  title = "Komuta merkezi", subtitle = "Operasyonel kontrol ve anlık iş zekası raporu", showFullDetails = true
 }: any) {
   const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
-    ...m,
-    name: statusLabels[m.name] || m.name,
-    color: statusColors[m.name] || "#cbd5e1"
+    ...m, name: statusLabels[m.name] || m.name, color: statusColors[m.name] || "#cbd5e1"
   }));
 
   const totalServiceUnits = serviceMetricsRaw.reduce((acc: number, m: any) => acc + m.value, 0);
 
-  // Premium Renk Paleti ve Kart Yapılandırması
+  // Yanyana ve Premium Tasarım Yapısı
   const stats = [
-    { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, color: "text-[#8197ff]", softBg: "bg-[#8197ff]/10", trend: "+12%" },
-    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, color: "text-[#4edea3]", softBg: "bg-[#4edea3]/10", trend: "+8%" },
-    { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, color: "text-[#ffb95f]", softBg: "bg-[#ffb95f]/10" },
-    { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, color: "text-[#8197ff]", softBg: "bg-[#8197ff]/10", badge: "Acil" },
-    { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, color: "text-[#4edea3]", softBg: "bg-[#4edea3]/10" },
-    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, color: "text-[#fb7185]", softBg: "bg-[#fb7185]/10", badge: "Kritik" },
-    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, color: "text-[#f472b6]", softBg: "bg-[#f472b6]/10" },
-    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, color: "text-[#a78bfa]", softBg: "bg-[#a78bfa]/10" },
+    { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, bg: "bg-gradient-to-br from-[#F5F7FF] to-[#EEF2FF] dark:from-[#1e2635] dark:to-[#0f172a] border-blue-100/50", color: "text-[#4C6FFF]", trend: "+12%" },
+    { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, bg: "bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] dark:from-[#064e3b]/20 dark:to-[#022c22]/20 border-emerald-100/50", color: "text-[#10B981]", trend: "+8%" },
+    { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, bg: "bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] dark:from-[#451a03]/20 dark:to-[#78350f]/10 border-amber-100/50", color: "text-[#F59E0B]" },
+    { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, bg: "bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE] dark:from-[#2e1065]/10 dark:to-[#4c1d95]/10 border-purple-100/50", color: "text-[#8B5CF6]", badge: "Acil" },
+    { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, bg: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 border-slate-200/50", color: "text-[#10B981]" },
+    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, bg: "bg-gradient-to-br from-[#FFF1F2] to-[#FFE4E6] dark:from-[#4c0519]/20 dark:to-[#881337]/10 border-rose-100/50", color: "text-[#F43F5E]", badge: "Kritik" },
+    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, bg: "bg-gradient-to-br from-slate-100 to-slate-200/50 dark:from-slate-800 dark:to-slate-900 border-slate-300/30", color: "text-[#64748b]" },
+    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, bg: "bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white shadow-xl shadow-blue-900/10", color: "text-blue-400" },
   ];
 
   return (
@@ -103,35 +83,32 @@ export function DashboardCore({
         </div>
       </div>
 
-      {/* 8-Card Engine - Premium Grid */}
-      <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {/* 8-Card Engine - PREMIUM BIG TEXT GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {stats.map((stat, idx) => (
-          <Card key={idx} className="group relative overflow-hidden rounded-[2.5rem] border-none bg-card shadow-xl shadow-slate-200/40 dark:shadow-black/60 transition-all duration-500 hover:-translate-y-2">
-            <CardContent className="p-10 flex flex-col justify-between min-h-[240px] relative z-10">
-              
-              {/* Background Ghost Icon */}
-              <stat.icon className={cn("absolute -right-6 -top-6 h-40 w-40 opacity-[0.03] transition-transform duration-700 group-hover:scale-110 group-hover:rotate-12", stat.color)} />
-
-              <div className="flex items-center justify-between z-10">
-                <div className={cn("p-4 rounded-2xl whisper-border transition-transform duration-500 group-hover:scale-110", stat.softBg)}>
-                  <stat.icon className={cn("h-7 w-7", stat.color)} />
+          <Card key={idx} className={cn("rounded-[2.5rem] border whisper-border transition-all duration-500 hover:scale-[1.02] overflow-hidden shadow-none", stat.bg)}>
+            <CardContent className="p-8">
+              <div className="flex items-start justify-between">
+                <div className="space-y-4">
+                  <p className={cn("text-[14px] font-bold tracking-tight opacity-70 uppercase-none", stat.label === "Kasa bakiyesi" ? "text-blue-100" : "text-slate-500")}>
+                    {stat.label}
+                  </p>
+                  <div className="space-y-2">
+                    {typeof stat.value === 'string' && stat.value.includes('₺') ? (
+                      <RevealFinancial amount={stat.value} className={cn("text-3xl sm:text-4xl font-black tracking-tighter leading-none", stat.label === "Kasa bakiyesi" ? "text-white" : "text-foreground")} />
+                    ) : (
+                      <h3 className={cn("text-3xl sm:text-4xl font-black tracking-tighter leading-none", stat.label === "Kasa bakiyesi" ? "text-white" : "text-foreground")}>
+                        {stat.value}
+                      </h3>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      {stat.trend && <div className="flex items-center gap-1 text-[13px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/10">{stat.trend}</div>}
+                      {stat.badge && <Badge className="bg-rose-500/10 text-rose-500 text-[10px] font-black border-none px-3 py-1 rounded-full">{stat.badge}</Badge>}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {stat.trend && <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/10">{stat.trend}</span>}
-                  {stat.badge && <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/10">{stat.badge}</span>}
-                </div>
-              </div>
-
-              <div className="mt-8 z-10">
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2 tracking-tight opacity-70 uppercase-none">
-                  {stat.label}
-                </p>
-                <div className="flex items-baseline gap-1">
-                  {typeof stat.value === 'string' && stat.value.includes('₺') ? (
-                    <RevealFinancial amount={stat.value} className="text-4xl font-extrabold tracking-tighter font-manrope text-foreground" />
-                  ) : (
-                    <h3 className="text-4xl font-extrabold tracking-tighter font-manrope text-foreground">{stat.value}</h3>
-                  )}
+                <div className={cn("p-4 rounded-2xl backdrop-blur-md bg-white/30 dark:bg-black/20 border border-white/20 shadow-sm transition-transform duration-500 group-hover:scale-110", stat.color)}>
+                  <stat.icon className="h-7 w-7" />
                 </div>
               </div>
             </CardContent>
@@ -139,7 +116,8 @@ export function DashboardCore({
         ))}
       </div>
 
-      {/* Analytics Center */}
+      {/* Analytics Center & Rest of the Code... */}
+      {/* (Kalan kısımlar aynı hiyerarşide devam ediyor) */}
       <div className="grid gap-10 lg:grid-cols-3 grid-cols-1">
         <Card className="lg:col-span-2 shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden group w-full bg-card border-none rounded-[2.5rem]">
           <CardHeader className="flex flex-row items-center justify-between border-none pb-10 p-10 bg-muted/20">
@@ -166,11 +144,9 @@ export function DashboardCore({
              </div>
           </CardContent>
         </Card>
-
         <LiveActivityFeed activity={liveActivity} />
       </div>
 
-      {/* Operational Overview */}
       <div className="grid gap-10 lg:grid-cols-3 grid-cols-1">
         <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden group rounded-[2.5rem] bg-card border-none">
           <CardHeader className="flex flex-row items-center justify-between border-none p-10 pb-4">
@@ -192,7 +168,6 @@ export function DashboardCore({
              </div>
           </CardContent>
         </Card>
-
         <div className="lg:col-span-2">
             <SmartInsights stats={statsData} />
         </div>
@@ -200,7 +175,6 @@ export function DashboardCore({
 
       {showFullDetails && (
         <div className="grid gap-10 lg:grid-cols-2 grid-cols-1">
-            {/* Recent Transactions */}
             <Card className="border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden rounded-[2.5rem] bg-card">
               <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-10 pb-6">
                 <div className="flex items-center gap-4">
@@ -231,23 +205,15 @@ export function DashboardCore({
                     </thead>
                     <tbody>
                       {recentTransactions.map((t: any, idx: number) => (
-                        <tr key={t.id} className={cn(
-                          "text-sm group transition-all duration-300 border-b border-border/20 last:border-0",
-                          idx % 2 === 0 ? "bg-transparent" : "bg-slate-50/50 dark:bg-white/[0.02]"
-                        )}>
+                        <tr key={t.id} className={cn("text-sm group transition-all duration-300 border-b border-border/20 last:border-0", idx % 2 === 0 ? "bg-transparent" : "bg-slate-50/50 dark:bg-white/[0.02]")}>
                           <td className="px-10 py-6">
                             <div className="font-extrabold text-foreground group-hover:text-primary transition-colors">{t.sale?.customer?.name || "Hızlı Satış"}</div>
                             <div className="text-[10px] text-slate-400 font-bold mt-1 uppercase-none tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                           </td>
                           <td className="px-6 py-6 text-[11px] text-slate-500 font-medium">{t.description}</td>
-                          <td className="px-6 py-6">
-                             <RevealFinancial amount={t.amount} className="text-sm font-black tracking-tight" />
-                          </td>
+                          <td className="px-6 py-6"><RevealFinancial amount={t.amount} className="text-sm font-black tracking-tight" /></td>
                           <td className="px-10 py-6 text-right">
-                            <Badge variant="outline" className={cn(
-                              "text-[9px] font-black border-none px-4 py-1.5 rounded-full shadow-sm",
-                              t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive'
-                            )}>
+                            <Badge variant="outline" className={cn("text-[9px] font-black border-none px-4 py-1.5 rounded-full shadow-sm", t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive')}>
                               {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
                             </Badge>
                           </td>
@@ -259,7 +225,6 @@ export function DashboardCore({
               </CardContent>
             </Card>
 
-            {/* Service Queue */}
             <Card className="border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden rounded-[2.5rem] bg-card">
               <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-10 pb-6">
                 <div className="flex items-center gap-4">
@@ -279,10 +244,7 @@ export function DashboardCore({
               </CardHeader>
               <CardContent className="space-y-4 p-10">
                 {(recentTicketsRaw ?? []).map((ticket: any, idx: number) => (
-                  <div key={ticket.id} className={cn(
-                      "flex items-center justify-between p-6 rounded-[1.5rem] group transition-all duration-300 border-none shadow-sm",
-                      idx % 2 === 0 ? "bg-slate-50/50 dark:bg-white/[0.02]" : "bg-transparent"
-                  )}>
+                  <div key={ticket.id} className={cn("flex items-center justify-between p-6 rounded-[1.5rem] group transition-all duration-300 border-none shadow-sm", idx % 2 === 0 ? "bg-slate-50/50 dark:bg-white/[0.02]" : "bg-transparent")}>
                     <div className="flex items-center gap-6">
                       <div className="h-14 w-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform relative">
                         <Smartphone className="h-7 w-7 text-primary" />
@@ -296,16 +258,10 @@ export function DashboardCore({
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] font-bold border-none mb-2 px-5 py-2 rounded-2xl"
-                        style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
-                      >
+                      <Badge variant="outline" className="text-[10px] font-bold border-none mb-2 px-5 py-2 rounded-2xl" style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}>
                         {statusLabels[ticket.status]}
                       </Badge>
-                      <p className="text-[10px] text-muted-foreground font-bold italic opacity-60">
-                        {ticket.technician?.name || "Atanmamış"}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold italic opacity-60">{ticket.technician?.name || "Atanmamış"}</p>
                     </div>
                   </div>
                 ))}
