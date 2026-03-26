@@ -16,7 +16,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#020617]/90 backdrop-blur-xl border-t border-slate-800/50 flex items-center justify-around px-2 z-50">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-border/10/50 flex items-center justify-around px-2 z-50">
       {items.map((item) => {
         const isActive = pathname === item.href;
         return (
@@ -29,14 +29,14 @@ export function BottomNav() {
             )}
           >
             <item.icon className="h-5 w-5" />
-            <span className="text-[8px] font-black uppercase tracking-widest">{item.label}</span>
+            <span className="text-[8px] font-black  ">{item.label}</span>
             {isActive && <div className="h-1 w-1 rounded-full bg-blue-500" />}
           </Link>
         );
       })}
 
       <Link href="/servis/yeni" className="absolute -top-6 left-1/2 -translate-x-1/2">
-        <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center border-4 border-[#020617] shadow-blue-strong text-white">
+        <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center border-4 border-[#020617]  text-white">
           <PlusCircle className="h-6 w-6" />
         </div>
       </Link>

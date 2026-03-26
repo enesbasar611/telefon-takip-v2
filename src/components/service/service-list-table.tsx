@@ -91,7 +91,7 @@ export const columns: ColumnDef<any>[] = [
       const status = row.getValue("status") as ServiceStatus;
       const config = statusConfig[status];
       return (
-        <Badge className={`${config.color} text-[10px] uppercase font-black tracking-tighter shadow-sm border-none`}>
+        <Badge className={`${config.color} text-[10px]  font-black  shadow-sm border-none`}>
           {config.label}
         </Badge>
       );
@@ -149,8 +149,8 @@ export function ServiceListTable({ data }: { data: any[] }) {
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[180px] bg-[#141416] border-white/5 text-white">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-gray-500 p-3">İşlemler</DropdownMenuLabel>
+                            <DropdownMenuContent align="end" className="w-[180px] bg-card border-white/5 text-white">
+                                <DropdownMenuLabel className="text-[10px] font-black   text-gray-500 p-3">İşlemler</DropdownMenuLabel>
                                 <DropdownMenuItem className="text-xs font-bold gap-3 p-3 cursor-pointer focus:bg-white/5" onSelect={() => {
                                     setSelectedTicket(ticket);
                                     setShowDetails(true);
@@ -272,26 +272,26 @@ export function ServiceListTable({ data }: { data: any[] }) {
                 const status = ticket.status as ServiceStatus;
                 const config = statusConfig[status];
                 return (
-                    <div key={row.id} className="matte-card p-5 rounded-2xl border-slate-800/50 space-y-4">
+                    <div key={row.id} className="matte-card p-5 rounded-2xl border-border/10/50 space-y-4">
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-widest">{ticket.ticketNumber}</span>
-                                <h3 className="font-black text-white uppercase text-sm leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{ticket.customer?.name}</p>
+                                <span className="text-[10px] font-black bg-slate-900 border border-border/10 text-slate-400 px-2 py-0.5 rounded w-fit mb-2  ">{ticket.ticketNumber}</span>
+                                <h3 className="font-black text-white  text-sm leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
+                                <p className="text-[10px] text-slate-500 font-bold  mt-1">{ticket.customer?.name}</p>
                             </div>
-                            <Badge className={`${config.color} border-none text-[8px] font-black px-2 py-0.5 uppercase tracking-tighter`}>
+                            <Badge className={`${config.color} border-none text-[8px] font-black px-2 py-0.5  `}>
                                 {config.label}
                             </Badge>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
-                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">ARIZA TANIMI</p>
+                        <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50">
+                            <p className="text-[8px] font-black text-slate-600  mb-1">ARIZA TANIMI</p>
                             <p className="text-[10px] text-slate-300 font-medium italic truncate">"{ticket.problemDesc}"</p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/50">
+                        <div className="flex items-center justify-between pt-2 border-t border-border/10/50">
                             <div className="flex flex-col">
-                                <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">TAHMİNİ ÜCRET</span>
+                                <span className="text-[8px] text-slate-600 font-bold  ">TAHMİNİ ÜCRET</span>
                                 <span className="text-sm font-black text-blue-500 italic">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
                             </div>
                             <div className="flex gap-2">
@@ -302,18 +302,18 @@ export function ServiceListTable({ data }: { data: any[] }) {
                                 </Link>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-border/10">
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white w-48">
-                                        <DropdownMenuItem className="text-[10px] font-black uppercase p-3 gap-3" onSelect={() => {
+                                    <DropdownMenuContent align="end" className="bg-card border-white/5 text-white w-48">
+                                        <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3" onSelect={() => {
                                             setSelectedTicket(ticket);
                                             setShowDetails(true);
                                         }}>
                                             <Search className="h-4 w-4 text-blue-500" /> DETAYLAR
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-[10px] font-black uppercase p-3 gap-3" onSelect={() => {
+                                        <DropdownMenuItem className="text-[10px] font-black  p-3 gap-3" onSelect={() => {
                                             setSelectedTicket(ticket);
                                             setShowStatus(true);
                                         }}>
@@ -331,14 +331,14 @@ export function ServiceListTable({ data }: { data: any[] }) {
         )}
       </div>
 
-      <div className="hidden lg:block rounded-2xl border shadow-xl bg-card overflow-hidden">
+      <div className="hidden lg:block rounded-2xl border shadow-none bg-card overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/30">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="font-black text-[10px] uppercase tracking-[0.15em] py-5">
+                    <TableHead key={header.id} className="font-black text-[10px]   py-5">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -383,7 +383,7 @@ export function ServiceListTable({ data }: { data: any[] }) {
         </Table>
       </div>
       <div className="flex items-center justify-between py-4">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+        <div className="text-xs font-bold text-muted-foreground  ">
             Toplam {data.length} Kayıt Listeleniyor
         </div>
         <div className="space-x-2">

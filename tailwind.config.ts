@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
 	extend: {
+		fontFamily: {
+			manrope: ['var(--font-manrope)', 'sans-serif'],
+			inter: ['var(--font-inter)', 'sans-serif'],
+		},
 		colors: {
 			background: 'hsl(var(--background))',
 			foreground: 'hsl(var(--foreground))',
@@ -43,6 +47,12 @@ const config: Config = {
 			border: 'hsl(var(--border))',
 			input: 'hsl(var(--input))',
 			ring: 'hsl(var(--ring))',
+			surface: {
+				container: {
+					low: 'hsl(var(--surface-container-low))',
+					highest: 'hsl(var(--surface-container-highest))'
+				}
+			}
 		},
 		borderRadius: {
 			lg: 'var(--radius)',

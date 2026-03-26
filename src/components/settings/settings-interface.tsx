@@ -45,82 +45,101 @@ export function SettingsInterface({ initialSettings }: SettingsProps) {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground/90">Sistem Ayarları</h1>
-        <p className="text-muted-foreground">İşletme bilgilerini ve sistem parametrelerini yapılandırın.</p>
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
+      <div className="flex items-center gap-6 mb-4">
+        <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+            <SettingsIcon className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+            <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Sistem ayarları</h1>
+            <p className="text-sm text-slate-500 font-medium mt-1">İşletme mimarisi ve sistem parametreleri</p>
+        </div>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px] bg-muted/50 p-1">
-          <TabsTrigger value="general" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
-            <SettingsIcon className="h-4 w-4" />
-            Genel
+        <TabsList className="grid w-full grid-cols-4 lg:w-[800px] bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl h-16 shadow-inner">
+          <TabsTrigger value="general" className="gap-3 text-xs font-bold rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+            <SettingsIcon className="h-4.5 w-4.5" />
+            Genel yapı
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
-            <Bell className="h-4 w-4" />
+          <TabsTrigger value="notifications" className="gap-3 text-xs font-bold rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+            <Bell className="h-4.5 w-4.5" />
             Bildirimler
           </TabsTrigger>
-          <TabsTrigger value="printing" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
-            <Printer className="h-4 w-4" />
+          <TabsTrigger value="printing" className="gap-3 text-xs font-bold rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+            <Printer className="h-4.5 w-4.5" />
             Yazdırma
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
-            <Smartphone className="h-4 w-4" />
+          <TabsTrigger value="integrations" className="gap-3 text-xs font-bold rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+            <Smartphone className="h-4.5 w-4.5" />
             Entegrasyonlar
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow border-t-4 border-t-primary">
-            <CardHeader>
-              <CardTitle>Firma Bilgileri</CardTitle>
-              <CardDescription>Fişlerde ve faturalarda görülecek firma bilgilerini düzenleyin.</CardDescription>
+        <TabsContent value="general" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 border-none rounded-2xl bg-card overflow-hidden">
+            <CardHeader className="p-10 border-b border-slate-100 dark:border-white/5 bg-muted/20">
+              <CardTitle className="text-2xl font-extrabold font-manrope">Firma bilgileri</CardTitle>
+              <CardDescription className="text-slate-500 font-medium mt-1">Sistem genelinde ve fişlerde kullanılacak kurumsal kimlik verileri</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Firma Adı</Label>
-                  <Input id="companyName" value={formData.companyName} onChange={handleChange} />
+            <CardContent className="p-10 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="companyName" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Firma adı</Label>
+                  <Input id="companyName" value={formData.companyName} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyPhone">Telefon</Label>
-                  <Input id="companyPhone" value={formData.companyPhone} onChange={handleChange} />
+                <div className="space-y-3">
+                  <Label htmlFor="companyPhone" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">İletişim hattı</Label>
+                  <Input id="companyPhone" value={formData.companyPhone} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="companyAddress">Adres</Label>
-                <Input id="companyAddress" value={formData.companyAddress} onChange={handleChange} />
+              <div className="space-y-3">
+                <Label htmlFor="companyAddress" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Global adres bilgisi</Label>
+                <Input id="companyAddress" value={formData.companyAddress} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
               </div>
-              <Button onClick={handleSave} disabled={isPending} className="font-bold">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Değişiklikleri Kaydet
-              </Button>
+              <div className="pt-4">
+                <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-extrabold text-base shadow-xl shadow-primary/20 transition-all active:scale-95">
+                    {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <SettingsIcon className="mr-3 h-5 w-5" />}
+                    Değişiklikleri güvenli kaydet
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications" className="mt-6">
-          <Card className="hover:shadow-md transition-shadow border-t-4 border-t-green-500">
-            <CardHeader>
-              <CardTitle>Bildirim Şablonları</CardTitle>
-              <CardDescription>Müşterilere gönderilecek SMS ve WhatsApp mesajlarını yapılandırın.</CardDescription>
+        <TabsContent value="notifications" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 border-none rounded-2xl bg-card overflow-hidden">
+            <CardHeader className="p-10 border-b border-slate-100 dark:border-white/5 bg-muted/20">
+              <CardTitle className="text-2xl font-extrabold font-manrope">Bildirim şablonları</CardTitle>
+              <CardDescription className="text-slate-500 font-medium mt-1">Müşteri deneyimini optimize eden otomatik WhatsApp mesaj yapılandırması</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="whatsappNewService">Yeni Servis Kaydı Mesajı</Label>
-                <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} />
-                <p className="text-[10px] text-muted-foreground italic font-medium">Değişkenler: {'{customer}, {device}, {ticket}'}</p>
+            <CardContent className="p-10 space-y-10">
+              <div className="space-y-4">
+                <Label htmlFor="whatsappNewService" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Yeni servis kabul mesajı</Label>
+                <div className="relative">
+                    <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
+                    <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10">
+                        <span className="text-[10px] font-bold text-blue-500">PARAMETRELER:</span>
+                        <span className="text-[10px] font-medium text-blue-400 italic">{' {customer}, {device}, {ticket}'}</span>
+                    </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsappReady">Cihaz Hazır Mesajı</Label>
-                <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} />
-                <p className="text-[10px] text-muted-foreground italic font-medium">Değişkenler: {'{customer}, {device}'}</p>
+              <div className="space-y-4">
+                <Label htmlFor="whatsappReady" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Cihaz onarım tamamlandı mesajı</Label>
+                <div className="relative">
+                    <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
+                    <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
+                        <span className="text-[10px] font-bold text-emerald-500">PARAMETRELER:</span>
+                        <span className="text-[10px] font-medium text-emerald-400 italic">{' {customer}, {device}'}</span>
+                    </div>
+                </div>
               </div>
-              <Button onClick={handleSave} disabled={isPending} className="font-bold">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Şablonları Kaydet
-              </Button>
+              <div className="pt-4">
+                <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-secondary hover:bg-secondary/90 text-white font-extrabold text-base shadow-xl shadow-secondary/20 transition-all active:scale-95">
+                    {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Bell className="mr-3 h-5 w-5" />}
+                    Şablonları yayına al
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

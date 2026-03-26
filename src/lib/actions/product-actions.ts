@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, toSentenceCase } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
@@ -9,6 +9,33 @@ export async function getProducts() {
       include: { category: true },
       orderBy: { updatedAt: "desc" }
     });
+    return serializePrisma(products);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function searchProducts(query: string) {
+  try {
+    if (!query || query.length < 2) return [];
+
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { sku: { contains: query, mode: 'insensitive' } },
+          { barcode: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        sku: true
+      },
+      take: 5
+    });
+
     return serializePrisma(products);
   } catch (error) {
     return [];
@@ -41,7 +68,7 @@ export async function createProduct(data: {
   try {
     const product = await prisma.product.create({
       data: {
-        name: data.name,
+        name: toSentenceCase(data.name),
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
@@ -69,23 +96,157 @@ export async function createProduct(data: {
   }
 }
 
+async function getOrCreateDevUser() {
+  return await prisma.user.upsert({
+    where: { email: "admin@takipv2.com" },
+    update: {},
+    create: {
+      email: "admin@takipv2.com",
+      name: "Admin",
+      password: "hashed_password",
+      role: "ADMIN",
+    },
+  });
+}
+
 export async function updateProduct(id: string, data: any) {
   try {
+    const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         ...data,
-        buyPrice: data.buyPrice ? Number(data.buyPrice) : undefined,
+        name: data.name ? toSentenceCase(data.name) : undefined,
+        buyPrice,
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
         stock: data.stock !== undefined ? Number(data.stock) : undefined,
         criticalStock: data.criticalStock !== undefined ? Number(data.criticalStock) : undefined,
       }
     });
+
+    // Cost-to-Profit Sync: Update costPrice for active service tickets
+    if (buyPrice !== undefined) {
+      await prisma.serviceUsedPart.updateMany({
+        where: {
+          productId: id,
+          ticket: {
+            status: {
+              notIn: ["DELIVERED", "CANCELLED"]
+            }
+          }
+        },
+        data: {
+          costPrice: buyPrice
+        }
+      });
+    }
+
     revalidatePath("/stok");
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
     console.error("Update product error:", error);
     return { success: false, error: "Ürün güncellenemedi." };
+  }
+}
+
+export async function quickSellProduct(productId: string, quantity: number) {
+  try {
+    const user = await getOrCreateDevUser();
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+
+    if (!product) throw new Error("Ürün bulunamadı.");
+    if (product.stock < quantity) throw new Error("Yetersiz stok.");
+
+    const totalAmount = Number(product.sellPrice) * quantity;
+    const saleNumber = `FAST-${Date.now()}`;
+
+    await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.create({
+        data: {
+          saleNumber,
+          userId: user.id,
+          totalAmount,
+          finalAmount: totalAmount,
+          items: {
+            create: {
+              productId,
+              quantity,
+              unitPrice: product.sellPrice,
+              totalPrice: totalAmount
+            }
+          },
+          transaction: {
+            create: {
+              type: "INCOME",
+              amount: totalAmount,
+              description: `Hızlı Satış: ${product.name} (x${quantity})`,
+              userId: user.id
+            }
+          },
+          inventoryMovements: {
+            create: {
+              productId,
+              quantity: -quantity,
+              type: "SALE",
+              notes: `Hızlı satış: ${saleNumber}`
+            }
+          }
+        }
+      });
+
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          stock: { decrement: quantity },
+          inventoryLogs: {
+            create: {
+              userId: user.id,
+              quantity: -quantity,
+              type: "SALE",
+              notes: `Hızlı satış yapıldı. Satış No: ${saleNumber}`
+            }
+          }
+        }
+      });
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Quick sell error:", error);
+    return { success: false, error: error.message || "Satış işlemi başarısız." };
+  }
+}
+
+export async function getDeadStockCount() {
+  try {
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const productsWithSales = await prisma.saleItem.findMany({
+      where: {
+        sale: {
+          createdAt: { gte: ninetyDaysAgo }
+        }
+      },
+      select: { productId: true },
+      distinct: ['productId']
+    });
+
+    const activeProductIds = productsWithSales.map(p => p.productId);
+
+    const deadStockCount = await prisma.product.count({
+      where: {
+        stock: { gt: 0 },
+        id: { notIn: activeProductIds }
+      }
+    });
+
+    return deadStockCount;
+  } catch (error) {
+    return 0;
   }
 }
 

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { GeistSans } from 'geist/font/sans';
+import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { Navbar } from "@/components/navbar";
@@ -9,7 +8,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UIProvider } from "@/lib/context/ui-context";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning className={GeistSans.className}>
-      <body className="bg-background text-foreground antialiased">
+    <html lang="tr" suppressHydrationWarning className={`${manrope.variable} ${inter.variable}`}>
+      <body className="bg-background text-foreground antialiased font-inter">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -31,7 +31,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UIProvider>
-            <div className="flex min-h-screen bg-[#020617]">
+            <div className="flex min-h-screen bg-background">
               <Sidebar className="hidden lg:flex" />
               <div className="flex flex-1 flex-col overflow-hidden">
                 <Navbar />

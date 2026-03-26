@@ -23,7 +23,7 @@ export function MobileSidebar() {
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 bg-[#020617] border-slate-800 w-64">
+      <SheetContent side="left" className="p-0 bg-background border-border/10 w-64">
         <div className="h-full">
             <Sidebar className="w-full border-none" />
         </div>

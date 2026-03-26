@@ -35,6 +35,13 @@ enum PaymentMethod {
   DEBT
 }
 
+enum ReturnReason {
+  PART_FAILURE
+  LABOR_ERROR
+  CUSTOMER_MISUSE
+  CUSTOMER_CANCEL
+}
+
 model User {
   id              String    @id @default(cuid())
   name            String?
@@ -49,6 +56,8 @@ model User {
   createdTickets  ServiceTicket[] @relation("CreatedBy")
   transactions    Transaction[]
   sales           Sale[]
+  returns         ReturnTicket[]
+  inventoryLogs   InventoryLog[]
 }
 
 model Customer {
@@ -95,6 +104,7 @@ model ServiceTicket {
 
   estimatedCost   Decimal       @default(0) @db.Decimal(10, 2)
   actualCost      Decimal       @default(0) @db.Decimal(10, 2)
+  overhead        Decimal       @default(0) @db.Decimal(10, 2)
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -102,8 +112,10 @@ model ServiceTicket {
   warrantyExpiry  DateTime?
   estimatedDeliveryDate DateTime?
 
-  logs            ServiceLog[]
-  usedParts       ServiceUsedPart[]
+  logs               ServiceLog[]
+  usedParts          ServiceUsedPart[]
+  inventoryMovements InventoryMovement[]
+  returns            ReturnTicket[]
 }
 
 model ServiceLog {
@@ -123,6 +135,7 @@ model ServiceUsedPart {
   product         Product       @relation(fields: [productId], references: [id])
   quantity        Int           @default(1)
   unitPrice       Decimal       @db.Decimal(10, 2)
+  costPrice       Decimal       @default(0) @db.Decimal(10, 2)
 }
 
 model Category {
@@ -146,6 +159,10 @@ model Product {
   criticalStock   Int       @default(5)
 
   isSecondHand    Boolean   @default(false)
+  isChronic       Boolean   @default(false)
+  supplierId      String?
+  location        String?
+  warrantyMonths  Int       @default(0)
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -155,6 +172,41 @@ model Product {
   usedInServices  ServiceUsedPart[]
   shortageItems   ShortageItem[]
   deviceInfo      DeviceHubInfo?
+  returns         ReturnTicket[]
+  inventoryLogs   InventoryLog[]
+}
+
+model ReturnTicket {
+  id              String        @id @default(cuid())
+  ticketNumber    String        @unique // e.g., RET-1001
+  serviceTicketId String
+  serviceTicket   ServiceTicket @relation(fields: [serviceTicketId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  supplierId      String?
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  returnReason    ReturnReason
+  lossAmount      Decimal       @default(0) @db.Decimal(10, 2)
+  notes           String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model InventoryLog {
+  id              String        @id @default(cuid())
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  quantity        Int
+  type            String        // SALE, PURCHASE, SERVICE_USE, RETURN_RESTORE, RETURN_JUNK, ADJUSTMENT
+  notes           String?
+
+  createdAt       DateTime      @default(now())
 }
 
 model DeviceHubInfo {
@@ -201,7 +253,13 @@ model InventoryMovement {
   quantity    Int      // Positive for stock in, negative for stock out
   type        String   // SALE, PURCHASE, SERVICE_USE, ADJUSTMENT
   notes       String?
-  createdAt   DateTime @default(now())
+
+  serviceTicketId String?
+  serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
+  saleId          String?
+  sale            Sale?          @relation(fields: [saleId], references: [id])
+
+  createdAt       DateTime @default(now())
 }
 
 model Sale {
@@ -220,8 +278,9 @@ model Sale {
 
   createdAt       DateTime      @default(now())
 
-  items           SaleItem[]
-  transaction     Transaction?
+  items              SaleItem[]
+  transaction        Transaction?
+  inventoryMovements InventoryMovement[]
 }
 
 model SaleItem {

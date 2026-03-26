@@ -22,7 +22,7 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
       className={cn("relative group cursor-pointer inline-flex items-center gap-2", className)}
     >
       <span className={cn(
-        "transition-all duration-300 font-black tracking-tighter",
+        "transition-all duration-300 font-black ",
         !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
         {prefix}{formattedAmount}

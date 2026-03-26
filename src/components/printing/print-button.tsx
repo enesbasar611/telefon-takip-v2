@@ -7,7 +7,7 @@ export function PrintButton() {
   return (
     <Button
       onClick={() => window.print()}
-      className="mt-10 bg-primary text-white p-2 h-auto rounded no-print text-[10px] font-bold uppercase tracking-widest w-full"
+      className="mt-10 bg-primary text-white p-2 h-auto rounded no-print text-[10px] font-bold   w-full"
     >
       <Printer className="mr-2 h-4 w-4" />
       FİŞİ YAZDIR

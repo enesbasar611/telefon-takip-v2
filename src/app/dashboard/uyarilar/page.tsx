@@ -19,37 +19,47 @@ export default async function BildirimlerPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Sistem Bildirimleri</h1>
-        <p className="text-muted-foreground">İşletmenizin kritik uyarılarını ve operasyonel hatırlatıcılarını takip edin.</p>
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
+      <div className="flex items-center gap-5 mb-4">
+        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 ">
+            <Bell className="h-7 w-7 text-blue-500" />
+        </div>
+        <div>
+            <h1 className="text-4xl font-extrabold tracking-tight">Sistem bildirimleri</h1>
+            <p className="text-xs text-muted-foreground font-medium mt-1">İşletmenizin kritik uyarıları ve operasyonel hatırlatıcıları</p>
+        </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-6">
         {notifications.length === 0 ? (
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="text-center py-12">
-              <ShieldAlert className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
-              <CardTitle className="mt-4 text-muted-foreground uppercase tracking-widest font-medium">Şu an için yeni bir bildirim bulunmuyor.</CardTitle>
+          <Card className="rounded-xl border-border shadow-sm bg-card">
+            <CardHeader className="text-center py-20">
+              <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-20" />
+              <CardTitle className="mt-6 text-muted-foreground font-bold">Şu an için yeni bir bildirim bulunmuyor</CardTitle>
             </CardHeader>
           </Card>
         ) : (
           notifications.map((n: any) => (
-            <Card key={n.id} className={`hover:shadow-md transition-shadow border-l-4 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
-              <CardHeader className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getIcon(n.type)}
+            <Card key={n.id} className={`rounded-xl border-border shadow-sm transition-all hover:translate-y-[-2px] bg-card border-l-8 ${n.priority === 'HIGH' ? 'border-l-red-500' : 'border-l-blue-500'}`}>
+              <CardHeader className="p-10">
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-6">
+                    <div className={cn(
+                        "p-4 rounded-[1.25rem] border",
+                        n.priority === 'HIGH' ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20"
+                    )}>
+                        {getIcon(n.type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg font-extrabold uppercase tracking-tight">{n.title}</CardTitle>
-                      <CardDescription className="text-sm">{n.message}</CardDescription>
+                      <CardTitle className="text-xl font-extrabold">{n.title}</CardTitle>
+                      <CardDescription className="text-base font-medium mt-1.5">{n.message}</CardDescription>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider">
-                      {n.priority === 'HIGH' ? 'KRİTİK' : 'NORMAL'}
+                  <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="px-5 py-1.5 rounded-full font-bold text-xs">
+                      {n.priority === 'HIGH' ? 'Kritik' : 'Normal'}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground font-bold">
                       {format(new Date(n.createdAt), "dd MMM yyyy HH:mm", { locale: tr })}
                     </span>
                   </div>
@@ -61,4 +71,9 @@ export default async function BildirimlerPage() {
       </div>
     </div>
   );
+}
+
+// Utility for conditional classes since it was missing in imports
+function cn(...inputs: any[]) {
+    return inputs.filter(Boolean).join(' ');
 }

@@ -20,7 +20,7 @@ export default async function ServicePage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Servis Yönetimi</h1>
+          <h1 className="text-3xl font-bold ">Servis Yönetimi</h1>
           <p className="text-muted-foreground">Aktif ve geçmiş servis kayıtlarını yönetin.</p>
         </div>
         <CreateServiceModal />

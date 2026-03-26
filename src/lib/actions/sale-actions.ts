@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, TransactionType } from "@prisma/client";
+import { addShortageItem } from "./shortage-actions";
 
 async function getOrCreateDevUser() {
   return await prisma.user.upsert({
@@ -51,7 +52,7 @@ export async function createSale(data: {
 
     // Update stock and create movements
     for (const item of data.items) {
-      await prisma.product.update({
+      const updatedProduct = await prisma.product.update({
         where: { id: item.productId },
         data: { stock: { decrement: item.quantity } },
       });
@@ -64,6 +65,15 @@ export async function createSale(data: {
           notes: `SATIŞ - ${sale.saleNumber}`,
         },
       });
+
+      if (updatedProduct.stock <= 0) {
+        await addShortageItem({
+          productId: item.productId,
+          name: updatedProduct.name,
+          quantity: 1,
+          notes: `Satış sonucu stok tükendi: ${sale.saleNumber}`
+        });
+      }
     }
 
     // Create financial transaction

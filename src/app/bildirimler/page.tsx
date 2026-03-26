@@ -21,7 +21,7 @@ export default async function BildirimlerPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Sistem Bildirimleri</h1>
+        <h1 className="text-3xl font-bold ">Sistem Bildirimleri</h1>
         <p className="text-muted-foreground">İşletmenizin kritik uyarılarını ve operasyonel hatırlatıcılarını takip edin.</p>
       </div>
 
@@ -30,7 +30,7 @@ export default async function BildirimlerPage() {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="text-center py-12">
               <ShieldAlert className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
-              <CardTitle className="mt-4 text-muted-foreground uppercase tracking-widest font-medium">Şu an için yeni bir bildirim bulunmuyor.</CardTitle>
+              <CardTitle className="mt-4 text-muted-foreground   font-medium">Şu an için yeni bir bildirim bulunmuyor.</CardTitle>
             </CardHeader>
           </Card>
         ) : (
@@ -41,12 +41,12 @@ export default async function BildirimlerPage() {
                   <div className="flex items-center gap-3">
                     {getIcon(n.type)}
                     <div>
-                      <CardTitle className="text-lg font-extrabold uppercase tracking-tight">{n.title}</CardTitle>
+                      <CardTitle className="text-lg font-extrabold  ">{n.title}</CardTitle>
                       <CardDescription className="text-sm">{n.message}</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider">
+                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="text-[10px]  font-bold ">
                       {n.priority === 'HIGH' ? 'KRİTİK' : 'NORMAL'}
                     </Badge>
                     <span className="text-[10px] text-muted-foreground">
