@@ -69,7 +69,7 @@ export function POSInterface({ products, customers }: { products: any[]; custome
 
     try {
       const result = await createSale({
-        customerId: selectedCustomerId,
+        customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
         items: cart.map(item => ({
           productId: item.id,
           quantity: item.quantity,
