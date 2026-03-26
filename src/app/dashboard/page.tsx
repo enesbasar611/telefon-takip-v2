@@ -123,7 +123,7 @@ export default async function DashboardOzetPage() {
       <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
           <Card key={idx} className={cn(
-            "rounded-xl border-none transition-all duration-500 hover:translate-y-[-6px] group",
+            "rounded-2xl border-none transition-all duration-500 hover:translate-y-[-6px] group",
             stat.bg,
             idx < 3 || idx === 7
               ? "text-white shadow-2xl shadow-primary/20 bg-gradient-to-br from-primary to-primary/80"
@@ -248,7 +248,7 @@ export default async function DashboardOzetPage() {
       {/* Operational Hub */}
       <div className="grid gap-6 lg:grid-cols-2 grid-cols-1">
         {/* Recent Transactions Table */}
-        <Card className="border-border shadow-sm overflow-hidden rounded-2xl bg-card">
+        <Card className="border-none shadow-2xl shadow-slate-200/40 overflow-hidden rounded-2xl bg-card">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
             <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20 ">
@@ -307,7 +307,7 @@ export default async function DashboardOzetPage() {
         </Card>
 
         {/* Recent Service Tickets List */}
-        <Card className="border-border shadow-sm overflow-hidden rounded-2xl bg-card">
+        <Card className="border-none shadow-2xl shadow-slate-200/40 overflow-hidden rounded-2xl bg-card">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
             <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 ">
@@ -358,7 +358,7 @@ export default async function DashboardOzetPage() {
       </div>
 
       {/* Top Products Grid */}
-      <Card className="border-border shadow-sm overflow-hidden mt-4 rounded-2xl bg-card">
+      <Card className="border-none shadow-2xl shadow-slate-200/40 overflow-hidden mt-4 rounded-2xl bg-card">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
           <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 ">
