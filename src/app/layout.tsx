@@ -31,7 +31,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UIProvider>
-            <div className="flex min-h-screen bg-[#020617]">
+            <div className="flex min-h-screen bg-background">
               <Sidebar className="hidden lg:flex" />
               <div className="flex flex-1 flex-col overflow-hidden">
                 <Navbar />

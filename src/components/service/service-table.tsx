@@ -53,7 +53,7 @@ const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any
   REPAIRING: { label: "TAMİRDE", color: "text-orange-500 bg-orange-500/10 border-orange-500/20", icon: WrenchIcon, glow: "" },
   WAITING_PART: { label: "PARÇA BEKLİYOR", color: "text-purple-500 bg-purple-500/10 border-purple-500/20", icon: PackageIcon, glow: "" },
   READY: { label: "HAZIR", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle, glow: "shadow-emerald-500/20" },
-  DELIVERED: { label: "TESLİM EDİLDİ", color: "text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-blue-sm", icon: CheckCircle, glow: "shadow-blue-500/30 animate-pulse" },
+  DELIVERED: { label: "TESLİM EDİLDİ", color: "text-blue-500 bg-blue-500/10 border-blue-500/20 ", icon: CheckCircle, glow: "shadow-blue-500/30 animate-pulse" },
   CANCELLED: { label: "İPTAL EDİLDİ", color: "text-rose-500 bg-rose-500/10 border-rose-500/20", icon: XCircle, glow: "" },
 };
 
@@ -97,23 +97,23 @@ export function ServiceTable({ data }: ServiceTableProps) {
   };
 
   return (
-    <div className="rounded-[2rem] obsidian overflow-hidden whisper-border border-white/5 shadow-2xl">
+    <div className="rounded-[2rem] obsidian overflow-hidden whisper-border border-white/5 shadow-none">
       <Table>
         <TableHeader className="bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
-            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Fiş No</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Müşteri</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Cihaz Analizi</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">İşlem Durumu</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Kayıt Tarihi</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] text-right">Maliyet</TableHead>
-            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] text-right">Aksiyon</TableHead>
+            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500  ">Fiş No</TableHead>
+            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Müşteri</TableHead>
+            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Cihaz Analizi</TableHead>
+            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">İşlem Durumu</TableHead>
+            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Kayıt Tarihi</TableHead>
+            <TableHead className="py-6 text-[10px] font-black text-gray-500   text-right">Maliyet</TableHead>
+            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500   text-right">Aksiyon</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-40 text-center text-[10px] font-black text-gray-600 uppercase tracking-widest bg-[#141416]/50">
+              <TableCell colSpan={7} className="h-40 text-center text-[10px] font-black text-gray-600   bg-[#141416]/50">
                 Kayıtlı veri bulunamadı.
               </TableCell>
             </TableRow>
@@ -121,12 +121,12 @@ export function ServiceTable({ data }: ServiceTableProps) {
             data.map((ticket) => (
               <TableRow key={ticket.id} className="border-b border-white/[0.03] group hover:bg-white/[0.01] transition-colors">
                 <TableCell className="px-8 py-6">
-                    <span className="font-black text-xs text-white uppercase tracking-tighter shadow-blue-sm">#{ticket.ticketNumber}</span>
+                    <span className="font-black text-xs text-white   ">#{ticket.ticketNumber}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-black text-xs text-white uppercase tracking-tight group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
-                    <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">{ticket.customer.phone}</span>
+                    <span className="font-black text-xs text-white   group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
+                    <span className="text-[9px] text-gray-600 font-bold  ">{ticket.customer.phone}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -135,20 +135,20 @@ export function ServiceTable({ data }: ServiceTableProps) {
                         <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="font-black text-xs text-white uppercase tracking-tight">{ticket.deviceBrand} {ticket.deviceModel}</span>
-                        <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest truncate max-w-[120px]">"{ticket.problemDesc}"</span>
+                        <span className="font-black text-xs text-white  ">{ticket.deviceBrand} {ticket.deviceModel}</span>
+                        <span className="text-[9px] text-gray-600 font-bold   truncate max-w-[120px]">"{ticket.problemDesc}"</span>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none font-black text-[9px] uppercase tracking-[0.1em] px-3 py-1.5 rounded-xl transition-all`} variant="outline">
+                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none font-black text-[9px]   px-3 py-1.5 rounded-xl transition-all`} variant="outline">
                     {statusMap[ticket.status as ServiceStatus].label}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                <TableCell className="text-[9px] font-black text-gray-500  ">
                   {format(new Date(ticket.createdAt), "dd MMM, HH:mm", { locale: tr })}
                 </TableCell>
-                <TableCell className="text-right font-black text-sm text-white tracking-tighter">
+                <TableCell className="text-right font-black text-sm text-white ">
                   ₺{Number(ticket.estimatedCost).toLocaleString("tr-TR")}
                 </TableCell>
                 <TableCell className="px-8">
@@ -178,27 +178,27 @@ export function ServiceTable({ data }: ServiceTableProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[200px] shadow-2xl">
-                        <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="bg-[#141416] border-white/5 text-white p-2 min-w-[200px] shadow-none">
+                        <DropdownMenuLabel className="text-[10px]   font-black text-gray-500 p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/5" />
                         {Object.entries(statusMap).map(([status, info]) => (
                           <DropdownMenuItem
                             key={status}
                             onClick={() => handleStatusUpdate(ticket.id, status as ServiceStatus)}
                             disabled={ticket.status === status}
-                            className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group uppercase tracking-widest"
+                            className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group  "
                           >
                             <div className={cn("w-2 h-2 rounded-full", info.color.split(' ')[0])} />
                             {info.label} Yap
                           </DropdownMenuItem>
                         ))}
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem asChild className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center uppercase tracking-widest">
+                        <DropdownMenuItem asChild className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center  ">
                             <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank" className="w-full flex items-center gap-3">
                                 <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center uppercase tracking-widest" onClick={() => handleDelete(ticket.id)}>
+                        <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center  " onClick={() => handleDelete(ticket.id)}>
                           <Trash className="h-4 w-4" /> Kaydı Arşivle
                         </DropdownMenuItem>
                       </DropdownMenuContent>

@@ -59,27 +59,27 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Kullanılan Parçalar</h3>
+        <h3 className="text-[10px] font-black   text-gray-500">Kullanılan Parçalar</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 px-3">
+            <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black  bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 px-3">
               <Plus className="h-3 w-3 mr-1" /> PARÇA EKLE
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-[#141416] border-white/5 text-white">
             <DialogHeader>
-              <DialogTitle className="text-sm font-black uppercase tracking-widest">Servise Parça Ekle</DialogTitle>
+              <DialogTitle className="text-sm font-black  ">Servise Parça Ekle</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ürün Seçin</label>
+                <label className="text-[10px] font-black   text-gray-500">Ürün Seçin</label>
                 <Select value={selectedProductId} onValueChange={setSelectedProductId}>
                   <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12">
                     <SelectValue placeholder="Envanterden ürün seçin..." />
                   </SelectTrigger>
                   <SelectContent className="bg-[#141416] border-white/5 text-white">
                     {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id} className="text-xs font-bold uppercase py-3">
+                      <SelectItem key={p.id} value={p.id} className="text-xs font-bold  py-3">
                         {p.name} (Stok: {p.stock}) - ₺{Number(p.sellPrice).toLocaleString('tr-TR')}
                       </SelectItem>
                     ))}
@@ -87,7 +87,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Adet</label>
+                <label className="text-[10px] font-black   text-gray-500">Adet</label>
                 <Input
                   type="number"
                   value={quantity}
@@ -95,7 +95,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                   className="bg-white/[0.03] border-white/5 rounded-xl h-12"
                 />
               </div>
-              <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-blue-500 text-black font-black uppercase h-12 rounded-xl mt-4">
+              <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-blue-500 text-black font-black  h-12 rounded-xl mt-4">
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "EKLEMAYI TAMAMLA"}
               </Button>
             </div>
@@ -112,8 +112,8 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                     <Package className="h-4 w-4 text-gray-500" />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[11px] font-black text-white uppercase tracking-tight">{part.product.name}</span>
-                    <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
+                    <span className="text-[11px] font-black text-white  ">{part.product.name}</span>
+                    <span className="text-[9px] text-gray-600 font-bold  ">{part.quantity} ADET • ₺{Number(part.unitPrice).toLocaleString('tr-TR')}</span>
                 </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -134,11 +134,11 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
             <div className="mt-1 pt-2 border-t border-white/[0.03] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Kar Analizi</span>
+                    <span className="text-[8px] font-black text-gray-500  ">Kar Analizi</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-[8px] font-bold text-gray-600 uppercase">Maliyet: ₺{Number(part.costPrice).toLocaleString('tr-TR')}</span>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 border-emerald-500/20 text-emerald-500 bg-emerald-500/5">
+                    <span className="text-[8px] font-bold text-gray-600 ">Maliyet: ₺{Number(part.costPrice).toLocaleString('tr-TR')}</span>
+                    <Badge variant="outline" className="text-[8px] font-black  px-2 py-0 border-emerald-500/20 text-emerald-500 bg-emerald-500/5">
                         Önerilen Min: ₺{(Number(part.costPrice) * 1.5).toLocaleString('tr-TR')}
                     </Badge>
                 </div>
@@ -147,14 +147,14 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
         ))}
         {currentParts.length === 0 && (
           <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
-             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] italic">Henüz parça eklenmedi.</p>
+             <p className="text-[10px] font-bold text-gray-600   italic">Henüz parça eklenmedi.</p>
           </div>
         )}
       </div>
 
       {currentParts.length > 0 && (
         <div className="pt-2 flex justify-between items-center border-t border-white/5">
-           <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">TOPLAM PARÇA MALİYETİ</span>
+           <span className="text-[10px] font-black text-gray-600  ">TOPLAM PARÇA MALİYETİ</span>
            <span className="text-sm font-black text-white">₺{totalPartsCost.toLocaleString('tr-TR')}</span>
         </div>
       )}

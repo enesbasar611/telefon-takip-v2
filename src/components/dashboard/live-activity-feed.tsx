@@ -24,15 +24,15 @@ import { tr } from "date-fns/locale";
 
 export function LiveActivityFeed({ activity }: { activity: any[] }) {
   return (
-    <Card className="bg-[#141416] border-white/5 shadow-2xl h-full overflow-hidden">
+    <Card className="bg-[#141416] border-white/5 shadow-none h-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
             <Activity className="h-4 w-4 text-blue-500" />
           </div>
           <div>
-            <CardTitle className="text-sm font-black uppercase tracking-widest">Canlı Akış</CardTitle>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Sistem Etkinlikleri</p>
+            <CardTitle className="text-sm font-black  ">Canlı Akış</CardTitle>
+            <p className="text-[10px] text-gray-500 font-bold  ">Sistem Etkinlikleri</p>
           </div>
         </div>
         <Badge variant="outline" className="text-[10px] font-black border-blue-500/20 text-blue-500 bg-blue-500/5 px-2 animate-pulse">
@@ -53,8 +53,8 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <h4 className="text-xs font-black text-white uppercase truncate">{item.title}</h4>
-                    <span className="text-[9px] font-bold text-gray-600 uppercase whitespace-nowrap">
+                    <h4 className="text-xs font-black text-white  truncate">{item.title}</h4>
+                    <span className="text-[9px] font-bold text-gray-600  whitespace-nowrap">
                       {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: tr })}
                     </span>
                   </div>
@@ -66,7 +66,7 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
             </div>
           ))}
           {activity.length === 0 && (
-             <div className="p-10 text-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">
+             <div className="p-10 text-center text-gray-600 text-[10px] font-bold  ">
                 Henüz etkinlik yok.
              </div>
           )}

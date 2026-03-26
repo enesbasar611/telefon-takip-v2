@@ -4,14 +4,14 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
@@ -32,17 +32,17 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
 
-    --radius: 1rem;
+    --radius: 2rem;
   }
 
   .dark {
-    --background: 222 47% 7%;
+    --background: 222 47% 4%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 7%;
+    --card: 222 47% 4%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 7%;
+    --popover: 222 47% 4%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%;
@@ -68,33 +68,29 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border/40;
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-blue-500/30;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Global Sentence Case Enforcement */
+  h1, h2, h3, h4, h5, h6, button, label, span, p {
+    @apply normal-case tracking-normal;
+  }
 }
 
 @layer components {
   .glass {
-    @apply bg-slate-900/50 backdrop-blur-lg border border-slate-800/50 shadow-2xl;
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-none;
   }
 
   .matte-card {
-    @apply bg-card border border-border/60 shadow-xl transition-all duration-300;
+    @apply bg-card border border-slate-800/50 shadow-none transition-all duration-300;
   }
 
   .whisper-border {
     border-width: 0.5px;
-  }
-
-  .blue-glow {
-    @apply shadow-[0_0_20px_rgba(59,130,246,0.15)];
-  }
-
-  .blue-glow-strong {
-    @apply shadow-[0_0_35px_rgba(59,130,246,0.3)];
   }
 }
 

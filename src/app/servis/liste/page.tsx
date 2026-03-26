@@ -12,9 +12,9 @@ export default async function ServiceListPage() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="h-2 w-2 rounded-full bg-orange-500 shadow-orange-sm" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Operasyonel Takip</span>
+            <span className="text-[10px] font-black   text-slate-500">Operasyonel Takip</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">SERVİS <span className="text-blue-500">MERKEZİ</span></h1>
+          <h1 className="text-4xl font-black  text-white  italic">SERVİS <span className="text-blue-500">MERKEZİ</span></h1>
           <p className="text-sm text-slate-500 font-medium mt-1">Aktif teknik servis kayıtlarını ve cihaz durumlarını yönetin.</p>
         </div>
       </div>

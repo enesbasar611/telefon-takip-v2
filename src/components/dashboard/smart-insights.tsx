@@ -48,15 +48,15 @@ export function SmartInsights({ stats }: { stats: any }) {
   ].filter(i => i.priority === "HIGH" || stats.readyDevices > 0);
 
   return (
-    <Card className="bg-[#141416] border-white/5 shadow-2xl h-full overflow-hidden">
+    <Card className="bg-[#141416] border-white/5 shadow-none h-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-blue-sm">
+          <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 ">
             <Zap className="h-4 w-4 text-emerald-500" />
           </div>
           <div>
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-white">Tahminleyici Zeka</CardTitle>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">İçgörü & Analiz</p>
+            <CardTitle className="text-sm font-black   text-white">Tahminleyici Zeka</CardTitle>
+            <p className="text-[10px] text-gray-500 font-bold  ">İçgörü & Analiz</p>
           </div>
         </div>
       </CardHeader>
@@ -68,7 +68,7 @@ export function SmartInsights({ stats }: { stats: any }) {
                     <insight.icon className="h-4 w-4" />
                 </div>
                 <div className="flex-1 overflow-hidden">
-                    <h4 className={`text-xs font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
+                    <h4 className={`text-xs font-black   mb-1 ${insight.color}`}>{insight.title}</h4>
                     <p className="text-[10px] font-medium text-gray-300 group-hover:text-white transition-colors">
                         {insight.message}
                     </p>
@@ -77,7 +77,7 @@ export function SmartInsights({ stats }: { stats: any }) {
           </div>
         ))}
         {insights.length === 0 && (
-           <div className="p-10 text-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">
+           <div className="p-10 text-center text-gray-600 text-[10px] font-bold  ">
               Sistem analizi sürüyor...
            </div>
         )}

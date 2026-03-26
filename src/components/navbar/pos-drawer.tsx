@@ -38,7 +38,7 @@ export function POSDrawer() {
         <Button
             variant="ghost"
             size="sm"
-            className="hidden md:flex gap-2 text-xs font-bold text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-xl transition-all group"
+            className="hidden md:flex gap-2 text-xs font-bold text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-none transition-all group"
         >
           <ShoppingCart className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           <span>Hızlı Satış</span>
@@ -51,15 +51,15 @@ export function POSDrawer() {
                 <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
                     <ShoppingCart className="h-6 w-6 text-blue-500" />
                 </div>
-                <SheetTitle className="text-3xl font-black uppercase tracking-tighter text-white italic">HIZLI <span className="text-blue-500">SATIŞ</span></SheetTitle>
+                <SheetTitle className="text-3xl font-black   text-white italic">HIZLI <span className="text-blue-500">SATIŞ</span></SheetTitle>
             </div>
-            <SheetDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+            <SheetDescription className="text-slate-500 font-bold  text-[10px] ">
               Orgelux POS Terminali v2.0 — Anlık Stok ve Finans Entegrasyonu
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-hidden">
             {loading ? (
-                <div className="h-full flex items-center justify-center text-gray-600 font-black uppercase tracking-widest animate-pulse">
+                <div className="h-full flex items-center justify-center text-gray-600 font-black   animate-pulse">
                     Veriler Yükleniyor...
                 </div>
             ) : (

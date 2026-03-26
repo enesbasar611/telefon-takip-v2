@@ -103,16 +103,16 @@ export function Sidebar({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("flex h-screen w-64 flex-col bg-[#020617] border-r border-slate-800/50 shadow-2xl z-20 overflow-hidden", className)}>
+    <div className={cn("flex h-screen w-64 flex-col bg-[#020617] border-r border-slate-800/50 shadow-none z-20 overflow-hidden", className)}>
       <div className="flex h-20 items-center px-6 border-b border-slate-800/50 bg-white/[0.01] flex-shrink-0">
         <Link href="/" className="flex flex-col group">
-          <div className="flex items-center gap-2 font-black text-xl tracking-tighter text-white">
-            <div className="h-8 w-8 rounded-lg bg-blue-600/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all shadow-blue-sm">
+          <div className="flex items-center gap-2 font-black text-xl  text-white">
+            <div className="h-8 w-8 rounded-lg bg-blue-600/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all ">
                 <Zap className="h-5 w-5 text-blue-500" />
             </div>
-            <span className="tracking-widest">BAŞAR <span className="text-blue-500">TEKNİK</span></span>
+            <span className="">BAŞAR <span className="text-blue-500">TEKNİK</span></span>
           </div>
-          <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mt-1 ml-10">
+          <span className="text-[9px] font-black text-gray-600   mt-1 ml-10">
             Command Center V2.0
           </span>
         </Link>
@@ -133,12 +133,12 @@ export function Sidebar({ className }: { className?: string }) {
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all group whisper-border border-transparent",
                       isActive && !isOpen
-                        ? "bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-blue-sm"
+                        ? "bg-blue-600/10 text-blue-400 border-blue-500/20 "
                         : "text-slate-400 hover:bg-slate-800/40 hover:text-white"
                     )}
                   >
                     <item.icon className={cn("h-4 w-4", isActive && !isOpen ? "text-blue-400" : "text-slate-500 group-hover:text-white")} />
-                    <span className="flex-1 text-left uppercase tracking-wider">{item.label}</span>
+                    <span className="flex-1 text-left  ">{item.label}</span>
                     {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   </button>
                 ) : (
@@ -147,12 +147,12 @@ export function Sidebar({ className }: { className?: string }) {
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all whisper-border",
                       isActive
-                        ? "bg-blue-600 text-white shadow-blue-strong border-blue-500"
+                        ? "bg-blue-600 text-white  border-blue-500"
                         : "text-slate-400 hover:bg-slate-800/40 hover:text-white border-transparent"
                     )}
                   >
                     <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-slate-500")} />
-                    <span className="flex-1 uppercase tracking-wider">{item.label}</span>
+                    <span className="flex-1  ">{item.label}</span>
                   </Link>
                 )}
 
@@ -163,7 +163,7 @@ export function Sidebar({ className }: { className?: string }) {
                         key={sub.label}
                         href={sub.href}
                         className={cn(
-                          "px-4 py-2 text-[10px] font-medium rounded-lg transition-all uppercase tracking-tighter",
+                          "px-4 py-2 text-[10px] font-medium rounded-lg transition-all  ",
                           pathname === sub.href
                             ? "text-blue-400 bg-blue-600/5"
                             : "text-slate-500 hover:text-white hover:bg-slate-800/40"
@@ -181,15 +181,15 @@ export function Sidebar({ className }: { className?: string }) {
       </ScrollArea>
 
       <div className="p-4 border-t border-slate-800/50 bg-white/[0.01]">
-        <div className="flex items-center gap-3 rounded-2xl whisper-border border-slate-800/50 bg-slate-900/40 p-3 shadow-xl">
+        <div className="flex items-center gap-3 rounded-2xl whisper-border border-slate-800/50 bg-slate-900/40 p-3 shadow-none">
           <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center font-black text-sm text-blue-500 border border-blue-500/20">
             JD
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-xs font-black text-white truncate uppercase tracking-tighter">John Doe</span>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Baş Teknisyen</span>
+            <span className="text-xs font-black text-white truncate  ">John Doe</span>
+            <span className="text-[9px] font-bold text-gray-500  ">Baş Teknisyen</span>
           </div>
-          <div className="ml-auto h-2 w-2 rounded-full bg-blue-500 animate-pulse shadow-blue-sm" />
+          <div className="ml-auto h-2 w-2 rounded-full bg-blue-500 animate-pulse " />
         </div>
       </div>
     </div>

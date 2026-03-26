@@ -5,82 +5,87 @@ import { AlertCircle, History, ShieldCheck } from "lucide-react";
 
 export default function ServiceIadePage() {
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Garanti ve İade Yönetimi</h1>
-        <p className="text-muted-foreground">Yapılan tamirlerin garanti sürelerini ve iade taleplerini yönetin.</p>
+    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
+      <div className="flex items-center gap-5 mb-4">
+        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 ">
+            <ShieldCheck className="h-7 w-7 text-blue-500" />
+        </div>
+        <div>
+            <h1 className="text-4xl font-extrabold tracking-tight">Garanti ve iade yönetimi</h1>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Tamir garanti süreleri ve iade talepleri kontrol merkezi</p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-green-50/10 border-green-500/20">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Aktif Garantiler</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-green-600" />
+      <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="rounded-[2rem] border-emerald-500/10 bg-emerald-500/5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+            <CardTitle className="text-sm font-bold text-emerald-600">Aktif garantiler</CardTitle>
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">42</div>
-            <p className="text-xs text-muted-foreground">Süresi devam eden tamirler.</p>
+          <CardContent className="p-8 pt-0">
+            <div className="text-4xl font-extrabold text-emerald-600 tracking-tight">42</div>
+            <p className="text-xs text-emerald-600/60 font-medium mt-2">Süresi devam eden cihazlar</p>
           </CardContent>
         </Card>
-        <Card className="bg-yellow-50/10 border-yellow-500/20">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Biten Garantiler</CardTitle>
-            <History className="h-4 w-4 text-yellow-600" />
+        <Card className="rounded-[2rem] border-amber-500/10 bg-amber-500/5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+            <CardTitle className="text-sm font-bold text-amber-600">Biten garantiler</CardTitle>
+            <History className="h-5 w-5 text-amber-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">156</div>
-            <p className="text-xs text-muted-foreground">Süresi dolan eski tamirler.</p>
+          <CardContent className="p-8 pt-0">
+            <div className="text-4xl font-extrabold text-amber-600 tracking-tight">156</div>
+            <p className="text-xs text-amber-600/60 font-medium mt-2">Süresi dolan eski tamirler</p>
           </CardContent>
         </Card>
-        <Card className="bg-red-50/10 border-red-500/20">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">İade Talepleri</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
+        <Card className="rounded-[2rem] border-rose-500/10 bg-rose-500/5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+            <CardTitle className="text-sm font-bold text-rose-600">İade talepleri</CardTitle>
+            <AlertCircle className="h-5 w-5 text-rose-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">2</div>
-            <p className="text-xs text-muted-foreground">Bekleyen iade veya tekrar tamir.</p>
+          <CardContent className="p-8 pt-0">
+            <div className="text-4xl font-extrabold text-rose-600 tracking-tight">2</div>
+            <p className="text-xs text-rose-600/60 font-medium mt-2">Bekleyen iade veya tekrar tamir</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Son İade Hareketleri</CardTitle>
-          <CardDescription>İşletmenizde gerçekleşen son garanti kapsamındaki işlemler.</CardDescription>
+      <Card className="rounded-[2rem] border-border shadow-sm bg-card overflow-hidden">
+        <CardHeader className="p-8 border-b border-border">
+          <CardTitle className="text-xl font-extrabold">Son iade hareketleri</CardTitle>
+          <CardDescription className="text-sm font-medium mt-1">Garanti kapsamındaki son işlemler</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fiş No</TableHead>
-                <TableHead>Müşteri</TableHead>
-                <TableHead>Cihaz</TableHead>
-                <TableHead>İşlem</TableHead>
-                <TableHead>Durum</TableHead>
-                <TableHead className="text-right">Garanti Bitiş</TableHead>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="border-b border-border">
+                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Fiş no</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Müşteri</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Cihaz</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">İşlem</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Durum</TableHead>
+                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight text-right">Garanti bitiş</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">SRV-1005</TableCell>
-                <TableCell>Can Özkan</TableCell>
-                <TableCell>Apple iPad Air 4</TableCell>
-                <TableCell>Batarya Değişimi</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Aktif</Badge>
+              <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
+                <TableCell className="px-8 py-6 font-bold text-sm">SRV-1005</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Can Özkan</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Apple iPad Air 4</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Batarya değişimi</TableCell>
+                <TableCell className="px-6 py-6">
+                  <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 rounded-full">Aktif</Badge>
                 </TableCell>
-                <TableCell className="text-right">22 Eyl 2026</TableCell>
+                <TableCell className="px-8 py-6 text-right font-bold text-sm">22 Eyl 2026</TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">SRV-1002</TableCell>
-                <TableCell>Ahmet Akın</TableCell>
-                <TableCell>Xiaomi Note 10 Pro</TableCell>
-                <TableCell>Şarj Soketi</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">İade/Tekrar</Badge>
+              <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
+                <TableCell className="px-8 py-6 font-bold text-sm">SRV-1002</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Ahmet Akın</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Xiaomi Note 10 Pro</TableCell>
+                <TableCell className="px-6 py-6 font-medium">Şarj soketi</TableCell>
+                <TableCell className="px-6 py-6">
+                  <Badge variant="outline" className="text-[10px] font-bold text-rose-600 border-rose-500/20 bg-rose-500/10 px-4 py-1.5 rounded-full">İade/tekrar</Badge>
                 </TableCell>
-                <TableCell className="text-right">Bugün</TableCell>
+                <TableCell className="px-8 py-6 text-right font-bold text-sm text-rose-600">Bugün</TableCell>
               </TableRow>
             </TableBody>
           </Table>

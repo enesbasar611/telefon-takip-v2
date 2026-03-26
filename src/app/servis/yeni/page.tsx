@@ -184,8 +184,8 @@ export default function NewServicePage() {
     <main className="min-h-screen pb-32">
       <div className="px-4 py-8 max-w-6xl mx-auto">
         <div className="mb-8">
-          <p className="text-primary font-bold text-xs uppercase tracking-widest mb-1">Servis İşlemleri</p>
-          <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
+          <p className="text-primary font-bold text-xs   mb-1">Servis İşlemleri</p>
+          <h2 className="text-3xl font-extrabold text-foreground ">Yeni Cihaz Kaydı</h2>
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
@@ -205,7 +205,7 @@ export default function NewServicePage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Müşteri Ad Soyad</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Müşteri Ad Soyad</Label>
                   <Input
                     {...form.register("customerName")}
                     placeholder="İsim giriniz..."
@@ -214,7 +214,7 @@ export default function NewServicePage() {
                   {form.formState.errors.customerName && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.customerName.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Telefon Numarası</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Telefon Numarası</Label>
                   <IMaskInput
                     mask="+90 (500) 000 00 00"
                     definitions={{
@@ -229,7 +229,7 @@ export default function NewServicePage() {
                   {form.formState.errors.customerPhone && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.customerPhone.message}</p>}
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">E-Posta Adresi (Opsiyonel)</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">E-Posta Adresi (Opsiyonel)</Label>
                   <Input
                     {...form.register("customerEmail")}
                     placeholder="ornek@mail.com"
@@ -248,7 +248,7 @@ export default function NewServicePage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Marka</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Marka</Label>
                   <Input
                     {...form.register("deviceBrand")}
                     placeholder="Örn: Apple"
@@ -256,7 +256,7 @@ export default function NewServicePage() {
                   />
                 </div>
                 <div className="space-y-1.5 relative">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Model</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Model</Label>
                   <Input
                     {...form.register("deviceModel")}
                     placeholder="Örn: iPhone 15 Pro"
@@ -264,7 +264,7 @@ export default function NewServicePage() {
                     onFocus={() => modelSuggestions.length > 0 && setShowSuggestions(true)}
                   />
                   {showSuggestions && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-none overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         {modelSuggestions.map((model) => (
                             <button
                                 key={model}
@@ -273,7 +273,7 @@ export default function NewServicePage() {
                                     form.setValue("deviceModel", model);
                                     setShowSuggestions(false);
                                 }}
-                                className="w-full text-left px-4 py-3 text-[10px] font-black uppercase text-slate-400 hover:bg-blue-600/10 hover:text-blue-500 transition-all border-b border-slate-800/50 last:border-none"
+                                className="w-full text-left px-4 py-3 text-[10px] font-black  text-slate-400 hover:bg-blue-600/10 hover:text-blue-500 transition-all border-b border-slate-800/50 last:border-none"
                             >
                                 {model}
                             </button>
@@ -282,7 +282,7 @@ export default function NewServicePage() {
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">IMEI Numarası</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">IMEI Numarası</Label>
                   <Input
                     {...form.register("imei")}
                     placeholder="15 haneli IMEI"
@@ -292,7 +292,7 @@ export default function NewServicePage() {
                   {form.formState.errors.imei && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.imei.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Seri Numarası</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Seri Numarası</Label>
                   <Input
                     {...form.register("serialNumber")}
                     placeholder="Seri no (opsiyonel)"
@@ -300,7 +300,7 @@ export default function NewServicePage() {
                   />
                 </div>
                 <div className="md:col-span-2 space-y-3">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Kozmetik Durum</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Kozmetik Durum</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {["Çizik", "Ezik", "Kırık Cam", "Sıvı Teması"].map((item) => (
                       <label key={item} className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg cursor-pointer border border-transparent hover:border-primary/20 transition-all">
@@ -335,7 +335,7 @@ export default function NewServicePage() {
               </div>
               <div className="space-y-6">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Detaylı Arıza Tanımı</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Detaylı Arıza Tanımı</Label>
                   <Textarea
                     {...form.register("problemDesc")}
                     className="bg-muted/50 border-none focus-visible:ring-1 h-32"
@@ -344,7 +344,7 @@ export default function NewServicePage() {
                   {form.formState.errors.problemDesc && <p className="text-[10px] text-destructive font-bold ml-1">{form.formState.errors.problemDesc.message}</p>}
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Teslim Alınan Aksesuarlar</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Teslim Alınan Aksesuarlar</Label>
                   <div className="flex flex-wrap gap-4">
                     {["Şarj Aleti", "Kutu", "Kılıf", "SIM Kart", "Hafıza Kart"].map((item) => (
                       <label key={item} className="inline-flex items-center gap-2 group cursor-pointer">
@@ -374,15 +374,15 @@ export default function NewServicePage() {
             {foundCustomer && (
               <section className="bg-blue-600/5 p-8 rounded-[2rem] border border-blue-500/20 animate-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center gap-3 mb-6">
-                   <div className="h-2 w-2 rounded-full bg-blue-500 shadow-blue-sm" />
-                   <h3 className="text-xs font-black text-white uppercase tracking-widest italic">Personel İstihbarat Paneli</h3>
+                   <div className="h-2 w-2 rounded-full bg-blue-500 " />
+                   <h3 className="text-xs font-black text-white   italic">Personel İstihbarat Paneli</h3>
                 </div>
 
                 <div className="space-y-6">
                     <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Müşteri Sadakati</p>
+                        <p className="text-[10px] font-black text-slate-500   mb-1">Müşteri Sadakati</p>
                         <div className="flex items-center gap-2">
-                            <Badge className="bg-blue-600 text-white border-none text-[10px] font-black uppercase tracking-widest px-3 py-1">
+                            <Badge className="bg-blue-600 text-white border-none text-[10px] font-black   px-3 py-1">
                                 {foundCustomer.isVip ? "VIP MÜŞTERİ" : "DÜZENLİ MÜŞTERİ"}
                             </Badge>
                             <span className="text-[10px] font-bold text-slate-400">Son İşlem: {format(new Date(foundCustomer.updatedAt), "dd MMM yyyy", { locale: tr })}</span>
@@ -392,15 +392,15 @@ export default function NewServicePage() {
                     <Separator className="bg-blue-500/10" />
 
                     <div className="space-y-4">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Son Servis Geçmişi</p>
+                        <p className="text-[10px] font-black text-slate-500  ">Son Servis Geçmişi</p>
                         {foundCustomer.tickets.map((t: any) => (
                             <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-800/50">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-white uppercase">{t.deviceBrand} {t.deviceModel}</span>
-                                    <span className="text-[8px] font-bold text-slate-600 uppercase">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM", { locale: tr })}</span>
+                                    <span className="text-[10px] font-black text-white ">{t.deviceBrand} {t.deviceModel}</span>
+                                    <span className="text-[8px] font-bold text-slate-600 ">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM", { locale: tr })}</span>
                                 </div>
                                 <div className="text-right">
-                                    <Badge variant="outline" className="border-none text-[8px] font-black uppercase p-0 text-blue-500">{t.status}</Badge>
+                                    <Badge variant="outline" className="border-none text-[8px] font-black  p-0 text-blue-500">{t.status}</Badge>
                                 </div>
                             </div>
                         ))}
@@ -409,7 +409,7 @@ export default function NewServicePage() {
                     <Button
                         type="button"
                         onClick={() => window.open(`/musteriler/${foundCustomer.id}`, '_blank')}
-                        className="w-full h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-500 font-black uppercase tracking-widest text-[10px] hover:bg-blue-500 hover:text-white transition-all"
+                        className="w-full h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-500 font-black   text-[10px] hover:bg-blue-500 hover:text-white transition-all"
                     >
                         TAM PROFİLİ GÖRÜNTÜLE
                     </Button>
@@ -425,7 +425,7 @@ export default function NewServicePage() {
               </div>
               <div className="space-y-5">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Tahmini Ücret</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Tahmini Ücret</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₺</span>
                     <Input
@@ -437,7 +437,7 @@ export default function NewServicePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Alınan Kapora</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Alınan Kapora</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₺</span>
                     <Input
@@ -449,7 +449,7 @@ export default function NewServicePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Beklenen Teslim Tarihi</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Beklenen Teslim Tarihi</Label>
                   <Input
                     {...form.register("estimatedDeliveryDate")}
                     type="datetime-local"
@@ -457,7 +457,7 @@ export default function NewServicePage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Atanan Teknisyen</Label>
+                  <Label className="text-[11px] font-bold text-muted-foreground   ml-1">Atanan Teknisyen</Label>
                   <Select onValueChange={(val) => form.setValue("technicianId", val)}>
                     <SelectTrigger className="bg-muted/50 border-none focus-visible:ring-1">
                       <SelectValue placeholder="Teknisyen Seçin..." />
@@ -502,13 +502,13 @@ export default function NewServicePage() {
           <footer className="fixed bottom-0 lg:bottom-0 bottom-16 right-0 left-0 lg:left-64 bg-[#020617]/90 backdrop-blur-xl border-t border-slate-800/50 px-4 py-4 z-40">
             <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
               <div className="hidden sm:flex flex-col">
-                <span className="text-[10px] uppercase font-black text-slate-500 tracking-widest">Kayıt Özeti</span>
+                <span className="text-[10px]  font-black text-slate-500 ">Kayıt Özeti</span>
                 <span className="text-sm font-black text-white italic">₺{currentEstimatedCost}</span>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button
                   variant="ghost"
-                  className="flex-1 sm:flex-none px-6 font-black uppercase text-[10px] text-slate-500 hover:text-white"
+                  className="flex-1 sm:flex-none px-6 font-black  text-[10px] text-slate-500 hover:text-white"
                   type="button"
                   onClick={() => router.back()}
                   disabled={isPending}
@@ -518,7 +518,7 @@ export default function NewServicePage() {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="flex-[2] sm:flex-none h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-600 text-white shadow-blue-strong hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
+                  className="flex-[2] sm:flex-none h-12 px-8 rounded-xl text-[10px] font-black   bg-blue-600 text-white  hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                   KAYDET VE YAZDIR

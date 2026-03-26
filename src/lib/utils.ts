@@ -6,6 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Converts a string to Sentence Case.
+ * Example: "IPHONE 11" -> "Iphone 11"
+ */
+export function toSentenceCase(str: string): string {
+  if (!str) return str;
+  const trimmed = str.trim();
+  if (trimmed.length === 0) return str;
+  const lower = trimmed.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+/**
  * Serializes Prisma objects for Next.js Server Components to Client Components.
  * Handles Dates, Decimals, and recursive objects/arrays.
  */

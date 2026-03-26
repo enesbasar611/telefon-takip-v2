@@ -89,7 +89,7 @@ export function ShortageList() {
           <title>Eksikler Listesi</title>
           <style>
             body { font-family: sans-serif; padding: 20px; }
-            h1 { border-bottom: 2px solid #000; padding-bottom: 10px; text-transform: uppercase; font-size: 20px; }
+            h1 { border-bottom: 2px solid #000; padding-bottom: 10px; text-transform: ; font-size: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
             th { background-color: #f2f2f2; font-size: 12px; }
@@ -140,9 +140,9 @@ export function ShortageList() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 bg-[#141416] border-2 border-red-600 p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <PopoverContent align="end" className="w-80 bg-[#141416] border-2 border-red-600 p-4 shadow-none animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black uppercase tracking-widest text-blue-500">Eksikler Listesi</h3>
+          <h3 className="text-xs font-black   text-blue-500">Eksikler Listesi</h3>
           <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold">
             {items.length} ÜRÜN
           </span>
@@ -169,7 +169,7 @@ export function ShortageList() {
             items.map((item) => (
               <div key={item.id} className="group flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all">
                 <div className="flex flex-col flex-1 mr-2">
-                  <span className="text-[10px] font-bold text-gray-300 uppercase leading-tight mb-1">{item.name}</span>
+                  <span className="text-[10px] font-bold text-gray-300  leading-tight mb-1">{item.name}</span>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
@@ -177,7 +177,7 @@ export function ShortageList() {
                       id={`qty-${item.id}`}
                       className="h-6 w-12 bg-slate-900 border-white/5 text-[9px] px-1 text-center font-black text-blue-500"
                     />
-                    <span className="text-[8px] text-gray-600 font-black uppercase">ADET</span>
+                    <span className="text-[8px] text-gray-600 font-black ">ADET</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -211,7 +211,7 @@ export function ShortageList() {
             <Separator className="my-4 bg-white/5" />
             <Button
                 onClick={handlePrint}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-black font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-black font-black  text-[10px]  h-10 rounded-xl"
             >
                 <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
             </Button>

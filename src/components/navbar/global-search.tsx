@@ -66,7 +66,7 @@ export function GlobalSearch() {
 
             {results.customers.length > 0 && (
               <div className="mb-4">
-                <p className="px-3 py-2 text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <p className="px-3 py-2 text-[9px] font-black text-slate-600   flex items-center gap-2">
                   <User className="h-3 w-3" /> Müşteriler
                 </p>
                 {results.customers.map((c: any) => (
@@ -77,7 +77,7 @@ export function GlobalSearch() {
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-blue-600/10 group transition-all"
                   >
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-slate-200 uppercase group-hover:text-blue-400">{c.name}</span>
+                      <span className="text-xs font-black text-slate-200  group-hover:text-blue-400">{c.name}</span>
                       <span className="text-[9px] text-slate-600 font-bold">{c.phone}</span>
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-800 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
@@ -88,7 +88,7 @@ export function GlobalSearch() {
 
             {results.tickets.length > 0 && (
               <div className="mb-4">
-                <p className="px-3 py-2 text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <p className="px-3 py-2 text-[9px] font-black text-slate-600   flex items-center gap-2">
                   <Ticket className="h-3 w-3" /> Servis Kayıtları
                 </p>
                 {results.tickets.map((t: any) => (
@@ -99,8 +99,8 @@ export function GlobalSearch() {
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-orange-600/10 group transition-all"
                   >
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-slate-200 uppercase group-hover:text-orange-400">{t.ticketNumber}</span>
-                      <span className="text-[9px] text-slate-600 font-bold uppercase">{t.customer.name} - {t.deviceBrand} {t.deviceModel}</span>
+                      <span className="text-xs font-black text-slate-200  group-hover:text-orange-400">{t.ticketNumber}</span>
+                      <span className="text-[9px] text-slate-600 font-bold ">{t.customer.name} - {t.deviceBrand} {t.deviceModel}</span>
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-800 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                   </Link>
@@ -110,7 +110,7 @@ export function GlobalSearch() {
 
             {results.devices.length > 0 && (
               <div className="mb-2">
-                <p className="px-3 py-2 text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <p className="px-3 py-2 text-[9px] font-black text-slate-600   flex items-center gap-2">
                   <Smartphone className="h-3 w-3" /> Cihaz Merkezi
                 </p>
                 {results.devices.map((d: any) => (
@@ -121,8 +121,8 @@ export function GlobalSearch() {
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-emerald-600/10 group transition-all"
                   >
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-slate-200 uppercase group-hover:text-emerald-400">{d.name}</span>
-                      <span className="text-[9px] text-slate-600 font-bold uppercase">IMEI: {d.deviceInfo?.imei}</span>
+                      <span className="text-xs font-black text-slate-200  group-hover:text-emerald-400">{d.name}</span>
+                      <span className="text-[9px] text-slate-600 font-bold ">IMEI: {d.deviceInfo?.imei}</span>
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-800 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                   </Link>
@@ -131,7 +131,7 @@ export function GlobalSearch() {
             )}
 
             {results.customers.length === 0 && results.tickets.length === 0 && results.devices.length === 0 && (
-              <p className="text-center py-8 text-[10px] font-black text-slate-600 uppercase tracking-widest italic">Sonuç bulunamadı.</p>
+              <p className="text-center py-8 text-[10px] font-black text-slate-600   italic">Sonuç bulunamadı.</p>
             )}
 
           </div>

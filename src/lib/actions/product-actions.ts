@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, toSentenceCase } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
@@ -41,7 +41,7 @@ export async function createProduct(data: {
   try {
     const product = await prisma.product.create({
       data: {
-        name: data.name,
+        name: toSentenceCase(data.name),
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
@@ -75,6 +75,7 @@ export async function updateProduct(id: string, data: any) {
       where: { id },
       data: {
         ...data,
+        name: data.name ? toSentenceCase(data.name) : undefined,
         buyPrice: data.buyPrice ? Number(data.buyPrice) : undefined,
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
         stock: data.stock !== undefined ? Number(data.stock) : undefined,

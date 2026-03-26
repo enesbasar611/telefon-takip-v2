@@ -47,25 +47,25 @@ export function SettingsInterface({ initialSettings }: SettingsProps) {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground/90">Sistem Ayarları</h1>
+        <h1 className="text-3xl font-bold  text-foreground/90">Sistem Ayarları</h1>
         <p className="text-muted-foreground">İşletme bilgilerini ve sistem parametrelerini yapılandırın.</p>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-[600px] bg-muted/50 p-1">
-          <TabsTrigger value="general" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
+          <TabsTrigger value="general" className="gap-2 text-[10px] font-bold  ">
             <SettingsIcon className="h-4 w-4" />
             Genel
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
+          <TabsTrigger value="notifications" className="gap-2 text-[10px] font-bold  ">
             <Bell className="h-4 w-4" />
             Bildirimler
           </TabsTrigger>
-          <TabsTrigger value="printing" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
+          <TabsTrigger value="printing" className="gap-2 text-[10px] font-bold  ">
             <Printer className="h-4 w-4" />
             Yazdırma
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2 text-[10px] font-bold uppercase tracking-widest">
+          <TabsTrigger value="integrations" className="gap-2 text-[10px] font-bold  ">
             <Smartphone className="h-4 w-4" />
             Entegrasyonlar
           </TabsTrigger>
