@@ -152,16 +152,16 @@ export function POSInterface({ products, customers, categories }: { products: an
       <div className="lg:col-span-8 flex flex-col gap-4 overflow-hidden">
         <div className="flex flex-col flex-1 overflow-hidden matte-card rounded-[2rem] bg-card border-none shadow-2xl">
           {/* Header & Search */}
-          <div className="p-8 border-b border-border/50 bg-muted/20 flex items-center justify-between gap-6">
-            <div className="flex items-center gap-6 flex-1">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <Package className="h-6 w-6 text-primary" />
+          <div className="p-10 border-b border-slate-100 flex items-center justify-between gap-8 bg-white/10">
+            <div className="flex items-center gap-8 flex-1">
+                <div className="h-14 w-14 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20 shadow-lg shadow-blue-500/5 flex-shrink-0">
+                    <Package className="h-7 w-7 text-blue-600" />
                 </div>
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
                     placeholder="Ürün adı veya barkod..."
-                    className="pl-12 bg-white/50 border-none h-14 rounded-2xl text-sm font-bold shadow-inner focus:ring-primary/20"
+                    className="pl-14 bg-slate-50 border-slate-200 h-16 rounded-2xl text-base font-bold shadow-inner focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     autoFocus
@@ -169,25 +169,25 @@ export function POSInterface({ products, customers, categories }: { products: an
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={toggleFullscreen}
-                    className="h-12 w-12 rounded-2xl bg-white/50 border-none hover:bg-primary/10 group"
+                    className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200 hover:bg-white hover:border-blue-500/20 hover:shadow-lg transition-all group"
                 >
-                    {isFullscreen ? <Minimize2 className="h-5 w-5 text-primary" /> : <Maximize2 className="h-5 w-5 text-primary" />}
+                    {isFullscreen ? <Minimize2 className="h-6 w-6 text-slate-600 group-hover:text-blue-600" /> : <Maximize2 className="h-6 w-6 text-slate-600 group-hover:text-blue-600" />}
                 </Button>
             </div>
           </div>
 
           {/* Categories Tab */}
-          <div className="px-8 py-4 border-b border-border/50 bg-white/30 overflow-x-auto">
+          <div className="px-10 py-6 border-b border-slate-100 bg-slate-50/30 overflow-x-auto relative z-20">
              <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-                <TabsList className="bg-transparent gap-2 p-0 h-auto">
+                <TabsList className="bg-transparent gap-3 p-0 h-auto">
                     <TabsTrigger
                         value="ALL"
-                        className="rounded-xl h-10 px-6 font-bold text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-none border border-transparent data-[state=active]:border-primary"
+                        className="rounded-xl h-12 px-8 font-black text-[11px] data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all shadow-sm border border-slate-200 data-[state=active]:border-blue-600 uppercase tracking-widest"
                     >
                         TÜM ÜRÜNLER
                     </TabsTrigger>
@@ -195,7 +195,7 @@ export function POSInterface({ products, customers, categories }: { products: an
                         <TabsTrigger
                             key={cat.id}
                             value={cat.id}
-                            className="rounded-xl h-10 px-6 font-bold text-xs data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-none border border-border/50"
+                            className="rounded-xl h-12 px-8 font-black text-[11px] data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all shadow-sm border border-slate-200 data-[state=active]:border-blue-600 uppercase tracking-widest"
                         >
                             {cat.name.toUpperCase()}
                         </TabsTrigger>
@@ -205,34 +205,40 @@ export function POSInterface({ products, customers, categories }: { products: an
           </div>
 
           {/* Grid Area */}
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/50">
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-slate-100/50 relative">
+            <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-10">
               {filteredProducts.map((product) => (
                 <button
                   key={product.id}
                   onClick={() => addToCart(product)}
                   disabled={product.stock <= 0}
-                  className="flex flex-col text-left bg-card border-none rounded-[1.5rem] p-6 hover:shadow-xl hover:translate-y-[-4px] transition-all group disabled:opacity-40 relative overflow-hidden shadow-sm"
+                  className="flex flex-col text-left bg-[#080C14] border border-white/5 rounded-[2.5rem] p-10 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:translate-y-[-8px] transition-all group disabled:opacity-40 relative overflow-hidden aspect-[3/4]"
                 >
-                  <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-emerald-500 animate-pulse group-hover:scale-150 transition-transform" />
+                  <div className="absolute top-6 right-6 h-3 w-3 rounded-full bg-emerald-500 animate-pulse group-hover:scale-125 transition-transform border-4 border-emerald-500/20" />
 
-                  <div className="text-[10px] font-black text-slate-400 mb-2 flex items-center gap-2">
-                    <Tag className="h-3 w-3" />
+                  <div className="text-[11px] font-black text-blue-500 mb-4 flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <Tag className="h-3.5 w-3.5" />
                     {product.category.name.toUpperCase()}
                   </div>
-                  <div className="font-extrabold text-sm text-foreground line-clamp-2 mb-6 group-hover:text-primary transition-colors leading-tight font-manrope">
+
+                  <div className="font-black text-lg text-white line-clamp-3 mb-10 group-hover:text-blue-400 transition-colors leading-tight font-manrope uppercase tracking-tight">
                     {product.name}
                   </div>
 
-                  <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
-                    <div className="font-black text-primary text-xl italic font-manrope">₺{product.sellPrice.toLocaleString('tr-TR')}</div>
-                    <div className={cn(
-                        "text-[9px] font-black px-3 py-1.5 rounded-xl border transition-colors",
-                        product.stock > product.criticalStock
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                            : "bg-rose-50 text-rose-600 border-rose-100"
-                    )}>
-                      {product.stock} STOK
+                  <div className="mt-auto pt-10 border-t border-white/5 flex flex-col gap-4">
+                    <div className="font-black text-white text-3xl italic font-manrope tracking-tighter shadow-blue-500/10">₺{product.sellPrice.toLocaleString('tr-TR')}</div>
+                    <div className="flex items-center justify-between">
+                        <div className={cn(
+                            "text-[10px] font-black px-4 py-2 rounded-2xl border transition-all",
+                            product.stock > product.criticalStock
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                        )}>
+                        {product.stock} ADET MEVCUT
+                        </div>
+                        {product.stock <= product.criticalStock && (
+                            <span className="text-[10px] font-black text-rose-500 animate-bounce uppercase italic">Kritik!</span>
+                        )}
                     </div>
                   </div>
                 </button>
@@ -263,21 +269,24 @@ export function POSInterface({ products, customers, categories }: { products: an
 
           {/* Customer Selection Drawer-style Section */}
           <div className="p-10 border-b border-white/5 bg-white/5">
-             <div className="flex items-center justify-between mb-5">
-                <Label className="text-[10px] font-black text-slate-400 tracking-widest uppercase opacity-70">MÜŞTERİ BİLGİSİ</Label>
-                <Button variant="ghost" className="h-6 text-[10px] font-black text-blue-500 p-0 flex items-center gap-1.5 group hover:bg-transparent">
-                    <UserPlus className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" /> YENİ EKLE
+             <div className="flex items-center justify-between mb-6">
+                <Label className="text-[11px] font-black text-slate-400 tracking-widest uppercase opacity-60">MÜŞTERİ BİLGİSİ</Label>
+                <Button variant="ghost" className="h-8 px-4 rounded-xl text-[10px] font-black text-blue-500 bg-blue-500/10 border border-blue-500/20 flex items-center gap-2 group hover:bg-blue-500 hover:text-white transition-all">
+                    <UserPlus className="h-4 w-4" /> YENİ EKLE
                 </Button>
              </div>
              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                <SelectTrigger className="bg-white border-none h-16 rounded-3xl text-[13px] font-black text-[#080C14] shadow-2xl focus:ring-blue-500/20 px-6">
+                <SelectTrigger className="bg-white border-none h-16 rounded-3xl text-sm font-black text-[#080C14] shadow-2xl focus:ring-4 focus:ring-blue-500/10 px-8">
                     <SelectValue placeholder="Müşteri Seçin (Hızlı Satış)" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground">
-                    <SelectItem value="null" className="text-xs font-bold py-3">Hızlı Satış (İsimsiz)</SelectItem>
+                <SelectContent className="bg-white border-none text-[#080C14] rounded-2xl shadow-2xl p-2 max-h-80">
+                    <SelectItem value="null" className="text-xs font-black py-4 rounded-xl hover:bg-slate-50 transition-colors">Hızlı Satış (İsimsiz)</SelectItem>
                     {customers.map((c) => (
-                        <SelectItem key={c.id} value={c.id} className="text-xs font-bold py-3 flex items-center gap-2">
-                           {c.name} <span className="text-[10px] opacity-50 ml-2">({c.phone})</span>
+                        <SelectItem key={c.id} value={c.id} className="text-xs font-black py-4 rounded-xl hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-none">
+                           <div className="flex flex-col gap-0.5">
+                                <span className="uppercase">{c.name}</span>
+                                <span className="text-[10px] text-slate-400 italic">#{c.phone}</span>
+                           </div>
                         </SelectItem>
                     ))}
                 </SelectContent>
@@ -290,45 +299,45 @@ export function POSInterface({ products, customers, categories }: { products: an
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-500 p-20 text-center">
                     <div className="relative">
-                        <ShoppingCart className="h-24 w-24 mb-6 opacity-[0.03] text-white" />
-                        <ShoppingCart className="h-12 w-12 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10 text-blue-500" />
+                        <ShoppingCart className="h-28 w-28 mb-8 opacity-[0.03] text-white" />
+                        <ShoppingCart className="h-14 w-14 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 text-blue-500" />
                     </div>
-                    <p className="font-black text-[11px] tracking-widest uppercase opacity-40">Sepetiniz şu an boş</p>
+                    <p className="font-black text-[12px] tracking-widest uppercase opacity-40">Sepetiniz şu an boş</p>
                   </div>
                 ) : (
                   cart.map((item) => (
-                    <div key={item.id} className="p-8 flex items-center hover:bg-white/[0.02] transition-colors group border-b border-white/5 last:border-none">
-                      <div className="flex-1">
-                         <span className="text-[14px] font-black text-white block leading-tight mb-1 font-manrope uppercase tracking-tight">{item.name}</span>
+                    <div key={item.id} className="p-8 flex items-center justify-between hover:bg-white/[0.02] transition-colors group border-b border-white/5 last:border-none gap-6">
+                      <div className="flex-1 min-w-0">
+                         <span className="text-[15px] font-black text-white block leading-tight mb-2 font-manrope uppercase tracking-tight truncate">{item.name}</span>
                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-blue-500 font-black italic">
+                            <span className="text-[11px] text-blue-500 font-black italic">
                                 ₺{item.sellPrice.toLocaleString('tr-TR')}
                             </span>
-                            <span className="h-1 w-1 rounded-full bg-slate-700" />
-                            <span className="text-[10px] text-slate-500 font-bold">STOK: {item.stock}</span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-tighter">STOK: {item.stock}</span>
                          </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                          <div className="flex items-center bg-white/5 rounded-2xl p-1 border border-white/10">
+                      <div className="flex items-center gap-6 flex-shrink-0">
+                          <div className="flex items-center bg-white/5 rounded-[1.25rem] p-1.5 border border-white/10 shadow-inner">
                             <button
                                 onClick={() => updateQuantity(item.id, -1)}
-                                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-rose-500 hover:text-white transition-all"
+                                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
                             >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-4 w-4" />
                             </button>
-                            <span className="text-sm font-black text-white w-8 text-center">{item.quantity}</span>
+                            <span className="text-base font-black text-white w-10 text-center font-manrope">{item.quantity}</span>
                             <button
                                 onClick={() => updateQuantity(item.id, 1)}
-                                className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition-all"
+                                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition-all active:scale-90"
                             >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-4 w-4" />
                             </button>
                           </div>
                           <button
-                           className="h-10 w-10 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                           className="h-12 w-12 rounded-[1.25rem] bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-500/20 active:scale-95 group-hover:shadow-lg group-hover:shadow-rose-500/10"
                            onClick={() => removeFromCart(item.id)}
                          >
-                           <Trash2 className="h-4 w-4" />
+                           <Trash2 className="h-5 w-5" />
                          </button>
                       </div>
                     </div>

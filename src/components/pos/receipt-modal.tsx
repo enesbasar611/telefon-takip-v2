@@ -58,7 +58,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
           {/* Receipt Preview (Thermal Layout) */}
           <div className="receipt-preview bg-white text-black p-8 rounded-xl shadow-inner border border-slate-200 font-mono text-[10px] leading-relaxed">
              <div className="text-center border-b border-black border-dashed pb-4 mb-4">
-                <h3 className="font-bold text-sm uppercase">TECH ATELIER</h3>
+                <h3 className="font-bold text-sm uppercase">BAŞAR TEKNİK</h3>
                 <p>PROFESYONEL TEKNİK SERVİS</p>
                 <p>Tel: +90 (5xx) xxx xx xx</p>
              </div>
@@ -95,7 +95,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
 
              <div className="text-center mt-8 pt-4 border-t border-black border-dashed opacity-70">
                 <p>Bizi Tercih Ettiğiniz İçin Teşekkürler</p>
-                <p>www.techatelier.com</p>
+                <p>v2.basarteknik.com</p>
              </div>
           </div>
         </div>
