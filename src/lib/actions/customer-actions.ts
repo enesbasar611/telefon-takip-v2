@@ -36,6 +36,9 @@ export async function getCustomerById(id: string) {
         debts: { orderBy: { createdAt: "desc" } }
       }
     });
+
+    if (!customer) return null;
+
     return serializePrisma(customer);
   } catch (error) {
     console.error("Error fetching customer:", error);

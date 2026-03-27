@@ -84,6 +84,12 @@ export async function getStaffPerformance(userId: string) {
       commission: commission
     };
   } catch (error) {
-    return null;
+    console.error("Error fetching staff performance:", error);
+    return {
+      serviceCount: 0,
+      saleCount: 0,
+      totalRevenue: 0,
+      commission: 0
+    };
   }
 }
