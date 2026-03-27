@@ -41,7 +41,7 @@ export async function createReturnTicket(data: {
     const returnCount = await prisma.returnTicket.count();
     const ticketNumber = `RET-${1000 + returnCount + 1}`;
 
-    const lossAmount = Number(usedPart.costPrice) + Number(serviceTicket.overhead);
+    const lossAmount = Number(usedPart.costPrice || 0) + Number(serviceTicket.overhead || 0);
 
     const result = await prisma.$transaction(async (tx) => {
       const retTicket = await tx.returnTicket.create({

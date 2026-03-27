@@ -31,9 +31,9 @@ export async function getProfitMatrix(range: string = "THIS_MONTH") {
     ]);
 
     const serviceStats = services.reduce((acc, ticket) => {
-      const actualRevenue = Number(ticket.actualCost);
-      const partsCost = ticket.usedParts.reduce((sum, part) => sum + (Number(part.costPrice) * part.quantity), 0);
-      const overhead = Number(ticket.overhead);
+      const actualRevenue = Number(ticket.actualCost || 0);
+      const partsCost = ticket.usedParts.reduce((sum, part) => sum + (Number(part.costPrice || 0) * part.quantity), 0);
+      const overhead = Number(ticket.overhead || 0);
 
       acc.totalRevenue += actualRevenue;
       acc.totalPartsCost += partsCost;
@@ -94,10 +94,10 @@ export async function getProfitabilityByModel() {
 
     const modelStats = services.reduce((acc: any, ticket) => {
       const model = ticket.deviceModel;
-      const partCost = ticket.usedParts.reduce((sum, p) => sum + (Number(p.costPrice) * p.quantity), 0);
-      const returnLoss = ticket.returns.reduce((sum, r) => sum + Number(r.lossAmount), 0);
+      const partCost = ticket.usedParts.reduce((sum, p) => sum + (Number(p.costPrice || 0) * p.quantity), 0);
+      const returnLoss = ticket.returns.reduce((sum, r) => sum + Number(r.lossAmount || 0), 0);
 
-      const profit = Number(ticket.actualCost) - (partCost + Number(ticket.overhead) + returnLoss);
+      const profit = Number(ticket.actualCost || 0) - (partCost + Number(ticket.overhead || 0) + returnLoss);
 
       if (!acc[model]) {
         acc[model] = { name: model, profit: 0, count: 0, returns: 0 };
