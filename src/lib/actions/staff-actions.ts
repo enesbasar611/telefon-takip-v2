@@ -73,9 +73,9 @@ export async function getStaffPerformance(userId: string) {
 
     if (!user) return null;
 
-    const totalServiceRevenue = user.assignedTickets.reduce((sum, t) => sum + Number(t.actualCost), 0);
-    const totalSaleRevenue = user.sales.reduce((sum, s) => sum + Number(s.finalAmount), 0);
-    const commission = (totalServiceRevenue + totalSaleRevenue) * (Number(user.commissionRate) / 100);
+    const totalServiceRevenue = user.assignedTickets.reduce((sum, t) => sum + Number(t.actualCost || 0), 0);
+    const totalSaleRevenue = user.sales.reduce((sum, s) => sum + Number(s.finalAmount || 0), 0);
+    const commission = (totalServiceRevenue + totalSaleRevenue) * (Number(user.commissionRate || 0) / 100);
 
     return {
       serviceCount: user.assignedTickets.length,
