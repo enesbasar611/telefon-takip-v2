@@ -43,7 +43,7 @@ const serviceSchema = z.object({
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
-    .min(10, "Geçerli bir Türkiye telefon numarası giriniz"),
+    .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xxxxxxxxx)"),
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
@@ -81,6 +81,7 @@ export default function NewServicePage() {
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       customerPhone: "",
+      customerEmail: "",
       estimatedCost: "0",
       downPayment: "0",
       cosmeticConditions: [],
@@ -150,6 +151,7 @@ export default function NewServicePage() {
       const result = await createServiceTicket({
         customerName: values.customerName,
         customerPhone: values.customerPhone,
+        customerEmail: values.customerEmail,
         deviceBrand: values.deviceBrand,
         deviceModel: values.deviceModel,
         imei: values.imei,
@@ -157,6 +159,7 @@ export default function NewServicePage() {
         problemDesc: values.problemDesc,
         cosmeticCondition: cosmeticStr,
         estimatedCost: Number(values.estimatedCost),
+        downPayment: Number(values.downPayment),
         notes: notesStr,
         technicianId: values.technicianId,
         estimatedDeliveryDate: values.estimatedDeliveryDate,
@@ -222,7 +225,14 @@ export default function NewServicePage() {
                     }}
                     value={form.watch("customerPhone")}
                     unmask={true}
-                    onAccept={(value) => form.setValue("customerPhone", value)}
+                    onAccept={(value) => {
+                        let sanitized = value.replace(/\D/g, "");
+                        if (sanitized.startsWith("90")) sanitized = sanitized.substring(2);
+                        if (sanitized.length > 0 && !sanitized.startsWith("5")) {
+                            sanitized = "5" + sanitized;
+                        }
+                        form.setValue("customerPhone", sanitized.substring(0, 10));
+                    }}
                     placeholder="+90 (5__) ___ __ __"
                     className="flex h-10 w-full rounded-md border-none bg-muted/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   />

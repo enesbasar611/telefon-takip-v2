@@ -12,7 +12,8 @@ const serviceSchema = z.object({
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
-    .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xx...)"),
+    .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xxxxxxxxx)"),
+  customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
   imei: z.string()
@@ -27,6 +28,7 @@ const serviceSchema = z.object({
   notes: z.string().optional(),
   technicianId: z.string().optional().or(z.literal("")),
   estimatedDeliveryDate: z.string().optional().or(z.literal("")),
+  downPayment: z.number().optional().default(0),
 });
 
 async function getOrCreateDevUser() {
@@ -50,10 +52,14 @@ export async function createServiceTicket(rawData: any) {
     // Find or create customer
     const customer = await prisma.customer.upsert({
       where: { phone: validatedData.customerPhone },
-      update: { name: validatedData.customerName },
+      update: {
+        name: validatedData.customerName,
+        email: validatedData.customerEmail || null
+      },
       create: {
         name: validatedData.customerName,
         phone: validatedData.customerPhone,
+        email: validatedData.customerEmail || null
       },
     });
 
@@ -85,8 +91,22 @@ export async function createServiceTicket(rawData: any) {
       },
     });
 
+    // Handle Down Payment (Kapora) as an INCOME transaction
+    if (validatedData.downPayment > 0) {
+      await prisma.transaction.create({
+        data: {
+          type: "INCOME",
+          amount: validatedData.downPayment,
+          description: `KAPORA ALINDI - ${ticketNumber} (${validatedData.customerName})`,
+          paymentMethod: "CASH",
+          userId: user.id,
+        }
+      });
+    }
+
     revalidatePath("/servis");
     revalidatePath("/servis/liste");
+    revalidatePath("/finans");
     revalidatePath("/");
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
