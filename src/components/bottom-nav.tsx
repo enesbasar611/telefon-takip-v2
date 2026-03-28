@@ -16,7 +16,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-border/10/50 flex items-center justify-around px-2 z-50">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex items-center justify-around px-2 z-50">
       {items.map((item) => {
         const isActive = pathname === item.href;
         return (

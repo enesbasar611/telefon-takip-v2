@@ -1,8 +1,7 @@
 "use client";
 
-import { Search, PlusCircle, ShoppingCart, User, Bell, Command, Settings2, Eye, EyeOff } from "lucide-react";
+import { PlusCircle, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/mode-toggle";
 import {
   DropdownMenu,
@@ -20,6 +19,7 @@ import { CurrencyDisplay } from "@/components/navbar/currency-display";
 import { GlobalSearch } from "@/components/navbar/global-search";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useUI } from "@/lib/context/ui-context";
+import { NotificationDropdown } from "@/components/navbar/notification-dropdown";
 
 export function Navbar() {
   const { isFinancialVisible, toggleFinancialVisibility } = useUI();
@@ -29,21 +29,21 @@ export function Navbar() {
       <div className="flex items-center gap-4 lg:w-1/3">
         <MobileSidebar />
         <div className="hidden lg:block w-full">
-            <GlobalSearch />
+          <GlobalSearch />
         </div>
       </div>
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 pr-6 border-r border-border">
-            <CreateServiceModal
+          <CreateServiceModal
             trigger={
-                <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
+              <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
                 <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                 <span className="font-bold">Yeni Servis</span>
-                </Button>
+              </Button>
             }
-            />
-            <POSDrawer />
+          />
+          <POSDrawer />
         </div>
 
         <div className="flex items-center gap-4">
@@ -60,10 +60,7 @@ export function Navbar() {
           <ShortageList />
           <ModeToggle />
 
-          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-primary animate-pulse " />
-          </Button>
+          <NotificationDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -77,16 +74,16 @@ export function Navbar() {
               <DropdownMenuLabel className="text-[10px] font-extrabold text-muted-foreground p-3 uppercase">Kullanıcı Hesabı</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem className="p-3 text-sm font-bold rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                 <User className="h-4 w-4 text-primary" /> Profil Detayları
+                <User className="h-4 w-4 text-primary" /> Profil Detayları
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="p-3 text-sm font-bold rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                 <Link href="/ayarlar" className="w-full h-full flex items-center gap-3">
-                    <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
+                  <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem className="p-3 text-sm font-bold rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex gap-3 items-center">
-                 Çıkış Yap
+                Çıkış Yap
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -95,3 +92,6 @@ export function Navbar() {
     </header>
   );
 }
+
+// Fixed missing import for Settings2
+import { Settings2 } from "lucide-react";

@@ -10,10 +10,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { POSInterface } from "@/components/pos/pos-interface";
+import { POSCompact } from "@/components/pos/pos-compact";
 import { useEffect, useState } from "react";
 import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { getCustomers } from "@/lib/actions/customer-actions";
+import { X } from "lucide-react";
 
 export function POSDrawer() {
   const [products, setProducts] = useState<any[]>([]);
@@ -38,36 +39,33 @@ export function POSDrawer() {
     <Sheet onOpenChange={(open) => open && fetchData()}>
       <SheetTrigger asChild>
         <Button
-            variant="ghost"
-            size="sm"
-            className="hidden md:flex gap-2 text-xs font-bold text-gray-400 bg-white/[0.02] border border-white/5 rounded-xl px-4 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/20 shadow-none transition-all group"
+          variant="ghost"
+          size="sm"
+          className="hidden md:flex gap-2 text-[11px] font-black text-muted-foreground bg-muted/20 border border-border/50 rounded-full px-5 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group uppercase tracking-widest"
         >
-          <ShoppingCart className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
+          <ShoppingCart className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
           <span>Hızlı Satış</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-[850px] bg-background border-border/10 p-0 overflow-hidden">
-        <div className="p-10 h-full flex flex-col">
-          <SheetHeader className="mb-10">
-            <div className="flex items-center gap-4 mb-2">
-                <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
-                    <ShoppingCart className="h-6 w-6 text-blue-500" />
-                </div>
-                <SheetTitle className="text-3xl font-black   text-white italic">HIZLI <span className="text-blue-500">SATIŞ</span></SheetTitle>
+      <SheetContent side="right" className="w-full sm:max-w-[500px] bg-[#0F172A] border-slate-700/50 p-0 overflow-hidden shadow-2xl">
+        <div className="h-full flex flex-col">
+          <SheetHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-slate-700/30">
+            <div className="flex flex-col">
+              <SheetTitle className="text-2xl font-black text-white tracking-tight leading-none uppercase">Quick Sales</SheetTitle>
+              <SheetDescription className="text-slate-400 font-bold text-[11px] mt-1.5 uppercase tracking-widest leading-none">
+                Frequent Items & Cart
+              </SheetDescription>
             </div>
-            <SheetDescription className="text-slate-500 font-bold  text-[10px] ">
-              Orgelux POS Terminali v2.0 — Anlık Stok ve Finans Entegrasyonu
-            </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
             {loading ? (
-                <div className="h-full flex items-center justify-center text-gray-600 font-black   animate-pulse">
-                    Veriler Yükleniyor...
-                </div>
+              <div className="h-full flex items-center justify-center text-slate-500 font-black animate-pulse uppercase tracking-widest">
+                Veriler Yükleniyor...
+              </div>
             ) : (
-                <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
-                   <POSInterface products={products} customers={customers} categories={categories} />
-                </div>
+              <div className="h-full">
+                <POSCompact products={products} customers={customers} categories={categories} />
+              </div>
             )}
           </div>
         </div>

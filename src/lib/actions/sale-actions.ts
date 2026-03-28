@@ -37,8 +37,8 @@ export async function createSale(data: {
         totalAmount: data.totalAmount,
         finalAmount: data.totalAmount,
         paymentMethod: (data.paymentMethod === "CASH" ? PaymentMethod.CASH :
-                        data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
-                        PaymentMethod.TRANSFER) as PaymentMethod,
+          data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
+            PaymentMethod.TRANSFER) as PaymentMethod,
         items: {
           create: data.items.map((item) => ({
             productId: item.productId,
@@ -48,6 +48,14 @@ export async function createSale(data: {
           })),
         },
       },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        },
+        customer: true
+      }
     });
 
     // Update stock and create movements

@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, Bell, Printer, Smartphone, Loader2 } from "lucide-react";
 import { bulkUpdateSettings } from "@/lib/actions/setting-actions";
 import { useToast } from "@/hooks/use-toast";
+import { ReceiptSettingsForm } from "@/components/settings/receipt-settings-form";
 
 interface SettingsProps {
   initialSettings: any[];
+  receiptSettings: any[];
 }
 
-export function SettingsInterface({ initialSettings }: SettingsProps) {
+export function SettingsInterface({ initialSettings, receiptSettings }: SettingsProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -48,11 +50,11 @@ export function SettingsInterface({ initialSettings }: SettingsProps) {
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
       <div className="flex items-center gap-6 mb-4">
         <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-            <SettingsIcon className="h-8 w-8 text-primary" />
+          <SettingsIcon className="h-8 w-8 text-primary" />
         </div>
         <div>
-            <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Sistem ayarları</h1>
-            <p className="text-sm text-slate-500 font-medium mt-1">İşletme mimarisi ve sistem parametreleri</p>
+          <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Sistem ayarları</h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">İşletme mimarisi ve sistem parametreleri</p>
         </div>
       </div>
 
@@ -99,8 +101,8 @@ export function SettingsInterface({ initialSettings }: SettingsProps) {
               </div>
               <div className="pt-4">
                 <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-extrabold text-base shadow-xl shadow-primary/20 transition-all active:scale-95">
-                    {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <SettingsIcon className="mr-3 h-5 w-5" />}
-                    Değişiklikleri güvenli kaydet
+                  {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <SettingsIcon className="mr-3 h-5 w-5" />}
+                  Değişiklikleri güvenli kaydet
                 </Button>
               </div>
             </CardContent>
@@ -117,40 +119,35 @@ export function SettingsInterface({ initialSettings }: SettingsProps) {
               <div className="space-y-4">
                 <Label htmlFor="whatsappNewService" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Yeni servis kabul mesajı</Label>
                 <div className="relative">
-                    <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
-                    <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10">
-                        <span className="text-[10px] font-bold text-blue-500">PARAMETRELER:</span>
-                        <span className="text-[10px] font-medium text-blue-400 italic">{' {customer}, {device}, {ticket}'}</span>
-                    </div>
+                  <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
+                  <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10">
+                    <span className="text-[10px] font-bold text-blue-500">PARAMETRELER:</span>
+                    <span className="text-[10px] font-medium text-blue-400 italic">{' {customer}, {device}, {ticket}'}</span>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
                 <Label htmlFor="whatsappReady" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Cihaz onarım tamamlandı mesajı</Label>
                 <div className="relative">
-                    <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
-                    <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
-                        <span className="text-[10px] font-bold text-emerald-500">PARAMETRELER:</span>
-                        <span className="text-[10px] font-medium text-emerald-400 italic">{' {customer}, {device}'}</span>
-                    </div>
+                  <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
+                  <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
+                    <span className="text-[10px] font-bold text-emerald-500">PARAMETRELER:</span>
+                    <span className="text-[10px] font-medium text-emerald-400 italic">{' {customer}, {device}'}</span>
+                  </div>
                 </div>
               </div>
               <div className="pt-4">
                 <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-secondary hover:bg-secondary/90 text-white font-extrabold text-base shadow-xl shadow-secondary/20 transition-all active:scale-95">
-                    {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Bell className="mr-3 h-5 w-5" />}
-                    Şablonları yayına al
+                  {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Bell className="mr-3 h-5 w-5" />}
+                  Şablonları yayına al
                 </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="printing" className="mt-6">
-           <Card className="border-t-4 border-t-blue-500 opacity-50 cursor-not-allowed">
-            <CardHeader>
-              <CardTitle>Yazdırma Ayarları</CardTitle>
-              <CardDescription>Termal yazıcı ve barkod tasarımı ayarları yakında.</CardDescription>
-            </CardHeader>
-          </Card>
+        <TabsContent value="printing" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <ReceiptSettingsForm initialSettings={receiptSettings} />
         </TabsContent>
       </Tabs>
     </div>

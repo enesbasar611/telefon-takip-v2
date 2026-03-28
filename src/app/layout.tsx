@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
+import { GeistMono } from 'geist/font/mono';
+import { Outfit } from 'next/font/google';
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { Navbar } from "@/components/navbar";
@@ -8,8 +9,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UIProvider } from "@/lib/context/ui-context";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+const fontOutfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+});
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -22,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning className={`${manrope.variable} ${inter.variable}`}>
-      <body className="bg-background text-foreground antialiased font-inter">
+    <html lang="tr" suppressHydrationWarning className={`${fontOutfit.variable} ${GeistMono.variable}`}>
+      <body className="bg-background text-foreground antialiased font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -31,7 +35,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UIProvider>
-            <div className="flex min-h-screen bg-background">
+            <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
               <Sidebar className="hidden lg:flex" />
               <div className="flex flex-1 flex-col overflow-hidden">
                 <Navbar />

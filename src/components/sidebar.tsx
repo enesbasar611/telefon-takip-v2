@@ -80,7 +80,15 @@ const menuItems = [
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },
-  { icon: Settings, label: "Sistem Ayarları", href: "/ayarlar" },
+  {
+    icon: Settings,
+    label: "Sistem Ayarları",
+    href: "/ayarlar",
+    subItems: [
+      { label: "Sistem Yapılandırması", href: "/ayarlar" },
+      { label: "Kullanıcı Yetkileri", href: "/ayarlar/yetkiler" },
+    ]
+  },
 ];
 
 export function Sidebar({ className }: { className?: string }) {
@@ -103,18 +111,16 @@ export function Sidebar({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("flex h-screen w-64 flex-col bg-card border-r border-border shadow-none z-20 overflow-hidden", className)}>
-      <div className="flex h-20 items-center px-6 border-b border-border bg-muted/20 flex-shrink-0">
-        <Link href="/" className="flex flex-col group">
-          <div className="flex items-center gap-2 font-extrabold text-xl text-foreground">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-all ">
-                <Zap className="h-5 w-5 text-primary fill-primary/20" />
-            </div>
-            <span className="">BAŞAR <span className="text-primary">TEKNİK</span></span>
+    <div className={cn("flex h-screen w-72 flex-col bg-background border-r border-border/40 shadow-none z-20 overflow-hidden font-sans", className)}>
+      <div className="flex h-24 items-center px-8 border-b border-border/10 flex-shrink-0">
+        <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-105">
+          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+            <Zap className="h-6 w-6 text-white fill-white" />
           </div>
-          <span className="text-[10px] font-bold text-muted-foreground mt-1 ml-11">
-            Yönetim Paneli V2.0
-          </span>
+          <div className="flex flex-col">
+            <span className="font-extrabold text-xl text-foreground tracking-tight leading-none uppercase">Başar <span className="text-primary">Teknik</span></span>
+            <span className="text-[11px] font-medium text-muted-foreground mt-1">Yönetim Paneli V2.0</span>
+          </div>
         </Link>
       </div>
 
@@ -126,47 +132,50 @@ export function Sidebar({ className }: { className?: string }) {
             const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
 
             return (
-              <div key={item.label} className="flex flex-col gap-1">
+              <div key={item.label} className="relative">
+                {isActive && (
+                  <div className="absolute left-[-32px] top-1/2 -translate-y-1/2 h-8 w-1.5 bg-primary rounded-r-full shadow-[2px_0_10px_rgba(var(--primary),0.3)]" />
+                )}
                 {hasSubItems ? (
                   <button
                     onClick={() => toggleMenu(item.label)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all group border border-transparent",
-                      isActive && !isOpen
-                        ? "bg-primary/5 text-primary border-primary/10 "
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-4.5 w-4.5", isActive && !isOpen ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                    <span className="flex-1 text-left tracking-tight">{item.label}</span>
+                    {isOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50" />}
                   </button>
                 ) : (
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all border",
+                      "flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
                       isActive
-                        ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground border-transparent"
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-4.5 w-4.5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-                    <span className="flex-1">{item.label}</span>
+                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                    <span className="flex-1 tracking-tight">{item.label}</span>
                   </Link>
                 )}
 
                 {hasSubItems && isOpen && (
-                  <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-border pl-4">
+                  <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-border/40 pl-4 py-1">
                     {item.subItems.map((sub) => (
                       <Link
                         key={sub.label}
                         href={sub.href}
                         className={cn(
-                          "px-4 py-2 text-xs font-medium rounded-lg transition-all  ",
+                          "px-4 py-2.5 text-[13.5px] font-medium rounded-lg transition-all",
                           pathname === sub.href
-                            ? "text-primary bg-primary/5 font-bold"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            ? "text-primary bg-primary/10 font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         )}
                       >
                         {sub.label}
@@ -180,16 +189,15 @@ export function Sidebar({ className }: { className?: string }) {
         </nav>
       </ScrollArea>
 
-      <div className="p-4 border-t border-border bg-muted/10">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center font-extrabold text-sm text-primary border border-primary/20">
+      <div className="p-8 border-t border-border/40 bg-muted/20">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 shadow-none">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary border border-primary/20">
             JD
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold text-foreground truncate">John Doe</span>
-            <span className="text-[10px] font-medium text-muted-foreground">Baş Teknisyen</span>
+            <span className="text-[14px] font-bold text-foreground truncate">John Doe</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Admin / Tekisyen</span>
           </div>
-          <div className="ml-auto h-2 w-2 rounded-full bg-secondary animate-pulse" />
         </div>
       </div>
     </div>

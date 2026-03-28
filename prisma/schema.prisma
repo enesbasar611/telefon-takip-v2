@@ -63,7 +63,7 @@ model User {
 model Customer {
   id        String   @id @default(cuid())
   name      String
-  phone     String   @unique
+  phone     String?  @unique
   secondaryPhone String?
   email     String?
   address   String?
@@ -349,4 +349,16 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model ReceiptSettings {
+  id        String   @id // "pos", "service", "stock"
+  title     String   @default("BAŞAR TEKNİK")
+  subtitle  String   @default("PROFESYONEL TEKNİK SERVİS")
+  phone     String   @default("+90 (5xx) xxx xx xx")
+  address   String?
+  footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
+  website   String   @default("v2.basarteknik.com")
+  terms     String?  @db.Text
+  updatedAt DateTime @updatedAt
 }

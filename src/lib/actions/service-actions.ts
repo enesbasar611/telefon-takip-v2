@@ -118,7 +118,7 @@ export async function createServiceTicket(rawData: any) {
   }
 }
 
-export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH") {
+export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH", message?: string) {
   try {
     const user = await getOrCreateDevUser();
 
@@ -134,7 +134,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       status,
       logs: {
         create: {
-          message: `Durum güncellendi: ${status}`,
+          message: message || `Durum güncellendi: ${status}`,
           status: status,
         }
       }
@@ -177,6 +177,63 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
   }
 }
 
+export async function updateServiceCost(ticketId: string, estimatedCost: number, actualCost: number) {
+  try {
+    const ticket = await prisma.serviceTicket.update({
+      where: { id: ticketId },
+      data: {
+        estimatedCost: estimatedCost,
+        actualCost: actualCost,
+      },
+    });
+    revalidatePath(`/servis/liste`);
+    revalidatePath(`/servis/${ticketId}`);
+    return { success: true, data: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("Error updating service cost:", error);
+    return { success: false, error: "Ücret güncellenirken bir hata oluştu." };
+  }
+}
+
+export async function updateServicePartPrice(partId: string, unitPrice: number) {
+  try {
+    const part = await prisma.serviceUsedPart.update({
+      where: { id: partId },
+      data: { unitPrice: unitPrice },
+    });
+    revalidatePath(`/servis/${part.ticketId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating part price:", error);
+    return { success: false, error: "Parça ücreti güncellenirken bir hata oluştu." };
+  }
+}
+
+export async function addServiceLogWithNote(ticketId: string, status: ServiceStatus, message: string) {
+  try {
+    const log = await prisma.serviceLog.create({
+      data: {
+        ticketId,
+        status,
+        message,
+      },
+    });
+
+    // Also update ticket status if provided
+    await prisma.serviceTicket.update({
+      where: { id: ticketId },
+      data: { status },
+    });
+
+    revalidatePath(`/servis/liste`);
+    revalidatePath(`/servis/${ticketId}`);
+    return { success: true, data: serializePrisma(log) };
+  } catch (error) {
+    console.error("Error adding service log:", error);
+    return { success: false, error: "Not eklenirken bir hata oluştu." };
+  }
+}
+
 export async function assignTechnician(ticketId: string, technicianId: string) {
   try {
     const ticket = await prisma.serviceTicket.update({
@@ -186,7 +243,7 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
         logs: {
           create: {
             message: `Teknisyen atandı.`,
-            status: ServiceStatus.PENDING, // Keeping current status or fetching it
+            status: ServiceStatus.PENDING,
           }
         }
       },
@@ -198,37 +255,6 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
     console.error("Error assigning technician:", error);
     return { success: false, error: "Teknisyen atanırken bir hata oluştu." };
   }
-}
-
-export async function deleteServiceTicket(id: string) {
-  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id } });
-
-  // Restore stock before deletion
-  for (const part of usedParts) {
-    await prisma.product.update({
-      where: { id: part.productId },
-      data: {
-        stock: { increment: part.quantity },
-        movements: {
-          create: {
-            quantity: part.quantity,
-            type: "ADJUSTMENT",
-            notes: `Servis silindiği için stok iade edildi: ${id}`,
-            serviceTicketId: id
-          }
-        }
-      }
-    });
-  }
-
-  await prisma.serviceLog.deleteMany({ where: { ticketId: id } });
-  await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id } });
-  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id } });
-  await prisma.serviceTicket.delete({ where: { id } });
-
-  revalidatePath("/servis");
-  revalidatePath("/stok");
-  revalidatePath("/");
 }
 
 export async function addPartToService(ticketId: string, productId: string, quantity: number) {
@@ -284,6 +310,7 @@ export async function addPartToService(ticketId: string, productId: string, quan
       });
     }
 
+    revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${ticketId}`);
     revalidatePath("/stok");
     return { success: true };
@@ -322,6 +349,7 @@ export async function removePartFromService(partId: string) {
       })
     ]);
 
+    revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${part.ticketId}`);
     revalidatePath("/stok");
     return { success: true };
@@ -337,6 +365,8 @@ export async function getServiceTickets() {
       include: {
         customer: true,
         technician: true,
+        logs: { orderBy: { createdAt: "desc" } },
+        usedParts: { include: { product: true } },
       },
       orderBy: {
         createdAt: "desc",
@@ -386,4 +416,35 @@ export async function queryServiceStatus(ticketNumber: string, phone: string) {
     console.error("Query service status error:", error);
     return null;
   }
+}
+
+export async function deleteServiceTicket(id: string) {
+  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id } });
+
+  // Restore stock before deletion
+  for (const part of usedParts) {
+    await prisma.product.update({
+      where: { id: part.productId },
+      data: {
+        stock: { increment: part.quantity },
+        movements: {
+          create: {
+            quantity: part.quantity,
+            type: "ADJUSTMENT",
+            notes: `Servis silindiği için stok iade edildi: ${id}`,
+            serviceTicketId: id
+          }
+        }
+      }
+    });
+  }
+
+  await prisma.serviceLog.deleteMany({ where: { ticketId: id } });
+  await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id } });
+  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id } });
+  await prisma.serviceTicket.delete({ where: { id } });
+
+  revalidatePath("/servis");
+  revalidatePath("/stok");
+  revalidatePath("/");
 }

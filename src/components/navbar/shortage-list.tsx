@@ -14,12 +14,14 @@ import { searchProducts } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { StockReceiptModal } from "./stock-receipt-modal";
 
 export function ShortageList() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Search states
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -141,199 +143,162 @@ export function ShortageList() {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const content = `
-      <html>
-        <head>
-          <title>Eksikler Listesi</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; }
-            h1 { border-bottom: 2px solid #000; padding-bottom: 10px; text-transform: ; font-size: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f2f2f2; font-size: 12px; }
-            td { font-size: 14px; font-weight: bold; }
-            .date { font-size: 10px; color: #666; margin-top: 5px; }
-          </style>
-        </head>
-        <body>
-          <h1>Eksikler Listesi / Tedarik Formu</h1>
-          <p class="date">Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>ÜRÜN ADI</th>
-                <th>SKU / KOD</th>
-                <th>ADET</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.product?.sku || '-'}</td>
-                  <td>${item.quantity || 1}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <p style="margin-top: 40px; font-size: 10px; text-align: center; border-top: 1px solid #eee; padding-top: 10px;">Takip V2 - Mobil Servis & ERP tarafından otomatik oluşturulmuştur.</p>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.print();
+    setShowPrintModal(true);
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-border/10 text-slate-500 hover:text-blue-500 transition-all">
-          <ClipboardList className={cn("h-5 w-5", items.length > 0 && "text-red-600 fill-red-600/10")} />
-          {items.length > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px] font-black text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
-              {items.length}
+    <>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-border/10 text-slate-500 hover:text-blue-500 transition-all">
+            <ClipboardList className={cn("h-5 w-5", items.length > 0 && "text-red-600 fill-red-600/10")} />
+            {items.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px] font-black text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
+                {items.length}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 bg-card border-2 border-red-600 p-4 shadow-none animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-black   text-blue-500">Eksikler Listesi</h3>
+            <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold">
+              {items.length} ÜRÜN
             </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 bg-card border-2 border-red-600 p-4 shadow-none animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black   text-blue-500">Eksikler Listesi</h3>
-          <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full font-bold">
-            {items.length} ÜRÜN
-          </span>
-        </div>
-
-        <div className="relative mb-4" ref={searchRef}>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                placeholder="Eksik ürün yaz..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onFocus={() => newName.length >= 2 && setShowResults(true)}
-                className="h-8 bg-white/[0.03] border-white/5 text-[10px] rounded-lg pl-8"
-              />
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-              {isSearching && (
-                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />
-              )}
-            </div>
-            <Button
-              onClick={handleManualAdd}
-              size="icon"
-              disabled={adding || !newName.trim()}
-              className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-black shrink-0 rounded-lg"
-              title="Manuel Ekle"
-            >
-              <PackagePlus className="h-4 w-4" />
-            </Button>
           </div>
 
-          {showResults && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-              {searchResults.length > 0 ? (
-                searchResults.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSelectProduct(p)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-blue-400">{p.name}</span>
-                      <span className="text-[8px] text-gray-500 uppercase font-bold">{p.sku || 'SKU YOK'}</span>
-                    </div>
-                    <div className="flex flex-col items-end bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5">
-                      <span className={cn("text-[10px] font-black tracking-tight", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
-                        {p.stock}
-                      </span>
-                      <span className="text-[7px] text-gray-600 font-black uppercase">ADET</span>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="p-3 text-center text-[10px] text-gray-500 italic">
-                  Ürün bulunamadı.
-                </div>
-              )}
-              <button
+          <div className="relative mb-4" ref={searchRef}>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Eksik ürün yaz..."
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onFocus={() => newName.length >= 2 && setShowResults(true)}
+                  className="h-8 bg-white/[0.03] border-white/5 text-[10px] rounded-lg pl-8"
+                />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                {isSearching && (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />
+                )}
+              </div>
+              <Button
                 onClick={handleManualAdd}
-                className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px] font-black hover:bg-blue-500/10 transition-colors"
+                size="icon"
+                disabled={adding || !newName.trim()}
+                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-black shrink-0 rounded-lg"
+                title="Manuel Ekle"
               >
-                "+ ${newName}" OLARAK MANUEL EKLE
-              </button>
+                <PackagePlus className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </div>
 
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-          {loading ? (
-            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
-          ) : items.length === 0 ? (
-            <p className="text-[10px] text-center text-gray-600 py-4 italic">Şu an eksik ürün bulunmuyor.</p>
-          ) : (
-            items.map((item) => (
-              <div key={item.id} className="group flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all">
-                <div className="flex flex-col flex-1 mr-2 overflow-hidden">
-                  <span className="text-[10px] font-bold text-gray-300 leading-tight mb-1 truncate">{item.name}</span>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      defaultValue={item.quantity || 1}
-                      id={`qty-${item.id}`}
-                      className="h-6 w-12 bg-slate-900 border-white/5 text-[9px] px-1 text-center font-black text-blue-500"
-                    />
-                    <span className="text-[8px] text-gray-600 font-black ">ADET</span>
-                    {item.product && (
-                       <span className={cn("text-[8px] font-black ml-auto", item.product.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
-                         STOK: {item.product.stock}
-                       </span>
-                    )}
+            {showResults && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                {searchResults.length > 0 ? (
+                  searchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleSelectProduct(p)}
+                      className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-blue-400">{p.name}</span>
+                        <span className="text-[8px] text-gray-500 uppercase font-bold">{p.sku || 'SKU YOK'}</span>
+                      </div>
+                      <div className="flex flex-col items-end bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5">
+                        <span className={cn("text-[10px] font-black tracking-tight", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                          {p.stock}
+                        </span>
+                        <span className="text-[7px] text-gray-600 font-black uppercase">ADET</span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-3 text-center text-[10px] text-gray-500 italic">
+                    Ürün bulunamadı.
+                  </div>
+                )}
+                <button
+                  onClick={handleManualAdd}
+                  className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px] font-black hover:bg-blue-500/10 transition-colors"
+                >
+                  "+ ${newName}" OLARAK MANUEL EKLE
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {loading ? (
+              <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
+            ) : items.length === 0 ? (
+              <p className="text-[10px] text-center text-gray-600 py-4 italic">Şu an eksik ürün bulunmuyor.</p>
+            ) : (
+              items.map((item) => (
+                <div key={item.id} className="group flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all">
+                  <div className="flex flex-col flex-1 mr-2 overflow-hidden">
+                    <span className="text-[10px] font-bold text-gray-300 leading-tight mb-1 truncate">{item.name}</span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        defaultValue={item.quantity || 1}
+                        id={`qty-${item.id}`}
+                        className="h-6 w-12 bg-slate-900 border-white/5 text-[9px] px-1 text-center font-black text-blue-500"
+                      />
+                      <span className="text-[8px] text-gray-600 font-black ">ADET</span>
+                      {item.product && (
+                        <span className={cn("text-[8px] font-black ml-auto", item.product.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                          STOK: {item.product.stock}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      onClick={() => {
+                        const qtyInput = document.getElementById(`qty-${item.id}`) as HTMLInputElement;
+                        handleApprove(item.id, parseInt(qtyInput.value) || 1);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-md"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => handleDelete(item.id)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-md"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <Button
-                        onClick={() => {
-                            const qtyInput = document.getElementById(`qty-${item.id}`) as HTMLInputElement;
-                            handleApprove(item.id, parseInt(qtyInput.value) || 1);
-                        }}
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-md"
-                    >
-                        <CheckCircle2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        onClick={() => handleDelete(item.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-md"
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
 
-        {items.length > 0 && (
-          <>
-            <Separator className="my-4 bg-white/5" />
-            <Button
+          {items.length > 0 && (
+            <>
+              <Separator className="my-4 bg-white/5" />
+              <Button
                 onClick={handlePrint}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-black font-black  text-[10px]  h-10 rounded-xl"
-            >
+              >
                 <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
-            </Button>
-          </>
-        )}
-      </PopoverContent>
-    </Popover>
+              </Button>
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <StockReceiptModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        items={items}
+      />
+    </>
   );
 }

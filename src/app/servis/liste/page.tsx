@@ -1,5 +1,6 @@
 import { getServiceTickets } from "@/lib/actions/service-actions";
 import { ServiceListTable } from "@/components/service/service-list-table";
+import { ServiceStats } from "@/components/service/service-stats";
 
 export const dynamic = 'force-dynamic';
 
@@ -7,23 +8,26 @@ export default async function ServiceListPage() {
   const tickets = await getServiceTickets();
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="h-2 w-2 rounded-full bg-orange-500 shadow-orange-sm" />
-            <span className="text-[10px] font-black   text-slate-500">Operasyonel Takip</span>
+            <span className="text-[10px] font-black   text-slate-500 uppercase tracking-widest">Operasyonel Takip</span>
           </div>
-          <h1 className="text-4xl font-black  text-white  italic">SERVİS <span className="text-blue-500">MERKEZİ</span></h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">Aktif teknik servis kayıtlarını ve cihaz durumlarını yönetin.</p>
+          <h1 className="text-4xl lg:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">SERVİS <span className="text-blue-500">MERKEZİ</span></h1>
+          <p className="text-xs text-slate-500 font-bold mt-2 opacity-80 uppercase tracking-wider">AKTİF TEKNİK SERVİS KAYITLARINI VE CİHAZ DURUMLARINI YÖNETİN.</p>
         </div>
       </div>
 
-      <div className="matte-card p-8 rounded-2xl border-border/10/50">
+      <ServiceStats tickets={tickets} />
+
+      <div className="matte-card p-0 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
         <ServiceListTable data={tickets} />
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .matte-card {
             background: rgba(15, 23, 42, 0.4) !important;
             backdrop-filter: blur(20px);

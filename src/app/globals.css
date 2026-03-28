@@ -4,165 +4,162 @@
 
 @layer base {
   :root {
-    /* Design System Tokens - The Luminous Prism (Light Mode) */
-    --background: 210 20% 96%; /* slate-50 base layer */
-    --foreground: 220 43% 6%; /* #080C14 - Neutral Deep Black */
+    /* Design System Tokens - The Aeonik Prism (Light Mode) */
+    --background: 210 20% 98%;
+    /* Ultra clean background */
+    --foreground: 224 71.4% 4.1%;
+    /* Deepest Black for best contrast */
 
     --card: 0 0% 100%;
-    --card-foreground: 225 35% 6%;
+    --card-foreground: 224 71.4% 4.1%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 225 35% 6%;
+    --popover-foreground: 224 71.4% 4.1%;
 
-    --primary: 228 100% 65%; /* #4C6FFF - Vivid blue */
+    --primary: 221.2 83.2% 53.3%;
+    /* Premium Blue */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 161 84% 39%; /* #10B981 - Fresh green */
+    --secondary: 161 84% 35%;
+    /* Sharper Green */
     --secondary-foreground: 210 40% 98%;
 
-    --tertiary: 38 92% 50%; /* #F59E0B - Warm orange */
+    --tertiary: 38 92% 50%;
     --tertiary-foreground: 210 40% 98%;
 
-    --muted: 210 20% 90%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 25% 35%;
+    /* Darker for better contrast */
 
-    --accent: 228 100% 96%;
-    --accent-foreground: 228 100% 65%;
+    --accent: 221.2 83.2% 96%;
+    --accent-foreground: 221.2 83.2% 53.3%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 210 20% 88%; /* Subdued borders for Light Mode */
-    --input: 210 20% 94%;
-    --ring: 228 100% 65%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
 
-    --surface-container-low: 210 20% 93%; /* slate-100 */
-    --surface-container-highest: 210 20% 88%; /* slate-200 */
-
-    --radius: 1rem; /* Moderate Level 2 Roundedness */
+    --radius: 1rem;
   }
 
-  /* Design System Tokens - The Luminous Prism (Dark Mode) */
   .dark {
-    --background: 225 35% 6%; /* #0a0e16 - The Void */
+    /* Design System Tokens - The Aeonik Prism (Dark Mode) */
+    --background: 224 71.4% 4.1%;
     --foreground: 210 40% 98%;
 
-    --card: 225 35% 8%; /* surface_container_low approx */
+    --card: 222.2 47.4% 11.2%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 225 35% 8%;
+    --popover: 222.2 47.4% 11.2%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 228 80% 75%; /* #8197ff - Light source blue */
-    --primary-foreground: 225 35% 6%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 158 75% 58%; /* #4edea3 - Success glow */
-    --secondary-foreground: 225 35% 6%;
+    --secondary: 161 84% 45%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --tertiary: 34 100% 69%; /* #ffb95f - Attention glow */
-    --tertiary-foreground: 225 35% 6%;
+    --tertiary: 38 92% 60%;
+    --tertiary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 225 35% 12%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 75.1%;
 
-    --accent: 225 35% 15%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
-    --border: 225 35% 15%; /* Outline variant at 15% opacity logic */
-    --input: 225 35% 12%;
-    --ring: 228 80% 75%;
-
-    --surface-container-low: 225 35% 8%; /* #0e131d */
-    --surface-container-highest: 225 35% 16%; /* #1e2635 */
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
   }
 }
 
 @layer base {
   * {
-    /* The No-Line Rule: Default borders are subdued, hierarchy is through tonal layering */
-    @apply border-border/10;
+    @apply border-border/40;
+    /* Slightly more visible borders */
   }
+
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 font-inter;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 font-sans h-screen overflow-hidden;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv05" 1;
+    color: hsl(var(--foreground));
   }
+
   /* Design System Typography Rules */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-manrope normal-case tracking-tight font-extrabold;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-sans tracking-tight font-extrabold;
     color: hsl(var(--foreground));
   }
 
-  body {
-    color: hsl(var(--foreground));
+  button,
+  label,
+  span,
+  p {
+    @apply font-sans;
   }
 
-  button, label, span, p {
-    @apply font-inter normal-case tracking-normal;
-  }
-
-  /* Kill all global uppercase classes */
+  /* Allow uppercase where explicitly asked */
   .uppercase {
-    text-transform: none !important;
+    text-transform: uppercase !important;
   }
 
   .tracking-widest {
-    letter-spacing: -0.025em !important;
+    letter-spacing: 0.15em !important;
   }
 
   .helper-text {
-    @apply text-slate-500 font-medium;
+    @apply text-muted-foreground font-medium;
   }
 }
 
 @layer components {
-  .glass {
-    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-none;
-  }
-
   .matte-card {
-    @apply bg-card border-none shadow-xl shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300;
-  }
-
-  .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-white/5 shadow-none;
+    @apply bg-card border border-border/10 shadow-xl shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300;
   }
 
   .whisper-border {
-    border-width: 0.5px;
+    border-width: 1px;
+    @apply border-border/20;
   }
 }
 
-@media print {
-  .no-print {
-    display: none !important;
-  }
-}
-
-/* Custom Scrollbar */
+/* Custom Scrollbar - Premium Matte */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  @apply bg-muted/30;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 10px;
+  @apply bg-muted-foreground/20 rounded-full border-2 border-transparent bg-clip-padding transition-colors hover:bg-muted-foreground/40;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+/* Animations - Systemic */
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
 }
 
-/* Animations */
-@keyframes pulse-blue {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-pulse-blue {
-  animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-pulse-soft {
+  animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

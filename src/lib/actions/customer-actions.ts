@@ -30,8 +30,8 @@ export async function getCustomerById(id: string) {
           include: { technician: true }
         },
         sales: {
-            include: { items: { include: { product: true } } },
-            orderBy: { createdAt: "desc" }
+          include: { items: { include: { product: true } } },
+          orderBy: { createdAt: "desc" }
         },
         debts: { orderBy: { createdAt: "desc" } }
       }
@@ -48,7 +48,7 @@ export async function getCustomerById(id: string) {
 
 export async function createCustomer(data: {
   name: string;
-  phone: string;
+  phone?: string;
   secondaryPhone?: string;
   email?: string;
   address?: string;
@@ -93,11 +93,11 @@ export async function updateCustomer(id: string, data: {
 }
 
 export async function deleteCustomer(id: string) {
-    try {
-      await prisma.customer.delete({ where: { id } });
-      revalidatePath("/musteriler");
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: "Müşteri silinemedi. Aktif kayıtları olabilir." };
-    }
+  try {
+    await prisma.customer.delete({ where: { id } });
+    revalidatePath("/musteriler");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Müşteri silinemedi. Aktif kayıtları olabilir." };
+  }
 }
