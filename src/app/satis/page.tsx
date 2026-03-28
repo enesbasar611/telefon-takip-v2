@@ -2,6 +2,7 @@ import { POSInterface } from "@/components/pos/pos-interface";
 import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { getCustomers } from "@/lib/actions/customer-actions";
 import { ShoppingCart } from "lucide-react";
+import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +15,13 @@ export default async function POSPage() {
     <div className="flex flex-col gap-6 pb-12 bg-background text-foreground min-h-screen lg:p-10 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-2">
         <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-[1.25rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-md shadow-secondary/5">
-                <ShoppingCart className="h-6 w-6 text-secondary" />
-            </div>
-            <div>
-                <h1 className="text-3xl font-extrabold text-foreground font-manrope">Hızlı satış (POS)</h1>
-                <p className="text-[11px] text-slate-500 font-bold mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
-            </div>
+          <div className="h-12 w-12 rounded-[1.25rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-md shadow-secondary/5">
+            <ShoppingCart className="h-6 w-6 text-secondary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold text-foreground font-manrope">Hızlı satış (POS)</h1>
+            <p className="text-[11px] text-slate-500 font-bold mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
+          </div>
         </div>
         <div className="flex items-center gap-3 px-4 py-2 bg-secondary/5 text-secondary border border-secondary/10 rounded-xl font-bold text-[10px] shadow-sm">
           <div className="h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" />
@@ -29,7 +30,9 @@ export default async function POSPage() {
       </div>
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border-none p-1">
-        <POSInterface products={products} customers={customers} categories={categories} />
+        <Suspense fallback={<div className="h-96 flex items-center justify-center text-muted-foreground text-sm font-bold">POS Yükleniyor...</div>}>
+          <POSInterface products={products} customers={customers} categories={categories} />
+        </Suspense>
       </div>
     </div>
   );

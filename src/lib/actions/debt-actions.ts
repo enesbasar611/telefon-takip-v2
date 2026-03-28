@@ -18,6 +18,23 @@ export async function getDebts() {
   }
 }
 
+export async function getThisMonthCollected() {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        type: "INCOME",
+        description: { startsWith: "Borç Tahsilatı:" },
+        createdAt: { gte: startOfMonth }
+      }
+    });
+    return transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function createDebt(data: { customerId: string; amount: number; dueDate?: Date; notes?: string }) {
   try {
     const debt = await prisma.debt.create({
@@ -51,15 +68,15 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
     // Create a transaction record for the collection
     let user = await prisma.user.findFirst(); // Mock user for demo
     if (user) {
-        await prisma.transaction.create({
-          data: {
-            type: "INCOME",
-            amount: paymentAmount,
-            description: `Borç Tahsilatı: ${debtId}`,
-            paymentMethod: "CASH",
-            userId: user.id
-          }
-        });
+      await prisma.transaction.create({
+        data: {
+          type: "INCOME",
+          amount: paymentAmount,
+          description: `Borç Tahsilatı: ${debtId}`,
+          paymentMethod: "CASH",
+          userId: user.id
+        }
+      });
     }
 
     revalidatePath("/veresiye");

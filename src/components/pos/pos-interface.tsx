@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,15 @@ export function POSInterface({ products, customers, categories }: { products: an
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+
+  // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
+  useEffect(() => {
+    const cid = searchParams.get("customerId");
+    if (cid && customers.find((c) => c.id === cid)) {
+      setSelectedCustomerId(cid);
+    }
+  }, [searchParams, customers]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {

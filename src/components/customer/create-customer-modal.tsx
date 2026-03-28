@@ -22,7 +22,15 @@ import { User, Phone, Mail, PlusCircle, Loader2 } from "lucide-react";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Ad Soyad en az 2 karakter olmalıdır"),
-  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz"),
+  phone: z.string()
+    .min(1, "Telefon numarası gereklidir")
+    .refine((val) => {
+      const d = val.replace(/\D/g, "");
+      if (d.length === 10 && d.startsWith("5")) return true;
+      if (d.length === 11 && d.startsWith("05")) return true;
+      if (d.length === 12 && d.startsWith("905")) return true;
+      return false;
+    }, "Geçerli Türkiye numarası giriniz (5xx xxx xx xx)"),
   email: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   address: z.string().optional(),
 });
@@ -32,6 +40,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 export function CreateCustomerModal() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [phoneValue, setPhoneValue] = useState("");
   const { toast } = useToast();
 
   const {
@@ -39,6 +48,7 @@ export function CreateCustomerModal() {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
   });
@@ -50,6 +60,7 @@ export function CreateCustomerModal() {
         toast({ title: "Başarılı", description: "Müşteri kaydı oluşturuldu." });
         setOpen(false);
         reset();
+        setPhoneValue("");
       } else {
         toast({ title: "Hata", description: result.error, variant: "destructive" });
       }
@@ -85,9 +96,28 @@ export function CreateCustomerModal() {
 
             <div className="space-y-3">
               <Label htmlFor="phone" className="text-xs font-bold text-muted-foreground">Telefon Numarası</Label>
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-500/50">+90</span>
-                <Input id="phone" {...register("phone")} placeholder="5XX XXX XX XX" maxLength={10} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-14 text-sm font-bold" />
+              <div className="flex items-center h-14 bg-slate-900 border border-white/5 rounded-2xl overflow-hidden focus-within:border-blue-500/30 transition-all">
+                <span className="pl-5 pr-2 text-sm font-bold text-emerald-500/70 select-none">+90</span>
+                <input
+                  id="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={13}
+                  placeholder="5xx xxx xx xx"
+                  className="flex-1 bg-transparent border-none outline-none pr-5 text-sm font-bold placeholder:text-muted-foreground/40"
+                  value={phoneValue}
+                  onChange={(e) => {
+                    let raw = e.target.value.replace(/[^0-9]/g, "");
+                    if (raw.startsWith("90")) raw = raw.substring(2);
+                    const trimmed = raw.substring(0, 10);
+                    let formatted = trimmed;
+                    if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
+                    else if (trimmed.length > 6 && trimmed.length <= 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
+                    else if (trimmed.length > 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
+                    setPhoneValue(formatted);
+                    setValue("phone", formatted);
+                  }}
+                />
               </div>
               {errors.phone && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.phone.message}</p>}
             </div>

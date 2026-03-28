@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UIProvider } from "@/lib/context/ui-context";
+import { getStaff } from "@/lib/actions/staff-actions";
 
 const fontOutfit = Outfit({
   subsets: ['latin'],
@@ -20,11 +21,13 @@ export const metadata: Metadata = {
   description: "Profesyonel SaaS Mobil Servis ve ERP Sistemi",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const staff = await getStaff();
+  const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
   return (
     <html lang="tr" suppressHydrationWarning className={`${fontOutfit.variable} ${GeistMono.variable}`}>
       <body className="bg-background text-foreground antialiased font-sans">
@@ -36,7 +39,7 @@ export default function RootLayout({
         >
           <UIProvider>
             <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-              <Sidebar className="hidden lg:flex" />
+              <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
               <div className="flex flex-1 flex-col overflow-hidden">
                 <Navbar />
                 <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">

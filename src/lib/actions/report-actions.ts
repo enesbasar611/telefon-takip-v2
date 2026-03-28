@@ -51,29 +51,53 @@ export async function getServiceMetrics() {
 }
 
 export async function getDashboardStats() {
-    try {
-        const todayStart = startOfDay(new Date());
-        const todayEnd = endOfDay(new Date());
+  try {
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+    const monthStart = startOfMonth(new Date());
+    const prevMonthStart = startOfMonth(new Date(new Date().setMonth(new Date().getMonth() - 1)));
+    const prevMonthEnd = endOfMonth(new Date(new Date().setMonth(new Date().getMonth() - 1)));
 
-        const [activeServices, dailySales, products, customers] = await Promise.all([
-            prisma.serviceTicket.count({ where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
-            prisma.sale.aggregate({
-                where: { createdAt: { gte: todayStart, lte: todayEnd } },
-                _sum: { finalAmount: true }
-            }),
-            prisma.product.findMany(),
-            prisma.customer.count()
-        ]);
+    const [activeServices, dailySales, products, customers, completedServicesThisMonth, thisMonthSales, prevMonthSales] = await Promise.all([
+      prisma.serviceTicket.count({ where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: todayStart, lte: todayEnd } },
+        _sum: { finalAmount: true }
+      }),
+      prisma.product.findMany(),
+      prisma.customer.count(),
+      prisma.serviceTicket.count({ where: { status: 'DELIVERED', updatedAt: { gte: monthStart } } }),
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: monthStart, lte: endOfDay(new Date()) } },
+        _sum: { finalAmount: true }
+      }),
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: prevMonthStart, lte: prevMonthEnd } },
+        _sum: { finalAmount: true }
+      })
+    ]);
 
-        const criticalStockCount = products.filter(p => p.stock <= p.criticalStock).length;
+    const criticalStockCount = products.filter(p => p.stock <= p.criticalStock).length;
 
-        return serializePrisma({
-            activeServices,
-            dailyRevenue: Number(dailySales._sum.finalAmount || 0),
-            criticalStockCount: criticalStockCount,
-            totalCustomers: customers
-        });
-    } catch (error) {
-        return serializePrisma({ activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0 });
+    const currentSales = Number(thisMonthSales._sum.finalAmount || 0);
+    const prevSales = Number(prevMonthSales._sum.finalAmount || 0);
+    let revenueGrowth = 0;
+    if (prevSales > 0) {
+      revenueGrowth = ((currentSales - prevSales) / prevSales) * 100;
+    } else if (currentSales > 0) {
+      revenueGrowth = 100;
     }
+
+    return serializePrisma({
+      activeServices,
+      dailyRevenue: Number(dailySales._sum.finalAmount || 0),
+      criticalStockCount,
+      totalCustomers: customers,
+      completedServicesThisMonth,
+      revenueGrowth: Math.round(revenueGrowth),
+      currentMonthRevenue: currentSales
+    });
+  } catch (error) {
+    return serializePrisma({ activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0, completedServicesThisMonth: 0, revenueGrowth: 0, currentMonthRevenue: 0 });
+  }
 }

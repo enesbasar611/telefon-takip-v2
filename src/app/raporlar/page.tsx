@@ -26,6 +26,11 @@ export default async function RaporlarPage() {
 
   const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
     ...m,
+    status: m.name,
+    name: {
+      PENDING: "Beklemede", APPROVED: "Onay Bekliyor", REPAIRING: "Tamirde",
+      WAITING_PART: "Parça Bekliyor", READY: "Hazır", DELIVERED: "Teslim Edildi", CANCELLED: "İptal"
+    }[m.name as string] || m.name,
     color: statusColors[m.name] || "#cbd5e1"
   }));
 
@@ -39,12 +44,14 @@ export default async function RaporlarPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bu Ayki Toplam Satış</CardTitle>
+            <CardTitle className="text-sm font-medium">Bu Ayki Net Satış</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{summary.totalIncome.toLocaleString('tr-TR')}</div>
-            <p className="text-xs text-muted-foreground">Önceki aya göre %12 artış.</p>
+            <div className="text-2xl font-bold">₺{stats.currentMonthRevenue?.toLocaleString('tr-TR') || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Önceki aya göre {stats.revenueGrowth > 0 ? '+' : ''}{stats.revenueGrowth}% {stats.revenueGrowth >= 0 ? 'artış' : 'düşüş'}.
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-card hover:shadow-md transition-shadow">
@@ -53,8 +60,8 @@ export default async function RaporlarPage() {
             <Wrench className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">10</div>
-            <p className="text-xs text-muted-foreground">Bu ay en çok parça değişimi yapıldı.</p>
+            <div className="text-2xl font-bold">{stats.completedServicesThisMonth || 0}</div>
+            <p className="text-xs text-muted-foreground">Bu ay içerisinde teslim edilenler.</p>
           </CardContent>
         </Card>
         <Card className="bg-card hover:shadow-md transition-shadow">

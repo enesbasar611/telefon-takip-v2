@@ -70,7 +70,6 @@ const menuItems = [
     subItems: [
       { label: "Müşteri Portföyü", href: "/musteriler" },
       { label: "Yeni Tanımlama", href: "/musteriler/yeni" },
-      { label: "Analiz & Notlar", href: "/musteriler/notlar" },
     ]
   },
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
@@ -80,18 +79,10 @@ const menuItems = [
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },
-  {
-    icon: Settings,
-    label: "Sistem Ayarları",
-    href: "/ayarlar",
-    subItems: [
-      { label: "Sistem Yapılandırması", href: "/ayarlar" },
-      { label: "Kullanıcı Yetkileri", href: "/ayarlar/yetkiler" },
-    ]
-  },
+  { icon: Settings, label: "Sistem Ayarları", href: "/ayarlar" },
 ];
 
-export function Sidebar({ className }: { className?: string }) {
+export function Sidebar({ className, user }: { className?: string; user?: { name: string; role: string } }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -196,11 +187,11 @@ export function Sidebar({ className }: { className?: string }) {
       <div className="p-8 border-t border-border/40 bg-muted/20">
         <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 shadow-none">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary border border-primary/20">
-            JD
+            {(user?.name || "A").charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-[14px] font-bold text-foreground truncate">John Doe</span>
-            <span className="text-[11px] font-medium text-muted-foreground">Admin / Tekisyen</span>
+            <span className="text-[14px] font-bold text-foreground truncate">{user?.name || "Yönetici"}</span>
+            <span className="text-[11px] font-medium text-muted-foreground">{user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}</span>
           </div>
         </div>
       </div>

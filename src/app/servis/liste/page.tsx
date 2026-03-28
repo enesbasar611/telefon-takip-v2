@@ -8,8 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ServicePage() {
+export default async function ServicePage({ searchParams }: { searchParams: { status?: string } }) {
   const tickets = await getServiceTickets();
+  const defaultTab = searchParams.status || "all";
 
   const filterByStatus = (status?: ServiceStatus) => {
     if (!status) return tickets;
@@ -26,7 +27,7 @@ export default async function ServicePage() {
         <CreateServiceModal />
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-7 overflow-x-auto">
           <TabsTrigger value="all">Tümü</TabsTrigger>
           <TabsTrigger value="PENDING">Beklemede</TabsTrigger>

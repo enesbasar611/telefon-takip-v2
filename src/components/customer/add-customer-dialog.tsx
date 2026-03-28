@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { UserPlus, Loader2 } from "lucide-react";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
-import { IMaskInput } from "react-imask";
 
 interface AddCustomerDialogProps {
     onSuccess?: (customer: any) => void;
@@ -87,16 +86,27 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                     </div>
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-slate-400">TELEFON</Label>
-                        <IMaskInput
-                            mask="+90 (000) 000 00 00"
-                            onAccept={(value) => {
-                                let pure = value.replace(/\D/g, "");
-                                if (pure.startsWith("90")) pure = pure.substring(2);
-                                setFormData({ ...formData, phone: pure });
-                            }}
-                            className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="+90 (5__) ___ __ __"
-                        />
+                        <div className="flex items-center bg-white/5 border border-white/10 rounded-md overflow-hidden focus-within:border-blue-500/50 transition-all">
+                            <span className="pl-3 pr-2 text-sm font-bold text-blue-400 select-none">+90</span>
+                            <input
+                                type="tel"
+                                inputMode="numeric"
+                                maxLength={13}
+                                placeholder="5xx xxx xx xx"
+                                className="flex-1 bg-transparent border-none outline-none h-10 pr-3 text-sm placeholder:text-muted-foreground/50"
+                                value={formData.phone}
+                                onChange={(e) => {
+                                    let raw = e.target.value.replace(/[^0-9]/g, "");
+                                    if (raw.startsWith("90")) raw = raw.substring(2);
+                                    const trimmed = raw.substring(0, 10);
+                                    let formatted = trimmed;
+                                    if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
+                                    else if (trimmed.length > 6 && trimmed.length <= 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
+                                    else if (trimmed.length > 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
+                                    setFormData({ ...formData, phone: formatted });
+                                }}
+                            />
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label className="text-xs font-bold text-slate-400">E-POSTA (OPSİYONEL)</Label>
