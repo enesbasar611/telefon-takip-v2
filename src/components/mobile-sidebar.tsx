@@ -25,7 +25,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="p-0 bg-background border-border/10 w-64">
         <div className="h-full">
-            <Sidebar className="w-full border-none" />
+          <Sidebar className="w-full border-none" onNavigate={() => setOpen(false)} />
         </div>
       </SheetContent>
     </Sheet>

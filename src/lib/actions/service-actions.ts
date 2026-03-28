@@ -125,7 +125,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     // Fetch current ticket to calculate costs if delivering
     const currentTicket = await prisma.serviceTicket.findUnique({
       where: { id: ticketId },
-      include: { usedParts: true }
+      include: { usedParts: { include: { product: true } } }
     });
 
     if (!currentTicket) throw new Error("Servis kaydı bulunamadı.");
@@ -142,6 +142,18 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
 
     if (status === ServiceStatus.DELIVERED) {
       updateData.deliveredAt = new Date();
+
+      // Calculate the maximum warranty months from used parts
+      const maxWarrantyMonths = currentTicket.usedParts.reduce((max, part) => {
+        return Math.max(max, part.product.warrantyMonths || 0);
+      }, 0);
+
+      // Set warranty expiry if any part has warranty
+      if (maxWarrantyMonths > 0) {
+        const expiryDate = new Date();
+        expiryDate.setMonth(expiryDate.getMonth() + maxWarrantyMonths);
+        updateData.warrantyExpiry = expiryDate;
+      }
 
       // Calculate total revenue from this service
       const partsTotal = currentTicket.usedParts.reduce((acc, part) => acc + (Number(part.unitPrice) * part.quantity), 0);

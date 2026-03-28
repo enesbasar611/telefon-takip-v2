@@ -35,10 +35,11 @@ const menuItems = [
     label: "Servis Merkezi",
     href: "/servis",
     subItems: [
-      { label: "Servis Yönetimi", href: "/servis/liste" },
       { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
+      { label: "Servis Yönetimi", href: "/servis/liste" },
       { label: "Teslimatlar", href: "/servis/teslimatlar" },
       { label: "Garanti Takibi", href: "/servis/iade" },
+      { label: "Servis Özeti", href: "/servis" },
     ]
   },
   {
@@ -82,7 +83,7 @@ const menuItems = [
   { icon: Settings, label: "Sistem Ayarları", href: "/ayarlar" },
 ];
 
-export function Sidebar({ className, user }: { className?: string; user?: { name: string; role: string } }) {
+export function Sidebar({ className, user, onNavigate }: { className?: string; user?: { name: string; role: string }, onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -132,7 +133,6 @@ export function Sidebar({ className, user }: { className?: string; user?: { name
                   <button
                     onClick={() => {
                       toggleMenu(item.label);
-                      if (item.href) router.push(item.href);
                     }}
                     className={cn(
                       "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
@@ -148,6 +148,7 @@ export function Sidebar({ className, user }: { className?: string; user?: { name
                 ) : (
                   <Link
                     href={item.href}
+                    onClick={() => onNavigate?.()}
                     className={cn(
                       "flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
                       isActive
@@ -166,6 +167,7 @@ export function Sidebar({ className, user }: { className?: string; user?: { name
                       <Link
                         key={sub.label}
                         href={sub.href}
+                        onClick={() => onNavigate?.()}
                         className={cn(
                           "px-4 py-2.5 text-[13.5px] font-medium rounded-lg transition-all",
                           pathname === sub.href

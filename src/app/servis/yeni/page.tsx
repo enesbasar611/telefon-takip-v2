@@ -235,7 +235,7 @@ export default function NewServicePage() {
 
       const result = await createServiceTicket({
         customerName: values.customerName,
-        customerPhone: values.customerPhone,
+        customerPhone: values.customerPhone.replace(/\D/g, ""),
         customerEmail: values.customerEmail,
         deviceBrand: values.deviceBrand,
         deviceModel: values.deviceModel,
@@ -706,8 +706,11 @@ export default function NewServicePage() {
                   İptal
                 </Button>
                 <Button
-                  type="submit"
-                  form="new-service-form"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    form.handleSubmit(onSubmit)();
+                  }}
                   disabled={form.formState.isSubmitting}
                   className={cn(
                     "h-14 px-8 font-black rounded-xl gap-2 transition-all shadow-lg active:scale-95 border-b-4 active:border-b-0 active:translate-y-1 relative overflow-hidden",
