@@ -26,6 +26,7 @@ import {
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ServiceStatus } from "@prisma/client";
+import { cn, formatPhone } from "@/lib/utils";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500" },
@@ -54,17 +55,17 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
         <DialogHeader className="p-6 bg-muted/30 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-xl">
-                <Smartphone className="h-6 w-6 text-primary" />
+              <div className="bg-blue-500/10 p-2.5 rounded-2xl">
+                <Smartphone className="h-6 w-6 text-blue-500" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-black ">{ticket.ticketNumber}</DialogTitle>
-                <DialogDescription className="text-xs font-bold   text-muted-foreground">
+                <DialogTitle className="text-2xl font-bold">{ticket.ticketNumber}</DialogTitle>
+                <DialogDescription className="text-xs font-bold text-slate-500">
                   {ticket.deviceBrand} {ticket.deviceModel}
                 </DialogDescription>
               </div>
             </div>
-            <Badge className={`${status.color} text-[10px]  font-black px-4 py-1.5 shadow-sm border-none`}>
+            <Badge className={cn("text-[10px] font-bold px-5 py-2 shadow-xl border-none", status.color)}>
               {status.label}
             </Badge>
           </div>
@@ -77,16 +78,16 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <User className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-black  ">Müşteri Bilgileri</h4>
+                  <h4 className="text-sm font-bold">Müşteri Bilgileri</h4>
                 </div>
-                <div className="bg-muted/30 rounded-2xl p-4 space-y-3 border border-border/50 shadow-inner">
+                <div className="bg-slate-900/50 rounded-3xl p-6 space-y-4 border border-white/5 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Ad Soyad</span>
-                    <span className="text-sm font-bold">{ticket.customer?.name}</span>
+                    <span className="text-[10px] font-bold text-slate-500">Ad Soyad</span>
+                    <span className="text-sm font-bold text-slate-200">{ticket.customer?.name}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Telefon</span>
-                    <span className="text-sm font-bold">{ticket.customer?.phone}</span>
+                    <span className="text-[10px] font-bold text-slate-500">Telefon</span>
+                    <span className="text-sm font-bold text-blue-400 font-mono">{formatPhone(ticket.customer?.phone)}</span>
                   </div>
                 </div>
               </section>
@@ -94,24 +95,24 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Smartphone className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-black  ">Cihaz Bilgileri</h4>
+                  <h4 className="text-sm font-bold">Cihaz Bilgileri</h4>
                 </div>
                 <div className="bg-muted/30 rounded-2xl p-4 space-y-3 border border-border/50 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Marka / Model</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">Marka / Model</span>
                     <span className="text-sm font-bold">{ticket.deviceBrand} {ticket.deviceModel}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">IMEI</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">IMEI</span>
                     <span className="text-sm font-bold select-all">{ticket.imei || "Bilinmiyor"}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Seri No</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">Seri No</span>
                     <span className="text-sm font-bold select-all">{ticket.serialNumber || "Bilinmiyor"}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Kozmetik Durum</span>
-                    <span className="text-xs font-medium text-right italic">"{ticket.cosmeticCondition || "Belirtilmedi"}"</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">Kozmetik Durum</span>
+                    <span className="text-xs font-medium text-right">"{ticket.cosmeticCondition || "Belirtilmedi"}"</span>
                   </div>
                 </div>
               </section>
@@ -122,15 +123,15 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <FileText className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-black  ">Arıza Detayları</h4>
+                  <h4 className="text-sm font-bold">Arıza Detayları</h4>
                 </div>
                 <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 shadow-inner">
-                  <p className="text-sm font-medium leading-relaxed italic">"{ticket.problemDesc}"</p>
+                  <p className="text-sm font-medium leading-relaxed">"{ticket.problemDesc}"</p>
                   {ticket.notes && (
                     <>
                       <Separator className="my-3 opacity-20" />
                       <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-muted-foreground ">Teknik Notlar</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">Teknik Notlar</span>
                         <p className="text-xs font-medium text-muted-foreground">{ticket.notes}</p>
                       </div>
                     </>
@@ -141,22 +142,22 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar className="h-4 w-4 text-primary" />
-                  <h4 className="text-sm font-black  ">Tarih ve Atama</h4>
+                  <h4 className="text-sm font-bold">Tarih ve Atama</h4>
                 </div>
                 <div className="bg-muted/30 rounded-2xl p-4 space-y-3 border border-border/50 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Kayıt Tarihi</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">Kayıt Tarihi</span>
                     <span className="text-sm font-bold">{format(new Date(ticket.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Teslim Tarihi</span>
+                    <span className="text-[10px] font-bold text-muted-foreground">Teslim Tarihi</span>
                     <span className="text-sm font-bold text-primary">
                       {ticket.estimatedDeliveryDate ? format(new Date(ticket.estimatedDeliveryDate), "dd MMMM yyyy", { locale: tr }) : "Belirtilmedi"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-muted-foreground ">Teknisyen</span>
-                    <Badge variant="outline" className="text-[10px] font-bold ">{ticket.technician?.name || "Atanmamış"}</Badge>
+                    <span className="text-[10px] font-bold text-muted-foreground">Teknisyen</span>
+                    <Badge variant="outline" className="text-[10px] font-bold">{ticket.technician?.name || "Atanmamış"}</Badge>
                   </div>
                 </div>
               </section>
@@ -169,7 +170,7 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
           <section className="pb-6">
             <div className="flex items-center gap-2 mb-4">
               <History className="h-4 w-4 text-primary" />
-              <h4 className="text-sm font-black  ">İşlem Geçmişi</h4>
+              <h4 className="text-sm font-bold">İşlem Geçmişi</h4>
             </div>
             <div className="space-y-3">
               {ticket.logs?.map((log: any, idx: number) => (
@@ -180,7 +181,7 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-black   text-foreground">{log.status}</span>
+                      <span className="text-xs font-bold text-foreground">{log.status}</span>
                       <span className="text-[10px] font-bold text-muted-foreground">{format(new Date(log.createdAt), "dd MMM, HH:mm", { locale: tr })}</span>
                     </div>
                     <p className="text-xs font-medium text-muted-foreground">{log.message}</p>
@@ -188,7 +189,7 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
                 </div>
               ))}
               {(!ticket.logs || ticket.logs.length === 0) && (
-                <p className="text-xs text-muted-foreground italic text-center py-4">Henüz işlem geçmişi bulunmuyor.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">Henüz işlem geçmişi bulunmuyor.</p>
               )}
             </div>
           </section>
@@ -197,12 +198,12 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
         <DialogFooter className="p-4 bg-muted/30 border-t border-border/50">
           <div className="w-full flex justify-between items-center">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-muted-foreground  ">Tahmini Tutar</span>
-              <span className="text-lg font-black text-primary">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
+              <span className="text-[10px] font-bold text-muted-foreground">Tahmini Tutar</span>
+              <span className="text-lg font-bold text-primary">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
             </div>
             <div className="flex gap-2">
-               <Button variant="outline" className="text-xs font-bold  shadow-sm" onClick={onClose}>Kapat</Button>
-               <Button className="text-xs font-bold  shadow-lg shadow-primary/20">Fatura Çıkar</Button>
+              <Button variant="outline" className="text-xs font-bold shadow-sm" onClick={onClose}>Kapat</Button>
+              <Button className="text-xs font-bold shadow-lg shadow-primary/20">Fatura Çıkar</Button>
             </div>
           </div>
         </DialogFooter>

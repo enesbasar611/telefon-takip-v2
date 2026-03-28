@@ -24,12 +24,13 @@ import {
     User,
     ShoppingBag,
     UserPlus,
-    CheckCircle
+    CheckCircle,
+    Phone
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
-import { cn } from "@/lib/utils";
+import { cn, formatPhone } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
 export function POSCompact({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
@@ -116,10 +117,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
             {/* Search Bar for Products */}
             <div className="p-6 pb-4">
                 <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
                         placeholder="Ürün veya seri no ara..."
-                        className="pl-12 h-14 bg-slate-800/50 border-slate-700/50 rounded-2xl text-sm font-medium text-white focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base font-bold text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                     />
@@ -127,19 +128,19 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Category Pills */}
-            <div className="px-6 pb-4 overflow-x-auto scrollbar-hide">
-                <div className="flex gap-2 min-w-max">
+            <div className="px-6 pb-6 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 min-w-max">
                     <button
                         onClick={() => setSelectedCategory("ALL")}
                         className={cn(
-                            "flex items-center gap-2 h-9 px-5 rounded-full border transition-all",
+                            "flex items-center gap-2.5 h-11 px-6 rounded-full border transition-all",
                             selectedCategory === "ALL"
-                                ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/20 text-white"
+                                ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/30 text-white"
                                 : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400"
                         )}
                     >
-                        <ShoppingBag className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-black tracking-widest uppercase">HEPSİ</span>
+                        <ShoppingBag className="h-4 w-4" />
+                        <span className="text-xs font-bold">HEPSİ</span>
                     </button>
                     {categories.map((cat) => {
                         const Icon = cat.name.toLowerCase().includes('aksesuar') ? Smartphone : (cat.name.toLowerCase().includes('parça') ? Package : Wrench);
@@ -148,14 +149,14 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
                                 className={cn(
-                                    "flex items-center gap-2 h-9 px-5 rounded-full border transition-all",
+                                    "flex items-center gap-2.5 h-11 px-6 rounded-full border transition-all",
                                     selectedCategory === cat.id
-                                        ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/20 text-white"
+                                        ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/30 text-white"
                                         : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400"
                                 )}
                             >
-                                <Icon className="h-3.5 w-3.5" />
-                                <span className="text-[10px] font-black tracking-widest uppercase truncate max-w-[120px]">{cat.name}</span>
+                                <Icon className="h-4 w-4" />
+                                <span className="text-xs font-bold truncate max-w-[150px]">{cat.name}</span>
                             </button>
                         );
                     })}
@@ -163,30 +164,30 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Product List Area */}
-            <div className="flex-1 overflow-y-auto px-6 space-y-4 custom-scrollbar-dark">
+            <div className="flex-1 overflow-y-auto px-6 space-y-4 custom-scrollbar-dark pb-6">
                 {filteredProducts.map((product) => (
                     <div
                         key={product.id}
-                        className="flex items-center justify-between p-4 bg-slate-800/30 border border-slate-700/30 rounded-2xl hover:bg-slate-800/50 transition-all group"
+                        className="flex items-center justify-between p-5 bg-slate-800/30 border border-slate-700/30 rounded-2xl hover:bg-white/[0.03] hover:border-blue-500/20 transition-all group active:scale-[0.99]"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden">
-                                <Package className="h-8 w-8 text-slate-500 opacity-20" />
+                        <div className="flex items-center gap-5">
+                            <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden">
+                                <Package className="h-9 w-9 text-slate-500 opacity-20" />
                             </div>
                             <div className="flex flex-col">
-                                <h4 className="text-sm font-bold text-white leading-tight">{product.name}</h4>
-                                <p className="text-[11px] text-slate-400 mt-1 uppercase tracking-tight">{product.category.name}</p>
+                                <h4 className="text-base font-bold text-white leading-tight">{product.name}</h4>
+                                <p className="text-xs text-blue-500 mt-1.5 font-bold">{product.category.name}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-6">
                             <div className="text-right">
-                                <span className="text-sm font-black text-blue-400">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                <span className="text-lg font-bold text-white">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
                             </div>
                             <button
                                 onClick={() => addToCart(product)}
-                                className="h-8 w-8 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                                className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all active:scale-90"
                             >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-5 w-5" />
                             </button>
                         </div>
                     </div>
@@ -194,10 +195,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Cart Summary Section - Fixed at bottom */}
-            <div className="p-8 bg-slate-900/80 border-t border-slate-700/50 backdrop-blur-xl space-y-6">
-                <div className="space-y-4">
+            <div className="p-10 bg-slate-900 border-t border-slate-700/50 backdrop-blur-3xl space-y-8">
+                <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                        <Label className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">MÜŞTERİ SEÇ</Label>
+                        <Label className="text-xs font-bold text-slate-500 tracking-[0.2em]">Operasyonel Müşteri Seçimi</Label>
                         {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
                             <button
                                 onClick={async () => {
@@ -210,16 +211,16 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                     }
                                     setIsProcessing(false);
                                 }}
-                                className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-1 transition-colors"
+                                className="text-xs font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1.5 transition-colors pulse-animation"
                             >
-                                <UserPlus className="h-3 w-3" />
-                                Müşteri Ekle
+                                <UserPlus className="h-4 w-4" />
+                                Hızlı Müşteri Ekle
                             </button>
                         )}
                     </div>
 
                     <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                         <Input
                             placeholder="Müşteri adı veya telefon ile ara..."
                             value={activeCustomer ? activeCustomer.name : customerSearch}
@@ -227,12 +228,12 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 setCustomerSearch(e.target.value);
                                 if (selectedCustomerId) setSelectedCustomerId(undefined);
                             }}
-                            className="pl-12 h-14 bg-slate-800/50 border-slate-700/50 rounded-2xl text-sm font-medium text-white focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 transition-all font-bold uppercase"
+                            className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base font-bold text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
                         />
 
                         {(customerSearch.length > 0 && !selectedCustomerId) && (
-                            <div className="absolute bottom-full left-0 w-full mb-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                <div className="max-h-64 overflow-y-auto p-2 custom-scrollbar-dark">
+                            <div className="absolute bottom-full left-0 w-full mb-4 bg-slate-900 border border-white/5 rounded-[2rem] shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 backdrop-blur-3xl">
+                                <div className="max-h-80 overflow-y-auto p-4 custom-scrollbar-dark">
                                     {/* Quick Add Option - Always at top if name is new */}
                                     {!customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
                                         <button
@@ -246,18 +247,18 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                                 }
                                                 setIsProcessing(false);
                                             }}
-                                            className="w-full text-left px-4 py-4 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 transition-all flex items-center justify-between group mb-2"
+                                            className="w-full text-left px-5 py-5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 transition-all flex items-center justify-between group mb-3"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                                                    <Plus className="h-5 w-5" />
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+                                                    <Plus className="h-6 w-6" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-black text-blue-400 uppercase tracking-tight">YENİ MÜŞTERİ EKLE</span>
-                                                    <span className="text-[11px] font-bold text-white mt-0.5">{customerSearch}</span>
+                                                    <span className="text-xs font-bold text-blue-400">SİSTEME KAYDET</span>
+                                                    <span className="text-sm font-bold text-white mt-1">{customerSearch}</span>
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-blue-500" />
+                                            <ChevronRight className="h-5 w-5 text-blue-500 group-hover:translate-x-1 transition-transform" />
                                         </button>
                                     )}
 
@@ -266,13 +267,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                             setSelectedCustomerId(undefined);
                                             setCustomerSearch("");
                                         }}
-                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between group"
+                                        className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/[0.03] transition-colors flex items-center justify-between group mb-2"
                                     >
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">HIZLI SATIŞ (İSİMSİZ)</span>
-                                        <CheckCircle className={cn("h-4 w-4 text-blue-500", !selectedCustomerId ? "opacity-100" : "opacity-0")} />
+                                        <span className="text-xs font-bold text-slate-500">HIZLI SATIŞ (İSİMSİZ)</span>
+                                        <CheckCircle className={cn("h-5 w-5 text-emerald-500", !selectedCustomerId ? "opacity-100" : "opacity-0")} />
                                     </button>
 
-                                    <div className="my-2 border-t border-slate-700/50" />
+                                    <div className="my-3 border-t border-white/5" />
 
                                     {customers
                                         .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone && c.phone.includes(customerSearch)))
@@ -283,13 +284,18 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                                     setSelectedCustomerId(customer.id);
                                                     setCustomerSearch(customer.name);
                                                 }}
-                                                className="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between group"
+                                                className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/[0.03] transition-colors flex items-center justify-between group mb-1"
                                             >
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-black text-white uppercase">{customer.name}</span>
-                                                    {customer.phone && <span className="text-[9px] text-slate-500 font-bold mt-1 tracking-wider">{customer.phone}</span>}
+                                                    <span className="text-sm font-bold text-white">{customer.name}</span>
+                                                    {customer.phone && (
+                                                        <div className="flex items-center gap-2 mt-1.5">
+                                                            <Phone className="h-3 w-3 text-blue-500" />
+                                                            <span className="text-xs text-blue-500 font-bold">{formatPhone(customer.phone)}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <CheckCircle className={cn("h-4 w-4 text-blue-500", selectedCustomerId === customer.id ? "opacity-100" : "opacity-0")} />
+                                                <CheckCircle className={cn("h-5 w-5 text-blue-500", selectedCustomerId === customer.id ? "opacity-100" : "opacity-0")} />
                                             </button>
                                         ))
                                     }
@@ -299,35 +305,37 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm font-medium text-slate-400">
+                <div className="space-y-4 pt-2">
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                         <span>Ara Toplam</span>
-                        <span className="text-white font-bold">₺{subtotal.toLocaleString('tr-TR')}</span>
+                        <span className="text-white">₺{subtotal.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm font-medium text-slate-400">
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                         <span>KDV (%20)</span>
-                        <span className="text-white font-bold">₺{tax.toLocaleString('tr-TR')}</span>
+                        <span className="text-white">₺{tax.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-end pt-2">
-                        <span className="text-lg font-black text-white uppercase tracking-tight">Toplam</span>
-                        <span className="text-4xl font-black text-blue-500 italic tracking-tighter">₺{total.toLocaleString('tr-TR')}</span>
+                    <div className="flex justify-between items-end pt-4 border-t border-white/5">
+                        <span className="text-xl font-bold text-white">Tahsilat Tutarı</span>
+                        <div className="flex flex-col items-end">
+                            <span className="text-4xl font-bold text-blue-500 animate-pulse-slow">₺{total.toLocaleString('tr-TR')}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-2">
                     <Button
                         disabled={cart.length === 0 || isProcessing}
                         onClick={handleCheckout}
-                        className="flex-1 h-16 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all gap-3"
+                        className="flex-1 h-20 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg tracking-[0.2em] rounded-[1.5rem] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all gap-4"
                     >
-                        <Banknote className="h-5 w-5" />
-                        Ödeme Yap
+                        <Banknote className="h-7 w-7" />
+                        Tahsil Et & Yazdır
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-16 w-16 rounded-2xl bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400 transition-all p-0"
+                        className="h-20 w-20 rounded-[1.5rem] bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400 transition-all p-0 flex items-center justify-center"
                     >
-                        <Printer className="h-6 w-6" />
+                        <Printer className="h-8 w-8" />
                     </Button>
                 </div>
             </div>

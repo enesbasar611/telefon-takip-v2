@@ -22,14 +22,14 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
       className={cn("relative group cursor-pointer inline-flex items-center gap-2", className)}
     >
       <span className={cn(
-        "transition-all duration-300 font-black ",
+        "transition-all duration-300 font-bold",
         !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
         {prefix}{formattedAmount}
       </span>
       {!isFinancialVisible && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-           <EyeOff className="h-4 w-4 text-gray-600/50" />
+          <EyeOff className="h-4 w-4 text-gray-600/50" />
         </div>
       )}
     </div>

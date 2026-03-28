@@ -65,7 +65,7 @@ export function SmartInsights({ stats }: { stats: any }) {
     <Card className="bg-card border-border shadow-sm h-full overflow-hidden rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 ">
+          <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
             <Zap className="h-5 w-5 text-emerald-500" />
           </div>
           <div>
@@ -91,7 +91,7 @@ export function SmartInsights({ stats }: { stats: any }) {
           </div>
         ))}
         {insights.length === 0 && (
-          <div className="p-10 text-center text-gray-600 text-[10px] font-bold  ">
+          <div className="p-10 text-center text-gray-600 text-[10px] font-bold">
             Sistem analizi sürüyor...
           </div>
         )}

@@ -19,8 +19,16 @@ export async function searchProducts(query: string) {
   try {
     if (!query || query.length < 2) return [];
 
+    // Find the category "Parça" (case insensitive)
+    const partCategory = await prisma.category.findFirst({
+      where: {
+        name: { contains: "Parça", mode: "insensitive" }
+      }
+    });
+
     const products = await prisma.product.findMany({
       where: {
+        categoryId: partCategory?.id,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { sku: { contains: query, mode: 'insensitive' } },
@@ -31,13 +39,18 @@ export async function searchProducts(query: string) {
         id: true,
         name: true,
         stock: true,
-        sku: true
+        sku: true,
+        sellPrice: true,
+        category: {
+          select: { name: true }
+        }
       },
-      take: 5
+      take: 8
     });
 
     return serializePrisma(products);
   } catch (error) {
+    console.error("Search products error:", error);
     return [];
   }
 }
@@ -78,11 +91,11 @@ export async function createProduct(data: {
         sku: data.sku,
         isSecondHand: data.isSecondHand || false,
         deviceInfo: data.isSecondHand ? {
-            create: {
-                imei: data.imei || `GEN-${Date.now()}`,
-                color: data.color,
-                capacity: data.capacity,
-            }
+          create: {
+            imei: data.imei || `GEN-${Date.now()}`,
+            color: data.color,
+            capacity: data.capacity,
+          }
         } : undefined
       }
     });
@@ -262,11 +275,11 @@ export async function deleteProduct(id: string) {
 }
 
 export async function createCategory(name: string) {
-    try {
-      const category = await prisma.category.create({ data: { name } });
-      revalidatePath("/stok");
-      return { success: true, category: serializePrisma(category) };
-    } catch (error) {
-      return { success: false, error: "Kategori oluşturulamadı." };
-    }
+  try {
+    const category = await prisma.category.create({ data: { name } });
+    revalidatePath("/stok");
+    return { success: true, category: serializePrisma(category) };
+  } catch (error) {
+    return { success: false, error: "Kategori oluşturulamadı." };
+  }
 }

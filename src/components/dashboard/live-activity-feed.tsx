@@ -31,11 +31,11 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
             <Activity className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-lg font-black font-sans uppercase tracking-tight">Canlı akış</CardTitle>
-            <p className="text-xs text-muted-foreground font-bold mt-1 uppercase tracking-wide">Gerçek zamanlı etkinlik trafiği</p>
+            <CardTitle className="text-lg font-bold font-sans">Canlı akış</CardTitle>
+            <p className="text-xs text-muted-foreground font-bold mt-1">Gerçek zamanlı etkinlik trafiği</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] font-extrabold border-primary/20 text-primary bg-primary/5 px-3 py-1 rounded-full animate-pulse tracking-widest">
+        <Badge variant="outline" className="text-[10px] font-extrabold border-primary/20 text-primary bg-primary/5 px-3 py-1 rounded-full animate-pulse">
           LIVE
         </Badge>
       </CardHeader>
@@ -44,28 +44,25 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
           {activity.map((item) => (
             <div key={item.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 group">
               <div className="flex items-start gap-5">
-                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE'
-                  ? 'bg-primary/10 border-primary/20 text-primary'
-                  : 'bg-secondary/10 border-secondary/20 text-secondary'
-                  }`}>
+                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary/10 border-secondary/20 text-secondary' }`}>
                   {item.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-4 mb-2">
-                    <h4 className="text-[13px] font-black text-foreground truncate font-sans uppercase">{item.title}</h4>
-                    <span className="text-[10px] font-black text-muted-foreground whitespace-nowrap uppercase tracking-[0.1em] bg-muted px-2 py-0.5 rounded">
+                    <h4 className="text-[13px] font-bold text-foreground truncate font-sans">{item.title}</h4>
+                    <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap tracking-[0.1em] bg-muted px-2 py-0.5 rounded">
                       {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: tr })}
                     </span>
                   </div>
                   <p className="text-[12px] font-medium text-muted-foreground truncate group-hover:text-foreground transition-colors leading-relaxed">
-                    <span className="font-black text-foreground">{item.user}</span> • {item.message}
+                    <span className="font-bold text-foreground">{item.user}</span> • {item.message}
                   </p>
                 </div>
               </div>
             </div>
           ))}
           {activity.length === 0 && (
-            <div className="p-10 text-center text-gray-600 text-[10px] font-bold  ">
+            <div className="p-10 text-center text-gray-600 text-[10px] font-bold">
               Henüz etkinlik yok.
             </div>
           )}

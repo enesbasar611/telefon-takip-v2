@@ -91,7 +91,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 h-12 px-8 bg-blue-600 text-white font-black   rounded-2xl hover:bg-blue-500  transition-all italic">
+        <Button className="gap-2 h-12 px-8 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-500 transition-all">
           <PlusCircle className="h-5 w-5" />
           <span>YENİ CİHAZ GİRİŞİ</span>
         </Button>
@@ -104,9 +104,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                  <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
                     <Smartphone className="h-6 w-6 text-blue-500" />
                  </div>
-                 <DialogTitle className="text-2xl font-black  ">Envanter Tanımlama</DialogTitle>
+                 <DialogTitle className="text-2xl font-bold">Envanter Tanımlama</DialogTitle>
               </div>
-              <DialogDescription className="text-xs font-medium text-slate-500  ">
+              <DialogDescription className="text-xs font-medium text-slate-500">
                 Sıfır veya İkinci el cihazları 2026 Orgelux standartlarında kaydedin.
               </DialogDescription>
             </DialogHeader>
@@ -114,12 +114,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black   text-slate-500">Cihaz Durumu</Label>
+                  <Label className="text-[10px] font-bold text-slate-500">Cihaz Durumu</Label>
                   <div className="flex gap-2 p-1.5 bg-slate-900/40 border border-border/10 rounded-2xl">
                     <Button
                       type="button"
                       variant="ghost"
-                      className={`flex-1 h-10 rounded-xl text-[10px] font-black   transition-all ${condition === "NEW" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
+                      className={`flex-1 h-10 rounded-xl text-[10px] font-bold transition-all ${condition === "NEW" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
                       onClick={() => setValue("condition", "NEW")}
                     >
                       <Zap className="h-3.5 w-3.5 mr-2" /> SIFIR
@@ -127,7 +127,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <Button
                       type="button"
                       variant="ghost"
-                      className={`flex-1 h-10 rounded-xl text-[10px] font-black   transition-all ${condition === "USED" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
+                      className={`flex-1 h-10 rounded-xl text-[10px] font-bold transition-all ${condition === "USED" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
                       onClick={() => setValue("condition", "USED")}
                     >
                       <ShieldCheck className="h-3.5 w-3.5 mr-2" /> 2. EL
@@ -138,16 +138,16 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black   text-slate-500">Marka</Label>
+                            <Label className="text-[10px] font-bold text-slate-500">Marka</Label>
                             <Input {...register("brand")} placeholder="Apple" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-[10px] font-black   text-slate-500">Model</Label>
+                            <Label className="text-[10px] font-bold text-slate-500">Model</Label>
                             <Input {...register("model")} placeholder="iPhone 15 Pro" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                         </div>
                     </div>
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500">IMEI Numarası</Label>
+                        <Label className="text-[10px] font-bold text-slate-500">IMEI Numarası</Label>
                         <Input {...register("imei")} maxLength={15} placeholder="352..." className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                     </div>
                 </div>
@@ -156,22 +156,22 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               <div className="space-y-6">
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500">Renk</Label>
+                        <Label className="text-[10px] font-bold text-slate-500">Renk</Label>
                         <Input {...register("color")} placeholder="Natural Titanium" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                     </div>
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500">Kapasite</Label>
+                        <Label className="text-[10px] font-bold text-slate-500">Kapasite</Label>
                         <Input {...register("capacity")} placeholder="256 GB" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                     </div>
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500">Batarya Sağlığı (%)</Label>
+                        <Label className="text-[10px] font-bold text-slate-500">Batarya Sağlığı (%)</Label>
                         <Input {...register("batteryHealth")} type="number" placeholder="100" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
                     </div>
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500">Kategori</Label>
+                        <Label className="text-[10px] font-bold text-slate-500">Kategori</Label>
                         <Select onValueChange={(v) => setValue("categoryId", v)}>
                             <SelectTrigger className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold">
                                 <SelectValue placeholder="Seç" />
@@ -187,12 +187,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
 
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500 italic">ALIŞ FİYATI (₺)</Label>
-                        <Input {...register("buyPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-black text-rose-500" />
+                        <Label className="text-[10px] font-bold text-slate-500">ALIŞ FİYATI (₺)</Label>
+                        <Input {...register("buyPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold text-rose-500" />
                     </div>
                     <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black   text-slate-500 italic text-blue-400">SATIŞ FİYATI (₺)</Label>
-                        <Input {...register("sellPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-black text-blue-400" />
+                        <Label className="text-[10px] font-bold text-slate-500 text-blue-400">SATIŞ FİYATI (₺)</Label>
+                        <Input {...register("sellPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold text-blue-400" />
                     </div>
                  </div>
               </div>
@@ -200,8 +200,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           <div className="p-10 border-t border-border/10/50 bg-slate-900/20 flex items-center justify-end gap-4">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-[10px] font-black   text-slate-500 hover:text-white">Vazgeç</Button>
-            <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-black   px-12 h-14 rounded-2xl  transition-all italic">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-[10px] font-bold text-slate-500 hover:text-white">Vazgeç</Button>
+            <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-12 h-14 rounded-2xl transition-all">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-5 w-5 mr-3" />}
               KAYDI TAMAMLA
             </Button>

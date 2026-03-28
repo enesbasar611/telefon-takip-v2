@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Trash, Edit } from "lucide-react";
 import { deleteCustomer } from "@/lib/actions/customer-actions";
 import { useToast } from "@/hooks/use-toast";
+import { cn, formatPhone } from "@/lib/utils";
 
 interface CustomerTableProps {
   data: any[];
@@ -47,12 +48,12 @@ export function CustomerTable({ data }: CustomerTableProps) {
   return (
     <div className="rounded-md border bg-card">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ad Soyad</TableHead>
-            <TableHead>Telefon</TableHead>
-            <TableHead>E-posta</TableHead>
-            <TableHead>Kayıt Tarihi</TableHead>
+        <TableHeader className="bg-slate-900/50">
+          <TableRow className="hover:bg-transparent border-white/5">
+            <TableHead className="text-xs font-bold text-slate-500">Ad Soyad</TableHead>
+            <TableHead className="text-xs font-bold text-slate-500">Telefon</TableHead>
+            <TableHead className="text-xs font-bold text-slate-500">E-posta</TableHead>
+            <TableHead className="text-xs font-bold text-slate-500">Kayıt Tarihi</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -65,11 +66,11 @@ export function CustomerTable({ data }: CustomerTableProps) {
             </TableRow>
           ) : (
             data.map((customer) => (
-              <TableRow key={customer.id}>
-                <TableCell className="font-medium">{customer.name}</TableCell>
-                <TableCell>{customer.phone}</TableCell>
-                <TableCell>{customer.email || "-"}</TableCell>
-                <TableCell className="text-xs">
+              <TableRow key={customer.id} className="hover:bg-white/[0.02] border-white/5">
+                <TableCell className="font-bold text-sm">{customer.name}</TableCell>
+                <TableCell className="font-bold text-xs text-blue-500">{formatPhone(customer.phone)}</TableCell>
+                <TableCell className="text-xs font-bold text-slate-400">{customer.email || "-"}</TableCell>
+                <TableCell className="text-xs font-bold text-slate-500">
                   {format(new Date(customer.createdAt), "dd MMM yyyy", { locale: tr })}
                 </TableCell>
                 <TableCell>

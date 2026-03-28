@@ -58,7 +58,12 @@ export async function createCustomer(data: {
   photo?: string;
 }) {
   try {
-    const customer = await prisma.customer.create({ data });
+    const customer = await prisma.customer.create({
+      data: {
+        ...data,
+        phone: data.phone || "" // Safety fallback
+      }
+    });
     revalidatePath("/musteriler");
     return { success: true, customer: serializePrisma(customer) };
   } catch (error) {

@@ -5,10 +5,10 @@ import { serializePrisma } from "@/lib/utils";
 export async function findCustomerByPhone(phone: string) {
   if (!phone) return null;
   const sanitizedPhone = phone.replace(/\D/g, "");
-  if (sanitizedPhone.length !== 10) return null;
+  if (sanitizedPhone.length < 7) return null;
 
-  const customer = await prisma.customer.findUnique({
-    where: { phone: sanitizedPhone },
+  const customer = await prisma.customer.findFirst({
+    where: { phone: { contains: sanitizedPhone } },
     include: {
       tickets: { orderBy: { createdAt: "desc" }, take: 3 },
       sales: { orderBy: { createdAt: "desc" }, take: 3 },
@@ -16,3 +16,18 @@ export async function findCustomerByPhone(phone: string) {
   });
   return serializePrisma(customer);
 }
+
+export async function findCustomerByName(name: string) {
+  if (!name || name.trim().length < 2) return [];
+  const customers = await prisma.customer.findMany({
+    where: { name: { contains: name.trim(), mode: "insensitive" } },
+    include: {
+      tickets: { orderBy: { createdAt: "desc" }, take: 3 },
+      sales: { orderBy: { createdAt: "desc" }, take: 3 },
+    },
+    take: 5,
+    orderBy: { createdAt: "desc" },
+  });
+  return serializePrisma(customers);
+}
+

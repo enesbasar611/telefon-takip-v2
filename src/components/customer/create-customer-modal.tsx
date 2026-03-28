@@ -16,9 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2 } from "lucide-react";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { useToast } from "@/hooks/use-toast";
+import { User, Phone, Mail, PlusCircle, Loader2 } from "lucide-react";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Ad Soyad en az 2 karakter olmalıdır"),
@@ -64,35 +64,52 @@ export function CreateCustomerModal() {
           <span>Yeni Müşteri Ekle</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Yeni Müşteri Kaydı</DialogTitle>
-            <DialogDescription>Müşteri portföyüne yeni bir kişi veya kurum ekleyin.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Ad Soyad / Firma</Label>
-              <Input id="name" {...register("name")} placeholder="Ahmet Yılmaz" />
-              {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+      <DialogContent className="sm:max-w-[500px] bg-slate-950 border-white/5 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-8 bg-slate-900/50 border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Yeni Müşteri Kaydı</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">Müşteri portföyüne yeni bir kişi veya kurum ekleyin.</DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="name" className="text-xs font-bold text-muted-foreground">Ad Soyad / Firma</Label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="name" {...register("name")} placeholder="Ahmet Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+              </div>
+              {errors.name && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.name.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
-              <Input id="phone" {...register("phone")} placeholder="05XX XXX XX XX" />
-              {errors.phone && <p className="text-xs text-red-500">{errors.phone.message}</p>}
+
+            <div className="space-y-3">
+              <Label htmlFor="phone" className="text-xs font-bold text-muted-foreground">Telefon Numarası</Label>
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-500/50">+90</span>
+                <Input id="phone" {...register("phone")} placeholder="5XX XXX XX XX" maxLength={10} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-14 text-sm font-bold" />
+              </div>
+              {errors.phone && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.phone.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-posta (Opsiyonel)</Label>
-              <Input id="email" {...register("email")} placeholder="ahmet@email.com" />
+
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-xs font-bold text-slate-500 tracking-[0.2em] ml-1">E-posta Adresi (Opsiyonel)</Label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+                <Input id="email" {...register("email")} placeholder="ahmet@email.com" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold focus:ring-0 focus:border-blue-500/30 transition-all" />
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Vazgeç</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Müşteriyi Kaydet
-            </Button>
-          </DialogFooter>
+
+          <div className="p-8 bg-slate-900/50 border-t border-white/5">
+            <DialogFooter className="gap-4">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl font-bold text-slate-400">Vazgeç</Button>
+              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl gap-3">
+                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
+                Müşteriyi Kaydet
+              </Button>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

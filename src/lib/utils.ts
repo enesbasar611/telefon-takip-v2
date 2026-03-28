@@ -74,3 +74,17 @@ export function serializePrisma<T>(data: T): any {
 
   return data;
 }
+
+/**
+ * Formats a 10-digit phone number to +90 (5XX) XXX XX XX
+ * Example: 5431234567 -> +90 (543) 123 45 67
+ */
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "").substring(0, 10);
+  if (cleaned.length < 10) return phone;
+  const part1 = cleaned.substring(0, 3);
+  const part2 = cleaned.substring(3, 6);
+  const part3 = cleaned.substring(6, 10);
+  return `+90 ${part1} ${part2} ${part3}`;
+}

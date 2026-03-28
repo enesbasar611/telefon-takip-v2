@@ -48,8 +48,8 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             </div>
           </div>
 
-          <DialogTitle className="text-3xl font-black text-white tracking-tight leading-none z-10">SATIŞ BAŞARILI</DialogTitle>
-          <p className="text-[10px] font-black text-emerald-400 mt-3 tracking-[0.3em] uppercase z-10">{sale.saleNumber} KAYDEDİLDİ</p>
+          <DialogTitle className="text-3xl font-bold text-white leading-none z-10">SATIŞ BAŞARILI</DialogTitle>
+          <p className="text-[10px] font-bold text-emerald-400 mt-3 tracking-[0.3em] z-10">{sale.saleNumber} KAYDEDİLDİ</p>
         </DialogHeader>
 
         <div className="p-8 space-y-6">
@@ -58,14 +58,14 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             <div className="bg-muted/30 p-4 rounded-2xl border border-white/5">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="h-3 w-3 text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500">TARİH</span>
+                <span className="text-[10px] font-bold text-slate-500">TARİH</span>
               </div>
               <p className="text-xs font-extrabold text-foreground">{sale.createdAt ? format(new Date(sale.createdAt), "dd MMM yyyy", { locale: tr }) : ""}</p>
             </div>
             <div className="bg-muted/30 p-4 rounded-2xl border border-white/5">
               <div className="flex items-center gap-2 mb-1">
                 <CreditCard className="h-3 w-3 text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500">ÖDEME</span>
+                <span className="text-[10px] font-bold text-slate-500">ÖDEME</span>
               </div>
               <p className="text-xs font-extrabold text-foreground">{sale.paymentMethod}</p>
             </div>
@@ -74,10 +74,10 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
           {/* Receipt Preview (Thermal Layout) */}
           <div className="receipt-preview bg-white text-black p-8 rounded-2xl shadow-inner border border-slate-200 font-mono text-[10px] leading-relaxed">
             <div className="text-center border-b border-black border-dashed pb-4 mb-4">
-              <h3 className="font-bold text-sm uppercase italic tracking-tighter">{settings?.title || "BAŞAR TEKNİK"}</h3>
+              <h3 className="font-bold text-sm">{settings?.title || "BAŞAR TEKNİK"}</h3>
               <p className="font-bold text-[9px] mt-0.5">{settings?.subtitle || "PROFESYONEL TEKNİK SERVİS"}</p>
               <p className="mt-1">Tel: {settings?.phone || "+90 (5xx) xxx xx xx"}</p>
-              {settings?.address && <p className="text-[8px] opacity-70 italic">{settings.address}</p>}
+              {settings?.address && <p className="text-[8px] opacity-70">{settings.address}</p>}
             </div>
 
             <div className="space-y-1 mb-4 border-b border-black border-dashed pb-3">
@@ -91,7 +91,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
               </div>
               <div className="flex justify-between">
                 <span>Müşteri:</span>
-                <span className="font-bold uppercase">{sale.customer?.name || "HIZLI SATIŞ"}</span>
+                <span className="font-bold">{sale.customer?.name || "HIZLI SATIŞ"}</span>
               </div>
             </div>
 
@@ -106,7 +106,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             </div>
 
             <div className="border-t border-black border-dashed pt-4 space-y-1.5">
-              <div className="flex justify-between text-xs font-black">
+              <div className="flex justify-between text-xs font-bold">
                 <span>GENEL TOPLAM:</span>
                 <span className="text-sm">₺{Number(sale.finalAmount).toFixed(2)}</span>
               </div>
@@ -125,7 +125,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
 
         <DialogFooter className="p-6 bg-slate-900/50 border-t border-white/5 gap-3">
           <Button variant="ghost" onClick={onClose} className="h-14 rounded-2xl font-bold text-slate-500 hover:text-white hover:bg-white/5">Vazgeç</Button>
-          <Button onClick={handlePrint} className="flex-1 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black gap-3 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">
+          <Button onClick={handlePrint} className="flex-1 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold gap-3 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">
             <Printer className="h-5 w-5" />
             FİŞİ YAZDIR
           </Button>

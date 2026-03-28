@@ -75,12 +75,12 @@ export function DeviceInspectionModal({
         <div className="p-8 space-y-8">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20 ">
+                <div className="h-10 w-10 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
                     <ShieldCheck className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                    <DialogTitle className="text-xl font-black  ">Cihaz Ekspertiz Raporu</DialogTitle>
-                    <p className="text-[10px] text-slate-500 font-bold   mt-0.5">{deviceName}</p>
+                    <DialogTitle className="text-xl font-bold">Cihaz Ekspertiz Raporu</DialogTitle>
+                    <p className="text-[10px] text-slate-500 font-bold mt-0.5">{deviceName}</p>
                 </div>
             </div>
           </DialogHeader>
@@ -88,7 +88,7 @@ export function DeviceInspectionModal({
           <div className="space-y-6">
             <div>
                 <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-black text-slate-500  ">KOZMETİK SKORU: {cosmeticScore}/10</span>
+                    <span className="text-[10px] font-bold text-slate-500">KOZMETİK SKORU: {cosmeticScore}/10</span>
                     <div className="flex gap-1">
                         {[...Array(10)].map((_, i) => (
                             <button
@@ -107,23 +107,13 @@ export function DeviceInspectionModal({
                 <div
                     key={item.id}
                     onClick={() => toggleCheck(item.id)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${
-                        results[item.id] === "OK"
-                        ? 'bg-emerald-600/5 border-emerald-500/20'
-                        : results[item.id] === "FAIL"
-                        ? 'bg-rose-600/5 border-rose-500/20'
-                        : 'bg-slate-900/40 border-border/10/60 hover:border-slate-700'
-                    }`}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${ results[item.id] === "OK" ? 'bg-emerald-600/5 border-emerald-500/20' : results[item.id] === "FAIL" ? 'bg-rose-600/5 border-rose-500/20' : 'bg-slate-900/40 border-border/10/60 hover:border-slate-700' }`}
                 >
                   <div className="flex items-center gap-3">
-                    <item.icon className={`h-4 w-4 ${
-                        results[item.id] === "OK" ? 'text-emerald-500' : results[item.id] === "FAIL" ? 'text-rose-500' : 'text-slate-500'
-                    }`} />
-                    <span className="text-[11px] font-black  ">{item.label}</span>
+                    <item.icon className={`h-4 w-4 ${ results[item.id] === "OK" ? 'text-emerald-500' : results[item.id] === "FAIL" ? 'text-rose-500' : 'text-slate-500' }`} />
+                    <span className="text-[11px] font-bold">{item.label}</span>
                   </div>
-                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-all ${
-                        results[item.id] === "OK" ? 'bg-emerald-500 text-white' : results[item.id] === "FAIL" ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-600'
-                  }`}>
+                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-all ${ results[item.id] === "OK" ? 'bg-emerald-500 text-white' : results[item.id] === "FAIL" ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-600' }`}>
                     {results[item.id] === "OK" ? <Check className="h-3 w-3 stroke-[4px]" /> : results[item.id] === "FAIL" ? <X className="h-3 w-3 stroke-[4px]" /> : <Info className="h-3 w-3" />}
                   </div>
                 </div>
@@ -135,11 +125,11 @@ export function DeviceInspectionModal({
         <div className="p-8 border-t border-border/10/50 bg-slate-900/20 flex items-center justify-between">
            <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-[9px] font-black text-slate-500  ">Sistem Onayına Hazır</span>
+                <span className="text-[9px] font-bold text-slate-500">Sistem Onayına Hazır</span>
            </div>
            <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={() => setOpen(false)} className="text-[10px] font-black   text-slate-500 hover:text-white">İptal</Button>
-                <Button onClick={handleSave} disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-black   px-8 h-12 rounded-2xl ">
+                <Button variant="ghost" onClick={() => setOpen(false)} className="text-[10px] font-bold text-slate-500 hover:text-white">İptal</Button>
+                <Button onClick={handleSave} disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 h-12 rounded-2xl">
                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "RAPORU KAYDET"}
                 </Button>
            </div>

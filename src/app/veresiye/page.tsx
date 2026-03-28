@@ -15,7 +15,7 @@ export default async function VeresiyePage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold ">Veresiye ve Alacaklar</h1>
+        <h1 className="text-3xl font-bold">Veresiye ve Alacaklar</h1>
         <p className="text-muted-foreground">Müşterilerden gelen açık alacakları ve vade takiplerini yönetin.</p>
       </div>
 
@@ -84,7 +84,7 @@ export default async function VeresiyePage() {
                 <TableBody>
                   {debts.filter((d: any) => !d.isPaid).length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground   font-medium bg-gray-50/50">Açık alacak kaydı bulunamadı.</TableCell>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground font-medium bg-gray-50/50">Açık alacak kaydı bulunamadı.</TableCell>
                     </TableRow>
                   ) : (
                     debts.filter((d: any) => !d.isPaid).map((debt: any) => (
@@ -98,7 +98,7 @@ export default async function VeresiyePage() {
                         <TableCell>₺{Number(debt.amount).toLocaleString('tr-TR')}</TableCell>
                         <TableCell className="font-bold text-red-600">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
                         <TableCell className="text-right">
-                          <Badge className="bg-blue-100 text-blue-800 border-none font-bold text-[10px]  ">BEKLEMEDE</Badge>
+                          <Badge className="bg-blue-100 text-blue-800 border-none font-bold text-[10px]">BEKLEMEDE</Badge>
                         </TableCell>
                       </TableRow>
                     ))
@@ -133,7 +133,7 @@ export default async function VeresiyePage() {
                                 <TableRow key={debt.id}>
                                     <TableCell className="font-bold">{debt.customer.name}</TableCell>
                                     <TableCell className="text-red-500 font-medium">{new Date(debt.dueDate).toLocaleDateString('tr-TR')}</TableCell>
-                                    <TableCell className="font-black">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
+                                    <TableCell className="font-bold">₺{Number(debt.remainingAmount).toLocaleString('tr-TR')}</TableCell>
                                 </TableRow>
                             ))
                         )}

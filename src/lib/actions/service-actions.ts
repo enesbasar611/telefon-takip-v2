@@ -257,7 +257,7 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
   }
 }
 
-export async function addPartToService(ticketId: string, productId: string, quantity: number) {
+export async function addPartToService(ticketId: string, productId: string, quantity: number, unitPrice?: number) {
   try {
     const user = await getOrCreateDevUser();
     const product = await prisma.product.findUnique({ where: { id: productId } });
@@ -270,7 +270,7 @@ export async function addPartToService(ticketId: string, productId: string, quan
           ticketId,
           productId,
           quantity,
-          unitPrice: product.sellPrice,
+          unitPrice: unitPrice !== undefined ? unitPrice : product.sellPrice,
           costPrice: product.buyPrice,
         }
       });

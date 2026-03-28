@@ -13,8 +13,8 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
   ];
 
   return (
-    <div className="h-[350px] w-full min-w-0 relative">
-      <ResponsiveContainer width="99%" height="100%">
+    <div className="w-full relative">
+      <ResponsiveContainer width="100%" height={350}>
         <PieChart>
           <Pie
             data={chartData}
@@ -43,8 +43,8 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-card border border-border p-3 rounded-xl shadow-2xl">
-                    <p className="text-[10px] font-black mb-1" style={{ color: payload[0].payload.color }}>{payload[0].name}</p>
-                    <p className="text-sm font-black text-foreground">{payload[0].value} Cihaz</p>
+                    <p className="text-[10px] font-bold mb-1" style={{ color: payload[0].payload.color }}>{payload[0].name}</p>
+                    <p className="text-sm font-bold text-foreground">{payload[0].value} Cihaz</p>
                   </div>
                 );
               }

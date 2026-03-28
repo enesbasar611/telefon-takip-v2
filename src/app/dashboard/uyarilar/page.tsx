@@ -22,11 +22,11 @@ export default async function BildirimlerPage() {
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
       <div className="flex items-center gap-5 mb-4">
-        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 ">
+        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
             <Bell className="h-7 w-7 text-blue-500" />
         </div>
         <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Sistem bildirimleri</h1>
+            <h1 className="text-4xl font-extrabold">Sistem bildirimleri</h1>
             <p className="text-xs text-muted-foreground font-medium mt-1">İşletmenizin kritik uyarıları ve operasyonel hatırlatıcıları</p>
         </div>
       </div>

@@ -19,7 +19,7 @@ export default async function StokPage() {
                 <Package className="h-8 w-8 text-primary" />
             </div>
             <div>
-                <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Envanter yönetimi</h1>
+                <h1 className="text-5xl font-extrabold text-foreground font-manrope">Envanter yönetimi</h1>
                 <p className="text-sm text-slate-500 font-medium mt-1">Yedek parça, aksesuar ve global stok envanteri</p>
             </div>
         </div>
@@ -44,9 +44,9 @@ export default async function StokPage() {
                 <TrendingUp className="h-6 w-6 text-slate-200" />
               </div>
               <div className="mt-8">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                <p className="text-xs font-bold text-slate-400 mb-1">{stat.label}</p>
                 <p className={cn(
-                    "text-5xl font-extrabold tracking-tighter font-manrope",
+                    "text-5xl font-extrabold font-manrope",
                     stat.label === 'Kritik stok' && stat.value > 0 ? 'text-rose-500' : 'text-foreground'
                 )}>{stat.value}</p>
               </div>

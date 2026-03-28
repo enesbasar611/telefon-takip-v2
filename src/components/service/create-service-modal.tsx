@@ -16,9 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, User, Smartphone, Hash, AlertCircle, Banknote, SmartphoneIcon } from "lucide-react";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -48,6 +50,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const {
     register,
@@ -76,6 +79,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
         });
         setOpen(false);
         reset();
+        router.refresh();
       } else {
         toast({
           title: "Hata",
@@ -96,62 +100,100 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Yeni Servis Kaydı Oluştur</DialogTitle>
-            <DialogDescription>
-              Müşteri ve cihaz bilgilerini girerek yeni bir teknik servis kaydı oluşturun.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Müşteri Ad Soyad</Label>
-                <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" />
-                {errors.customerName && <p className="text-xs text-red-500 font-medium">{errors.customerName.message}</p>}
+      <DialogContent className="sm:max-w-[600px] bg-slate-950 border-white/5 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="p-8 bg-slate-900/50 border-b border-white/5">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Yeni Servis Kaydı</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Müşteri ve cihaz bilgilerini girerek yeni bir teknik servis kaydı oluşturun.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-8 space-y-8">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="customerName" className="text-xs font-bold text-muted-foreground">Müşteri Ad Soyad</Label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                </div>
+                {errors.customerName && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.customerName.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerPhone">Telefon Numarası</Label>
-                <Input id="customerPhone" {...register("customerPhone")} placeholder="5XX XXX XX XX" maxLength={10} />
-                {errors.customerPhone && <p className="text-xs text-red-500 font-medium">{errors.customerPhone.message}</p>}
+
+              <div className="space-y-3">
+                <Label htmlFor="customerPhone" className="text-xs font-bold text-muted-foreground">Telefon Numarası</Label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-500/50">+90</span>
+                  <Input
+                    id="customerPhone"
+                    {...register("customerPhone")}
+                    placeholder="5XX XXX XX XX"
+                    maxLength={10}
+                    className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-14 text-sm font-bold"
+                  />
+                </div>
+                {errors.customerPhone && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.customerPhone.message}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="deviceBrand">Cihaz Markası</Label>
-                <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." />
-                {errors.deviceBrand && <p className="text-xs text-red-500 font-medium">{errors.deviceBrand.message}</p>}
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="deviceBrand" className="text-xs font-bold text-muted-foreground">Cihaz Markası</Label>
+                <div className="relative group">
+                  <SmartphoneIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                </div>
+                {errors.deviceBrand && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.deviceBrand.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deviceModel">Cihaz Modeli</Label>
-                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." />
-                {errors.deviceModel && <p className="text-xs text-red-500 font-medium">{errors.deviceModel.message}</p>}
+
+              <div className="space-y-3">
+                <Label htmlFor="deviceModel" className="text-xs font-bold text-muted-foreground">Cihaz Modeli</Label>
+                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-slate-900 border-white/5 rounded-2xl px-6 text-sm font-bold" />
+                {errors.deviceModel && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.deviceModel.message}</p>}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="imei">IMEI / Seri No (Opsiyonel)</Label>
-              <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} />
-              {errors.imei && <p className="text-xs text-red-500 font-medium">{errors.imei.message}</p>}
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="imei" className="text-xs font-bold text-muted-foreground">IMEI / Seri No</Label>
+                <div className="relative group">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                </div>
+                {errors.imei && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.imei.message}</p>}
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="estimatedCost" className="text-xs font-bold text-muted-foreground">Tahmini Ücret</Label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-500/50">₺</span>
+                  <Input id="estimatedCost" type="number" {...register("estimatedCost")} placeholder="0.00" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm font-bold transition-all tabular-nums text-emerald-500" />
+                </div>
+                {errors.estimatedCost && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.estimatedCost.message}</p>}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="problemDesc">Sorun Açıklaması</Label>
-              <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." />
-              {errors.problemDesc && <p className="text-xs text-red-500 font-medium">{errors.problemDesc.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="estimatedCost">Tahmini Ücret (₺)</Label>
-              <Input id="estimatedCost" type="number" {...register("estimatedCost")} placeholder="0.00" />
-              {errors.estimatedCost && <p className="text-xs text-red-500 font-medium">{errors.estimatedCost.message}</p>}
+
+            <div className="space-y-3">
+              <Label htmlFor="problemDesc" className="text-xs font-bold text-muted-foreground">Arıza Tanımı</Label>
+              <div className="relative group">
+                <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
+                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+              </div>
+              {errors.problemDesc && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.problemDesc.message}</p>}
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Vazgeç</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Kaydı Tamamla
-            </Button>
-          </DialogFooter>
+
+          <div className="p-8 bg-slate-900/50 border-t border-white/5">
+            <DialogFooter className="gap-4">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl font-bold text-slate-400">Vazgeç</Button>
+              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl gap-3 transition-all active:scale-95">
+                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
+                Kaydı Tamamla
+              </Button>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -14,7 +14,7 @@ export default async function TedarikcilerPage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold ">Tedarikçiler ve Satın Alma</h1>
+          <h1 className="text-3xl font-bold">Tedarikçiler ve Satın Alma</h1>
           <p className="text-muted-foreground">Mal alımı yaptığınız firmaları ve siparişleri yönetin.</p>
         </div>
         <CreateSupplierModal />

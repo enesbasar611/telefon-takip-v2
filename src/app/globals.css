@@ -106,14 +106,6 @@
     @apply font-sans;
   }
 
-  /* Allow uppercase where explicitly asked */
-  .uppercase {
-    text-transform: uppercase !important;
-  }
-
-  .tracking-widest {
-    letter-spacing: 0.15em !important;
-  }
 
   .helper-text {
     @apply text-muted-foreground font-medium;

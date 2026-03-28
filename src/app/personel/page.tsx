@@ -14,7 +14,7 @@ export default async function PersonelPage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold ">Personel ve Yetkiler</h1>
+          <h1 className="text-3xl font-bold">Personel ve Yetkiler</h1>
           <p className="text-muted-foreground">Ekibinizi yönetin ve performanslarını takip edin.</p>
         </div>
         <CreateStaffModal />
@@ -77,7 +77,7 @@ export default async function PersonelPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name || user.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-[10px] font-bold  ">{user.role}</Badge>
+                      <Badge variant="outline" className="text-[10px] font-bold">{user.role}</Badge>
                     </TableCell>
                     <TableCell>{user.assignedTickets?.length || 0}</TableCell>
                     <TableCell>{user.sales?.length || 0}</TableCell>

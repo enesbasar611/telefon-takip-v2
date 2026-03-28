@@ -1,76 +1,42 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ServiceTable } from "@/components/service/service-table";
-import { CreateServiceModal } from "@/components/service/create-service-modal";
 import { getServiceTickets } from "@/lib/actions/service-actions";
-import { ServiceStatus } from "@prisma/client";
-import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ServiceListTable } from "@/components/service/service-list-table";
+import { ServiceStats } from "@/components/service/service-stats";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ServicePage() {
+export default async function ServiceListPage() {
   const tickets = await getServiceTickets();
 
-  const filterByStatus = (status?: ServiceStatus) => {
-    if (!status) return tickets;
-    return tickets.filter((t: any) => t.status === status);
-  };
-
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold ">Servis Yönetimi</h1>
-          <p className="text-muted-foreground">Aktif ve geçmiş servis kayıtlarını yönetin.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-2 w-2 rounded-full bg-orange-500" />
+            <span className="text-[10px] font-bold text-muted-foreground tracking-wider">Operasyonel Takip</span>
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-bold text-foreground">Servis Merkezi</h1>
+          <p className="text-sm text-muted-foreground font-medium mt-2">Aktif teknik servis kayıtlarını ve cihaz durumlarını yönetin.</p>
         </div>
-        <CreateServiceModal />
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-7 overflow-x-auto">
-          <TabsTrigger value="all">Tümü</TabsTrigger>
-          <TabsTrigger value="PENDING">Beklemede</TabsTrigger>
-          <TabsTrigger value="APPROVED">Onay Bekliyor</TabsTrigger>
-          <TabsTrigger value="REPAIRING">Tamirde</TabsTrigger>
-          <TabsTrigger value="WAITING_PART">Parça Bekliyor</TabsTrigger>
-          <TabsTrigger value="READY">Hazır</TabsTrigger>
-          <TabsTrigger value="DELIVERED">Teslim Edildi</TabsTrigger>
-        </TabsList>
-        <Suspense fallback={<ServiceTableSkeleton />}>
-          <TabsContent value="all" className="mt-4">
-            <ServiceTable data={tickets} />
-          </TabsContent>
-          <TabsContent value="PENDING" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.PENDING)} />
-          </TabsContent>
-          <TabsContent value="APPROVED" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.APPROVED)} />
-          </TabsContent>
-          <TabsContent value="REPAIRING" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.REPAIRING)} />
-          </TabsContent>
-          <TabsContent value="WAITING_PART" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.WAITING_PART)} />
-          </TabsContent>
-          <TabsContent value="READY" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.READY)} />
-          </TabsContent>
-          <TabsContent value="DELIVERED" className="mt-4">
-            <ServiceTable data={filterByStatus(ServiceStatus.DELIVERED)} />
-          </TabsContent>
-        </Suspense>
-      </Tabs>
-    </div>
-  );
-}
+      <ServiceStats tickets={tickets} />
 
-function ServiceTableSkeleton() {
-  return (
-    <div className="space-y-3 mt-4">
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-20 w-full" />
-      <Skeleton className="h-20 w-full" />
-      <Skeleton className="h-20 w-full" />
+      <div className="matte-card p-0 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
+        <ServiceListTable data={tickets} />
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .matte-card {
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .shadow-orange-sm {
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
+        }
+      `}} />
     </div>
   );
 }

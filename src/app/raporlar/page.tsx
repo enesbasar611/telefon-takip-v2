@@ -32,7 +32,7 @@ export default async function RaporlarPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold ">Raporlar ve Analizler</h1>
+        <h1 className="text-3xl font-bold">Raporlar ve Analizler</h1>
         <p className="text-muted-foreground">İşletmenizin performansını profesyonel grafiklerle analiz edin.</p>
       </div>
 

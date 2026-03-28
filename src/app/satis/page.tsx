@@ -18,8 +18,8 @@ export default async function POSPage() {
                 <ShoppingCart className="h-6 w-6 text-secondary" />
             </div>
             <div>
-                <h1 className="text-3xl font-extrabold tracking-tighter text-foreground font-manrope uppercase">Hızlı satış (POS)</h1>
-                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
+                <h1 className="text-3xl font-extrabold text-foreground font-manrope">Hızlı satış (POS)</h1>
+                <p className="text-[11px] text-slate-500 font-bold mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
             </div>
         </div>
         <div className="flex items-center gap-3 px-4 py-2 bg-secondary/5 text-secondary border border-secondary/10 rounded-xl font-bold text-[10px] shadow-sm">

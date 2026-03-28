@@ -41,9 +41,9 @@ export function POSDrawer() {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden md:flex gap-2 text-[11px] font-black text-muted-foreground bg-muted/20 border border-border/50 rounded-full px-5 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group uppercase tracking-widest"
+          className="hidden md:flex gap-2 text-sm font-bold text-muted-foreground bg-muted/20 border border-border/50 rounded-xl px-5 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group"
         >
-          <ShoppingCart className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
+          <ShoppingCart className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           <span>Hızlı Satış</span>
         </Button>
       </SheetTrigger>
@@ -51,15 +51,15 @@ export function POSDrawer() {
         <div className="h-full flex flex-col">
           <SheetHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-slate-700/30">
             <div className="flex flex-col">
-              <SheetTitle className="text-2xl font-black text-white tracking-tight leading-none uppercase">Quick Sales</SheetTitle>
-              <SheetDescription className="text-slate-400 font-bold text-[11px] mt-1.5 uppercase tracking-widest leading-none">
-                Frequent Items & Cart
+              <SheetTitle className="text-2xl font-bold text-foreground leading-none">Hızlı Satış</SheetTitle>
+              <SheetDescription className="text-muted-foreground font-medium text-xs mt-1.5">
+                Sık kullanılan ürünler ve sepet yönetimi
               </SheetDescription>
             </div>
           </SheetHeader>
           <div className="flex-1 overflow-hidden relative">
             {loading ? (
-              <div className="h-full flex items-center justify-center text-slate-500 font-black animate-pulse uppercase tracking-widest">
+              <div className="h-full flex items-center justify-center text-slate-500 font-bold animate-pulse">
                 Veriler Yükleniyor...
               </div>
             ) : (

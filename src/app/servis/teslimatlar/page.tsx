@@ -16,7 +16,7 @@ export default async function ServiceTeslimatlarPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold ">Teslimatlar</h1>
+        <h1 className="text-3xl font-bold">Teslimatlar</h1>
         <p className="text-muted-foreground">Teslim edilmeye hazır ve teslim edilmiş cihazların takibi.</p>
       </div>
 

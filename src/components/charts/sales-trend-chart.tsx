@@ -8,8 +8,8 @@ interface SalesTrendChartProps {
 
 export function SalesTrendChart({ data }: SalesTrendChartProps) {
   return (
-    <div className="h-[350px] w-full min-w-0 relative">
-      <ResponsiveContainer width="99%" height="100%">
+    <div className="w-full relative">
+      <ResponsiveContainer width="100%" height={350}>
         <BarChart data={data ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -37,8 +37,8 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-card border border-border p-3 rounded-xl shadow-2xl">
-                    <p className="text-[10px] font-black text-slate-500 mb-1">{label}</p>
-                    <p className="text-sm font-black text-primary">₺{Number(payload[0].value).toLocaleString('tr-TR')}</p>
+                    <p className="text-[10px] font-bold text-slate-500 mb-1">{label}</p>
+                    <p className="text-sm font-bold text-primary">₺{Number(payload[0].value).toLocaleString('tr-TR')}</p>
                   </div>
                 );
               }

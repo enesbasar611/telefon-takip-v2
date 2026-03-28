@@ -123,7 +123,7 @@ export function CurrencyConverterModal({ rates, trigger }: CurrencyConverterModa
       <DialogContent className="bg-card border-border rounded-xl p-10 max-w-2xl shadow-2xl">
         <DialogHeader className="flex flex-row items-center justify-between mb-8">
           <div>
-            <DialogTitle className="text-2xl font-extrabold tracking-tight">Döviz ve altın çevirici</DialogTitle>
+            <DialogTitle className="text-2xl font-extrabold">Döviz ve altın çevirici</DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">Canlı kurlar üzerinden anlık hesaplama yapın</p>
           </div>
           <Button

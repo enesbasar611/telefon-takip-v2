@@ -52,9 +52,9 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
         <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
           <SettingsIcon className="h-8 w-8 text-primary" />
         </div>
-        <div>
-          <h1 className="text-5xl font-extrabold tracking-tighter text-foreground font-manrope">Sistem ayarları</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">İşletme mimarisi ve sistem parametreleri</p>
+        <div className="flex-1 space-y-2">
+          <h1 className="text-5xl font-bold text-foreground">Sistem Ayarları</h1>
+          <p className="text-muted-foreground font-medium">Platform parametrelerini ve işletme bilgilerini özelleştirin.</p>
         </div>
       </div>
 
@@ -81,22 +81,22 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
         <TabsContent value="general" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 border-none rounded-2xl bg-card overflow-hidden">
             <CardHeader className="p-10 border-b border-slate-100 dark:border-white/5 bg-muted/20">
-              <CardTitle className="text-2xl font-extrabold font-manrope">Firma bilgileri</CardTitle>
+              <CardTitle className="text-2xl font-bold">Firma bilgileri</CardTitle>
               <CardDescription className="text-slate-500 font-medium mt-1">Sistem genelinde ve fişlerde kullanılacak kurumsal kimlik verileri</CardDescription>
             </CardHeader>
             <CardContent className="p-10 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label htmlFor="companyName" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Firma adı</Label>
+                  <Label htmlFor="companyName" className="text-xs font-bold text-slate-400 ml-1">Firma adı</Label>
                   <Input id="companyName" value={formData.companyName} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
                 </div>
                 <div className="space-y-3">
-                  <Label htmlFor="companyPhone" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">İletişim hattı</Label>
+                  <Label htmlFor="companyPhone" className="text-xs font-bold text-slate-400 ml-1">İletişim hattı</Label>
                   <Input id="companyPhone" value={formData.companyPhone} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
                 </div>
               </div>
               <div className="space-y-3">
-                <Label htmlFor="companyAddress" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Global adres bilgisi</Label>
+                <Label htmlFor="companyAddress" className="text-xs font-bold text-slate-400 ml-1">Global adres bilgisi</Label>
                 <Input id="companyAddress" value={formData.companyAddress} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
               </div>
               <div className="pt-4">
@@ -117,22 +117,22 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
             </CardHeader>
             <CardContent className="p-10 space-y-10">
               <div className="space-y-4">
-                <Label htmlFor="whatsappNewService" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Yeni servis kabul mesajı</Label>
+                <Label htmlFor="whatsappNewService" className="text-xs font-bold text-slate-400 ml-1">Yeni servis kabul mesajı</Label>
                 <div className="relative">
                   <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
                   <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10">
                     <span className="text-[10px] font-bold text-blue-500">PARAMETRELER:</span>
-                    <span className="text-[10px] font-medium text-blue-400 italic">{' {customer}, {device}, {ticket}'}</span>
+                    <span className="text-[10px] font-medium text-blue-400">{' {customer}, {device}, {ticket}'}</span>
                   </div>
                 </div>
               </div>
               <div className="space-y-4">
-                <Label htmlFor="whatsappReady" className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Cihaz onarım tamamlandı mesajı</Label>
+                <Label htmlFor="whatsappReady" className="text-xs font-bold text-slate-400 ml-1">Cihaz onarım tamamlandı mesajı</Label>
                 <div className="relative">
                   <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} className="h-20 text-sm font-bold px-6 pt-2 shadow-sm" />
                   <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
                     <span className="text-[10px] font-bold text-emerald-500">PARAMETRELER:</span>
-                    <span className="text-[10px] font-medium text-emerald-400 italic">{' {customer}, {device}'}</span>
+                    <span className="text-[10px] font-medium text-emerald-400">{' {customer}, {device}'}</span>
                   </div>
                 </div>
               </div>

@@ -86,7 +86,7 @@ export function DashboardCore({
       {/* Editorial Header Section - Reference: Image 2 */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-6">
         <div className="flex flex-col gap-3">
-          <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-foreground font-sans">
+          <h1 className="text-4xl lg:text-5xl font-bold text-foreground font-sans">
             Panel Özeti
           </h1>
           <p className="text-[15px] text-muted-foreground font-medium max-w-2xl leading-relaxed">
@@ -95,16 +95,16 @@ export function DashboardCore({
         </div>
         <div className="flex items-center gap-6 bg-card border border-border/50 px-6 py-4 rounded-[1.5rem] shadow-sm">
           <div className="flex flex-col">
-            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1.5">SİSTEM DURUMU</span>
+            <span className="text-[11px] font-bold text-muted-foreground leading-none mb-1.5">SİSTEM DURUMU</span>
             <div className="flex items-center gap-2.5">
               <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              <span className="text-sm font-black text-emerald-500 uppercase tracking-tight">Aktif ve Stabil</span>
+              <span className="text-sm font-bold text-emerald-500">Aktif ve Stabil</span>
             </div>
           </div>
           <div className="h-10 w-px bg-border/50" />
           <div className="flex flex-col">
-            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1.5">GÜNCELLEME</span>
-            <span className="text-sm font-black text-foreground uppercase tracking-tight">ANLIK</span>
+            <span className="text-[11px] font-bold text-muted-foreground leading-none mb-1.5">GÜNCELLEME</span>
+            <span className="text-sm font-bold text-foreground">ANLIK</span>
           </div>
         </div>
       </div>
@@ -128,13 +128,13 @@ export function DashboardCore({
                 </div>
                 <div className="flex flex-col items-end">
                   {stat.trend && (
-                    <span className="text-[11px] font-black bg-muted px-4 py-1.5 rounded-full border border-border/50 uppercase tracking-widest text-secondary-foreground/80">
+                    <span className="text-[11px] font-bold bg-muted px-4 py-1.5 rounded-full border border-border/50 text-secondary-foreground/80">
                       {stat.trend}
                     </span>
                   )}
                   {stat.badge && (
                     <span className={cn(
-                      "text-[11px] font-black px-4 py-1.5 rounded-full border border-border/50 uppercase tracking-widest",
+                      "text-[11px] font-bold px-4 py-1.5 rounded-full border border-border/50",
                       stat.colorClass,
                       stat.bgClass
                     )}>
@@ -145,12 +145,12 @@ export function DashboardCore({
               </div>
 
               <div className="mt-12 relative">
-                <p className="text-[11px] font-black mb-3 text-muted-foreground uppercase tracking-[0.2em]">{stat.label}</p>
+                <p className="text-[11px] font-bold mb-3 text-muted-foreground tracking-[0.2em]">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
                   {typeof stat.value === 'string' && stat.value.includes('₺') ? (
-                    <RevealFinancial amount={stat.value} className={cn("text-5xl font-black tracking-tighter font-sans", stat.colorClass)} />
+                    <RevealFinancial amount={stat.value} className={cn("text-5xl font-bold font-sans", stat.colorClass)} />
                   ) : (
-                    <h3 className={cn("text-6xl font-black tracking-tighter font-sans", stat.colorClass)}>{stat.value}</h3>
+                    <h3 className={cn("text-6xl font-bold font-sans", stat.colorClass)}>{stat.value}</h3>
                   )}
                 </div>
               </div>
@@ -165,18 +165,18 @@ export function DashboardCore({
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 pb-8 p-10 bg-muted/10">
             <div className="flex items-center gap-8">
               <div>
-                <CardTitle className="text-2xl font-black font-sans uppercase tracking-tight">Gelir Analizi</CardTitle>
+                <CardTitle className="text-2xl font-bold font-sans">Gelir Analizi</CardTitle>
                 <p className="text-sm text-muted-foreground font-medium mt-1">Son 30 günlük trend ve büyüme verileri.</p>
               </div>
               <div className="h-12 w-px bg-border/50" />
               <div className="flex gap-12">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Toplam gelir</span>
-                  <span className="text-xl font-black text-foreground tracking-tighter">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
+                  <span className="text-[11px] font-bold text-muted-foreground tracking-[0.2em] mb-1">Toplam gelir</span>
+                  <span className="text-xl font-bold text-foreground">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Net kar</span>
-                  <span className="text-xl font-black text-secondary tracking-tighter">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
+                  <span className="text-[11px] font-bold text-muted-foreground tracking-[0.2em] mb-1">Net kar</span>
+                  <span className="text-xl font-bold text-secondary">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
                 </div>
               </div>
             </div>
@@ -185,10 +185,8 @@ export function DashboardCore({
               <span className="text-xs font-bold text-slate-600">Canlı Veri</span>
             </div>
           </CardHeader>
-          <CardContent className="pt-8">
-            <div className="h-[300px]">
-              <SalesTrendChart data={salesTrend} />
-            </div>
+          <CardContent className="pt-8 w-full">
+            <SalesTrendChart data={salesTrend} />
           </CardContent>
         </Card>
 
@@ -200,20 +198,18 @@ export function DashboardCore({
         <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 overflow-hidden group rounded-2xl bg-card border border-border/5 transition-all duration-500 hover:-translate-y-2 hover:shadow-3xl">
           <CardHeader className="flex flex-row items-center justify-between border-none p-10 pb-4">
             <div>
-              <CardTitle className="text-xl font-extrabold font-sans uppercase">Servis kapasite analizi</CardTitle>
+              <CardTitle className="text-xl font-extrabold font-sans">Servis kapasite analizi</CardTitle>
               <p className="text-xs text-muted-foreground font-medium mt-1 font-bold">Anlık iş yükü ve kuyruk dağılımı</p>
             </div>
             <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10 shadow-sm">
               <Target className="h-6 w-6 text-primary" />
             </div>
           </CardHeader>
-          <CardContent className="relative pt-6">
-            <div className="h-[300px]">
-              <ServiceStatusChart data={serviceMetrics} />
-            </div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-10">
-              <span className="text-5xl font-extrabold block text-foreground drop-shadow-none font-sans uppercase">{totalServiceUnits}</span>
-              <span className="text-xs text-muted-foreground font-black uppercase tracking-widest">Cihaz yükü</span>
+          <CardContent className="relative pt-6 w-full">
+            <ServiceStatusChart data={serviceMetrics} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center mt-10 pointer-events-none">
+              <span className="text-5xl font-extrabold block text-foreground drop-shadow-none font-sans">{totalServiceUnits}</span>
+              <span className="text-xs text-muted-foreground font-bold">Cihaz yükü</span>
             </div>
           </CardContent>
         </Card>
@@ -231,11 +227,11 @@ export function DashboardCore({
             <Card className="border border-border/5 shadow-2xl shadow-slate-200/40 overflow-hidden rounded-2xl bg-card transition-all duration-500 hover:-translate-y-2 hover:shadow-3xl">
               <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20 ">
+                  <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
                     <History className="h-5 w-5 text-secondary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-black uppercase tracking-tight">Finansal kayıtlar</CardTitle>
+                    <CardTitle className="text-xl font-bold">Finansal kayıtlar</CardTitle>
                     <p className="text-[13px] text-muted-foreground font-medium mt-1">Gerçek zamanlı işlemler</p>
                   </div>
                 </div>
@@ -249,7 +245,7 @@ export function DashboardCore({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-[12px] font-black text-muted-foreground bg-muted/20 uppercase tracking-[0.1em]">
+                      <tr className="text-[12px] font-bold text-muted-foreground bg-muted/20 tracking-[0.1em]">
                         <th className="px-8 py-5">Müşteri & Tarih</th>
                         <th className="px-6 py-5">İşlem Detayı</th>
                         <th className="px-6 py-5">Net Tutar</th>
@@ -263,16 +259,16 @@ export function DashboardCore({
                           idx % 2 === 0 ? "bg-transparent" : "bg-slate-50 dark:bg-white/[0.03]"
                         )}>
                           <td className="px-8 py-6">
-                            <div className="font-black text-foreground text-[14px] group-hover:text-primary transition-colors uppercase tracking-tight">{t.sale?.customer?.name || "Hızlı Satış"}</div>
-                            <div className="text-[11px] text-muted-foreground font-black mt-1 uppercase tracking-widest">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
+                            <div className="font-bold text-foreground text-[14px] group-hover:text-primary transition-colors">{t.sale?.customer?.name || "Hızlı Satış"}</div>
+                            <div className="text-[11px] text-muted-foreground font-bold mt-1">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                           </td>
                           <td className="px-6 py-6 text-[13px] text-foreground/80 font-medium">{t.description}</td>
                           <td className="px-6 py-6">
-                            <RevealFinancial amount={t.amount} className="text-sm font-black tracking-tight" />
+                            <RevealFinancial amount={t.amount} className="text-sm font-bold" />
                           </td>
                           <td className="px-8 py-6 text-right">
                             <Badge variant="outline" className={cn(
-                              "text-[9px] font-black border-none px-4 py-1.5 rounded-full shadow-sm",
+                              "text-[9px] font-bold border-none px-4 py-1.5 rounded-full shadow-sm",
                               t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive'
                             )}>
                               {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
@@ -290,16 +286,16 @@ export function DashboardCore({
             <Card className="border border-border/5 shadow-2xl shadow-slate-200/40 overflow-hidden rounded-2xl bg-card transition-all duration-500 hover:-translate-y-2 hover:shadow-3xl">
               <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 ">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                     <Smartphone className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-black uppercase tracking-tight">Servis kuyruğu</CardTitle>
+                    <CardTitle className="text-xl font-bold">Servis kuyruğu</CardTitle>
                     <p className="text-[13px] text-muted-foreground font-medium mt-1">İşlemdeki son cihazlar</p>
                   </div>
                 </div>
                 <Link href="/servis/liste">
-                  <Button variant="ghost" className="text-xs font-black text-primary hover:bg-primary/10 group h-10 rounded-2xl px-6 transition-all">
+                  <Button variant="ghost" className="text-xs font-bold text-primary hover:bg-primary/10 group h-10 rounded-2xl px-6 transition-all">
                     Kuyruğu yönet <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
@@ -316,21 +312,21 @@ export function DashboardCore({
                         <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-secondary border-4 border-white dark:border-slate-900 animate-pulse" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-base text-foreground group-hover:text-primary transition-colors font-sans uppercase">{ticket.deviceBrand} {ticket.deviceModel}</h4>
-                        <p className="text-xs text-muted-foreground font-bold mt-1.5 uppercase tracking-tight">
-                          {ticket.customer?.name} • <span className="text-primary font-black">#{ticket.ticketNumber}</span>
+                        <h4 className="font-extrabold text-base text-foreground group-hover:text-primary transition-colors font-sans">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                        <p className="text-xs text-muted-foreground font-bold mt-1.5">
+                          {ticket.customer?.name} • <span className="text-primary font-bold">#{ticket.ticketNumber}</span>
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <Badge
                         variant="outline"
-                        className="text-[11px] font-black border-none mb-2 px-5 py-2 rounded-2xl uppercase tracking-widest"
+                        className="text-[11px] font-bold border-none mb-2 px-5 py-2 rounded-2xl"
                         style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
                       >
                         {statusLabels[ticket.status]}
                       </Badge>
-                      <p className="text-[11px] text-muted-foreground font-black uppercase tracking-tight">
+                      <p className="text-[11px] text-muted-foreground font-bold">
                         {ticket.technician?.name || "Atanmamış"}
                       </p>
                     </div>
@@ -344,7 +340,7 @@ export function DashboardCore({
           <Card className="border border-border/5 shadow-2xl shadow-slate-200/40 overflow-hidden mt-4 rounded-2xl bg-card transition-all duration-500 hover:-translate-y-2 hover:shadow-3xl">
             <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 ">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>

@@ -7,11 +7,11 @@ export default function ServiceIadePage() {
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
       <div className="flex items-center gap-5 mb-4">
-        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 ">
+        <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
             <ShieldCheck className="h-7 w-7 text-blue-500" />
         </div>
         <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Garanti ve iade yönetimi</h1>
+            <h1 className="text-4xl font-extrabold">Garanti ve iade yönetimi</h1>
             <p className="text-xs text-muted-foreground font-medium mt-1">Tamir garanti süreleri ve iade talepleri kontrol merkezi</p>
         </div>
       </div>
@@ -23,7 +23,7 @@ export default function ServiceIadePage() {
             <ShieldCheck className="h-5 w-5 text-emerald-600" />
           </CardHeader>
           <CardContent className="p-8 pt-0">
-            <div className="text-4xl font-extrabold text-emerald-600 tracking-tight">42</div>
+            <div className="text-4xl font-extrabold text-emerald-600">42</div>
             <p className="text-xs text-emerald-600/60 font-medium mt-2">Süresi devam eden cihazlar</p>
           </CardContent>
         </Card>
@@ -33,7 +33,7 @@ export default function ServiceIadePage() {
             <History className="h-5 w-5 text-amber-600" />
           </CardHeader>
           <CardContent className="p-8 pt-0">
-            <div className="text-4xl font-extrabold text-amber-600 tracking-tight">156</div>
+            <div className="text-4xl font-extrabold text-amber-600">156</div>
             <p className="text-xs text-amber-600/60 font-medium mt-2">Süresi dolan eski tamirler</p>
           </CardContent>
         </Card>
@@ -43,7 +43,7 @@ export default function ServiceIadePage() {
             <AlertCircle className="h-5 w-5 text-rose-600" />
           </CardHeader>
           <CardContent className="p-8 pt-0">
-            <div className="text-4xl font-extrabold text-rose-600 tracking-tight">2</div>
+            <div className="text-4xl font-extrabold text-rose-600">2</div>
             <p className="text-xs text-rose-600/60 font-medium mt-2">Bekleyen iade veya tekrar tamir</p>
           </CardContent>
         </Card>
@@ -58,12 +58,12 @@ export default function ServiceIadePage() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="border-b border-border">
-                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Fiş no</TableHead>
-                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Müşteri</TableHead>
-                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Cihaz</TableHead>
-                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">İşlem</TableHead>
-                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight">Durum</TableHead>
-                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground uppercase tracking-tight text-right">Garanti bitiş</TableHead>
+                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground">Fiş no</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground">Müşteri</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground">Cihaz</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground">İşlem</TableHead>
+                <TableHead className="px-6 py-5 text-xs font-bold text-muted-foreground">Durum</TableHead>
+                <TableHead className="px-8 py-5 text-xs font-bold text-muted-foreground text-right">Garanti bitiş</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

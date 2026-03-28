@@ -23,16 +23,31 @@ export default async function DashboardPage() {
 
   if (!statsData) return <div className="p-12 text-center text-muted-foreground animate-pulse">Analitik veriler hazırlanıyor...</div>;
 
+  const serializeDecimals = (data: any): any => {
+    if (data === null || data === undefined) return data;
+    if (typeof data.toNumber === 'function') return data.toNumber();
+    if (Array.isArray(data)) return data.map(serializeDecimals);
+    if (typeof data === 'object') {
+      if (data.constructor && data.constructor.name === 'Decimal') return Number(data);
+      const res: any = {};
+      for (const key of Object.keys(data)) {
+        res[key] = serializeDecimals(data[key]);
+      }
+      return res;
+    }
+    return data;
+  };
+
   return (
     <DashboardCore
-      statsData={statsData}
-      recentTicketsRaw={recentTicketsRaw}
-      recentTransactions={recentTransactions}
-      topProducts={topProducts}
-      salesTrend={salesTrend}
-      serviceMetricsRaw={serviceMetricsRaw}
-      liveActivity={liveActivity}
-      profitMatrix={profitMatrix}
+      statsData={serializeDecimals(statsData)}
+      recentTicketsRaw={serializeDecimals(recentTicketsRaw)}
+      recentTransactions={serializeDecimals(recentTransactions)}
+      topProducts={serializeDecimals(topProducts)}
+      salesTrend={serializeDecimals(salesTrend)}
+      serviceMetricsRaw={serializeDecimals(serviceMetricsRaw)}
+      liveActivity={serializeDecimals(liveActivity)}
+      profitMatrix={serializeDecimals(profitMatrix)}
     />
   );
 }

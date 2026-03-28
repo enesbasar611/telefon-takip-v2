@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { updateServiceStatus, deleteServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, formatPhone } from "@/lib/utils";
 import { formatWhatsAppLink, WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import Link from "next/link";
 
@@ -101,19 +101,19 @@ export function ServiceTable({ data }: ServiceTableProps) {
       <Table>
         <TableHeader className="bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
-            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500  ">Fiş No</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Müşteri</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Cihaz Analizi</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">İşlem Durumu</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500  ">Kayıt Tarihi</TableHead>
-            <TableHead className="py-6 text-[10px] font-black text-gray-500   text-right">Maliyet</TableHead>
-            <TableHead className="px-8 py-6 text-[10px] font-black text-gray-500   text-right">Aksiyon</TableHead>
+            <TableHead className="px-8 py-6 text-xs font-bold text-muted-foreground">Fiş No</TableHead>
+            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Müşteri</TableHead>
+            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Cihaz Analizi</TableHead>
+            <TableHead className="py-6 text-xs font-bold text-muted-foreground">İşlem Durumu</TableHead>
+            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Kayıt Tarihi</TableHead>
+            <TableHead className="py-6 text-xs font-bold text-muted-foreground text-right">Maliyet</TableHead>
+            <TableHead className="px-8 py-6 text-xs font-bold text-muted-foreground text-right">Aksiyon</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-40 text-center text-[10px] font-black text-gray-600   bg-card/50">
+              <TableCell colSpan={7} className="h-40 text-center text-sm font-medium text-muted-foreground bg-card/50">
                 Kayıtlı veri bulunamadı.
               </TableCell>
             </TableRow>
@@ -121,47 +121,47 @@ export function ServiceTable({ data }: ServiceTableProps) {
             data.map((ticket) => (
               <TableRow key={ticket.id} className="border-b border-white/[0.03] group hover:bg-white/[0.01] transition-colors">
                 <TableCell className="px-8 py-6">
-                    <span className="font-black text-xs text-white   ">#{ticket.ticketNumber}</span>
+                  <span className="font-bold text-sm text-foreground">#{ticket.ticketNumber}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-black text-xs text-white   group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
-                    <span className="text-[9px] text-gray-600 font-bold  ">{ticket.customer.phone}</span>
+                    <span className="font-bold text-sm text-foreground group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
+                    <span className="text-xs text-muted-foreground font-medium">{formatPhone(ticket.customer.phone)}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-white/[0.02] whisper-border border-white/5 flex items-center justify-center group-hover:bg-white/5 transition-all">
-                        <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                      <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="font-black text-xs text-white  ">{ticket.deviceBrand} {ticket.deviceModel}</span>
-                        <span className="text-[9px] text-gray-600 font-bold   truncate max-w-[120px]">"{ticket.problemDesc}"</span>
+                      <span className="font-bold text-sm text-foreground">{ticket.deviceBrand} {ticket.deviceModel}</span>
+                      <span className="text-xs text-muted-foreground font-medium truncate max-w-[150px]">"{ticket.problemDesc}"</span>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none font-black text-[9px]   px-3 py-1.5 rounded-xl transition-all`} variant="outline">
+                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none font-bold text-xs px-4 py-2 rounded-xl transition-all`} variant="outline">
                     {statusMap[ticket.status as ServiceStatus].label}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-[9px] font-black text-gray-500  ">
+                <TableCell className="text-xs font-medium text-muted-foreground">
                   {format(new Date(ticket.createdAt), "dd MMM, HH:mm", { locale: tr })}
                 </TableCell>
-                <TableCell className="text-right font-black text-sm text-white ">
+                <TableCell className="text-right font-bold text-lg text-emerald-500">
                   ₺{Number(ticket.estimatedCost).toLocaleString("tr-TR")}
                 </TableCell>
                 <TableCell className="px-8">
                   <div className="flex items-center justify-end gap-2">
                     <Link href={`/servis/${ticket.id}`}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
-                            title="Detayları Görüntüle"
-                        >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
+                        title="Detayları Görüntüle"
+                      >
                         <Eye className="h-4 w-4" />
-                        </Button>
+                      </Button>
                     </Link>
                     <Button
                       variant="ghost"
@@ -178,27 +178,27 @@ export function ServiceTable({ data }: ServiceTableProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-white/5 text-white p-2 min-w-[200px] shadow-none">
-                        <DropdownMenuLabel className="text-[10px]   font-black text-gray-500 p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="bg-card border-white/5 text-foreground p-2 min-w-[200px] shadow-none">
+                        <DropdownMenuLabel className="text-xs font-bold text-muted-foreground p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/5" />
                         {Object.entries(statusMap).map(([status, info]) => (
                           <DropdownMenuItem
                             key={status}
                             onClick={() => handleStatusUpdate(ticket.id, status as ServiceStatus)}
                             disabled={ticket.status === status}
-                            className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group  "
+                            className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
                           >
                             <div className={cn("w-2 h-2 rounded-full", info.color.split(' ')[0])} />
                             {info.label} Yap
                           </DropdownMenuItem>
                         ))}
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem asChild className="p-3 text-[10px] font-black rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center  ">
-                            <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank" className="w-full flex items-center gap-3">
-                                <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
-                            </Link>
+                        <DropdownMenuItem asChild className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center">
+                          <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank" className="w-full flex items-center gap-3">
+                            <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="p-3 text-[10px] font-black rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center  " onClick={() => handleDelete(ticket.id)}>
+                        <DropdownMenuItem className="p-3 text-xs font-medium rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center" onClick={() => handleDelete(ticket.id)}>
                           <Trash className="h-4 w-4" /> Kaydı Arşivle
                         </DropdownMenuItem>
                       </DropdownMenuContent>

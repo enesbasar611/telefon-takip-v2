@@ -106,7 +106,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
           </div>
           <div>
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-4xl font-extrabold tracking-tight">{customer.name}</h1>
+              <h1 className="text-4xl font-extrabold">{customer.name}</h1>
               {customer.isVip && (
                 <Badge className="bg-blue-500 text-white border-none font-bold text-[10px] px-4 py-1.5 rounded-xl animate-pulse">Vip üye</Badge>
               )}
@@ -166,7 +166,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </div>
                     <Progress value={tier.percent} className="h-2 bg-muted [&>div]:bg-blue-500 rounded-full" />
                     {tier.next > 0 && (
-                        <p className="text-[10px] text-muted-foreground font-medium italic text-center">
+                        <p className="text-[10px] text-muted-foreground font-medium text-center">
                            Bir sonraki seviye için {tier.next - customer.loyaltyPoints} puan daha gerekiyor.
                         </p>
                     )}
@@ -182,8 +182,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         <Wallet className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Toplam işlem hacmi</p>
-                        <h3 className="text-4xl font-extrabold tracking-tight">₺{totalRevenue.toLocaleString('tr-TR')}</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1">Toplam işlem hacmi</p>
+                        <h3 className="text-4xl font-extrabold">₺{totalRevenue.toLocaleString('tr-TR')}</h3>
                     </div>
                 </CardContent>
             </Card>
@@ -194,8 +194,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         <Wrench className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Aktif servis adedi</p>
-                        <h3 className="text-4xl font-extrabold tracking-tight">{activeTicketsCount} cihaz</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1">Aktif servis adedi</p>
+                        <h3 className="text-4xl font-extrabold">{activeTicketsCount} cihaz</h3>
                     </div>
                 </CardContent>
             </Card>
@@ -206,8 +206,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         <ArrowDownCircle className="h-7 w-7" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-muted-foreground mb-1 uppercase tracking-tight">Güncel borç bakiyesi</p>
-                        <h3 className="text-4xl font-extrabold tracking-tight text-rose-500">₺{totalDebt.toLocaleString('tr-TR')}</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1">Güncel borç bakiyesi</p>
+                        <h3 className="text-4xl font-extrabold text-rose-500">₺{totalDebt.toLocaleString('tr-TR')}</h3>
                     </div>
                 </CardContent>
             </Card>
@@ -216,10 +216,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
             <div className="col-span-1 md:col-span-3">
                 <Tabs defaultValue="history" className="w-full">
                     <TabsList className="bg-muted/30 border-b border-border w-full justify-start rounded-none h-auto p-0 gap-10 mb-8 overflow-x-auto">
-                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">İşlem arşivi</TabsTrigger>
-                        <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Kullanılan parçalar</TabsTrigger>
-                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Aktif garantiler</TabsTrigger>
-                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all uppercase tracking-tight">Müşteri notları</TabsTrigger>
+                        <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">İşlem arşivi</TabsTrigger>
+                        <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Kullanılan parçalar</TabsTrigger>
+                        <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Aktif garantiler</TabsTrigger>
+                        <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Müşteri notları</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="history" className="space-y-6 outline-none">
@@ -240,13 +240,13 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)` : `${item.saleNumber} (Ürün satışı)`}
                                             </h4>
                                             <p className="text-xs text-muted-foreground font-bold mt-1">
-                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold tracking-tight">#{item.ticketNumber || item.saleNumber}</span>
+                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold">#{item.ticketNumber || item.saleNumber}</span>
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-12">
                                         <div className="text-right hidden sm:block">
-                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-tight">Durum sınıfı</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5">Durum sınıfı</p>
                                             <Badge variant="outline" className={cn(
                                                 "text-[10px] font-bold border-none px-4 py-1.5 rounded-xl shadow-sm",
                                                 item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
@@ -255,8 +255,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             </Badge>
                                         </div>
                                         <div className="text-right min-w-[120px]">
-                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5 uppercase tracking-tight">Net tutar</p>
-                                            <span className="text-2xl font-extrabold tracking-tight">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
+                                            <p className="text-[10px] font-bold text-muted-foreground mb-1.5">Net tutar</p>
+                                            <span className="text-2xl font-extrabold">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -275,11 +275,11 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <table className="w-full text-left">
                                     <thead className="bg-muted/30 border-b border-border">
                                         <tr>
-                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Parça adı</th>
-                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Tarih</th>
-                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Servis no</th>
-                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Fiyat</th>
-                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight text-right">Garanti durumu</th>
+                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground">Parça adı</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Tarih</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Servis no</th>
+                                            <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Fiyat</th>
+                                            <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground text-right">Garanti durumu</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -289,7 +289,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                 <tr key={p.id} className="hover:bg-muted/10 transition-colors">
                                                     <td className="px-8 py-6">
                                                         <div className="font-bold text-sm">{p.product?.name}</div>
-                                                        <div className="text-[10px] text-muted-foreground font-medium mt-1 uppercase tracking-tight">{p.product?.category?.name}</div>
+                                                        <div className="text-[10px] text-muted-foreground font-medium mt-1">{p.product?.category?.name}</div>
                                                     </td>
                                                     <td className="px-6 py-6 text-xs font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</td>
                                                     <td className="px-6 py-6 text-xs font-bold text-blue-500">#{p.ticketNumber}</td>
@@ -336,7 +336,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                     </div>
                                                     <div>
                                                         <CardTitle className="text-xs font-bold">{ticket.deviceBrand} {ticket.deviceModel}</CardTitle>
-                                                        <CardDescription className="text-[10px] font-bold uppercase tracking-tight">Servis no: {ticket.ticketNumber}</CardDescription>
+                                                        <CardDescription className="text-[10px] font-bold">Servis no: {ticket.ticketNumber}</CardDescription>
                                                     </div>
                                                 </div>
                                                 <Badge variant="outline" className={cn(
@@ -349,7 +349,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                         </CardHeader>
                                         <CardContent className="pt-10">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Koruma periyodu</span>
+                                                <span className="text-[10px] font-bold text-muted-foreground">Koruma periyodu</span>
                                                 <span className={cn(
                                                     "text-[10px] font-extrabold",
                                                     isExpired ? 'text-rose-500' : 'text-emerald-500'
@@ -359,11 +359,11 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             </div>
                                             <Progress value={percent} className="h-2 bg-muted rounded-full" />
                                             <div className="flex items-center justify-between mt-6">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground italic">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
                                                     <Calendar className="h-3.5 w-3.5 text-blue-500" />
                                                     <span>Bitiş: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
                                                 </div>
-                                                <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto uppercase tracking-tight">
+                                                <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
                                                     Detayı gör <ArrowUpRight className="h-3 w-3 ml-1" />
                                                 </Button>
                                             </div>
@@ -383,7 +383,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 </div>
                             </CardHeader>
                             <CardContent className="p-10">
-                                <div className="bg-muted/30 p-10 rounded-xl border border-border min-h-[250px] text-muted-foreground text-sm font-medium leading-relaxed italic group hover:border-blue-500/20 transition-all">
+                                <div className="bg-muted/30 p-10 rounded-xl border border-border min-h-[250px] text-muted-foreground text-sm font-medium leading-relaxed group hover:border-blue-500/20 transition-all">
                                     {customer.notes || "Bu profil için henüz stratejik bir not girişi yapılmamıştır."}
                                 </div>
                             </CardContent>

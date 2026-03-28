@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,7 +35,7 @@ const menuItems = [
     label: "Servis Merkezi",
     href: "/servis",
     subItems: [
-      { label: "Aktif Kayıtlar", href: "/servis/liste" },
+      { label: "Servis Yönetimi", href: "/servis/liste" },
       { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
       { label: "Teslimatlar", href: "/servis/teslimatlar" },
       { label: "Garanti Takibi", href: "/servis/iade" },
@@ -93,6 +93,7 @@ const menuItems = [
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export function Sidebar({ className }: { className?: string }) {
             <Zap className="h-6 w-6 text-white fill-white" />
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-xl text-foreground tracking-tight leading-none uppercase">Başar <span className="text-primary">Teknik</span></span>
+            <span className="font-bold text-xl text-foreground leading-none">Başar <span className="text-primary">Teknik</span></span>
             <span className="text-[11px] font-medium text-muted-foreground mt-1">Yönetim Paneli V2.0</span>
           </div>
         </Link>
@@ -138,7 +139,10 @@ export function Sidebar({ className }: { className?: string }) {
                 )}
                 {hasSubItems ? (
                   <button
-                    onClick={() => toggleMenu(item.label)}
+                    onClick={() => {
+                      toggleMenu(item.label);
+                      if (item.href) router.push(item.href);
+                    }}
                     className={cn(
                       "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
                       isActive
@@ -147,7 +151,7 @@ export function Sidebar({ className }: { className?: string }) {
                     )}
                   >
                     <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1 text-left tracking-tight">{item.label}</span>
+                    <span className="flex-1 text-left">{item.label}</span>
                     {isOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50" />}
                   </button>
                 ) : (
@@ -161,7 +165,7 @@ export function Sidebar({ className }: { className?: string }) {
                     )}
                   >
                     <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1 tracking-tight">{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
                   </Link>
                 )}
 

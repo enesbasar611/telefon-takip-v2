@@ -92,8 +92,8 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
               <Wrench className="h-5 w-5 text-orange-500" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-black ">Durum Güncelle</DialogTitle>
-              <DialogDescription className="text-xs font-bold   text-muted-foreground">
+              <DialogTitle className="text-lg font-bold">Durum Güncelle</DialogTitle>
+              <DialogDescription className="text-xs font-medium text-muted-foreground mt-1">
                 {ticket.ticketNumber} - {ticket.customer?.name}
               </DialogDescription>
             </div>
@@ -102,14 +102,14 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
 
         <div className="p-6 space-y-6">
           <div className="space-y-3">
-            <Label className="text-[10px] font-black   text-muted-foreground ml-1">Yeni Durum Seçin</Label>
+            <Label className="text-xs font-bold text-muted-foreground ml-1">Yeni Durum Seçin</Label>
             <Select value={status} onValueChange={(val) => setStatus(val as ServiceStatus)}>
               <SelectTrigger className="bg-muted/50 border-none h-12 font-bold text-sm focus:ring-1 focus:ring-primary shadow-inner">
                 <SelectValue placeholder="Durum Seçin" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(statusConfig).map(([key, config]) => (
-                  <SelectItem key={key} value={key} className="text-xs font-bold  py-3">
+                  <SelectItem key={key} value={key} className="text-xs font-bold py-3">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${config.color}`} />
                       {config.label}
@@ -122,8 +122,8 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
 
           <div className="space-y-3">
             <div className="flex justify-between items-center ml-1">
-              <Label className="text-[10px] font-black   text-muted-foreground">İşlem Notu (Opsiyonel)</Label>
-              <span className="text-[9px] font-bold text-muted-foreground italic">Opsiyonel</span>
+              <Label className="text-xs font-bold text-muted-foreground">İşlem Notu (Opsiyonel)</Label>
+              <span className="text-[10px] font-medium text-muted-foreground">Opsiyonel</span>
             </div>
             <Textarea
               placeholder="Bu aşamada yapılan işlemler hakkında not ekleyin..."
@@ -134,9 +134,9 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
 
         <DialogFooter className="p-4 bg-muted/30 border-t border-border/50">
           <div className="flex items-center justify-between w-full">
-            <Button variant="ghost" className="text-xs font-bold " onClick={onClose}>İptal</Button>
+            <Button variant="ghost" className="text-xs font-medium" onClick={onClose}>İptal</Button>
             <Button
-              className="bg-orange-500 hover:bg-orange-600 text-white font-black  text-xs px-8 shadow-lg shadow-orange-500/20 gap-2 h-11"
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-8 shadow-lg shadow-orange-500/20 gap-2 h-11"
               onClick={handleUpdate}
               disabled={isPending}
             >

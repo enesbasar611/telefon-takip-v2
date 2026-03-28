@@ -77,20 +77,20 @@ export function NotificationDropdown() {
             <DropdownMenuContent align="end" className="w-[420px] bg-card border-border shadow-2xl rounded-2xl p-0 overflow-hidden font-sans">
                 <DropdownMenuLabel className="p-6 flex items-center justify-between bg-muted/20">
                     <div className="flex flex-col gap-1">
-                        <span className="text-xs font-black text-foreground uppercase tracking-[0.15em]">SİSTEM BİLDİRİMLERİ</span>
+                        <span className="text-xs font-bold text-foreground">Sistem Bildirimleri</span>
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                            <p className="text-[11px] text-muted-foreground font-bold tracking-wider">{unreadCount} YENİ BİLDİRİM</p>
+                            <p className="text-[11px] text-muted-foreground font-medium">{unreadCount} Yeni Bildirim</p>
                         </div>
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setUnreadCount(0)}
-                        className="h-9 text-[10px] font-black text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 group transition-all"
+                        className="h-9 text-xs font-bold text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 group transition-all"
                     >
                         <CheckCheck className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
-                        OKUNDU İŞARETLE
+                        Okundu İşaretle
                     </Button>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border m-0" />
@@ -104,7 +104,7 @@ export function NotificationDropdown() {
                     ) : notifications.length === 0 ? (
                         <div className="p-20 text-center">
                             <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-10 mb-6" />
-                            <p className="text-[12px] font-black text-muted-foreground uppercase tracking-widest">Şu an bildirim bulunmuyor</p>
+                            <p className="text-[12px] font-bold text-muted-foreground">Şu an bildirim bulunmuyor</p>
                         </div>
                     ) : (
                         notifications.map((n, i) => (
@@ -118,8 +118,8 @@ export function NotificationDropdown() {
                                     </div>
                                     <div className="flex flex-col flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-[13px] font-black text-foreground uppercase tracking-tight truncate pr-4">{n.title}</span>
-                                            <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap bg-muted/50 px-2 py-0.5 rounded-md uppercase tracking-tighter">
+                                            <span className="text-[13px] font-bold text-foreground truncate pr-4">{n.title}</span>
+                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap bg-muted/50 px-2 py-0.5 rounded-md">
                                                 {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr })}
                                             </span>
                                         </div>
@@ -135,7 +135,7 @@ export function NotificationDropdown() {
 
                 <DropdownMenuSeparator className="bg-border m-0" />
                 <Link href="/bildirimler" className="w-full">
-                    <div className="p-5 text-center text-[11px] font-black text-primary hover:bg-primary/5 transition-all uppercase tracking-[0.2em] cursor-pointer">
+                    <div className="p-5 text-center text-xs font-bold text-primary hover:bg-primary/5 transition-all cursor-pointer">
                         Tüm Arşivi Görüntüle
                     </div>
                 </Link>

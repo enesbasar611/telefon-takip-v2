@@ -124,7 +124,7 @@ export default function NewCustomerPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-black ">Yeni Müşteri Kaydı</h1>
+              <h1 className="text-3xl font-bold">Yeni Müşteri Kaydı</h1>
               <p className="text-gray-500 text-sm mt-1">Sistem için yeni bir teknik servis ortağı veya bireysel müşteri tanımlayın.</p>
             </div>
             <div className="flex items-center gap-3">
@@ -164,7 +164,7 @@ export default function NewCustomerPage() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]  ">MÜŞTERİ ADI SOYADI</FormLabel>
+                              <FormLabel className="text-gray-500 font-bold text-[10px]">MÜŞTERİ ADI SOYADI</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -181,7 +181,7 @@ export default function NewCustomerPage() {
                           name="type"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]  ">MÜŞTERİ TİPİ</FormLabel>
+                              <FormLabel className="text-gray-500 font-bold text-[10px]">MÜŞTERİ TİPİ</FormLabel>
                               <div className="flex gap-2 p-1 bg-background rounded-lg border border-white/5">
                                 <Button
                                   type="button"
@@ -212,7 +212,7 @@ export default function NewCustomerPage() {
                           name="phone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]  ">TELEFON NUMARASI</FormLabel>
+                              <FormLabel className="text-gray-500 font-bold text-[10px]">TELEFON NUMARASI</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
@@ -239,7 +239,7 @@ export default function NewCustomerPage() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]  ">E-POSTA ADRESİ</FormLabel>
+                              <FormLabel className="text-gray-500 font-bold text-[10px]">E-POSTA ADRESİ</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -257,7 +257,7 @@ export default function NewCustomerPage() {
                         name="address"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-500 font-bold text-[10px]  ">ADRES BİLGİSİ</FormLabel>
+                            <FormLabel className="text-gray-400 font-bold text-xs ml-1">ADRES BİLGİSİ</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
@@ -284,24 +284,28 @@ export default function NewCustomerPage() {
                         name="secondaryPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-500 font-bold text-[10px]  ">YEDEK TELEFON</FormLabel>
+                            <FormLabel className="text-gray-400 font-bold text-xs ml-1">YEDEK TELEFON</FormLabel>
                             <FormControl>
-                                <div className="relative">
-                                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
-                                  <IMaskInput
-                                    mask="+90 (000) 000 00 00"
-                                    definitions={{
-                                      '0': /[0-9]/
-                                    }}
-                                    value={field.value}
-                                    unmask={false}
-                                    onAccept={(value) => field.onChange(value)}
-                                    placeholder="+90 (5__) ___ __ __"
-                                    className="flex h-10 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
-                                  />
-                                </div>
+                              <div className="relative">
+                                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                                <IMaskInput
+                                  mask="+90 (000) 000 00 00"
+                                  definitions={{
+                                    '0': /[0-9]/
+                                  }}
+                                  value={field.value}
+                                  unmask={true}
+                                  onAccept={(value) => {
+                                    let pure = value.replace(/\D/g, "");
+                                    if (pure.startsWith("90")) pure = pure.substring(2);
+                                    field.onChange(pure);
+                                  }}
+                                  placeholder="+90 (5__) ___ __ __"
+                                  className="flex h-11 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                                />
+                              </div>
                             </FormControl>
-                            <FormDescription className="text-gray-600 text-[10px]">Müşteriye ulaşılamadığında aranacak ikincil numara.</FormDescription>
+                            <FormDescription className="text-gray-600 text-xs font-bold">Müşteriye ulaşılamadığında aranacak ikincil numara.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -316,7 +320,7 @@ export default function NewCustomerPage() {
               {/* Profile Photo Card */}
               <Card className="bg-card border-none shadow-sm overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between px-6">
-                  <CardTitle className="text-gray-500 font-bold text-[10px]  ">MÜŞTERİ FOTOĞRAFI</CardTitle>
+                  <CardTitle className="text-gray-500 font-bold text-[10px]">MÜŞTERİ FOTOĞRAFI</CardTitle>
                   {photoPreview && (
                     <Button
                       type="button"
@@ -389,8 +393,8 @@ export default function NewCustomerPage() {
               {/* Notes Card */}
               <Card className="bg-card border-none shadow-sm h-full">
                 <CardHeader className="pb-2 flex flex-row items-center gap-2">
-                   <StickyNote className="h-4 w-4 text-gray-500" />
-                   <CardTitle className="text-gray-500 font-bold text-[10px]  ">ÖZEL NOTLAR</CardTitle>
+                  <StickyNote className="h-4 w-4 text-gray-500" />
+                  <CardTitle className="text-gray-500 font-bold text-[10px]">ÖZEL NOTLAR</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <FormField

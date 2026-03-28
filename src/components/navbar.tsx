@@ -71,7 +71,7 @@ export function Navbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
-              <DropdownMenuLabel className="text-[10px] font-extrabold text-muted-foreground p-3 uppercase">Kullanıcı Hesabı</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-bold text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem className="p-3 text-sm font-bold rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                 <User className="h-4 w-4 text-primary" /> Profil Detayları
