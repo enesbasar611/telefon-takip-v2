@@ -30,6 +30,7 @@ import {
     Clock,
     X,
     MessageSquare,
+    MessageCircle,
     CreditCard,
     Wallet,
     ShoppingBag,
@@ -43,6 +44,7 @@ import {
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import Link from "next/link";
 import { cn, formatPhone } from "@/lib/utils";
 import {
     addPartToService,
@@ -147,6 +149,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     };
 
     const handleAddPart = async (product: any) => {
+        const alreadyExists = ticket.usedParts?.some((p: any) => p.productId === product.id);
+        if (alreadyExists) {
+            const confirmed = window.confirm("Aynı parçayı ekliyorsunuz, devam edilsin mi?");
+            if (!confirmed) return;
+        }
+
         setLoading(true);
         try {
             const price = Number(product.sellPrice) || 0;
@@ -198,7 +206,6 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             await updateServiceCost(ticket.id, Number(ticket.estimatedCost), laborCost);
             toast.success("İşçilik ücreti güncellendi.");
             refreshTicket();
-            router.refresh();
         } catch (err) {
             toast.error("Hata oluştu.");
         } finally {
@@ -225,11 +232,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
         }
     };
 
-    const handleStatusUpdate = async (newStatus: ServiceStatus) => {
+    const handleStatusUpdate = async (newStatus: ServiceStatus, paymentMethod: string = "CASH") => {
         setLoading(true);
         try {
             const label = statusConfig[newStatus]?.label || newStatus;
-            await updateServiceStatus(ticket.id, newStatus, "CASH", `Durum güncellendi: ${label}`);
+            await updateServiceStatus(ticket.id, newStatus, paymentMethod, `Durum güncellendi: ${label}`);
             toast.success(`Durum: ${label}`);
             refreshTicket();
             router.refresh();
@@ -243,8 +250,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     if (!ticket) return null;
 
     const partsTotal = ticket.usedParts?.reduce((acc: number, p: any) => acc + (Number(p.unitPrice) * p.quantity), 0) || 0;
-    const vat = (partsTotal + laborCost) * 0.20;
-    const grandTotal = partsTotal + laborCost + vat;
+    const grandTotal = partsTotal + laborCost;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -293,173 +299,90 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 flex overflow-hidden p-6 gap-6 bg-gradient-to-br from-slate-950 to-[#020617]">
+                <div className="flex-1 grid grid-cols-[300px_1fr_380px] overflow-hidden p-6 gap-6 bg-[#020617]">
 
-                    {/* Left Column: Device & History */}
-                    <div className="w-[380px] flex flex-col gap-6 overflow-hidden">
-
-                        {/* Device Info Card */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 space-y-8 flex flex-col shrink-0">
-                            <div className="flex items-center gap-3 mb-2">
-                                <ScanLine className="h-4 w-4 text-blue-500" />
-                                <h3 className="text-xs font-bold text-slate-500">Cihaz Bilgileri</h3>
+                    {/* Left Column: Client & Device (Slim) */}
+                    <div className="w-[300px] flex flex-col gap-4 overflow-hidden shrink-0">
+                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <ScanLine className="h-3.5 w-3.5 text-blue-500" />
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Müşteri & Cihaz</h3>
                             </div>
 
-                            <div className="grid gap-6">
-                                <div className="flex items-start gap-4 p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
-                                    <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                                        <Smartphone className="h-6 w-6 text-blue-400" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-bold text-slate-500 mb-1">Model & Marka</p>
-                                        <p className="text-sm font-bold text-slate-100 truncate">{ticket.deviceBrand} {ticket.deviceModel}</p>
-                                    </div>
+                            <div className="space-y-4">
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Cihaz</p>
+                                    <p className="text-sm font-bold text-white leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</p>
+                                    <p className="text-xs text-slate-600 mt-1 font-medium italic">{ticket.imei || "IMEI Yok"}</p>
                                 </div>
 
-                                <div className="flex items-start gap-4 p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
-                                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                                        <User className="h-6 w-6 text-emerald-400" />
-                                    </div>
+                                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
                                     <div className="min-w-0">
-                                        <p className="text-xs font-bold text-slate-500 mb-1">Müşteri & İletişim</p>
-                                        <p className="text-sm font-bold text-blue-400 truncate">{ticket.customer?.name}</p>
-                                        <p className="text-xs font-bold text-emerald-500 mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
+                                        <p className="text-[10px] font-bold text-emerald-500/50 uppercase mb-1">Müşteri</p>
+                                        <p className="text-sm font-bold text-emerald-400 truncate">{ticket.customer?.name}</p>
+                                        <p className="text-xs font-bold text-emerald-600 mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
                                     </div>
-                                </div>
-
-                                <div className="flex items-start gap-4 p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-500/10 flex items-center justify-center shrink-0">
-                                        <Hash className="h-6 w-6 text-slate-400" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-bold text-slate-500 mb-1">IMEI / Seri No</p>
-                                        <p className="text-sm font-medium text-slate-300 truncate">{ticket.imei || "Belirtilmemiş"}</p>
-                                    </div>
+                                    <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/10">
+                                            <MessageCircle className="h-4 w-4" />
+                                        </Button>
+                                    </Link>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Problem Description */}
-                        <div className="bg-amber-500/5 border border-amber-500/10 rounded-[2.5rem] p-8 shrink-0">
-                            <div className="flex items-center gap-3 mb-6">
-                                <AlertCircle className="h-4 w-4 text-amber-500" />
-                                <h3 className="text-xs font-bold text-amber-500/80">Arıza Detayı</h3>
+                        <div className="bg-amber-500/5 border border-amber-500/10 rounded-[2rem] p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500/80">Arıza Detayı</h3>
                             </div>
-                            <p className="text-[13px] text-amber-200/80 font-medium leading-relaxed">
-                                {ticket.problemDesc}
+                            <p className="text-xs text-amber-200/70 font-medium leading-relaxed italic">
+                                "{ticket.problemDesc}"
                             </p>
-                        </div>
-
-                        {/* Timeline / History */}
-                        <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <Clock className="h-4 w-4 text-slate-500" />
-                                    <h3 className="text-xs font-bold text-slate-500">Servis Günlüğü</h3>
-                                </div>
-                                <span className="text-xs font-bold text-slate-700">{ticket.logs?.length || 0} Kayıt</span>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pr-2">
-                                {ticket.logs?.map((log: any, i: number) => (
-                                    <div key={log.id} className="relative pl-8 group">
-                                        <div className={cn(
-                                            "absolute left-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-slate-950 z-10 transition-all",
-                                            i === 0 ? "bg-blue-500 scale-125 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "bg-slate-800"
-                                        )} />
-                                        {i !== ticket.logs.length - 1 && (
-                                            <div className="absolute left-[12px] top-4 bottom-[-24px] w-px bg-white/5" />
-                                        )}
-                                        <div className="flex flex-col gap-1 px-2 py-1 rounded-xl group-hover:bg-white/[0.02] transition-colors">
-                                            <p className={cn("text-xs font-bold leading-tight", i === 0 ? "text-slate-200" : "text-slate-500")}>
-                                                {log.message}
-                                            </p>
-                                            <span className="text-xs font-medium text-slate-700">
-                                                {format(new Date(log.createdAt), "dd MMMM yyyy, HH:mm", { locale: tr })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </div>
 
-                    {/* Right Side: Actions, Parts & Financials */}
-                    <div className="flex-1 flex flex-col gap-6 min-w-0">
-
-                        {/* Unified Management Panel */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[3rem] p-10 flex flex-col gap-10">
-
-                            <div className="grid grid-cols-2 gap-10">
-                                {/* Part Selector */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 ml-2">
-                                        <Box className="h-4 w-4 text-blue-500" />
-                                        <h3 className="text-xs font-bold text-slate-500">Parça Ekle</h3>
-                                    </div>
+                    {/* Middle Column: Parts & Actions */}
+                    <div className="flex-1 flex flex-col gap-6 min-w-0 overflow-hidden">
+                        {/* Action Panel */}
+                        <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 flex flex-col gap-8 shrink-0">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Parça Ekle</p>
                                     <div className="relative group">
-                                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
                                         <Input
-                                            placeholder="Ürün adı veya SKU ile ara..."
+                                            placeholder="Ürün adı veya SKU..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="h-16 bg-slate-950 border-white/5 pl-14 pr-8 rounded-3xl text-sm font-medium focus:border-blue-500/30 transition-all placeholder:text-slate-800"
+                                            className="h-12 bg-slate-950 border-white/5 pl-12 pr-6 rounded-2xl text-xs font-medium focus:border-blue-500/30"
                                         />
                                         {searchResults.length > 0 && (
-                                            <div className="absolute top-full left-0 right-0 mt-3 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl z-[100] max-h-80 overflow-y-auto overflow-x-hidden p-2 backdrop-blur-3xl">
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[100] max-h-60 overflow-y-auto p-1.5 backdrop-blur-3xl">
                                                 {searchResults.map(p => (
-                                                    <button
-                                                        key={p.id}
-                                                        onClick={() => handleAddPart(p)}
-                                                        className="w-full p-4 flex items-center justify-between hover:bg-white/5 rounded-2xl transition-all group/item"
-                                                    >
+                                                    <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-3 flex items-center justify-between hover:bg-white/5 rounded-xl transition-all group/item">
                                                         <div className="flex flex-col text-left">
-                                                            <span className="text-sm font-bold text-white group-hover/item:text-blue-400 transition-colors">{p.name}</span>
-                                                            <span className="text-xs text-slate-500 font-medium">{p.sku}</span>
+                                                            <span className="text-xs font-bold text-white group-hover/item:text-blue-400">{p.name}</span>
+                                                            <span className="text-[10px] text-slate-500">{p.sku}</span>
                                                         </div>
-                                                        <div className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold">
-                                                            ₺{(() => {
-                                                                const price = Number(p.sellPrice) || 0;
-                                                                const isDollar = p.name?.includes('$') || p.sku?.includes('$');
-                                                                const finalPrice = isDollar ? price * rates.usd : price;
-                                                                return (
-                                                                    <div className="flex items-center gap-1">
-                                                                        {isDollar && <span className="opacity-50 text-[8px]">$</span>}
-                                                                        {finalPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </div>
+                                                        <span className="text-xs font-black text-blue-500">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
                                 </div>
-
-                                {/* Status Switcher */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between ml-2">
-                                        <div className="flex items-center gap-3">
-                                            <Activity className="h-4 w-4 text-emerald-500" />
-                                            <h3 className="text-xs font-bold text-slate-500">Durum Güncelle</h3>
-                                        </div>
-                                        {selectedStatus && selectedStatus === ticket.status && (
-                                            <div className="flex items-center gap-2 bg-rose-500/10 px-4 py-1.5 rounded-full border border-rose-500/20 animate-pulse">
-                                                <XCircle className="h-4 w-4 text-rose-500" />
-                                                <span className="text-[10px] font-bold text-rose-500">Cihaz Zaten Bu Durumda</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Durumu Güncelle</p>
                                     <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val as ServiceStatus)}>
-                                        <SelectTrigger className="h-16 bg-slate-950 border-white/5 rounded-3xl text-sm font-bold text-slate-300 focus:ring-0">
-                                            <SelectValue placeholder="Yeni durumu belirleyin..." />
+                                        <SelectTrigger className="h-12 bg-slate-950 border-white/5 rounded-2xl text-xs font-bold text-slate-300">
+                                            <SelectValue placeholder="Durum seçin..." />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-950 border-white/10 text-white rounded-3xl p-2 z-[100] shadow-2xl">
+                                        <SelectContent className="bg-slate-950 border-white/10 text-white rounded-2xl p-1 z-[100]">
                                             {Object.entries(statusConfig).map(([key, config]) => (
-                                                <SelectItem key={key} value={key} className="text-xs font-bold py-4 focus:bg-white/5 rounded-2xl transition-all cursor-pointer">
-                                                    <div className="flex items-center gap-4 px-2">
-                                                        <div className={cn("h-3 w-3 rounded-full shadow-[0_0_10px_currentColor]", config.dot)} />
+                                                <SelectItem key={key} value={key} className="text-[10px] font-bold py-3 focus:bg-white/5 rounded-xl">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn("h-2 w-2 rounded-full", config.dot)} />
                                                         <span>{config.label}</span>
                                                     </div>
                                                 </SelectItem>
@@ -469,77 +392,70 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 </div>
                             </div>
 
-                            {/* Technical Note Input */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center px-2">
-                                    <div className="flex items-center gap-3">
-                                        <MessageSquare className="h-4 w-4 text-purple-500" />
-                                        <h3 className="text-xs font-bold text-slate-500">İşlem Notu Ekle</h3>
-                                    </div>
-                                    {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
-                                        <Button
-                                            onClick={handleSaveNoteAndStatus}
-                                            disabled={isSavingNote || (selectedStatus === ticket.status)}
-                                            className="h-10 px-8 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-full gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-                                        >
-                                            {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Kaydet
-                                        </Button>
-                                    )}
-                                </div>
+                            <div className="relative">
                                 <Textarea
-                                    placeholder="Yapılan işlemler hakkında detaylı teknik not giriniz..."
+                                    placeholder="İşlem notu veya teknik detay giriniz..."
                                     value={techNote}
                                     onChange={(e) => setTechNote(e.target.value)}
-                                    className="h-24 bg-slate-950 border-white/5 rounded-[2rem] p-6 text-sm font-medium focus:border-blue-500/30 transition-all resize-none placeholder:text-slate-800"
+                                    className="h-20 bg-slate-950 border-white/5 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-slate-800"
                                 />
+                                {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
+                                    <Button
+                                        onClick={handleSaveNoteAndStatus}
+                                        disabled={isSavingNote}
+                                        className="absolute bottom-3 right-3 h-8 px-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 shadow-xl"
+                                    >
+                                        {isSavingNote ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Kaydet
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Parts List Scroll Area */}
-                        <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-[3rem] p-10 flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between mb-8 px-2">
-                                <div className="flex items-center gap-3">
-                                    <ShoppingBag className="h-4 w-4 text-slate-500" />
-                                    <h3 className="text-xs font-bold text-slate-500">Kullanılan Parçalar</h3>
+                        {/* Parts List */}
+                        <div className="flex-1 bg-white/[0.01] border border-white/5 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <ShoppingBag className="h-3.5 w-3.5 text-blue-500" />
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Parça Listesi</h3>
                                 </div>
-                                <div className="flex items-center gap-2 bg-emerald-500/10 px-5 py-2 rounded-full border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                                    <span className="text-sm font-bold text-emerald-500">₺{partsTotal.toLocaleString('tr-TR')}</span>
-                                </div>
+                                <span className="text-xs font-black text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/10">₺{partsTotal.toLocaleString('tr-TR')}</span>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto no-scrollbar pr-2 space-y-3">
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pr-2">
                                 {ticket.usedParts?.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center opacity-10 grayscale">
-                                        <Box className="h-16 w-16 mb-4 text-slate-500" />
-                                        <p className="text-sm font-bold">Henüz parça kaydı yok</p>
+                                    <div className="h-full flex flex-col items-center justify-center opacity-20">
+                                        <Box className="h-10 w-10 mb-2 text-slate-600" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Parça Yok</p>
                                     </div>
                                 ) : (
                                     ticket.usedParts?.map((p: any) => (
-                                        <div key={p.id} className="flex items-center gap-6 p-6 rounded-[2rem] bg-slate-950/40 border border-white/[0.03] group hover:border-blue-500/20 transition-all">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-slate-200 truncate">{p.product?.name}</p>
-                                                <p className="text-xs text-slate-500 font-medium mt-1">{p.product?.sku}</p>
+                                        <div key={p.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                                            <div className="h-10 w-10 rounded-xl bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10 text-blue-500">
+                                                <Box className="h-5 w-5" />
                                             </div>
-                                            <div className="flex items-center gap-8">
-                                                <div className="text-center px-5 py-2 rounded-xl bg-white/5 border border-white/5">
-                                                    <span className="text-xs font-bold text-slate-400">{p.quantity} Adet</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold text-slate-200 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
+                                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-tighter mt-0.5">{p.product?.sku || "SKU-NONE"}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                    <span className="text-[8px] font-black text-slate-700 uppercase">Miktar</span>
+                                                    <span className="text-[11px] font-bold text-slate-400">{p.quantity} Adet</span>
                                                 </div>
-                                                <div className="relative w-36">
-                                                    <Input
-                                                        type="number"
-                                                        defaultValue={Number(p.unitPrice)}
-                                                        onBlur={(e) => handleUpdatePartPrice(p.id, Number(e.target.value))}
-                                                        className="h-12 bg-slate-950 border-white/5 text-right font-bold text-sm text-emerald-500 rounded-2xl pr-5 pl-10 focus:border-emerald-500/30 transition-all tabular-nums"
-                                                    />
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500/40">₺</span>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-[8px] font-black text-slate-700 uppercase">Birim Fiyat</span>
+                                                    <div className="relative w-28">
+                                                        <Input
+                                                            type="number"
+                                                            defaultValue={Number(p.unitPrice)}
+                                                            onBlur={(e) => handleUpdatePartPrice(p.id, Number(e.target.value))}
+                                                            className="h-9 bg-black border-white/5 text-right font-black text-xs text-emerald-500 rounded-xl pr-3 pl-8 transition-all"
+                                                        />
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500/30">₺</span>
+                                                    </div>
                                                 </div>
-                                                <Button
-                                                    onClick={() => handleRemovePart(p.id)}
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-12 w-12 text-rose-500/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-2xl transition-all"
-                                                >
-                                                    <Trash2 className="h-5 w-5" />
+                                                <Button onClick={() => handleRemovePart(p.id)} variant="ghost" size="icon" className="h-9 w-9 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl">
+                                                    <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         </div>
@@ -548,62 +464,115 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
                         </div>
 
-                        {/* Financial Summary & Checkout */}
-                        <div className="bg-blue-600 border border-blue-500/20 rounded-[3.5rem] p-1.5 overflow-hidden shadow-[0_30px_60px_rgba(59,130,246,0.2)]">
-                            <div className="bg-slate-950 rounded-[3.3rem] p-10 flex items-center justify-between gap-12">
-                                <div className="flex items-center gap-12">
-                                    <div className="flex flex-col gap-3">
-                                        <span className="text-xs font-bold text-slate-500">İşçilik Ücreti</span>
-                                        <div className="relative group">
-                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-500/50 font-bold text-lg">₺</span>
-                                            <Input
-                                                type="number"
-                                                value={laborCost}
-                                                onChange={(e) => setLaborCost(Number(e.target.value))}
-                                                onBlur={handleSaveLabor}
-                                                className="h-14 w-44 bg-white/5 border-transparent rounded-2xl pl-12 pr-5 text-xl font-bold text-emerald-500 focus:bg-white/10 transition-all tabular-nums"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-16 w-px bg-white/5" />
-
-                                    <div className="flex flex-col gap-1 items-end">
-                                        <span className="text-xs font-bold text-blue-500 mb-1">Genel Toplam (KDV Dahil)</span>
-                                        <div className="flex items-baseline gap-3">
-                                            <span className="text-2xl font-bold text-slate-600">₺</span>
-                                            <h4 className="text-5xl font-bold text-white tabular-nums">
-                                                {grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                            </h4>
-                                        </div>
+                        {/* Financial Area (Compact & Stable) */}
+                        <div className="bg-slate-950 border border-white/5 rounded-[2.3rem] p-6 grid grid-cols-[1fr_auto] items-center gap-8 shrink-0 shadow-2xl">
+                            <div className="flex items-center gap-6 min-w-0">
+                                <div className="flex flex-col gap-1.5 shrink-0">
+                                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">İşçilik Ücreti</p>
+                                    <div className="relative">
+                                        <Input
+                                            type="number"
+                                            value={laborCost}
+                                            onChange={(e) => setLaborCost(Number(e.target.value))}
+                                            onBlur={handleSaveLabor}
+                                            className="h-10 w-28 bg-white/5 border-transparent rounded-xl pl-8 pr-3 text-sm font-black text-emerald-500"
+                                        />
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500/40">₺</span>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-5">
-                                    {ticket.status !== "READY" && ticket.status !== "DELIVERED" ? (
-                                        <div className="flex items-center gap-5 px-10 py-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 backdrop-blur-md">
-                                            <AlertCircle className="h-6 w-6 text-blue-500 animate-pulse" />
-                                            <p className="text-xs font-bold text-blue-400 leading-snug max-w-[280px]">
-                                                * Tahsilat yapmak için lütfen servisi tamamla butonuna basınız ve cihazı hazır kategorisine aktarınız.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex gap-5">
-                                            <Button
-                                                onClick={() => handleStatusUpdate("DELIVERED")}
-                                                className="h-20 px-12 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm rounded-3xl gap-4 shadow-2xl shadow-emerald-500/20 transition-all active:scale-95"
-                                            >
-                                                <CreditCard className="h-6 w-6" /> Tahsilat Yap ve Teslim Et
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                className="h-20 px-10 bg-transparent border-white/10 hover:bg-white/5 text-white font-bold text-sm rounded-3xl gap-4 transition-all"
-                                            >
-                                                <Wallet className="h-6 w-6 text-amber-500" /> Veresiye Kaydet
-                                            </Button>
-                                        </div>
-                                    )}
+                                <div className="h-10 w-px bg-white/5 shrink-0" />
+                                <div className="flex flex-col gap-0.5 shrink-0">
+                                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Tahmini</p>
+                                    <p className="text-sm font-black text-slate-600">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
                                 </div>
+                                <div className="h-10 w-px bg-white/5 shrink-0" />
+                                <div className="flex flex-col gap-0.5 min-w-[120px]">
+                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">GENEL TOPLAM</p>
+                                    <p className="text-3xl font-black text-white leading-none">₺{grandTotal.toLocaleString('tr-TR')}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                                {(ticket.status === "READY" || ticket.status === "DELIVERED" || selectedStatus === "READY" || selectedStatus === "DELIVERED") ? (
+                                    <div className="flex gap-2">
+                                        <Button onClick={() => handleStatusUpdate("DELIVERED", "CASH")} className="h-12 bg-emerald-500 text-black font-black text-[10px] uppercase px-5 rounded-2xl gap-2 shadow-lg shadow-emerald-500/20 whitespace-nowrap group hover:bg-emerald-400 transition-all">
+                                            <CreditCard className="h-4 w-4 group-hover:scale-110 transition-transform" /> Tahsil & Teslim
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleStatusUpdate("DELIVERED", "DEBT")}
+                                            variant="outline"
+                                            className="h-12 bg-white/5 border-white/10 text-white font-black text-[10px] uppercase px-5 rounded-2xl gap-2 hover:bg-amber-500 hover:text-black hover:border-amber-500 transition-all group"
+                                        >
+                                            <Wallet className="h-4 w-4 text-amber-500 group-hover:text-black transition-colors" /> Veresiye
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <p className="text-[9px] font-bold text-blue-500/60 leading-tight max-w-[120px] text-right italic">
+                                        * Tahsilat için "Hazır" yapın.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Workflow Timeline (Detailed) */}
+                    <div className="w-[380px] flex flex-col gap-4 overflow-hidden shrink-0">
+                        <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-3">
+                                    <Activity className="h-4 w-4 text-blue-500" />
+                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Servis Akışı</h3>
+                                </div>
+                                <span className="text-[10px] font-black text-slate-700 bg-white/5 px-2 py-1 rounded-md">{ticket.logs?.length || 0} ADIM</span>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pr-2 relative">
+                                {/* Connecting Line */}
+                                <div className="absolute left-[19px] top-6 bottom-6 w-px bg-gradient-to-b from-blue-500/50 via-slate-800 to-transparent" />
+
+                                {ticket.logs?.map((log: any, i: number) => {
+                                    const isStatusLog = log.message.includes("Durum güncellendi");
+                                    const isPartAdd = log.message.includes("Parça eklendi");
+                                    const isPartRemove = log.message.includes("Parça çıkarıldı");
+                                    const isPriceUpdate = log.message.includes("Fiyat güncellendi");
+
+                                    return (
+                                        <div key={log.id} className="relative pl-12 group">
+                                            <div className={cn(
+                                                "absolute left-2.5 top-1.5 h-3.5 w-3.5 rounded-full border-[3px] border-slate-950 z-10 transition-all",
+                                                i === 0 ? "bg-blue-500 scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-slate-800",
+                                                isStatusLog && i !== 0 ? "bg-amber-500" : "",
+                                                (isPartAdd || isPartRemove || isPriceUpdate) && "bg-purple-500"
+                                            )} />
+
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className={cn(
+                                                        "text-[9px] font-black uppercase tracking-widest",
+                                                        i === 0 ? "text-blue-500" : "text-slate-600"
+                                                    )}>
+                                                        {format(new Date(log.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
+                                                    </span>
+                                                </div>
+                                                <div className={cn(
+                                                    "p-4 rounded-2xl border transition-all",
+                                                    i === 0 ? "bg-blue-500/5 border-blue-500/10" : "bg-white/[0.02] border-white/5 group-hover:bg-white/[0.04]",
+                                                    isStatusLog && "border-amber-500/10",
+                                                    (isPartAdd || isPartRemove || isPriceUpdate) && "border-purple-500/10"
+                                                )}>
+                                                    <p className={cn(
+                                                        "text-[11px] font-bold leading-relaxed tracking-tight",
+                                                        i === 0 ? "text-slate-100" : "text-slate-400",
+                                                        isStatusLog && "text-amber-200/60",
+                                                        (isPartAdd || isPartRemove || isPriceUpdate) && "text-purple-200/60"
+                                                    )}>
+                                                        {log.message}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

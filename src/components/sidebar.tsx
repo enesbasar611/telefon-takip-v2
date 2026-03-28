@@ -32,14 +32,11 @@ const menuItems = [
   },
   {
     icon: Wrench,
-    label: "Servis Merkezi",
+    label: "Servis Yönetimi",
     href: "/servis",
     subItems: [
+      { label: "Komuta Merkezi", href: "/servis" },
       { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
-      { label: "Servis Yönetimi", href: "/servis/liste" },
-      { label: "Teslimatlar", href: "/servis/teslimatlar" },
-      { label: "Garanti Takibi", href: "/servis/iade" },
-      { label: "Servis Özeti", href: "/servis" },
     ]
   },
   {

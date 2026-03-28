@@ -34,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreHorizontal,
   ChevronDown,
   Wrench,
   Search,
@@ -45,14 +44,14 @@ import {
   CheckCircle2,
   PackagePlus,
   ShoppingBag,
-  XCircle
+  XCircle,
+  Trash2,
+  UserCircle
 } from "lucide-react";
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
-import { ServiceDetailsModal } from "./service-details-modal";
-import { ServiceStatusModal } from "./service-status-modal";
 import { ServiceReceiptModal } from "./service-receipt-modal";
 import { ServiceManagementModal } from "./service-management-modal";
 import { cn, formatPhone } from "@/lib/utils";
@@ -78,10 +77,10 @@ export const columns: ColumnDef<any>[] = [
     header: "MÜŞTERİ",
     accessorFn: (row) => row.customer?.name,
     cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-bold text-sm">{row.original.customer?.name}</span>
+      <Link href={`/musteriler/${row.original.customerId}`} className="flex flex-col group/name">
+        <span className="font-bold text-sm group-hover/name:text-blue-500 transition-colors">{row.original.customer?.name}</span>
         <span className="text-xs text-blue-500 font-bold">{formatPhone(row.original.customer?.phone)}</span>
-      </div>
+      </Link>
     ),
   },
   {
@@ -128,10 +127,8 @@ export const columns: ColumnDef<any>[] = [
   },
 ];
 
-export function ServiceListTable({ data }: { data: any[] }) {
+export function ServiceListTable({ data, allowedStatuses }: { data: any[], allowedStatuses?: ServiceStatus[] }) {
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
-  const [showStatus, setShowStatus] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showManagement, setShowManagement] = useState(false);
   const [isQuickDeliver, setIsQuickDeliver] = useState(false);
@@ -199,8 +196,13 @@ export function ServiceListTable({ data }: { data: any[] }) {
             >
               <Printer className="h-4 w-4" />
             </Button>
+            <Link href={`/musteriler/${ticket.customerId}`}>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-blue-500 hover:bg-blue-500/10 rounded-xl border border-blue-500/10" title="Müşteri Profili">
+                <UserCircle className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-blue-500/10">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-blue-500/10" title="WhatsApp Mesaj">
                 <MessageCircle className="h-4 w-4" />
               </Button>
             </Link>
@@ -216,23 +218,28 @@ export function ServiceListTable({ data }: { data: any[] }) {
                   className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
-                    setShowDetails(true);
+                    setShowManagement(true);
                   }}
                 >
                   <Search className="h-4 w-4 text-blue-500" /> Detayları Gör
                 </DropdownMenuItem>
+                <Link href={`/musteriler/${ticket.customerId}`}>
+                  <DropdownMenuItem className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl">
+                    <UserCircle className="h-4 w-4 text-blue-500" /> Müşteri Profili
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem
                   className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
-                    setShowStatus(true);
+                    setShowManagement(true);
                   }}
                 >
                   <Wrench className="h-4 w-4 text-blue-500" /> Durum Güncelle
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5" />
                 <DropdownMenuItem className="text-sm font-bold gap-3 p-4 cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 rounded-xl">
-                  Kaydı Sil
+                  <Trash2 className="h-4 w-4" /> Kaydı Sil
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -287,21 +294,23 @@ export function ServiceListTable({ data }: { data: any[] }) {
         >
           TÜMÜ
         </Button>
-        {Object.entries(statusConfig).map(([key, config]) => (
-          <Button
-            key={key}
-            variant={statusFilter === key ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setStatusFilter(key)}
-            className={cn(
-              "h-10 px-8 rounded-xl text-xs font-bold transition-all gap-3 shrink-0",
-              statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
-            )}
-          >
-            <div className={cn("h-2 w-2 rounded-full", config.color)} />
-            {config.label.toUpperCase()}
-          </Button>
-        ))}
+        {Object.entries(statusConfig)
+          .filter(([key]) => !allowedStatuses || allowedStatuses.includes(key as ServiceStatus))
+          .map(([key, config]) => (
+            <Button
+              key={key}
+              variant={statusFilter === key ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setStatusFilter(key)}
+              className={cn(
+                "h-10 px-8 rounded-xl text-xs font-bold transition-all gap-3 shrink-0",
+                statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
+              )}
+            >
+              <div className={cn("h-2 w-2 rounded-full", config.color)} />
+              {config.label.toUpperCase()}
+            </Button>
+          ))}
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8">
@@ -354,22 +363,6 @@ export function ServiceListTable({ data }: { data: any[] }) {
 
       {selectedTicket && (
         <>
-          <ServiceDetailsModal
-            ticket={selectedTicket}
-            isOpen={showDetails}
-            onClose={() => {
-              setShowDetails(false);
-              setSelectedTicket(null);
-            }}
-          />
-          <ServiceStatusModal
-            ticket={selectedTicket}
-            isOpen={showStatus}
-            onClose={() => {
-              setShowStatus(false);
-              setSelectedTicket(null);
-            }}
-          />
           <ServiceReceiptModal
             ticket={selectedTicket}
             isOpen={showReceipt}
@@ -456,6 +449,15 @@ export function ServiceListTable({ data }: { data: any[] }) {
                     >
                       <Wrench className="h-5 w-5" />
                     </Button>
+                    <Link href={`/musteriler/${ticket.customerId}`} onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                      >
+                        <UserCircle className="h-5 w-5" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -541,6 +543,6 @@ export function ServiceListTable({ data }: { data: any[] }) {
           </Button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

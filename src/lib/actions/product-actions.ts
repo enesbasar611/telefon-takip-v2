@@ -73,12 +73,16 @@ export async function createProduct(data: {
   criticalStock: number;
   barcode?: string;
   sku?: string;
+  location?: string;
+  supplierId?: string;
   isSecondHand?: boolean;
   imei?: string;
   color?: string;
   capacity?: string;
 }) {
   try {
+    const user = await getOrCreateDevUser();
+
     const product = await prisma.product.create({
       data: {
         name: toSentenceCase(data.name),
@@ -89,12 +93,30 @@ export async function createProduct(data: {
         criticalStock: data.criticalStock,
         barcode: data.barcode,
         sku: data.sku,
+        location: data.location,
+        supplierId: data.supplierId,
         isSecondHand: data.isSecondHand || false,
         deviceInfo: data.isSecondHand ? {
           create: {
             imei: data.imei || `GEN-${Date.now()}`,
             color: data.color,
             capacity: data.capacity,
+          }
+        } : undefined,
+        // Log the initial stock as a movement
+        movements: data.stock > 0 ? {
+          create: {
+            quantity: data.stock,
+            type: "PURCHASE",
+            notes: "İlk stok kaydı."
+          }
+        } : undefined,
+        inventoryLogs: data.stock > 0 ? {
+          create: {
+            userId: user.id,
+            quantity: data.stock,
+            type: "PURCHASE",
+            notes: "İlk stok kaydı."
           }
         } : undefined
       }
@@ -124,7 +146,10 @@ async function getOrCreateDevUser() {
 
 export async function updateProduct(id: string, data: any) {
   try {
+    const user = await getOrCreateDevUser();
+    const oldProduct = await prisma.product.findUnique({ where: { id } });
     const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
+    const newStock = data.stock !== undefined ? Number(data.stock) : undefined;
 
     const product = await prisma.product.update({
       where: { id },
@@ -133,10 +158,32 @@ export async function updateProduct(id: string, data: any) {
         name: data.name ? toSentenceCase(data.name) : undefined,
         buyPrice,
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
-        stock: data.stock !== undefined ? Number(data.stock) : undefined,
+        stock: newStock,
         criticalStock: data.criticalStock !== undefined ? Number(data.criticalStock) : undefined,
       }
     });
+
+    // If stock changed manually, log it
+    if (oldProduct && newStock !== undefined && newStock !== oldProduct.stock) {
+      const diff = newStock - oldProduct.stock;
+      await prisma.inventoryMovement.create({
+        data: {
+          productId: id,
+          quantity: diff,
+          type: "ADJUSTMENT",
+          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`
+        }
+      });
+      await prisma.inventoryLog.create({
+        data: {
+          productId: id,
+          userId: user.id,
+          quantity: diff,
+          type: "ADJUSTMENT",
+          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`
+        }
+      });
+    }
 
     // Cost-to-Profit Sync: Update costPrice for active service tickets
     if (buyPrice !== undefined) {
@@ -160,6 +207,42 @@ export async function updateProduct(id: string, data: any) {
   } catch (error) {
     console.error("Update product error:", error);
     return { success: false, error: "Ürün güncellenemedi." };
+  }
+}
+
+export async function addInventoryStock(productId: string, quantity: number, notes?: string) {
+  try {
+    const user = await getOrCreateDevUser();
+
+    await prisma.$transaction([
+      prisma.product.update({
+        where: { id: productId },
+        data: { stock: { increment: quantity } }
+      }),
+      prisma.inventoryMovement.create({
+        data: {
+          productId,
+          quantity,
+          type: "PURCHASE",
+          notes: notes || "Hızlı stok girişi"
+        }
+      }),
+      prisma.inventoryLog.create({
+        data: {
+          productId,
+          userId: user.id,
+          quantity,
+          type: "PURCHASE",
+          notes: notes || "Hızlı stok girişi"
+        }
+      })
+    ]);
+
+    revalidatePath("/stok");
+    return { success: true };
+  } catch (error) {
+    console.error("Add inventory stock error:", error);
+    return { success: false, error: "Stok eklenemedi." };
   }
 }
 
@@ -271,6 +354,51 @@ export async function deleteProduct(id: string) {
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ürün silinemedi." };
+  }
+}
+
+export async function getProductMovements(productId: string) {
+  try {
+    const movements = await prisma.inventoryMovement.findMany({
+      where: { productId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        serviceTicket: {
+          select: {
+            ticketNumber: true,
+            customer: {
+              select: { name: true }
+            }
+          }
+        },
+        sale: {
+          select: { saleNumber: true }
+        }
+      }
+    });
+    return serializePrisma(movements);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getInventoryStats() {
+  try {
+    const products = await prisma.product.findMany({});
+
+    const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
+    const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
+    const criticalCount = products.filter(p => p.stock <= p.criticalStock).length;
+    const totalItems = products.reduce((acc, p) => acc + p.stock, 0);
+
+    return {
+      totalValue,
+      potentialProfit,
+      criticalCount,
+      totalItems
+    };
+  } catch (error) {
+    return { totalValue: 0, potentialProfit: 0, criticalCount: 0, totalItems: 0 };
   }
 }
 

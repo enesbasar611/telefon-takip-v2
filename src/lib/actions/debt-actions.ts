@@ -44,6 +44,8 @@ export async function createDebt(data: { customerId: string; amount: number; due
       }
     });
     revalidatePath("/veresiye");
+    revalidatePath("/servis");
+    revalidatePath("/musteriler");
     return { success: true, debt: serializePrisma(debt) };
   } catch (error) {
     return { success: false, error: "Borç kaydı oluşturulamadı." };
@@ -81,6 +83,8 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
 
     revalidatePath("/veresiye");
     revalidatePath("/finans");
+    revalidatePath("/servis");
+    revalidatePath("/musteriler");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Tahsilat kaydedilemedi." };

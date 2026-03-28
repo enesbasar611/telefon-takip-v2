@@ -140,20 +140,29 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       }
     };
 
+    // Auto-return stock if cancelled
+    if (status === ServiceStatus.CANCELLED && currentTicket.status !== ServiceStatus.CANCELLED) {
+      for (const part of currentTicket.usedParts) {
+        await prisma.product.update({
+          where: { id: part.productId },
+          data: { stock: { increment: part.quantity } }
+        });
+      }
+    }
+
     if (status === ServiceStatus.DELIVERED) {
       updateData.deliveredAt = new Date();
 
-      // Calculate the maximum warranty months from used parts
-      const maxWarrantyMonths = currentTicket.usedParts.reduce((max, part) => {
+      // Default warranty is 1 month unless parts have more
+      const defaultWarrantyMonths = 1;
+      const partWarrantyMonths = currentTicket.usedParts.reduce((max, part) => {
         return Math.max(max, part.product.warrantyMonths || 0);
       }, 0);
 
-      // Set warranty expiry if any part has warranty
-      if (maxWarrantyMonths > 0) {
-        const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + maxWarrantyMonths);
-        updateData.warrantyExpiry = expiryDate;
-      }
+      const finalWarrantyMonths = Math.max(defaultWarrantyMonths, partWarrantyMonths);
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + finalWarrantyMonths);
+      updateData.warrantyExpiry = expiryDate;
 
       // Calculate total revenue from this service
       const partsTotal = currentTicket.usedParts.reduce((acc, part) => acc + (Number(part.unitPrice) * part.quantity), 0);
@@ -161,15 +170,29 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       const totalRevenue = partsTotal + laborTotal;
 
       if (totalRevenue > 0) {
-        await prisma.transaction.create({
-          data: {
-            type: "INCOME",
-            amount: totalRevenue,
-            description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}`,
-            paymentMethod: paymentMethod as any,
-            userId: user.id,
-          }
-        });
+        if (paymentMethod === "DEBT") {
+          // Create a debt record for the customer
+          await prisma.debt.create({
+            data: {
+              customerId: currentTicket.customerId,
+              amount: totalRevenue,
+              remainingAmount: totalRevenue,
+              notes: `SERVIS BORÇ - ${currentTicket.ticketNumber}`,
+              dueDate: new Date(new Date().setDate(new Date().getDate() + 15)) // Default 15 days due date
+            }
+          });
+        } else {
+          // Regular income transaction
+          await prisma.transaction.create({
+            data: {
+              type: "INCOME",
+              amount: totalRevenue,
+              description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}`,
+              paymentMethod: paymentMethod as any,
+              userId: user.id,
+            }
+          });
+        }
       }
     }
 
@@ -212,7 +235,18 @@ export async function updateServicePartPrice(partId: string, unitPrice: number) 
     const part = await prisma.serviceUsedPart.update({
       where: { id: partId },
       data: { unitPrice: unitPrice },
+      include: { product: true }
     });
+
+    // Log the price change
+    await prisma.serviceLog.create({
+      data: {
+        ticketId: part.ticketId,
+        status: ServiceStatus.REPAIRING,
+        message: `Parça fiyatı güncellendi: ${part.product.name} -> ₺${unitPrice.toLocaleString('tr-TR')}`,
+      }
+    });
+
     revalidatePath(`/servis/${part.ticketId}`);
     return { success: true };
   } catch (error) {
@@ -310,6 +344,14 @@ export async function addPartToService(ticketId: string, productId: string, quan
         }
       });
 
+      await tx.serviceLog.create({
+        data: {
+          ticketId,
+          status: ServiceStatus.REPAIRING,
+          message: `Parça eklendi: ${product.name} (₺${unitPrice !== undefined ? unitPrice : product.sellPrice})`,
+        }
+      });
+
       return { part, updatedProduct };
     });
 
@@ -358,6 +400,13 @@ export async function removePartFromService(partId: string) {
       }),
       prisma.serviceUsedPart.delete({
         where: { id: partId }
+      }),
+      prisma.serviceLog.create({
+        data: {
+          ticketId: part.ticketId,
+          status: ServiceStatus.REPAIRING,
+          message: `Parça çıkarıldı: ${part.product.name}`,
+        }
       })
     ]);
 
