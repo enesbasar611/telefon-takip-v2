@@ -9,7 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Search,
   Filter,
@@ -45,6 +47,9 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 
 
 export function StockListTable({ products, categories }: { products: any[], categories: any[] }) {
+  const searchParams = useSearchParams();
+  const highlightedId = searchParams.get("highlight");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);

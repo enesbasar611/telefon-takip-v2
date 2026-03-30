@@ -1,0 +1,154 @@
+"use client";
+
+import { Shield, User, AlertCircle, ArrowRight, MessageSquare, ExternalLink } from "lucide-react";
+import { SystemNotification } from "@/lib/actions/notification-actions";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+
+export function NotificationSidebar({ notifications: incomingNotifications }: { notifications: any }) {
+    const router = useRouter();
+    const notifications = Array.isArray(incomingNotifications)
+        ? incomingNotifications
+        : (incomingNotifications?.notifications || []);
+
+    const warrantyAlerts = notifications.filter((n: any) => n.type === "WARRANTY_EXPIRY");
+    const pendingApprovals = notifications.filter((n: any) => n.type === "PENDING_APPROVAL");
+
+    const openWhatsApp = (phone: string, message: string) => {
+        const cleanPhone = phone.replace(/\D/g, "");
+        const url = `https://wa.me/${cleanPhone.startsWith('90') ? cleanPhone : '90' + cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
+    };
+
+    return (
+        <div className="flex flex-col gap-5 w-full lg:w-[320px] shrink-0">
+            {/* Garanti Bitiş Uyarısı Widget */}
+            {warrantyAlerts.length > 0 && (
+                <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-5 border border-white/10 shadow-xl relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
+
+                    <div className="flex items-center justify-between mb-3 relative z-10">
+                        <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md">
+                            <Shield className="h-4 w-4 text-slate-200" />
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-bold text-slate-300 uppercase tracking-widest backdrop-blur-md border border-white/5">
+                            GARANTİ
+                        </span>
+                    </div>
+
+                    <div className="relative z-10">
+                        <h3 className="text-lg font-bold text-white mb-1.5 leading-tight">
+                            Garanti Uyarısı
+                        </h3>
+                        <p className="text-[12px] font-medium text-slate-400 leading-snug mb-4">
+                            {warrantyAlerts[0].message}
+                        </p>
+                        <Button
+                            onClick={() => router.push(`/servis?highlight=${warrantyAlerts[0].referenceId}`)}
+                            className="w-full h-10 rounded-xl bg-white text-slate-900 font-bold hover:bg-slate-200 text-xs transition-all shadow-lg shadow-white/5"
+                        >
+                            Teklif Hazırla
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Onay Bekleyenler Widget - Image 2 Style */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
+
+                <div className="flex items-center justify-between mb-5 relative z-10">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        ONAY BEKLEYENLER
+                    </h3>
+                    <div className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-black shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                        {pendingApprovals.length}
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-6 relative z-10">
+                    {pendingApprovals.length === 0 ? (
+                        <p className="text-xs text-slate-500 font-medium">Şu an bekleyen işlem yok.</p>
+                    ) : (
+                        pendingApprovals.slice(0, 3).map((pending: SystemNotification) => (
+                            <div key={pending.id} className="flex gap-3 animate-in fade-in slide-in-from-right-2 duration-500">
+                                <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5 relative group/avatar">
+                                    <User className="h-4 w-4 text-slate-400 group-hover/avatar:text-blue-400 transition-colors" />
+                                    <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-[#0B1120] flex items-center justify-center">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2 flex-1 min-w-0">
+                                    <div className="space-y-0.5">
+                                        <h4 className="text-[13px] font-bold text-white leading-none truncate tracking-tight">
+                                            {pending.message.split('-')[0].trim().replace('Müşteri:', '').trim()}
+                                        </h4>
+                                        <p className="text-[11px] font-medium text-slate-500 leading-tight">
+                                            Maliyet onayı bekleniyor ({pending.metadata?.cost?.toLocaleString('tr-TR')} TL)
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {/* WhatsApp Instead of Ara */}
+                                        <Button
+                                            onClick={() => openWhatsApp(pending.metadata?.phone || "", "Merhaba, cihazınızın onarım onayı hakkında görüşmek istemiştik.")}
+                                            className="h-8 px-4 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px] font-black transition-all gap-1.5 border border-emerald-500/20"
+                                        >
+                                            <MessageSquare className="h-3 w-3 fill-current" /> WhatsApp
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => router.push(`/servis?highlight=${pending.referenceId}`)}
+                                            className="h-8 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-black gap-1.5 border border-white/5 transition-all"
+                                        >
+                                            <ExternalLink className="h-3 w-3" /> Detay
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Gecikmiş Servis Alert */}
+                <div className="mt-6 pt-5 border-t border-white/5 flex gap-3 relative z-10 transition-all hover:translate-x-1">
+                    <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+                        <AlertCircle className="h-4 w-4 text-rose-500" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <h4 className="text-[13px] font-bold text-white leading-none">
+                            TS-2024-001 Servis
+                        </h4>
+                        <p className="text-[10px] font-bold text-rose-500 leading-tight">
+                            2 gün gecikti!
+                        </p>
+                        <Button
+                            className="h-7 px-4 mt-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black self-start transition-all shadow-lg shadow-rose-600/20"
+                        >
+                            Hızlandır
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Cihaz Takibi Widget */}
+            <div className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all cursor-pointer">
+                <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
+                <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">
+                    <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                        CİHAZ TAKİBİ
+                    </h3>
+                    <div className="flex items-end justify-between mb-4">
+                        <span className="text-xl font-black text-white leading-none tracking-tight">
+                            24 Cihaz Onarımda
+                        </span>
+                        <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-all group-hover:translate-x-1" />
+                    </div>
+                    <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 w-[65%] rounded-full shadow-[0_0_12px_rgba(37,99,235,0.7)]" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

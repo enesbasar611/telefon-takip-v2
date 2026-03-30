@@ -5,12 +5,20 @@ import { revalidatePath } from "next/cache";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
-export async function getTransactions(filters?: { accountId?: string; dailySessionId?: string }) {
+export async function getTransactions(options: {
+  accountId?: string;
+  dailySessionId?: string;
+  page?: number;
+  pageSize?: number;
+} = {}) {
+  const { accountId, dailySessionId, page = 1, pageSize = 50 } = options;
+  const skip = (page - 1) * pageSize;
+
   try {
     const transactions = await prisma.transaction.findMany({
       where: {
-        ...(filters?.accountId ? { accountId: filters.accountId } : {}),
-        ...(filters?.dailySessionId ? { dailySessionId: filters.dailySessionId } : {}),
+        ...(accountId ? { accountId } : {}),
+        ...(dailySessionId ? { dailySessionId } : {}),
       },
       include: {
         user: true,
@@ -18,7 +26,9 @@ export async function getTransactions(filters?: { accountId?: string; dailySessi
         account: true,
         dailySession: true
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize
     });
     return serializePrisma(transactions);
   } catch (error) {

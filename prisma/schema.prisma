@@ -26,6 +26,7 @@ model User {
   transactions    Transaction[]
   openedSessions  DailySession[] @relation("OpenedBy")
   closedSessions  DailySession[] @relation("ClosedBy")
+  reminders       Reminder[]
 }
 
 model Customer {
@@ -149,6 +150,35 @@ model StockAIAlert {
   expiresAt DateTime
   isRead    Boolean  @default(false)
   product   Product? @relation(fields: [productId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String
+  category    String
+  title       String
+  message     String
+  referenceId String?
+  status      String?
+  isRead      Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  category    String
+  recurrence  String   @default("NONE")
+  assignedTo  String?
+  creatorId   String
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User?    @relation(fields: [assignedTo], references: [id])
 }
 
 model ReturnTicket {

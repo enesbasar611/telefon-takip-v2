@@ -16,14 +16,35 @@ async function checkStockAndAddShortage(productId: string, productName: string) 
   }
 }
 
-export async function getProducts() {
+export async function getProducts(options: {
+  categoryId?: string,
+  page?: number,
+  pageSize?: number,
+  search?: string
+} = {}) {
+  const { categoryId, page, pageSize, search } = options;
+
   try {
+    const where: any = {};
+    if (categoryId) where.categoryId = categoryId;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+        { barcode: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const products = await prisma.product.findMany({
+      where,
       include: { category: true },
-      orderBy: { updatedAt: "desc" }
+      orderBy: { updatedAt: "desc" },
+      ...(pageSize ? { take: pageSize } : {}),
+      ...(page && pageSize ? { skip: (page - 1) * pageSize } : {}),
     });
     return serializePrisma(products);
   } catch (error) {
+    console.error("Error fetching products:", error);
     return [];
   }
 }

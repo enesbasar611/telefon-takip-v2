@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = 'force-dynamic';
 
 export default async function BildirimlerPage() {
-  const notifications = await getSystemNotifications();
+  const { notifications } = await getSystemNotifications();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -23,11 +23,11 @@ export default async function BildirimlerPage() {
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
       <div className="flex items-center gap-5 mb-4">
         <div className="h-14 w-14 rounded-[1.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-            <Bell className="h-7 w-7 text-blue-500" />
+          <Bell className="h-7 w-7 text-blue-500" />
         </div>
         <div>
-            <h1 className="text-4xl font-extrabold">Sistem bildirimleri</h1>
-            <p className="text-xs text-muted-foreground font-medium mt-1">İşletmenizin kritik uyarıları ve operasyonel hatırlatıcıları</p>
+          <h1 className="text-4xl font-extrabold">Sistem bildirimleri</h1>
+          <p className="text-xs text-muted-foreground font-medium mt-1">İşletmenizin kritik uyarıları ve operasyonel hatırlatıcıları</p>
         </div>
       </div>
 
@@ -46,10 +46,10 @@ export default async function BildirimlerPage() {
                 <div className="flex items-center justify-between gap-6">
                   <div className="flex items-center gap-6">
                     <div className={cn(
-                        "p-4 rounded-[1.25rem] border",
-                        n.priority === 'HIGH' ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20"
+                      "p-4 rounded-[1.25rem] border",
+                      n.priority === 'HIGH' ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20"
                     )}>
-                        {getIcon(n.type)}
+                      {getIcon(n.type)}
                     </div>
                     <div>
                       <CardTitle className="text-xl font-extrabold">{n.title}</CardTitle>

@@ -143,31 +143,43 @@
     transform: scale(1);
   }
 
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
   50% {
     opacity: 0.8;
-    transform: scale(1.02);
+    transform: scale(0.99);
   }
 }
 
 .animate-pulse-soft {
-  animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-soft 3s ease-in-out infinite;
 }
 
-@keyframes blink {
-  0% {
+@keyframes blink-blue {
+
+  0%,
+  100% {
     background-color: transparent;
+    border-color: rgba(59, 130, 246, 0.1);
+    box-shadow: none;
   }
 
   50% {
-    background-color: hsl(var(--primary) / 0.2);
-    border-color: hsl(var(--primary) / 0.5);
-  }
-
-  100% {
-    background-color: transparent;
+    background-color: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
   }
 }
 
+.animate-blink-blue {
+  animation: blink-blue 2s ease-in-out 3;
+  /* Blink 3 times then stay still or use infinite if preferred */
+}
+
 .highlight-blink {
-  animation: blink 1s ease-in-out 3;
+  animation: blink-blue 2s ease-in-out 3;
 }

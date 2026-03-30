@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useSearchParams } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -128,21 +129,24 @@ export const columns: ColumnDef<any>[] = [
 ];
 
 export function ServiceListTable({ data, allowedStatuses }: { data: any[], allowedStatuses?: ServiceStatus[] }) {
+  const searchParams = useSearchParams();
+  const highlightedId = searchParams.get("highlight");
+
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showManagement, setShowManagement] = useState(false);
   const [isQuickDeliver, setIsQuickDeliver] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-  const filteredData = useMemo(() => {
-    if (statusFilter === "ALL") return data;
-    return data.filter(t => t.status === statusFilter);
-  }, [data, statusFilter]);
-
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+
+  const filteredData = useMemo(() => {
+    if (statusFilter === "ALL") return data;
+    return data.filter(t => t.status === statusFilter);
+  }, [data, statusFilter]);
 
   const tableColumns = useMemo<ColumnDef<any>[]>(() => [
     ...columns,
@@ -392,8 +396,11 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             const config = statusConfig[status];
             return (
               <div
-                key={row.id}
-                className="matte-card p-6 rounded-[2rem] border border-white/5 space-y-5 bg-slate-900/40 backdrop-blur-2xl transition-all active:scale-[0.98]"
+                key={ticket.id}
+                className={cn(
+                  "p-8 matte-card rounded-[2.5rem] border border-white/5 bg-slate-900/40 space-y-6 relative overflow-hidden",
+                  highlightedId === ticket.id && "animate-blink-blue"
+                )}
                 onClick={() => {
                   setSelectedTicket(ticket);
                   setIsQuickDeliver(false);
@@ -492,7 +499,10 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-blue-600/5 transition-colors border-white/5 last:border-0"
+                  className={cn(
+                    "hover:bg-blue-600/5 transition-colors border-white/5 last:border-0",
+                    highlightedId === row.original.id && "animate-blink-blue"
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-6">

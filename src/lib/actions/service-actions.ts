@@ -420,9 +420,59 @@ export async function removePartFromService(partId: string) {
   }
 }
 
-export async function getServiceTickets() {
+export async function getServiceCounts() {
   try {
+    const counts = await prisma.serviceTicket.groupBy({
+      by: ['status'],
+      _count: true
+    });
+
+    // Total count for current active statuses (PENDING, APPROVED, REPAIRING, WAITING_PART)
+    const activeCount = counts
+      .filter(c => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(c.status))
+      .reduce((acc, c) => acc + c._count, 0);
+
+    const readyCount = counts.find(c => c.status === "READY")?._count || 0;
+    const doneCount = counts
+      .filter(c => ["DELIVERED", "CANCELLED"].includes(c.status))
+      .reduce((acc, c) => acc + c._count, 0);
+
+    const totalCount = counts.reduce((acc, c) => acc + c._count, 0);
+
+    return {
+      active: activeCount,
+      ready: readyCount,
+      done: doneCount,
+      all: totalCount
+    };
+  } catch (error) {
+    console.error("Error fetching service counts:", error);
+    return { active: 0, ready: 0, done: 0, all: 0 };
+  }
+}
+
+export async function getServiceTickets(options: {
+  status?: ServiceStatus | ServiceStatus[],
+  page?: number,
+  pageSize?: number
+} = {}) {
+  const { status, page = 1, pageSize = 50 } = options;
+  const skip = (page - 1) * pageSize;
+
+  try {
+    const where: any = {};
+    if (status) {
+      if (Array.isArray(status)) {
+        where.status = { in: status };
+      } else {
+        where.status = status;
+      }
+    }
+
     const tickets = await prisma.serviceTicket.findMany({
+      where,
+      skip,
+      take: pageSize,
       include: {
         customer: true,
         technician: true,
