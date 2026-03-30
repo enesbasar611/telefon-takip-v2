@@ -38,6 +38,7 @@ import { useSupplierOrders } from "@/lib/context/supplier-order-context";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { SupplierPaymentModal } from "./supplier-payment-modal";
 
 interface TedarikcilerPageClientProps {
     suppliers: any[];
@@ -64,6 +65,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
     const [isGlobalMalKabulOpen, setIsGlobalMalKabulOpen] = useState(false);
     const [isGlobalDetailOpen, setIsGlobalDetailOpen] = useState(false);
+    const [isGlobalPaymentOpen, setIsGlobalPaymentOpen] = useState(false);
     const [globalSelectedOrder, setGlobalSelectedOrder] = useState<any>(null);
     const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
     const { totalItemCount } = useSupplierOrders();
@@ -92,11 +94,33 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
         (p: any) => !criticalAlerts.some((a: any) => a.productId === p.id)
     ).length;
 
-    const deliveredCount = purchaseOrders.filter((o: any) => o.status === "DELIVERED").length;
+    const deliveredCount = purchaseOrders.filter((o: any) => o.status === "COMPLETED" || o.status === "DELIVERED").length;
     const totalOrderCount = purchaseOrders.length;
-    const deliveryRate = totalOrderCount > 0 ? Math.round((deliveredCount / totalOrderCount) * 100) : 88;
-    const supplierSatisfaction = Math.min(95, 70 + suppliers.length * 2);
-    const paymentDelay = Math.max(15, 80 - pendingOrders.length * 10);
+
+    // 1. Sevk Süresi Hızı: Ortalama tedarikçi sevk hızı
+    const avgDeliverySpeed = suppliers.length > 0
+        ? Math.round(suppliers.reduce((sum, s) => sum + (s.deliverySpeed || 0), 0) / suppliers.length)
+        : 0;
+    const deliveryRate = avgDeliverySpeed;
+
+    // 2. Tedarikçi Memnuniyeti: Ortalama güven skoru
+    const avgTrustScore = suppliers.length > 0
+        ? Math.round(suppliers.reduce((sum, s) => sum + (s.trustScore || 0), 0) / suppliers.length)
+        : 0;
+    const supplierSatisfaction = avgTrustScore;
+
+    // 3. Ödeme Performansı (Gecikme Skoru): Gecikmemiş borçların oranı
+    const unpaidOrders = purchaseOrders.filter((o: any) => o.paymentStatus !== "PAID");
+    const overdueCount = unpaidOrders.filter((o: any) => {
+        const diffDays = Math.floor((new Date().getTime() - new Date(o.createdAt).getTime()) / (1000 * 3600 * 24));
+        return diffDays > 15;
+    }).length;
+    const paymentDelayScore = unpaidOrders.length > 0
+        ? Math.round(((unpaidOrders.length - overdueCount) / unpaidOrders.length) * 100)
+        : (suppliers.length > 0 ? 100 : 0);
+
+    // Smart Alım Önerisi
+    const topSupplier = [...suppliers].sort((a, b) => (b.trustScore || 0) - (a.trustScore || 0))[0];
 
     const recentActivity = purchaseOrders.slice(0, 3).map((o: any) => ({
         id: o.id,
@@ -300,7 +324,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         <Table>
                             <TableHeader>
                                 <TableRow className="border-b border-white/5 hover:bg-transparent">
-                                    {["Sipariş No", "Tedarikçi", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
+                                    {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
                                         <TableHead key={h} className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                     ))}
                                 </TableRow>
@@ -321,31 +345,56 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                 <TableCell className="px-6 py-4 font-bold text-sm text-foreground">{orderNum}</TableCell>
                                                 <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
                                                 <TableCell>
+                                                    <Badge className={cn(
+                                                        "text-[9px] font-black border px-2 py-0.5 rounded-lg",
+                                                        order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                            order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                                "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                                    )}>
+                                                        {order.paymentStatus === "PAID" ? "Ödendi" :
+                                                            order.paymentStatus === "PARTIAL" ? "Kısmi" : "Ödenmedi"}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
                                                     <Badge className={cn("text-[9px] font-black border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-sm font-black text-foreground">
-                                                    ₺{Number(order.totalAmount || 0).toLocaleString("tr-TR")}
+                                                    ₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}
                                                 </TableCell>
                                                 <TableCell className="text-xs font-medium text-muted-foreground">
                                                     {format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            if (order.status === "PENDING" || order.status === "ORDERED") {
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
                                                                 setGlobalSelectedOrder(order);
-                                                                setIsGlobalMalKabulOpen(true);
-                                                            } else {
-                                                                setGlobalSelectedOrder(order);
-                                                                setIsGlobalDetailOpen(true);
-                                                            }
-                                                        }}
-                                                        className="h-8 text-xs font-bold text-blue-400 hover:bg-blue-500/10 rounded-lg"
-                                                    >
-                                                        {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
-                                                    </Button>
+                                                                setIsGlobalPaymentOpen(true);
+                                                            }}
+                                                            className="h-8 text-xs font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                                                            disabled={order.paymentStatus === "PAID"}
+                                                        >
+                                                            Ödeme Yap
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (order.status === "PENDING" || order.status === "ORDERED") {
+                                                                    setGlobalSelectedOrder(order);
+                                                                    setIsGlobalMalKabulOpen(true);
+                                                                } else {
+                                                                    setGlobalSelectedOrder(order);
+                                                                    setIsGlobalDetailOpen(true);
+                                                                }
+                                                            }}
+                                                            className="h-8 text-xs font-bold text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                        >
+                                                            {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -365,7 +414,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         <CardContent className="p-4 space-y-2">
                             {[
                                 { icon: ShoppingCart, label: "Yeni Alım Formu", color: "text-blue-400", bg: "bg-blue-500/10", onClick: () => setIsPurchaseFormOpen(true) },
-                                { icon: PayIcon, label: "Ödeme Yaz", color: "text-emerald-400", bg: "bg-emerald-500/10", onClick: () => toast.info("Ödeme işlemi yapmak için önce listelerden bir tedarikçi seçip 'Ödeme Yap' butonunu tıklayın.") },
+                                { icon: PayIcon, label: "Ödeme Yap", color: "text-emerald-400", bg: "bg-emerald-500/10", onClick: () => setIsGlobalPaymentOpen(true) },
                                 { icon: UserPlus, label: "Tedarikçi Ekle", color: "text-purple-400", bg: "bg-purple-500/10", onClick: () => document.getElementById("create-supplier-trigger")?.click() },
                             ].map((action, i) => (
                                 <button key={i} onClick={action.onClick} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all group text-left">
@@ -405,7 +454,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             {[
                                 { label: "Sevk Süresi Hızı", value: deliveryRate, color: "bg-emerald-500" },
                                 { label: "Tedarikçi Memnuniyeti", value: supplierSatisfaction, color: "bg-blue-500" },
-                                { label: "Ödeme Gecikmesi", value: paymentDelay, color: "bg-amber-500" },
+                                { label: "Ödeme Performansı", value: paymentDelayScore, color: "bg-amber-500" },
                             ].map((metric, i) => (
                                 <div key={i} className="space-y-2">
                                     <div className="flex items-center justify-between">
@@ -423,8 +472,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                     <div>
                                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Smart Alım</p>
                                         <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
-                                            {suppliers.length > 0
-                                                ? `${suppliers[0].name} ile toplu sipariş vererek %10'a varan indirim sağlayabilirsiniz.`
+                                            {topSupplier
+                                                ? `En yüksek güven skoruna sahip ${topSupplier.name} ile toplu alım planlayarak maliyetlerinizi düşürebilirsiniz.`
                                                 : "Tedarikçi ekleyerek akıllı alım önerilerinden yararlanmaya başlayın."}
                                         </p>
                                     </div>
@@ -490,6 +539,22 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     setGlobalSelectedOrder(null);
                 }}
                 order={globalSelectedOrder}
+            />
+            <SupplierPaymentModal
+                isOpen={isGlobalPaymentOpen}
+                onClose={() => {
+                    setIsGlobalPaymentOpen(false);
+                    setGlobalSelectedOrder(null);
+                }}
+                supplierId={globalSelectedOrder?.supplierId || ""}
+                supplierName={globalSelectedOrder?.supplier?.name || "Bir Tedarikçi Seçin"}
+                unpaidOrders={globalSelectedOrder ? [globalSelectedOrder] : []}
+                suppliers={suppliers}
+                allPurchaseOrders={purchaseOrders}
+                onSuccess={() => {
+                    // Refresh data or update local state
+                    window.location.reload();
+                }}
             />
             {globalSelectedOrder && isGlobalDetailOpen && (
                 <PurchaseOrderDetailModal

@@ -80,9 +80,9 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
     };
 
     const stats = [
-        { label: "Toplam Alışveriş", value: `₺${Number(supplier.totalShopping || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
-        { label: "Güncel Borç", value: `₺${Number(supplier.balance || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
-        { label: "Geciken Ödemeler", value: "₺0,00", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: "Toplam Alışveriş", value: `₺${Math.round(Number(supplier.totalShopping || 0)).toLocaleString("tr-TR")}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
+        { label: "Güncel Borç", value: `₺${Math.round(Number(supplier.balance || 0)).toLocaleString("tr-TR")}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
+        { label: "Geciken Ödemeler", value: "₺0", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
         { label: "Aktif Siparişler", value: `${supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").length || 0} Adet`, icon: Truck, color: "text-purple-500", bg: "bg-purple-500/10" },
     ];
 
@@ -299,7 +299,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-white/5 text-left bg-white/[0.01]">
-                                            {["Sipariş No", "Tarih", "Toplam Tutar", "Durum", "İşlem"].map((h) => (
+                                            {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
                                                 <th key={h} className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
                                         </tr>
@@ -316,7 +316,16 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
                                                     <td className="px-6 py-4 text-sm font-black text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
                                                     <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm font-black text-foreground">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-sm font-black text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge className={cn(
+                                                            "text-[10px] font-black border-none px-2 rounded-xl",
+                                                            order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
+                                                                order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
+                                                        )}>
+                                                            {order.paymentStatus === "PAID" ? "ÖDENDİ" : order.paymentStatus === "PARTIAL" ? "KISMİ" : "BEKLİYOR"}
+                                                        </Badge>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
                                                             "text-[10px] font-black border-none px-2 rounded-xl",
@@ -364,7 +373,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-white/5 text-left bg-white/[0.01]">
-                                            {["Sipariş No", "Tarih", "Toplam Tutar", "Durum", "İşlem"].map((h) => (
+                                            {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
                                                 <th key={h} className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
                                         </tr>
@@ -381,7 +390,16 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
                                                     <td className="px-6 py-4 text-sm font-black text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
                                                     <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm font-black text-foreground">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-sm font-black text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge className={cn(
+                                                            "text-[10px] font-black border-none px-2 rounded-xl",
+                                                            order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
+                                                                order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
+                                                        )}>
+                                                            {order.paymentStatus === "PAID" ? "ÖDENDİ" : order.paymentStatus === "PARTIAL" ? "KISMİ" : "BEKLİYOR"}
+                                                        </Badge>
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className="text-[10px] font-black border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                                                             Tamamlandı
@@ -474,16 +492,16 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                             {t.description}
                                                         </td>
                                                         <td className="px-4 py-4 text-xs font-bold text-slate-500 text-right">
-                                                            ₺{prevBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                            ₺{Math.round(prevBalance).toLocaleString("tr-TR")}
                                                         </td>
                                                         <td className={cn(
                                                             "px-4 py-4 text-sm font-black text-right",
                                                             t.type === "INCOME" ? "text-rose-400" : "text-emerald-400"
                                                         )}>
-                                                            {t.type === "INCOME" ? "+" : "-"} ₺{amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                            {t.type === "INCOME" ? "+" : "-"} ₺{Math.round(amount).toLocaleString("tr-TR")}
                                                         </td>
                                                         <td className="px-6 py-4 text-sm font-black text-foreground text-right bg-white/[0.01]">
-                                                            ₺{currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                            ₺{Math.round(currentBalance).toLocaleString("tr-TR")}
                                                         </td>
                                                     </tr>
                                                 );
@@ -501,7 +519,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
             {selectedOrder && (
                 <MalKabulModal
                     isOpen={isMalKabulOpen}
-                    onClose={(updatedOrder) => {
+                    onClose={() => {
                         setIsMalKabulOpen(false);
                         setSelectedOrder(null);
                         // If it's a purchase order receive, we might want to refresh the whole profile

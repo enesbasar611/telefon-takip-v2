@@ -321,9 +321,11 @@ model PurchaseOrder {
   updatedAt     DateTime            @updatedAt
   vatAmount     Decimal             @default(0) @db.Decimal(12, 2)
   status        OrderStatus         @default(PENDING)
+  remainingAmount Decimal           @default(0) @db.Decimal(12, 2)
   responsible   User?               @relation(fields: [responsibleId], references: [id])
   supplier      Supplier            @relation(fields: [supplierId], references: [id])
   items         PurchaseOrderItem[]
+  transactions  SupplierTransaction[]
 }
 
 model PurchaseOrderItem {
@@ -341,13 +343,15 @@ model PurchaseOrderItem {
 }
 
 model SupplierTransaction {
-  id          String          @id @default(cuid())
-  supplierId  String
-  amount      Decimal         @db.Decimal(12, 2)
-  type        TransactionType
-  description String
-  date        DateTime        @default(now())
-  supplier    Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  supplierId      String
+  purchaseOrderId String?
+  amount          Decimal         @db.Decimal(12, 2)
+  type            TransactionType
+  description     String
+  date            DateTime        @default(now())
+  supplier        Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  purchaseOrder   PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
 }
 
 model Setting {

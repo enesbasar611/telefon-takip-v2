@@ -29,12 +29,18 @@ import {
     CreditCard,
     Banknote,
     Info,
-    Clock
+    Clock,
+    ChevronRight,
+    AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
+import { searchProducts } from "@/lib/actions/product-actions";
+import { format, isAfter, subDays } from "date-fns";
+import { tr } from "date-fns/locale";
+import { useEffect, useRef } from "react";
 
 interface PurchaseFormProps {
     isOpen: boolean;
@@ -61,6 +67,45 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
     const [paymentStatus, setPaymentStatus] = useState<"PAID" | "UNPAID">("UNPAID");
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [loading, setLoading] = useState(false);
+    const [searchResults, setSearchResults] = useState<{ [key: string]: any[] }>({});
+    const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
+
+    // Close search results when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setActiveSearchId(null);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleSearch = async (id: string, query: string) => {
+        updateItem(id, "name", query);
+        if (query.length < 2) {
+            setSearchResults(prev => ({ ...prev, [id]: [] }));
+            setActiveSearchId(null);
+            return;
+        }
+
+        const results = await searchProducts(query);
+        setSearchResults(prev => ({ ...prev, [id]: results }));
+        setActiveSearchId(id);
+    };
+
+    const selectProduct = (rowId: string, product: any) => {
+        setItems(items.map(i => i.id === rowId ? {
+            ...i,
+            name: product.name,
+            productId: product.id,
+            buyPrice: Number(product.buyPrice) || i.buyPrice,
+            // You can also add vatRate if it exists on product, but usually it's category based. 
+            // For now just name and price.
+        } : i));
+        setActiveSearchId(null);
+    };
 
     const addItem = () => {
         setItems([...items, { id: Math.random().toString(), name: "", quantity: 1, buyPrice: 0, vatRate: 20 }]);
@@ -209,12 +254,36 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                         {items.map((item) => (
                                             <tr key={item.id} className="hover:bg-white/[0.01] transition-colors">
                                                 <td className="px-4 py-3">
-                                                    <Input
-                                                        value={item.name}
-                                                        onChange={e => updateItem(item.id, "name", e.target.value)}
-                                                        className="h-10 bg-white/5 border-none rounded-lg text-sm font-bold"
-                                                        placeholder="iPhone 14 LCD..."
-                                                    />
+                                                    <div className="relative" ref={item.id === activeSearchId ? searchRef : null}>
+                                                        <Input
+                                                            value={item.name}
+                                                            onChange={e => handleSearch(item.id, e.target.value)}
+                                                            onFocus={() => {
+                                                                if (item.name.length >= 2) setActiveSearchId(item.id);
+                                                            }}
+                                                            className="h-10 bg-white/5 border-none rounded-lg text-sm font-bold placeholder:text-muted-foreground/30"
+                                                            placeholder="Ürün adı yazınız..."
+                                                        />
+                                                        {activeSearchId === item.id && searchResults[item.id]?.length > 0 && (
+                                                            <div className="absolute top-full left-0 w-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                                                                {searchResults[item.id].map((p) => (
+                                                                    <button
+                                                                        key={p.id}
+                                                                        onClick={() => selectProduct(item.id, p)}
+                                                                        className="w-full px-4 py-2 text-left hover:bg-white/5 flex items-center justify-between group"
+                                                                    >
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{p.name}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">Stok: {p.stock} | {p.category?.name}</p>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <p className="text-[10px] font-black text-blue-400">₺{Number(p.sellPrice || 0).toLocaleString("tr-TR")}</p>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3 w-24">
                                                     <Input
@@ -336,7 +405,12 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10">
                                     <div>
                                         <p className="text-[9px] font-black opacity-60">VADESİ GELEN</p>
-                                        <p className="text-sm font-black uppercase tracking-tight">₺0</p>
+                                        <p className="text-sm font-black uppercase tracking-tight">
+                                            ₺{(() => {
+                                                const unpaid = selectedSupplier?.purchases?.filter((p: any) => p.paymentStatus !== "PAID") || [];
+                                                return Math.round(unpaid.reduce((sum: number, p: any) => sum + Number(p.remainingAmount || p.totalAmount), 0)).toLocaleString("tr-TR");
+                                            })()}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black opacity-60">AÇIK SİPARİŞLER</p>
@@ -354,26 +428,57 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                     <Wallet className="h-3 w-3" /> BEKLEYEN BORÇLAR
                                 </h5>
                             </div>
-                            {/* Simulated recent debts */}
                             <div className="space-y-3">
-                                <div className="bg-white/5 rounded-2xl p-4 border-l-2 border-rose-500">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <p className="text-[11px] font-bold text-white">FATURA: #FT-9821</p>
-                                        <span className="text-[9px] font-black text-rose-400">VADESİ GEÇTİ</span>
-                                    </div>
-                                    <p className="text-lg font-black">₺12.200</p>
-                                </div>
-                                <div className="bg-white/5 rounded-2xl p-4 border-l-2 border-amber-500">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <p className="text-[11px] font-bold text-white">FATURA: #FT-9904</p>
-                                        <span className="text-[9px] font-black text-amber-400">YARIN</span>
-                                    </div>
-                                    <p className="text-lg font-black">₺8.750</p>
-                                </div>
+                                {(() => {
+                                    const unpaidOrders = selectedSupplier?.purchases?.filter((p: any) => p.paymentStatus !== "PAID") || [];
+
+                                    if (unpaidOrders.length === 0) {
+                                        return (
+                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col items-center justify-center text-center gap-3">
+                                                <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                                    <CheckCircle2 className="h-5 w-5" />
+                                                </div>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">
+                                                    Bu tedarikçiye ait<br />bekleyen borç bulunmuyor.
+                                                </p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return unpaidOrders.slice(0, 3).map((order: any) => {
+                                        // Simple overdue logic: more than 15 days old
+                                        const createdAtDate = new Date(order.createdAt);
+                                        const diffDays = Math.floor((new Date().getTime() - createdAtDate.getTime()) / (1000 * 3600 * 24));
+                                        const isOverdue = diffDays > 15;
+
+                                        return (
+                                            <div key={order.id} className={cn(
+                                                "bg-white/5 rounded-2xl p-4 border-l-2 transition-all hover:bg-white/10 cursor-pointer",
+                                                isOverdue ? "border-rose-500" : (order.paymentStatus === "PARTIAL" ? "border-amber-500" : "border-blue-500")
+                                            )}>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <p className="text-[11px] font-bold text-white uppercase">#{order.orderNo}</p>
+                                                    <span className={cn(
+                                                        "text-[9px] font-black uppercase",
+                                                        isOverdue ? "text-rose-400" : (order.paymentStatus === "PARTIAL" ? "text-amber-400" : "text-blue-400")
+                                                    )}>
+                                                        {isOverdue ? "VADESİ GEÇTİ" : (order.paymentStatus === "PARTIAL" ? "KISMİ ÖDEME" : "BEKLEYEN")}
+                                                    </span>
+                                                </div>
+                                                <p className="text-lg font-black">₺{Math.round(Number(order.remainingAmount || order.totalAmount)).toLocaleString("tr-TR")}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground mt-1">
+                                                    {format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}
+                                                </p>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
-                            <Button variant="ghost" className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white mt-2">
-                                TÜM EKSTREYİ GÖRÜNTÜLE
-                            </Button>
+                            {selectedSupplier?.purchases?.filter((p: any) => p.paymentStatus !== "PAID").length > 3 && (
+                                <Button variant="ghost" className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white mt-2">
+                                    TÜM EKSTREYİ GÖRÜNTÜLE
+                                </Button>
+                            )}
                         </div>
 
                         <div className="mt-auto bg-blue-500/5 rounded-2xl p-4 flex gap-3 border border-blue-500/10">

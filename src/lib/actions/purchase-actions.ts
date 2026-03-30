@@ -26,6 +26,7 @@ export async function createPurchaseOrderAction(data: {
                 netAmount: data.netAmount,
                 description: data.description,
                 status: "PENDING",
+                remainingAmount: data.totalAmount, // Başlangıçta tüm tutar borç
                 paymentStatus: data.paymentStatus || "UNPAID",
                 paymentMethod: data.paymentMethod || "CASH",
                 items: {
@@ -107,31 +108,61 @@ export async function createSupplierTransactionAction(data: {
             const t = await tx.supplierTransaction.create({
                 data: {
                     supplierId: data.supplierId,
-                    amount: data.amount,
+                    amount: Math.round(data.amount), // Küsüratları yuvarla
                     type: data.type,
                     description: data.description,
+                    purchaseOrderId: data.purchaseOrderId || null,
                 },
             });
 
-            // If this is for a specific purchase order, mark it as PAID
-            if (data.purchaseOrderId) {
-                await tx.purchaseOrder.update({
-                    where: { id: data.purchaseOrderId },
-                    data: { paymentStatus: "PAID" }
+            // Borç/Ödeme miktarını yuvarla
+            const roundedAmount = Math.round(data.amount);
+
+            // 1. Eğer spesifik bir sipariş için ödeme yapılıyorsa
+            if (data.purchaseOrderId && data.type === "EXPENSE") {
+                const order = await tx.purchaseOrder.findUnique({
+                    where: { id: data.purchaseOrderId }
                 });
+
+                if (order) {
+                    const newRemaining = Math.max(0, Math.round(Number(order.remainingAmount) - roundedAmount));
+                    await tx.purchaseOrder.update({
+                        where: { id: data.purchaseOrderId },
+                        data: {
+                            remainingAmount: newRemaining,
+                            paymentStatus: newRemaining <= 0 ? "PAID" : "PARTIAL"
+                        }
+                    });
+                }
             }
 
-            // Update supplier balance
-            // User requested: "Borç Ekle" (INCOME/Debt) and "Borç Öde" (EXPENSE/Payment)
-            // INCOME = Borçlandık (increases balance), EXPENSE = Biz ödeme yaptık (decreases balance)
-            const adjustment = data.type === "INCOME" ? data.amount : -data.amount;
+            // 2. Tedarikçi bakiyesini güncelle
+            // INCOME = Borçlandık (balance artar), EXPENSE = Ödeme yaptık (balance azalır)
+            const supplier = await tx.supplier.findUnique({ where: { id: data.supplierId } });
+            if (!supplier) throw new Error("Tedarikçi bulunamadı");
+
+            const currentBalance = Math.round(Number(supplier.balance));
+            const adjustment = data.type === "INCOME" ? roundedAmount : -roundedAmount;
+            let newBalance = Math.max(0, currentBalance + adjustment); // Borç asla eksiye düşmez
 
             await tx.supplier.update({
                 where: { id: data.supplierId },
-                data: {
-                    balance: { increment: adjustment },
-                },
+                data: { balance: newBalance },
             });
+
+            // 3. Eğer toplam borç sıfırlandıysa, o tedarikçinin tüm siparişlerini ÖDENDİ olarak işaretle
+            if (newBalance === 0) {
+                await tx.purchaseOrder.updateMany({
+                    where: {
+                        supplierId: data.supplierId,
+                        paymentStatus: { not: "PAID" }
+                    },
+                    data: {
+                        paymentStatus: "PAID",
+                        remainingAmount: 0
+                    }
+                });
+            }
 
             return t;
         });
@@ -231,23 +262,30 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                 }
             }
 
-            // 3. Update Order status to COMPLETED if all received? Or just mark as COMPLETED.
+            const finalReceivedAmount = Math.round(newTotalAmount);
+
+            // 3. Update Order status
             await tx.purchaseOrder.update({
                 where: { id: orderId },
                 data: {
                     status: "COMPLETED",
                     receivedAt: new Date(),
-                    totalAmount: newTotalAmount,
-                    netAmount: newTotalAmount,
+                    totalAmount: finalReceivedAmount,
+                    netAmount: finalReceivedAmount,
+                    remainingAmount: order.paymentStatus === "UNPAID" ? finalReceivedAmount : 0,
                 },
             });
 
             // 4. Update Supplier Balance & Total Shopping
+            const currentSupplier = await tx.supplier.findUnique({ where: { id: order.supplierId } });
+            const oldBalance = Math.round(Number(currentSupplier.balance));
+            const newBalance = order.paymentStatus === "UNPAID" ? oldBalance + finalReceivedAmount : oldBalance;
+
             await tx.supplier.update({
                 where: { id: order.supplierId },
                 data: {
-                    totalShopping: { increment: newTotalAmount },
-                    balance: { increment: order.paymentStatus === "UNPAID" ? newTotalAmount : 0 },
+                    totalShopping: { increment: finalReceivedAmount },
+                    balance: newBalance,
                 },
             });
 

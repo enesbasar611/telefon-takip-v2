@@ -28,25 +28,37 @@ import {
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
-const paymentSchema = z.object({
+interface SupplierPaymentModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    supplierId?: string;
+    supplierName?: string;
+    unpaidOrders?: any[];
+    suppliers?: any[];
+    allPurchaseOrders?: any[];
+    onSuccess?: (updatedSupplier?: any) => void;
+}
+
+const supplierPaymentSchema = z.object({
+    supplierId: z.string().min(1, "Tedarikçi seçiniz"),
     amount: z.coerce.number().min(1, "Tutar 0'dan büyük olmalıdır"),
     type: z.enum(["INCOME", "EXPENSE"]),
     description: z.string().min(2, "Açıklama giriniz"),
     purchaseOrderId: z.string().optional(),
 });
 
-type PaymentFormValues = z.infer<typeof paymentSchema>;
+type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
-interface SupplierPaymentModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    supplierId: string;
-    supplierName: string;
-    unpaidOrders?: any[];
-    onSuccess?: (updatedSupplier: any) => void;
-}
-
-export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName, unpaidOrders = [], onSuccess }: SupplierPaymentModalProps) {
+export function SupplierPaymentModal({
+    isOpen,
+    onClose,
+    supplierId: initialSupplierId,
+    supplierName: initialSupplierName,
+    unpaidOrders: initialUnpaidOrders = [],
+    suppliers = [],
+    allPurchaseOrders = [],
+    onSuccess
+}: SupplierPaymentModalProps) {
     const [isPending, startTransition] = useTransition();
 
     const {
@@ -57,9 +69,10 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
         control,
         formState: { errors },
         reset,
-    } = useForm<PaymentFormValues>({
-        resolver: zodResolver(paymentSchema),
+    } = useForm<SupplierPaymentFormValues>({
+        resolver: zodResolver(supplierPaymentSchema),
         defaultValues: {
+            supplierId: initialSupplierId || "",
             type: "EXPENSE",
             description: "",
         }
@@ -67,23 +80,30 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
 
     const selectedType = watch("type");
     const selectedOrderId = watch("purchaseOrderId");
+    const selectedSupplierId = watch("supplierId");
+
+    // Efektif unpaidOrders (eğer sidebar'dan açıldıysa ve supplier seçildiyse)
+    const effectiveUnpaidOrders = initialSupplierId
+        ? initialUnpaidOrders
+        : allPurchaseOrders.filter((o: any) => o.supplierId === selectedSupplierId && o.paymentStatus !== "PAID");
 
     // Auto-fill amount when a purchase order is selected
     useEffect(() => {
         if (selectedOrderId && selectedOrderId !== "manual") {
-            const order = unpaidOrders.find(o => o.id === selectedOrderId);
+            const order = effectiveUnpaidOrders.find((o: any) => o.id === selectedOrderId);
             if (order) {
-                setValue("amount", Number(order.totalAmount));
+                const amount = Math.round(Number(order.remainingAmount || order.totalAmount));
+                setValue("amount", amount);
                 setValue("description", `${order.orderNo} nolu sipariş ödemesi`);
             }
         }
-    }, [selectedOrderId, unpaidOrders, setValue]);
+    }, [selectedOrderId, effectiveUnpaidOrders, setValue]);
 
-    const onSubmit = async (data: PaymentFormValues) => {
+    const onSubmit = async (data: SupplierPaymentFormValues) => {
         startTransition(async () => {
             const result = await createSupplierTransactionAction({
-                supplierId,
-                amount: data.amount,
+                supplierId: data.supplierId,
+                amount: Math.round(data.amount),
                 type: data.type,
                 description: data.description,
                 purchaseOrderId: data.purchaseOrderId === "manual" ? undefined : data.purchaseOrderId,
@@ -93,13 +113,17 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
                 toast.success("Cari işlem başarıyla kaydedildi.");
 
                 // Fetch updated supplier data
-                const updatedSupplier = await getSupplierProfileDataAction(supplierId);
-                if (updatedSupplier && onSuccess) {
+                if (onSuccess) {
+                    const updatedSupplier = await getSupplierProfileDataAction(data.supplierId);
                     onSuccess(updatedSupplier);
                 }
 
                 onClose();
-                reset();
+                reset({
+                    supplierId: initialSupplierId || "",
+                    type: "EXPENSE",
+                    description: "",
+                });
             } else {
                 toast.error(result.error || "Bir hata oluştu.");
             }
@@ -116,12 +140,39 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
                         </div>
                         <div>
                             <DialogTitle className="text-xl font-black text-white">Cari İşlem / Ödeme</DialogTitle>
-                            <p className="text-xs font-semibold text-slate-400 mt-1">{supplierName} hesabına işlem giriyorsunuz.</p>
+                            <p className="text-xs font-semibold text-slate-400 mt-1">
+                                {initialSupplierName || "Tedarikçi"} hesabına işlem giriyorsunuz.
+                            </p>
                         </div>
                     </div>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {!initialSupplierId && (
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black tracking-wider text-slate-500 uppercase">TEDARİKÇİ SEÇİN</Label>
+                            <Controller
+                                control={control}
+                                name="supplierId"
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm font-bold text-white focus:ring-emerald-500">
+                                            <SelectValue placeholder="Tedarikçi Seçin" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl">
+                                            {suppliers.map((s: any) => (
+                                                <SelectItem key={s.id} value={s.id} className="text-xs font-bold">
+                                                    {s.name} (Borç: ₺{Math.round(Number(s.balance)).toLocaleString("tr-TR")})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {errors.supplierId && <p className="text-[10px] text-red-400">{errors.supplierId.message}</p>}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3 mb-2">
                         <button
                             type="button"
@@ -161,9 +212,9 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl">
                                         <SelectItem value="manual" className="text-xs font-bold text-slate-400">Manuel İşlem / Genel Ödeme</SelectItem>
-                                        {unpaidOrders.map((order) => (
+                                        {effectiveUnpaidOrders.map((order: any) => (
                                             <SelectItem key={order.id} value={order.id} className="text-xs font-bold">
-                                                {order.orderNo} - ₺{Number(order.totalAmount).toLocaleString("tr-TR")} ({format(new Date(order.createdAt), "dd MMM", { locale: tr })})
+                                                {order.orderNo} - ₺{Math.round(Number(order.remainingAmount || order.totalAmount)).toLocaleString("tr-TR")} ({format(new Date(order.createdAt), "dd MMM", { locale: tr })})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -177,10 +228,15 @@ export function SupplierPaymentModal({ isOpen, onClose, supplierId, supplierName
                         <Input
                             id="amount"
                             type="number"
-                            step="0.01"
+                            step="1"
                             {...register("amount")}
-                            placeholder="0.00"
+                            placeholder="0"
                             className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg font-black text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            onChange={(e) => {
+                                // Clamp to integer
+                                const val = parseInt(e.target.value) || 0;
+                                setValue("amount", val);
+                            }}
                         />
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>
