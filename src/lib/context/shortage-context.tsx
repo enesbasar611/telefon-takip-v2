@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { getShortageItems, addShortageItem as addShortageItemAction, deleteShortageItem as deleteShortageAction, updateShortageQuantity as updateShortageQtyAction, resolveShortageItems as resolveShortageItemsAction } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
@@ -23,20 +25,7 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
         isRefreshing.current = true;
         try {
             const data = await getShortageItems();
-
-            // Auto-resolve: if product stock > 0, it should be removed from shortage
-            const itemsToResolve = data.filter((item: any) =>
-                item.product && item.product.stock > 0
-            );
-
-            if (itemsToResolve.length > 0) {
-                const ids = itemsToResolve.map((i: any) => i.id);
-                await resolveShortageItemsAction(ids);
-                const freshData = await getShortageItems();
-                setItems(freshData);
-            } else {
-                setItems(data);
-            }
+            setItems(data);
         } catch (error) {
             console.error("Shortage fetch error:", error);
         } finally {

@@ -1,7 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { serializePrisma } from "@/lib/utils";
 import { OrderStatus, PaymentStatus, PaymentMethod, TransactionType } from "@prisma/client";
 
 export async function createPurchaseOrderAction(data: {
@@ -45,8 +46,9 @@ export async function createPurchaseOrderAction(data: {
         // If payment status is PAID or PARTIAL, create a transaction? 
         // Usually it's better to do this in a separate step or Mal Kabul.
 
-        revalidatePath("/tedarikciler");
-        return { success: true, order };
+        // revalidatePath("/tedarikciler");
+        return { success: true, order: serializePrisma(order) };
+
     } catch (error) {
         console.error("Error creating purchase order:", error);
         return { success: false, error: "Sipariş oluşturulamadı." };
@@ -59,7 +61,7 @@ export async function updatePurchaseOrderStatusAction(orderId: string, status: O
             where: { id: orderId },
             data: { status },
         });
-        revalidatePath("/tedarikciler");
+        // revalidatePath("/tedarikciler");
         return { success: true, order };
     } catch (error) {
         return { success: false, error: "Durum güncellenemedi." };
@@ -83,8 +85,8 @@ export async function getSupplierProfileDataAction(supplierId: string) {
 
         if (!supplier) return null;
 
-        // Convert Decimals to Numbers for client components
-        const serializedSupplier = JSON.parse(JSON.stringify(supplier));
+        // Add import { serializePrisma } from "@/lib/utils"; at top of file, doing it here first 
+        const serializedSupplier = serializePrisma(supplier);
 
         return serializedSupplier;
     } catch (error) {
@@ -98,9 +100,10 @@ export async function createSupplierTransactionAction(data: {
     amount: number;
     type: TransactionType;
     description: string;
+    purchaseOrderId?: string;
 }) {
     try {
-        const transaction = await prisma.$transaction(async (tx) => {
+        const transaction = await prisma.$transaction(async (tx: any) => {
             const t = await tx.supplierTransaction.create({
                 data: {
                     supplierId: data.supplierId,
@@ -110,13 +113,18 @@ export async function createSupplierTransactionAction(data: {
                 },
             });
 
+            // If this is for a specific purchase order, mark it as PAID
+            if (data.purchaseOrderId) {
+                await tx.purchaseOrder.update({
+                    where: { id: data.purchaseOrderId },
+                    data: { paymentStatus: "PAID" }
+                });
+            }
+
             // Update supplier balance
-            // DEBT increases balance (what we owe), PAYMENT decreases it.
-            const adjustment = data.type === "INCOME" ? -data.amount : data.amount; // INCOME/EXPENSE enum from prisma
-            // Note: Reusing TransactionType enum which has INCOME/EXPENSE. 
-            // For Supplier: EXPENSE = we spent money (debt), INCOME = we received money (refund?)
-            // Actually let's use DEBT/PAYMENT if possible, but TransactionType is fixed.
-            // I'll interpret EXPENSE as payment from us to them? No, EXPENSE is usually money going out.
+            // User requested: "Borç Ekle" (INCOME/Debt) and "Borç Öde" (EXPENSE/Payment)
+            // INCOME = Borçlandık (increases balance), EXPENSE = Biz ödeme yaptık (decreases balance)
+            const adjustment = data.type === "INCOME" ? data.amount : -data.amount;
 
             await tx.supplier.update({
                 where: { id: data.supplierId },
@@ -128,17 +136,17 @@ export async function createSupplierTransactionAction(data: {
             return t;
         });
 
-        revalidatePath("/tedarikciler");
-        return { success: true, transaction };
+        // revalidatePath("/tedarikciler");
+        return { success: true, transaction: serializePrisma(transaction) };
     } catch (error) {
         console.error("Error creating transaction:", error);
         return { success: false, error: "İşlem kaydedilemedi." };
     }
 }
 
-export async function receivePurchaseOrderAction(orderId: string, receivedItems: { itemId: string; receivedQuantity: number }[]) {
+export async function receivePurchaseOrderAction(orderId: string, receivedItems: { itemId: string; receivedQuantity: number; buyPrice?: number; buyPriceUsd?: number | null }[]) {
     try {
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             const order = await tx.purchaseOrder.findUnique({
                 where: { id: orderId },
                 include: { items: true, supplier: true },
@@ -146,21 +154,48 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
 
             if (!order) throw new Error("Sipariş bulunamadı.");
 
+            let newTotalAmount = 0;
+
             // 1. Update received quantities for items
             for (const rItem of receivedItems) {
-                const item = order.items.find((i) => i.id === rItem.itemId);
+                const item = order.items.find((i: any) => i.id === rItem.itemId);
                 if (item) {
+                    const priceToUse = rItem.buyPrice ?? Number(item.buyPrice);
+                    newTotalAmount += rItem.receivedQuantity * priceToUse;
+
                     await tx.purchaseOrderItem.update({
                         where: { id: rItem.itemId },
-                        data: { receivedQuantity: { increment: rItem.receivedQuantity } },
+                        data: {
+                            receivedQuantity: { increment: rItem.receivedQuantity },
+                            buyPrice: priceToUse,
+                            buyPriceUsd: rItem.buyPriceUsd !== undefined ? rItem.buyPriceUsd : null
+                        },
                     });
 
                     // 2. Update Product stock if productId exists
                     if (item.productId && rItem.receivedQuantity > 0) {
+                        const product = await tx.product.findUnique({ where: { id: item.productId } });
+                        const oldPrice = Number(product.buyPrice);
+
                         await tx.product.update({
                             where: { id: item.productId },
-                            data: { stock: { increment: rItem.receivedQuantity } },
+                            data: {
+                                stock: { increment: rItem.receivedQuantity },
+                                buyPrice: priceToUse,
+                                buyPriceUsd: rItem.buyPriceUsd !== undefined ? rItem.buyPriceUsd : null
+                            },
                         });
+
+                        let priceNote = "";
+                        if (rItem.buyPriceUsd) {
+                            priceNote = priceToUse !== oldPrice
+                                ? `Sipariş Kabul: ${order.orderNo}. Eski: ${oldPrice}₺, Yeni: $${rItem.buyPriceUsd} (${priceToUse}₺)`
+                                : `Sipariş Kabul: ${order.orderNo}`;
+                        } else {
+                            priceNote = priceToUse !== oldPrice
+                                ? `Sipariş Kabul: ${order.orderNo}. Eski: ${oldPrice}₺, Yeni: ${priceToUse}₺`
+                                : `Sipariş Kabul: ${order.orderNo}`;
+                        }
 
                         // Create InventoryMovement
                         await tx.inventoryMovement.create({
@@ -168,8 +203,29 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                                 productId: item.productId,
                                 quantity: rItem.receivedQuantity,
                                 type: "PURCHASE",
-                                notes: `Sipariş Kabul: ${order.orderNo}`,
+                                notes: priceNote,
                             },
+                        });
+
+                        // Auto-remove from Shortage List as some stock arrived?
+                        // Actually, if we received SOME, we remove old entry, but if we still have MISSING below, we'll re-add it.
+                        await tx.shortageItem.deleteMany({
+                            where: { productId: item.productId }
+                        });
+                    }
+
+                    // 2b. Handle Missing Items: If received < ordered, re-add to Shortage List
+                    // IF received >= ordered, DON'T add to shortage (user request: "fazlaysa eksik listesine gönderme")
+                    if (rItem.receivedQuantity < item.quantity) {
+                        const missingQty = item.quantity - rItem.receivedQuantity;
+                        await tx.shortageItem.create({
+                            data: {
+                                productId: item.productId,
+                                name: item.name,
+                                quantity: missingQty,
+                                notes: `Sipariş #${order.orderNo} uyuşmazlığı - Gelen: ${rItem.receivedQuantity}/${item.quantity}`,
+                                isResolved: false
+                            }
                         });
                     }
                 }
@@ -181,25 +237,25 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                 data: {
                     status: "COMPLETED",
                     receivedAt: new Date(),
+                    totalAmount: newTotalAmount,
+                    netAmount: newTotalAmount,
                 },
             });
 
             // 4. Update Supplier Balance & Total Shopping
-            // When received, the net amount becomes a DEBT if not paid.
-            // For now, let's assume simple tracking.
             await tx.supplier.update({
                 where: { id: order.supplierId },
                 data: {
-                    totalShopping: { increment: order.totalAmount },
-                    balance: { increment: order.paymentStatus === "UNPAID" ? order.totalAmount : 0 },
+                    totalShopping: { increment: newTotalAmount },
+                    balance: { increment: order.paymentStatus === "UNPAID" ? newTotalAmount : 0 },
                 },
             });
 
             return order;
         });
 
-        revalidatePath("/tedarikciler");
-        return { success: true, order: result };
+        // revalidatePath("/tedarikciler");
+        return { success: true, order: serializePrisma(result) };
     } catch (error) {
         console.error("Error receiving order:", error);
         return { success: false, error: "Stok girişi yapılamadı." };

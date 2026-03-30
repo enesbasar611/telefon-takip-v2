@@ -36,15 +36,38 @@ interface MalKabulModalProps {
 
 export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
     const [receivedQtys, setReceivedQtys] = useState<Record<string, number>>({});
+    const [buyPrices, setBuyPrices] = useState<Record<string, number>>({});
+    const [currencies, setCurrencies] = useState<Record<string, "TRY" | "USD">>({});
     const [loading, setLoading] = useState(false);
+    const [usdRate, setUsdRate] = useState<number>(33.0);
+
+    useEffect(() => {
+        fetch("https://api.exchangerate-api.com/v4/latest/USD")
+            .then(res => res.json())
+            .then(data => setUsdRate(data.rates.TRY))
+            .catch(() => setUsdRate(33.0));
+    }, []);
 
     useEffect(() => {
         if (order?.items) {
-            const initial: Record<string, number> = {};
+            const initialQtys: Record<string, number> = {};
+            const initialPrices: Record<string, number> = {};
+            const initialCurrencies: Record<string, "TRY" | "USD"> = {};
+
             order.items.forEach((item: any) => {
-                initial[item.id] = item.quantity; // Default to full quantity
+                initialQtys[item.id] = item.quantity;
+                const usdPrice = item.product?.buyPriceUsd || item.buyPriceUsd;
+                if (usdPrice && Number(usdPrice) > 0) {
+                    initialPrices[item.id] = Number(usdPrice);
+                    initialCurrencies[item.id] = "USD";
+                } else {
+                    initialPrices[item.id] = Number(item.buyPrice) || Number(item.product?.buyPrice) || 0;
+                    initialCurrencies[item.id] = "TRY";
+                }
             });
-            setReceivedQtys(initial);
+            setReceivedQtys(initialQtys);
+            setBuyPrices(initialPrices);
+            setCurrencies(initialCurrencies);
         }
     }, [order]);
 
@@ -53,16 +76,49 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
         setReceivedQtys(prev => ({ ...prev, [itemId]: num }));
     };
 
+    const handlePriceChange = (itemId: string, val: string) => {
+        const num = parseFloat(val) || 0;
+        setBuyPrices(prev => ({ ...prev, [itemId]: num }));
+    };
+
     const handleComplete = async () => {
         setLoading(true);
-        const updates = Object.entries(receivedQtys).map(([itemId, receivedQuantity]) => ({
-            itemId,
-            receivedQuantity
-        }));
+        const updates = order.items.map((item: any) => {
+            const receivedQuantity = receivedQtys[item.id] || 0;
+            const priceInput = buyPrices[item.id];
+            const hasNewPrice = priceInput !== undefined && !isNaN(priceInput) && priceInput > 0;
+            const isUsd = currencies[item.id] === 'USD';
+
+            const finalPriceTry = !hasNewPrice
+                ? Number(item.buyPrice || item.product?.buyPrice || 0)
+                : (isUsd ? (priceInput * usdRate) : priceInput);
+
+            return {
+                itemId: item.id,
+                receivedQuantity,
+                buyPrice: finalPriceTry,
+                buyPriceUsd: (hasNewPrice && isUsd) ? priceInput : null
+            };
+        });
 
         const res = await receivePurchaseOrderAction(order.id, updates);
         if (res.success) {
             toast.success("Mal kabul başarıyla tamamlandı. Stoklar güncellendi.");
+
+            const hasMissingStatus = updates.some((u: any) => {
+                const originalItem = order.items.find((i: any) => i.id === u.itemId);
+                return originalItem && u.receivedQuantity < originalItem.quantity;
+            });
+
+            if (hasMissingStatus) {
+                setTimeout(() => {
+                    toast.warning("Eksik ürünler tespit edildi ve otomatik olarak 'Eksik Listesi'ne aktarıldı.", {
+                        style: { backgroundColor: '#f59e0b', color: '#fff', border: 'none' },
+                        duration: 5000
+                    });
+                }, 1000);
+            }
+
             onClose();
         } else {
             toast.error(res.error || "Bir hata oluştu.");
@@ -70,9 +126,22 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
         setLoading(false);
     };
 
+    const currentTotal = (order?.items || []).reduce((acc: number, item: any) => {
+        const qty = receivedQtys[item.id] || 0;
+        const priceInput = buyPrices[item.id];
+        const isUsd = currencies[item.id] === 'USD';
+        const hasNewPrice = priceInput !== undefined && !isNaN(priceInput) && priceInput > 0;
+
+        const finalPriceTry = hasNewPrice
+            ? (isUsd ? (priceInput * usdRate) : priceInput)
+            : Number(item.buyPrice || item.product?.buyPrice || 0);
+
+        return acc + (qty * finalPriceTry);
+    }, 0);
+
     if (!order) return null;
 
-    const mismatches = order.items.filter((item: any) => receivedQtys[item.id] !== item.quantity).length;
+    const mismatches = (order.items || []).filter((item: any) => receivedQtys[item.id] !== item.quantity).length;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -96,9 +165,9 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                             <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
                                 <Package className="h-5 w-5 text-blue-400" />
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tedarikçi</p>
-                                <p className="text-sm font-black truncate">{order.supplier?.name}</p>
+                                <p className="text-sm font-black truncate text-foreground">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</p>
                             </div>
                         </Card>
 
@@ -107,8 +176,8 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 <Wallet className="h-5 w-5 text-emerald-400" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sipariş Değeri</p>
-                                <p className="text-sm font-black truncate">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Güncel Değer</p>
+                                <p className="text-sm font-black truncate">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                             </div>
                         </Card>
 
@@ -142,10 +211,12 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                             <table className="w-full text-left">
                                 <thead className="bg-white/[0.02] border-b border-white/5">
                                     <tr>
-                                        <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase">Ürün Adı</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase text-center">Sipariş Adedi</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase text-center w-32">Gelen Adet</th>
-                                        <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase text-right">Durum</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase">Ürün Adı</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase text-center w-28">Stok Durumu</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase text-center">Sipariş</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase text-center w-28">Gelen</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase text-center w-32">Alış Fiyatı ($)</th>
+                                        <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase text-right">Durum</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -155,19 +226,26 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 
                                         return (
                                             <tr key={item.id} className="hover:bg-white/[0.01] transition-colors">
-                                                <td className="px-6 py-4 flex items-center gap-3">
+                                                <td className="px-4 py-4 flex items-center gap-3">
                                                     <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                                                         <Package className="h-5 w-5 text-muted-foreground" />
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold text-foreground">{item.name}</p>
-                                                        <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[200px]">ID: {item.productId || "Manuel Giriş"}</p>
+                                                        <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[150px]">ID: {item.productId || "Manuel Giriş"}</p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="text-sm font-bold text-slate-400">{item.product?.stock || 0}</span>
+                                                        <span className="text-slate-600">→</span>
+                                                        <span className="text-sm font-black text-emerald-400">{(item.product?.stock || 0) + received}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
                                                     <span className="text-sm font-black text-foreground">{item.quantity} Adet</span>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 py-4">
                                                     <Input
                                                         type="number"
                                                         value={received}
@@ -175,7 +253,32 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         className="h-10 rounded-xl bg-white/5 border-white/10 text-center font-black text-sm"
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-4 py-4 w-32 align-top">
+                                                    <div className="relative">
+                                                        <div className="absolute inset-y-0 left-0 flex items-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setCurrencies(prev => ({ ...prev, [item.id]: prev[item.id] === 'USD' ? 'TRY' : 'USD' }))}
+                                                                className="h-full px-2 text-xs font-black text-blue-400 bg-blue-500/10 border-r border-white/10 rounded-l-xl hover:bg-blue-500/20 transition-colors"
+                                                            >
+                                                                {currencies[item.id] === 'USD' ? '$' : '₺'}
+                                                            </button>
+                                                        </div>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={buyPrices[item.id] !== undefined ? buyPrices[item.id] : ""}
+                                                            onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                                                            className="w-full h-10 bg-white/5 border-white/10 text-xs font-black rounded-xl pl-8 text-right pr-2"
+                                                        />
+                                                    </div>
+                                                    {currencies[item.id] === 'USD' && buyPrices[item.id] > 0 && (
+                                                        <div className="text-[10px] font-bold text-muted-foreground mt-1 text-right">
+                                                            ≈ {((buyPrices[item.id] || 0) * usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}₺
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4 text-right">
                                                     <div className="flex items-center justify-end">
                                                         {status === "MATCH" ? (
                                                             <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -211,12 +314,16 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                 <div className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Genel Toplam</p>
-                        <p className="text-3xl font-black text-blue-500 tracking-tighter">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
+                        <p className="text-3xl font-black text-blue-500 tracking-tighter">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button onClick={onClose} variant="ghost" className="h-12 px-6 rounded-2xl font-bold text-xs">İptal</Button>
                         <Button
-                            onClick={handleComplete}
+                            onClick={() => {
+                                if (window.confirm("Mal kabul işlemini tamamlamak ve stokları güncellemek istediğinize emin misiniz?")) {
+                                    handleComplete();
+                                }
+                            }}
                             disabled={loading}
                             className="h-12 px-8 rounded-2xl font-black text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20 uppercase tracking-widest gap-2"
                         >

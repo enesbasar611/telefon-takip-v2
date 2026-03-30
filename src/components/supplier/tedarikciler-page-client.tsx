@@ -32,6 +32,8 @@ import {
 import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
 import { SupplierAnalysisModal } from "@/components/supplier/supplier-analysis-modal";
 import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
+import { MalKabulModal } from "@/components/supplier/mal-kabul-modal";
+import { toast } from "sonner";
 import { useSupplierOrders } from "@/lib/context/supplier-order-context";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -53,11 +55,16 @@ const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 import { SupplierProfile } from "./supplier-profile";
 import { PurchaseForm } from "./purchase-form";
+import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 
-export function TedarikcilerPageClient({ suppliers, purchaseOrders, aiAlerts, criticalProducts }: TedarikcilerPageClientProps) {
+export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurchaseOrders, aiAlerts, criticalProducts }: TedarikcilerPageClientProps) {
+    const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
     const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
     const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
+    const [isGlobalMalKabulOpen, setIsGlobalMalKabulOpen] = useState(false);
+    const [isGlobalDetailOpen, setIsGlobalDetailOpen] = useState(false);
+    const [globalSelectedOrder, setGlobalSelectedOrder] = useState<any>(null);
     const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
     const { totalItemCount } = useSupplierOrders();
 
@@ -238,7 +245,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders, aiAlerts, cr
                                         const initials = supplier.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
                                         const colors = ["bg-blue-500/20 text-blue-400", "bg-emerald-500/20 text-emerald-400", "bg-amber-500/20 text-amber-400", "bg-purple-500/20 text-purple-400", "bg-rose-500/20 text-rose-400"];
                                         return (
-                                            <TableRow key={supplier.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group cursor-pointer">
+                                            <TableRow key={supplier.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group cursor-pointer" onClick={() => setSelectedSupplierId(supplier.id)}>
                                                 <TableCell className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn("h-9 w-9 rounded-xl font-black text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
@@ -323,8 +330,21 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders, aiAlerts, cr
                                                     {format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-blue-400 hover:bg-blue-500/10 rounded-lg">
-                                                        {order.status === "PENDING" ? "Tahsil Et" : "İncele"}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            if (order.status === "PENDING" || order.status === "ORDERED") {
+                                                                setGlobalSelectedOrder(order);
+                                                                setIsGlobalMalKabulOpen(true);
+                                                            } else {
+                                                                setGlobalSelectedOrder(order);
+                                                                setIsGlobalDetailOpen(true);
+                                                            }
+                                                        }}
+                                                        className="h-8 text-xs font-bold text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                    >
+                                                        {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -344,9 +364,9 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders, aiAlerts, cr
                         </div>
                         <CardContent className="p-4 space-y-2">
                             {[
-                                { icon: ShoppingCart, label: "Yeni Alım Formu", color: "text-blue-400", bg: "bg-blue-500/10", onClick: () => setIsAnalysisOpen(true) },
-                                { icon: PayIcon, label: "Ödeme Yaz", color: "text-emerald-400", bg: "bg-emerald-500/10", onClick: undefined },
-                                { icon: UserPlus, label: "Tedarikçi Ekle", color: "text-purple-400", bg: "bg-purple-500/10", onClick: undefined },
+                                { icon: ShoppingCart, label: "Yeni Alım Formu", color: "text-blue-400", bg: "bg-blue-500/10", onClick: () => setIsPurchaseFormOpen(true) },
+                                { icon: PayIcon, label: "Ödeme Yaz", color: "text-emerald-400", bg: "bg-emerald-500/10", onClick: () => toast.info("Ödeme işlemi yapmak için önce listelerden bir tedarikçi seçip 'Ödeme Yap' butonunu tıklayın.") },
+                                { icon: UserPlus, label: "Tedarikçi Ekle", color: "text-purple-400", bg: "bg-purple-500/10", onClick: () => document.getElementById("create-supplier-trigger")?.click() },
                             ].map((action, i) => (
                                 <button key={i} onClick={action.onClick} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all group text-left">
                                     <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", action.bg)}>
@@ -455,6 +475,29 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders, aiAlerts, cr
                 isOpen={isOrderPanelOpen}
                 onClose={() => setIsOrderPanelOpen(false)}
             />
+            <PurchaseForm
+                isOpen={isPurchaseFormOpen}
+                onClose={() => setIsPurchaseFormOpen(false)}
+                suppliers={suppliers}
+                onSuccess={(newOrder) => {
+                    setPurchaseOrders([newOrder, ...purchaseOrders]);
+                }}
+            />
+            <MalKabulModal
+                isOpen={isGlobalMalKabulOpen}
+                onClose={() => {
+                    setIsGlobalMalKabulOpen(false);
+                    setGlobalSelectedOrder(null);
+                }}
+                order={globalSelectedOrder}
+            />
+            {globalSelectedOrder && isGlobalDetailOpen && (
+                <PurchaseOrderDetailModal
+                    isOpen={isGlobalDetailOpen}
+                    onClose={() => setIsGlobalDetailOpen(false)}
+                    order={globalSelectedOrder}
+                />
+            )}
         </div>
     );
 }

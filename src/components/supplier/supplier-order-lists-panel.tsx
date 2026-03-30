@@ -16,8 +16,12 @@ import {
     ChevronRight,
     ShoppingBasket,
     Sparkles,
+    CheckCircle2,
+    ClipboardList,
+    Loader2
 } from "lucide-react";
 import { useSupplierOrders } from "@/lib/context/supplier-order-context";
+import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -29,6 +33,7 @@ interface SupplierOrderListsPanelProps {
 export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsPanelProps) {
     const { orders, updateQty, removeProduct, clearSupplier, totalItemCount } = useSupplierOrders();
     const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set(Object.keys(orders)));
+    const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
 
     const supplierIds = Object.keys(orders);
 
@@ -59,6 +64,41 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
 
         window.open(url, "_blank");
         toast.success(`${list.supplierName} için WhatsApp açılıyor...`);
+    };
+
+    const handleCreateOrder = async (supplierId: string, items: any[], supplierName: string) => {
+        setOrderingStatus((prev) => ({ ...prev, [supplierId]: "loading" }));
+        try {
+            const res = await createPurchaseOrderAction({
+                supplierId,
+                orderNo: `PO-${Date.now()}`,
+                items: items.map((item) => ({
+                    productId: item.productId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    buyPrice: 0,
+                })),
+                totalAmount: 0,
+                vatAmount: 0,
+                netAmount: 0,
+                description: "Eksikler listesinden otomatik oluşturuldu",
+            });
+
+            if (res.success) {
+                setOrderingStatus((prev) => ({ ...prev, [supplierId]: "success" }));
+                toast.success(`${supplierName} siparişi oluşturuldu!`);
+                setTimeout(() => {
+                    setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+                    clearSupplier(supplierId);
+                }, 1500);
+            } else {
+                toast.error("Sipariş oluşturulamadı.");
+                setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+            }
+        } catch (err) {
+            setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+            toast.error("Beklenmeyen bir hata oluştu.");
+        }
     };
 
     const handleClearSupplier = (supplierId: string, name: string) => {
@@ -182,16 +222,40 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                             <div className="px-3 pb-3 flex items-center gap-2">
                                                 <Button
                                                     onClick={() => sendWhatsApp(supplierId)}
-                                                    className="flex-1 h-10 rounded-xl bg-[#25D366] hover:bg-[#22c55e] text-white font-black text-xs gap-2"
+                                                    className="flex-1 h-10 rounded-xl bg-[#25D366] hover:bg-[#22c55e] text-white font-black text-[10px] gap-2"
                                                 >
-                                                    <MessageCircle className="h-4 w-4" />
-                                                    WhatsApp Gönder
+                                                    <MessageCircle className="h-4 w-4 shrink-0" />
+                                                    <span className="truncate">WhatsApp Gönder</span>
                                                 </Button>
+
+                                                <Button
+                                                    onClick={() => handleCreateOrder(supplierId, list.items, list.supplierName)}
+                                                    disabled={orderingStatus[supplierId] !== undefined && orderingStatus[supplierId] !== "idle"}
+                                                    className={cn(
+                                                        "flex-1 text-white font-black text-[10px] h-10 rounded-xl gap-2 transition-all",
+                                                        orderingStatus[supplierId] === "success"
+                                                            ? "bg-emerald-500 hover:bg-emerald-600"
+                                                            : "bg-blue-600 hover:bg-blue-500"
+                                                    )}
+                                                >
+                                                    {orderingStatus[supplierId] === "loading" ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                                                    ) : orderingStatus[supplierId] === "success" ? (
+                                                        <>
+                                                            <CheckCircle2 className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Verildi</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Ver</span>
+                                                        </>
+                                                    )}
+                                                </Button>
+
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleClearSupplier(supplierId, list.supplierName)}
-                                                    className="h-10 px-3 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 font-bold text-xs"
+                                                    className="h-10 px-3 shrink-0 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 font-bold text-xs"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>

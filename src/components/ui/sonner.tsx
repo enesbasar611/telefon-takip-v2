@@ -61,18 +61,24 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast !flex !flex-row !bg-[#0f172a] !border !border-white/[0.06] !shadow-2xl !shadow-black/40 !rounded-2xl !p-4 !gap-4 !items-center !min-w-[320px]",
+            "group toast !flex !flex-row !border !border-white/[0.06] !shadow-2xl !shadow-black/40 !rounded-2xl !p-4 !gap-4 !items-center !w-full sm:!w-[380px] relative",
+          success: "!bg-emerald-950/90 !border-emerald-500/20",
+          error: "!bg-rose-950/90 !border-rose-500/20",
+          warning: "!bg-amber-950/90 !border-amber-500/20",
+          info: "!bg-[#0f172a] !border-blue-500/20",
+          default: "!bg-[#0f172a]",
+          content: "!ml-[74px] !flex-1 !min-w-0 flex flex-col justify-center",
           title:
-            "!text-white !font-black !text-sm !leading-snug !flex-1 !pl-1",
+            "!text-white !font-medium !text-[13px] !leading-snug !break-words",
           description:
-            "!text-slate-400 !font-bold !text-xs !uppercase !tracking-wider !leading-snug !flex-1 !pl-1",
+            "!text-slate-400 !font-normal !text-[11px] !leading-relaxed !break-words !mt-0.5",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
           closeButton:
             "!bg-white/5 !border-white/10 !text-slate-500 hover:!text-white hover:!bg-white/10 !rounded-lg",
-          icon: "!m-0 !shrink-0",
+          icon: "!absolute !left-4 !top-1/2 !-translate-y-1/2 !m-0 !w-[42px] !h-[42px] !flex-none flex items-center justify-center",
         },
       }}
       {...props}

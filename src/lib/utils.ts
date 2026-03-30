@@ -30,34 +30,26 @@ export function serializePrisma<T>(data: T): any {
   }
 
   // Handle Prisma Decimal / Decimal.js
-  // Using multiple checks to be highly robust against different environments/versions
-  const isDecimal =
-    typeof data === "object" &&
-    data !== null &&
-    (
-      (data as any).constructor?.name === "Decimal" ||
-      ((data as any).toNumber && (data as any).toFixed && !((data as any) instanceof Function)) ||
-      // Characteristic properties of decimal.js used by Prisma
-      ('d' in data && 'e' in data && 's' in data && Array.isArray((data as any).d))
-    );
-
-  if (isDecimal) {
-    return Number((data as any).toNumber());
+  if (typeof data === "object" && data !== null) {
+    if (typeof (data as any).toNumber === "function") {
+      return Number((data as any).toNumber());
+    }
+    // Also catch raw parsed decimal shapes just in case
+    if ('d' in data && 'e' in data && 's' in data && Array.isArray((data as any).d)) {
+      return Number(((data as any).d || []).join(''));
+    }
   }
 
   // Handle Array
   if (Array.isArray(data)) {
-    return data.map(serializePrisma);
+    return data.map((item) => serializePrisma(item));
   }
 
   // Handle Objects recursively
-  if (typeof data === "object") {
+  if (typeof data === "object" && data !== null) {
     const obj: any = {};
     for (const key in data) {
-      if (
-        Object.prototype.hasOwnProperty.call(data, key) &&
-        typeof (data as any)[key] !== "function"
-      ) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
         obj[key] = serializePrisma((data as any)[key]);
       }
     }

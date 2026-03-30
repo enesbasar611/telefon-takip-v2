@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { approveShortageItem } from "@/lib/actions/shortage-actions";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
+import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -47,8 +48,10 @@ export function ShortageList() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const { orders, assignProductToSupplier, removeProduct, updateQty: updateSupplierQty, totalItemCount } = useSupplierOrders();
+  const { orders, assignProductToSupplier, removeProduct, updateQty: updateSupplierQty, totalItemCount, clearSupplier } = useSupplierOrders();
   const supplierIds = Object.keys(orders);
+
+  const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -142,9 +145,47 @@ export function ShortageList() {
     const url = phone
       ? `https://wa.me/${phone.startsWith("0") ? "90" + phone.slice(1) : phone}?text=${message}`
       : `https://wa.me?text=${message}`;
+
     window.open(url, "_blank");
     toast.success(`${list.supplierName} için WhatsApp açılıyor...`);
   };
+
+  const handleCreateOrder = async (supplierId: string, items: any[], supplierName: string) => {
+    setOrderingStatus((prev) => ({ ...prev, [supplierId]: "loading" }));
+    try {
+      const res = await createPurchaseOrderAction({
+        supplierId,
+        orderNo: `PO-${Date.now()}`,
+        items: items.map((item) => ({
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          buyPrice: 0,
+        })),
+        totalAmount: 0,
+        vatAmount: 0,
+        netAmount: 0,
+        description: "Eksikler listesinden otomatik oluşturuldu",
+      });
+
+      if (res.success) {
+        setOrderingStatus((prev) => ({ ...prev, [supplierId]: "success" }));
+        toast.success(`${supplierName} siparişi oluşturuldu!`);
+        setTimeout(() => {
+          setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+          clearSupplier(supplierId);
+          setActiveTab("main");
+        }, 1500);
+      } else {
+        toast.error("Sipariş oluşturulamadı.");
+        setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+      }
+    } catch (err) {
+      setOrderingStatus((prev) => ({ ...prev, [supplierId]: "idle" }));
+      toast.error("Beklenmeyen bir hata oluştu.");
+    }
+  };
+
 
   const totalBadge = items.length + totalItemCount;
 
@@ -237,7 +278,7 @@ export function ShortageList() {
                   <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
                     {searchResults.length > 0 ? (
                       searchResults.map((p) => (
-                        <button key={p.id} onClick={() => handleSelectProduct(p)} className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0">
+                        <button key={p.id} onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(p); }} className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0">
                           <div className="flex flex-col">
                             <span className="text-[10px] font-bold text-blue-400">{p.name}</span>
                             <span className="text-[8px] text-gray-500 font-bold">{p.sku || 'SKU YOK'}</span>
@@ -250,7 +291,7 @@ export function ShortageList() {
                     ) : (
                       <div className="p-3 text-center text-[10px] text-gray-500">Ürün bulunamadı.</div>
                     )}
-                    <button onClick={handleManualAdd} className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px] font-bold hover:bg-blue-500/10 transition-colors">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleManualAdd(); }} className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px] font-bold hover:bg-blue-500/10 transition-colors">
                       + "{newName}" OLARAK MANUEL EKLE
                     </button>
                   </div>
@@ -387,13 +428,37 @@ export function ShortageList() {
                 {list.items.length > 0 && (
                   <>
                     <Separator className="my-2 bg-white/5" />
-                    <Button
-                      onClick={() => sendWhatsApp(supplierId)}
-                      className="w-full bg-[#25D366] hover:bg-[#22c55e] text-white font-bold text-[10px] h-10 rounded-xl gap-2"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      WhatsApp ile Gönder
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => sendWhatsApp(supplierId)}
+                        className="flex-1 bg-[#25D366] hover:bg-[#22c55e] text-white font-bold text-[10px] h-10 rounded-xl gap-2"
+                      >
+                        <MessageCircle className="h-4 w-4 shrink-0" />
+                        <span className="truncate">WhatsApp Gönder</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleCreateOrder(supplierId, list.items, list.supplierName)}
+                        disabled={orderingStatus[supplierId] !== undefined && orderingStatus[supplierId] !== "idle"}
+                        className={cn(
+                          "flex-1 text-white font-bold text-[10px] h-10 rounded-xl gap-2 transition-all",
+                          orderingStatus[supplierId] === "success"
+                            ? "bg-emerald-500 hover:bg-emerald-600"
+                            : "bg-blue-600 hover:bg-blue-500"
+                        )}
+                      >
+                        {orderingStatus[supplierId] === "loading" ? (
+                          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                        ) : orderingStatus[supplierId] === "success" ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Verildi</span>
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Ver</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>

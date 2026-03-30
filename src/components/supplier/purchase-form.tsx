@@ -28,8 +28,10 @@ import {
     Wallet,
     CreditCard,
     Banknote,
-    Info
+    Info,
+    Clock
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
@@ -38,6 +40,7 @@ interface PurchaseFormProps {
     isOpen: boolean;
     onClose: () => void;
     suppliers: any[];
+    onSuccess?: (newOrder: any) => void;
 }
 
 interface OrderItem {
@@ -49,7 +52,7 @@ interface OrderItem {
     vatRate: number;
 }
 
-export function PurchaseForm({ isOpen, onClose, suppliers }: PurchaseFormProps) {
+export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: PurchaseFormProps) {
     const [selectedSupplierId, setSelectedSupplierId] = useState("");
     const [orderNo, setOrderNo] = useState(`PO-${new Date().getFullYear()}-${Math.floor(Math.random() * 900 + 100)}`);
     const [items, setItems] = useState<OrderItem[]>([
@@ -101,6 +104,9 @@ export function PurchaseForm({ isOpen, onClose, suppliers }: PurchaseFormProps) 
 
         if (res.success) {
             toast.success("Satın alma emri oluşturuldu.");
+            if (onSuccess && res.order) {
+                onSuccess(res.order);
+            }
             onClose();
         } else {
             toast.error(res.error || "Hata oluştu.");

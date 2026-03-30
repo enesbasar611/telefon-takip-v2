@@ -9,6 +9,7 @@ import { UIProvider } from "@/lib/context/ui-context";
 import { SupplierOrderProvider } from "@/lib/context/supplier-order-context";
 import { ShortageProvider } from "@/lib/context/shortage-context";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { GlobalSearch } from "@/components/global-search";
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -39,6 +40,7 @@ export default async function RootLayout({
           <UIProvider>
             <SupplierOrderProvider>
               <ShortageProvider>
+                <GlobalSearch />
                 <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
                   <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
                   <div className="flex flex-1 flex-col overflow-hidden">

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { addShortageItem as addShortageItemAction } from "@/lib/actions/shortage-actions";

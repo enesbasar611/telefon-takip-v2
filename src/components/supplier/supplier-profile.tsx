@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import {
     Phone,
     Mail,
@@ -21,33 +22,93 @@ import {
     ChevronRight,
     ArrowLeft,
     Truck,
-    PackageCheck
+    PackageCheck,
+    Landmark,
+    Loader2,
+    Printer
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { MalKabulModal } from "./mal-kabul-modal";
+import { SupplierPaymentModal } from "./supplier-payment-modal";
+import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
+import { TedarikciCariEkstreModal } from "./tedarikci-cari-ekstre-modal";
+import { EditSupplierModal } from "./edit-supplier-modal";
+import { deleteSupplier } from "@/lib/actions/supplier-actions";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 interface SupplierProfileProps {
     supplier: any;
     onBack: () => void;
 }
 
-export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
+export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierProfileProps) {
+    const [supplier, setSupplier] = useState(initialSupplier);
     const [activeTab, setActiveTab] = useState("orders");
     const [isMalKabulOpen, setIsMalKabulOpen] = useState(false);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isIbanOpen, setIsIbanOpen] = useState(false);
+    const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+    const [isEkstreOpen, setIsEkstreOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [pendingOrdersToDelete, setPendingOrdersToDelete] = useState<any[]>([]);
+    const [isPendingOrdersModalOpen, setIsPendingOrdersModalOpen] = useState(false);
+
+    // Keep state in sync if initialSupplier changes (though rare in this setup)
+    useEffect(() => {
+        setSupplier(initialSupplier);
+    }, [initialSupplier]);
+
+    const handleDetail = (order: any) => {
+        setSelectedOrder(order);
+        setIsDetailOpen(true);
+    };
 
     const stats = [
-        { label: "Toplam Alışveriş", value: `₺${Number(supplier.totalShopping || 0).toLocaleString("tr-TR")}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
-        { label: "Güncel Borç", value: `₺${Number(supplier.balance || 0).toLocaleString("tr-TR")}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
-        { label: "Geciken Ödemeler", value: "₺0", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: "Toplam Alışveriş", value: `₺${Number(supplier.totalShopping || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
+        { label: "Güncel Borç", value: `₺${Number(supplier.balance || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
+        { label: "Geciken Ödemeler", value: "₺0,00", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
         { label: "Aktif Siparişler", value: `${supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").length || 0} Adet`, icon: Truck, color: "text-purple-500", bg: "bg-purple-500/10" },
     ];
+
+    const handlePrintCari = () => {
+        setIsEkstreOpen(true); // Open modal and trigger its print or we can do a dedicated print here
+    };
 
     const handleMalKabul = (order: any) => {
         setSelectedOrder(order);
         setIsMalKabulOpen(true);
+    };
+
+    const handleDelete = async (force: boolean = false) => {
+        setIsDeleting(true);
+        const res = await deleteSupplier(supplier.id, force);
+        if (res.success) {
+            toast.success("Tedarikçi başarıyla silindi.");
+            onBack();
+        } else if (res.error === "PENDING_ORDERS") {
+            setPendingOrdersToDelete(res.pendingOrders);
+            setIsPendingOrdersModalOpen(true);
+            setIsDeleteAlertOpen(false);
+        } else {
+            toast.error(res.error || "Tedarikçi silinirken bir hata oluştu.");
+        }
+        setIsDeleting(false);
     };
 
     return (
@@ -104,21 +165,77 @@ export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
                     </div>
 
                     <div className="flex items-center gap-3 relative z-10">
-                        <div className="hidden xl:flex flex-col items-end mr-6 pr-6 border-r border-white/5">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Güven Skoru</p>
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl font-black text-emerald-500">{supplier.trustScore || 98}/100</span>
-                                <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                    <PackageCheck className="h-4 w-4 text-emerald-500" />
+                        <div className="hidden xl:flex flex-col items-end mr-6 pr-6 border-r border-white/5 space-y-3">
+                            <div className="flex flex-col items-end">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Güven Skoru</p>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl font-black text-emerald-500">{supplier.trustScore || 98}/100</span>
+                                    <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                        <PackageCheck className="h-4 w-4 text-emerald-500" />
+                                    </div>
                                 </div>
+                            </div>
+
+                            {/* Dynamic Reliability Bars */}
+                            <div className="w-48 space-y-2.5">
+                                {[
+                                    { label: "Güvenlik", value: Number(supplier.trustScore || 95) },
+                                    { label: "Teslimat", value: Number(supplier.deliverySpeed || 80) },
+                                    { label: "Kalite", value: Number(supplier.qualityScore || 90) }
+                                ].map((item, i) => (
+                                    <div key={i} className="space-y-1">
+                                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-tighter">
+                                            <span className="text-slate-500">{item.label}</span>
+                                            <span className={item.value >= 80 ? "text-emerald-500" : "text-amber-500"}>%{item.value}</span>
+                                        </div>
+                                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div
+                                                className={cn(
+                                                    "h-full transition-all duration-1000 rounded-full",
+                                                    item.value >= 80 ? "bg-emerald-500" : "bg-amber-500"
+                                                )}
+                                                style={{ width: `${item.value}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        <Button variant="outline" className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsEditOpen(true)}
+                            className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5"
+                        >
                             <Edit3 className="h-4 w-4" />
                             Düzenle
                         </Button>
-                        <Button variant="outline" className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5 px-4 bg-white/5">
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDeleteAlertOpen(true)}
+                            className="h-11 rounded-xl font-bold text-xs gap-2 border-rose-500/10 hover:bg-rose-500/10 text-rose-500 bg-rose-500/5 px-4"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Sil
+                        </Button>
+
+                        {supplier.iban && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsIbanOpen(true)}
+                                className="h-11 rounded-xl font-bold text-xs gap-2 border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 bg-indigo-500/5 text-indigo-300"
+                            >
+                                <Landmark className="h-4 w-4" />
+                                IBAN Göster
+                            </Button>
+                        )}
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsPaymentOpen(true)}
+                            className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5 px-4 bg-white/5"
+                        >
                             <CreditCard className="h-4 w-4" />
                             Ödeme Yap
                         </Button>
@@ -219,7 +336,14 @@ export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
                                                             >
                                                                 Teslim Al
                                                             </Button>
-                                                            <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase text-muted-foreground">Detay</Button>
+                                                            <Button
+                                                                onClick={() => handleDetail(order)}
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg text-[10px] font-black uppercase text-muted-foreground hover:bg-white/5"
+                                                            >
+                                                                Detay
+                                                            </Button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -232,16 +356,54 @@ export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
                     </TabsContent>
 
                     <TabsContent value="history" className="m-0">
-                        {/* History list - similar to orders but completed */}
                         <Card className="bg-card border-white/5 overflow-hidden">
                             <div className="p-6 border-b border-white/5">
                                 <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
                             </div>
-                            <div className="p-12 text-center space-y-3">
-                                <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
-                                    <History className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                                <p className="text-sm font-medium text-muted-foreground text-center">Henüz geçmiş işlem kaydı bulunmuyor.</p>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-white/5 text-left bg-white/[0.01]">
+                                            {["Sipariş No", "Tarih", "Toplam Tutar", "Durum", "İşlem"].map((h) => (
+                                                <th key={h} className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {supplier.purchases?.filter((p: any) => p.status === "COMPLETED").length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
+                                                    Henüz geçmiş işlem kaydı bulunmuyor.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            supplier.purchases?.filter((p: any) => p.status === "COMPLETED").map((order: any) => (
+                                                <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
+                                                    <td className="px-6 py-4 text-sm font-black text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
+                                                    <td className="px-6 py-4 text-sm font-black text-foreground">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge className="text-[10px] font-black border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                                                            Tamamlandı
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                onClick={() => handleDetail(order)}
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg text-[10px] font-black uppercase text-muted-foreground hover:bg-white/5"
+                                                            >
+                                                                Detay
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </Card>
                     </TabsContent>
@@ -249,39 +411,86 @@ export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
                     <TabsContent value="cari" className="m-0">
                         <Card className="bg-card border-white/5 overflow-hidden">
                             <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Cari Hareket Kayıtları</h3>
-                                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase gap-2">
-                                    <FileText className="h-3.5 w-3.5" />
-                                    Ekstre Al
+                                <div className="flex flex-col gap-1">
+                                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Cari Hesap Ekstresi (Banka Tipi)</h3>
+                                    <p className="text-[10px] font-medium text-muted-foreground">Tüm alım ve ödeme hareketlerinin kümülatif bakiye dökümü.</p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-xl text-[10px] font-black uppercase gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+                                    onClick={() => setIsEkstreOpen(true)}
+                                >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    Yazdır / Ekstre Al
                                 </Button>
                             </div>
-                            <div className="divide-y divide-white/5">
-                                {supplier.transactions?.length === 0 ? (
-                                    <div className="p-12 text-center text-sm font-medium text-muted-foreground">İşlem kaydı yok.</div>
-                                ) : (
-                                    supplier.transactions?.map((t: any) => (
-                                        <div key={t.id} className="p-4 flex items-center justify-between hover:bg-white/[0.01]">
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn(
-                                                    "h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xs",
-                                                    t.type === "EXPENSE" ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"
-                                                )}>
-                                                    {t.type === "EXPENSE" ? "B" : "A"}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-foreground">{t.description}</p>
-                                                    <p className="text-[10px] font-medium text-muted-foreground">{format(new Date(t.date), "dd MMM yyyy HH:mm", { locale: tr })}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className={cn("text-sm font-black", t.type === "EXPENSE" ? "text-rose-400" : "text-emerald-400")}>
-                                                    {t.type === "EXPENSE" ? "-" : "+"} ₺{Number(t.amount).toLocaleString("tr-TR")}
-                                                </p>
-                                                <p className="text-[10px] font-medium text-muted-foreground">Kalan Borç: ₺{Number(supplier.balance).toLocaleString("tr-TR")}</p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-white/5 text-left bg-white/[0.01]">
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tarih</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">İşlem Tipi</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Açıklama</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Eski Bakiye</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Tutar</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Yeni Bakiye</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {(!supplier.transactions || supplier.transactions.length === 0) ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-20 text-center text-sm font-medium text-muted-foreground">
+                                                    Henüz bir cari hareket bulunmuyor.
+                                                </td>
+                                            </tr>
+                                        ) : (() => {
+                                            let cumulativeBalance = 0;
+                                            const sorted = [...(supplier.transactions || [])].sort((a, b) =>
+                                                new Date(a.date || a.createdAt).getTime() - new Date(b.date || b.createdAt).getTime()
+                                            );
+
+                                            return sorted.map((t: any) => {
+                                                const prevBalance = cumulativeBalance;
+                                                const amount = Number(t.amount);
+                                                if (t.type === "INCOME") cumulativeBalance += amount;
+                                                else cumulativeBalance -= amount;
+                                                const currentBalance = cumulativeBalance;
+
+                                                return (
+                                                    <tr key={t.id} className="hover:bg-white/[0.01] transition-colors group">
+                                                        <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                                                            {format(new Date(t.date || t.createdAt), "dd MMM yyyy HH:mm", { locale: tr })}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <Badge className={cn(
+                                                                "text-[10px] font-black border-none px-2 rounded-xl",
+                                                                t.type === "INCOME" ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"
+                                                            )}>
+                                                                {t.type === "INCOME" ? "Borç Alım" : "Borç Ödeme"}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm font-bold text-foreground">
+                                                            {t.description}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-xs font-bold text-slate-500 text-right">
+                                                            ₺{prevBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className={cn(
+                                                            "px-4 py-4 text-sm font-black text-right",
+                                                            t.type === "INCOME" ? "text-rose-400" : "text-emerald-400"
+                                                        )}>
+                                                            {t.type === "INCOME" ? "+" : "-"} ₺{amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm font-black text-foreground text-right bg-white/[0.01]">
+                                                            ₺{currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }).reverse();
+                                        })()}
+                                    </tbody>
+                                </table>
                             </div>
                         </Card>
                     </TabsContent>
@@ -292,13 +501,144 @@ export function SupplierProfile({ supplier, onBack }: SupplierProfileProps) {
             {selectedOrder && (
                 <MalKabulModal
                     isOpen={isMalKabulOpen}
-                    onClose={() => {
+                    onClose={(updatedOrder) => {
                         setIsMalKabulOpen(false);
                         setSelectedOrder(null);
+                        // If it's a purchase order receive, we might want to refresh the whole profile
+                        // For now we rely on revalidatePath, but if we want instant state:
+                        // window.location.reload(); // Simple way
                     }}
                     order={selectedOrder}
                 />
             )}
+
+            <SupplierPaymentModal
+                isOpen={isPaymentOpen}
+                onClose={() => setIsPaymentOpen(false)}
+                supplierId={supplier.id}
+                supplierName={supplier.name}
+                unpaidOrders={supplier.purchases?.filter((p: any) => p.paymentStatus !== "PAID")}
+                onSuccess={(updatedSupplier) => {
+                    if (updatedSupplier) setSupplier(updatedSupplier);
+                }}
+            />
+
+            <TedarikciCariEkstreModal
+                isOpen={isEkstreOpen}
+                onClose={() => setIsEkstreOpen(false)}
+                supplier={supplier}
+            />
+
+            <Dialog open={isIbanOpen} onOpenChange={setIsIbanOpen}>
+                <DialogContent className="max-w-md w-11/12 sm:w-full bg-[#0F172A] border-white/10 p-8 flex flex-col items-center justify-center text-center rounded-3xl">
+                    <DialogTitle className="sr-only">IBAN Bilgisi</DialogTitle>
+                    <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 shadow-inner shadow-indigo-500/20 border border-indigo-500/20">
+                        <Landmark className="h-8 w-8 text-indigo-400" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white mb-2">{supplier.name}</h2>
+                    <p className="text-sm font-bold text-indigo-400 mb-8">{supplier.bankName || "Banka Adı Girilmemiş"}</p>
+
+                    <div className="bg-[#0B101B] border border-white/10 rounded-2xl py-8 px-4 sm:px-8 w-full">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
+                        <p className="text-[17px] sm:text-2xl font-mono font-bold text-white tracking-widest break-all">
+                            {supplier.iban}
+                        </p>
+                    </div>
+
+                    <Button onClick={() => setIsIbanOpen(false)} className="w-full mt-8 h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition-all">
+                        Kapat
+                    </Button>
+                </DialogContent>
+            </Dialog>
+            {selectedOrder && isDetailOpen && (
+                <PurchaseOrderDetailModal
+                    isOpen={isDetailOpen}
+                    onClose={() => setIsDetailOpen(false)}
+                    order={selectedOrder}
+                />
+            )}
+
+            <EditSupplierModal
+                isOpen={isEditOpen}
+                onClose={() => setIsEditOpen(false)}
+                supplier={supplier}
+            />
+
+            <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialogContent className="bg-[#0F172A] border-white/10 rounded-3xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black text-white">Tedarikçiyi Sil</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400 font-medium">
+                            <span className="font-bold text-white">"{supplier.name}"</span> isimli tedarikçiyi silmek istediğinize emin misiniz?
+                            Bu işlem geri alınamaz ve tedarikçiye ait tüm geçmiş veriler silinecektir.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel className="bg-white/5 border-white/5 text-white font-bold rounded-xl hover:bg-white/10 hover:text-white">
+                            Vazgeç
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDelete(false);
+                            }}
+                            disabled={isDeleting}
+                            className="bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl shadow-lg shadow-rose-600/20"
+                        >
+                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                            Onayla ve Sil
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <Dialog open={isPendingOrdersModalOpen} onOpenChange={setIsPendingOrdersModalOpen}>
+                <DialogContent className="max-w-xl bg-[#0F172A] border-white/10 rounded-3xl p-8">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-white flex items-center gap-3">
+                            <Clock className="text-amber-500 h-6 w-6" />
+                            Bekleyen İşlemler Var!
+                        </DialogTitle>
+                        <p className="text-slate-400 font-medium pt-2">
+                            Bu tedarikçiye ait henüz tamamlanmamış <span className="text-white font-bold">{pendingOrdersToDelete.length}</span> adet sipariş bulunuyor.
+                            Tedarikçiyi silmek için bu siparişlerdeki ürünleri ne yapmak istersiniz?
+                        </p>
+                    </DialogHeader>
+
+                    <div className="my-6 space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                        {pendingOrdersToDelete.map((order) => (
+                            <div key={order.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-black text-white">#{order.orderNo}</p>
+                                    <p className="text-[10px] font-bold text-slate-500">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-black text-amber-500">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
+                                    <p className="text-[10px] font-bold text-slate-500">{order.items?.length || 0} Kalem Ürün</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <Button
+                            onClick={() => handleDelete(true)}
+                            disabled={isDeleting}
+                            className="w-full h-12 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-xl shadow-lg shadow-amber-600/20 gap-2"
+                        >
+                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                            Tümünü Eksik Listesine Gönder ve Sil
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsPendingOrdersModalOpen(false)}
+                            className="w-full h-12 text-slate-400 hover:text-white font-bold bg-white/5 rounded-xl transition-all"
+                        >
+                            Vazgeç
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

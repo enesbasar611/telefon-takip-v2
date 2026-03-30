@@ -32,21 +32,18 @@ export async function searchProducts(query: string) {
   try {
     if (!query || query.length < 2) return [];
 
-    // Find the category "Parça" (case insensitive)
-    const partCategory = await prisma.category.findFirst({
-      where: {
-        name: { contains: "Parça", mode: "insensitive" }
-      }
-    });
-
     const products = await prisma.product.findMany({
       where: {
-        categoryId: partCategory?.id,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { sku: { contains: query, mode: 'insensitive' } },
           { barcode: { contains: query, mode: 'insensitive' } },
-          { category: { name: { contains: query, mode: 'insensitive' } } }
+          { description: { contains: query, mode: 'insensitive' } },
+          { category: { name: { contains: query, mode: 'insensitive' } } },
+          { deviceInfo: { color: { contains: query, mode: 'insensitive' } } },
+          { deviceInfo: { capacity: { contains: query, mode: 'insensitive' } } },
+          { deviceInfo: { serialNumber: { contains: query, mode: 'insensitive' } } },
+          { deviceInfo: { imei: { contains: query, mode: 'insensitive' } } }
         ]
       },
       select: {
