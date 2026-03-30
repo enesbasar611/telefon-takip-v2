@@ -152,3 +152,22 @@
 .animate-pulse-soft {
   animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes blink {
+  0% {
+    background-color: transparent;
+  }
+
+  50% {
+    background-color: hsl(var(--primary) / 0.2);
+    border-color: hsl(var(--primary) / 0.5);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+.highlight-blink {
+  animation: blink 1s ease-in-out 3;
+}

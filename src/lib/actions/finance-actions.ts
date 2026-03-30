@@ -141,6 +141,29 @@ async function getOrCreateDevUser() {
   return user;
 }
 
+/**
+ * Returns the default "Kasa" (cash register) account.
+ * Creates one automatically if it doesn't exist yet.
+ */
+export async function getOrCreateKasaAccount() {
+  // 1. Try the default-flagged account
+  let kasa = await prisma.account.findFirst({ where: { isDefault: true } });
+  if (kasa) return kasa;
+
+  // 2. Try by name
+  kasa = await prisma.account.findFirst({ where: { name: { contains: "Kasa" } } });
+  if (kasa) {
+    await prisma.account.update({ where: { id: kasa.id }, data: { isDefault: true } });
+    return kasa;
+  }
+
+  // 3. Create it fresh
+  kasa = await prisma.account.create({
+    data: { name: "Kasa", type: "CASH", balance: 0, isDefault: true }
+  });
+  return kasa;
+}
+
 export async function getFinancialSummary() {
   try {
     const accounts = await prisma.account.findMany();
@@ -231,6 +254,7 @@ export async function closeDailySession(id: string, actualBalance: number, notes
 
     if (!session) return { success: false, error: "Oturum bulunamadı." };
 
+    // Net change for THIS session (income - expense)
     const netChange = session.transactions.reduce((acc, t) => {
       const amount = Number(t.amount);
       return t.type === 'INCOME' ? acc + amount : acc - amount;
@@ -238,23 +262,59 @@ export async function closeDailySession(id: string, actualBalance: number, notes
 
     const expectedBalance = Number(session.openingBalance) + netChange;
 
-    await prisma.dailySession.update({
-      where: { id },
-      data: {
-        closingBalance: expectedBalance,
-        actualBalance,
-        status: "CLOSED",
-        closedById: user.id,
-        notes: notes ? `${session.notes || ''}\nKapanış Notu: ${notes}` : session.notes
+    // Fetch / create the Kasa account
+    const kasaAccount = await getOrCreateKasaAccount();
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Close the session
+      await tx.dailySession.update({
+        where: { id },
+        data: {
+          closingBalance: expectedBalance,
+          actualBalance,
+          status: "CLOSED",
+          closedById: user.id,
+          notes: notes ? `${session.notes || ''}\nKapanış Notu: ${notes}` : session.notes
+        }
+      });
+
+      // 2. Apply the net delta to the Kasa account
+      //    Only count transactions NOT already linked to this Kasa account
+      //    (to avoid double-counting when sales already updated the account)
+      const kasaLinkedTxIds = session.transactions
+        .filter(t => t.accountId === kasaAccount.id)
+        .map(t => t.id);
+
+      const nonKasaTxs = session.transactions.filter(
+        t => !kasaLinkedTxIds.includes(t.id) && t.accountId === null
+      );
+
+      const unlinkedNet = nonKasaTxs.reduce((acc, t) => {
+        const amount = Number(t.amount);
+        return t.type === 'INCOME' ? acc + amount : acc - amount;
+      }, 0);
+
+      if (unlinkedNet !== 0) {
+        await tx.account.update({
+          where: { id: kasaAccount.id },
+          data: {
+            balance: {
+              [unlinkedNet > 0 ? 'increment' : 'decrement']: Math.abs(unlinkedNet)
+            }
+          }
+        });
       }
     });
 
     revalidatePath("/finans");
+    revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
+    console.error("closeDailySession error:", error);
     return { success: false, error: "Kasa kapatılamadı." };
   }
 }
+
 
 export async function transferFunds(data: {
   fromAccountId: string;
@@ -366,5 +426,97 @@ export async function getAccountAnalytics(accountId: string, period: "DAY" | "WE
   } catch (error) {
     console.error("Analytics error:", error);
     return { chartData: [], distributionData: [], transactions: [] };
+  }
+}
+
+export async function paySupplierDebt(data: {
+  supplierId: string;
+  accountId: string;
+  amount: number;
+  description: string;
+}) {
+  try {
+    const user = await getOrCreateDevUser();
+    const activeSession = await prisma.dailySession.findFirst({
+      where: { status: "OPEN" }
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update Account balance
+      const account = await tx.account.update({
+        where: { id: data.accountId },
+        data: { balance: { decrement: data.amount } }
+      });
+
+      // 2. Update Supplier balance
+      const supplier = await tx.supplier.update({
+        where: { id: data.supplierId },
+        data: { balance: { decrement: data.amount } }
+      });
+
+      // 3. Create General Transaction (linked to account)
+      const transaction = await tx.transaction.create({
+        data: {
+          type: "EXPENSE",
+          amount: data.amount,
+          description: `Tedarikçi Ödemesi: ${supplier.name} - ${data.description}`,
+          paymentMethod: account.type === 'CASH' ? 'CASH' : 'TRANSFER',
+          accountId: data.accountId,
+          dailySessionId: activeSession?.id,
+          userId: user.id,
+          category: "TEDARİKÇİ ÖDEMESİ"
+        }
+      });
+
+      // 4. Create Supplier Transaction
+      await tx.supplierTransaction.create({
+        data: {
+          supplierId: data.supplierId,
+          amount: data.amount,
+          type: "EXPENSE",
+          description: data.description,
+          date: new Date()
+        }
+      });
+
+      // 5. Allocate payment to PurchaseOrders (FIFO)
+      let remainingToApply = data.amount;
+      const unpaidOrders = await tx.purchaseOrder.findMany({
+        where: {
+          supplierId: data.supplierId,
+          paymentStatus: { in: ["UNPAID", "PARTIAL"] },
+          remainingAmount: { gt: 0 }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      for (const order of unpaidOrders) {
+        if (remainingToApply <= 0) break;
+
+        const orderRemaining = Number(order.remainingAmount);
+        const applyAmount = Math.min(remainingToApply, orderRemaining);
+
+        const newRemaining = orderRemaining - applyAmount;
+        await tx.purchaseOrder.update({
+          where: { id: order.id },
+          data: {
+            remainingAmount: newRemaining,
+            paymentStatus: newRemaining === 0 ? "PAID" : "PARTIAL"
+          }
+        });
+
+        remainingToApply -= applyAmount;
+      }
+
+      return { transaction };
+    });
+
+    revalidatePath("/finans");
+    revalidatePath("/tedarikciler");
+    revalidatePath("/");
+    return { success: true, transaction: serializePrisma(result.transaction) };
+  } catch (error) {
+    console.error("Pay supplier debt error:", error);
+    return { success: false, error: "Ödeme gerçekleştirilemedi." };
   }
 }

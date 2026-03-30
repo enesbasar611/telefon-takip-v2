@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { getDeadStockCount } from "./product-actions";
+import { getOrCreateKasaAccount } from "./finance-actions";
 
 export async function getDashboardStats() {
   try {
@@ -12,83 +13,68 @@ export async function getDashboardStats() {
       pendingServices,
       readyDevices,
       products,
-      todaySales,
+      todaySalesAgg,
       todayRepairIncome,
       todayTransactions,
       totalDebts,
-      allTransactions,
       pendingProcurementCount,
       deadStockCount,
+      kasaAccount,
     ] = await Promise.all([
-      // PENDING SERVICES
       prisma.serviceTicket.count({
-        where: {
-          status: {
-            in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"]
-          }
-        }
+        where: { status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
       }),
-      // READY DEVICES
-      prisma.serviceTicket.count({
-        where: {
-          status: "READY"
-        }
-      }),
-      // For CRITICAL STOCK
+      prisma.serviceTicket.count({ where: { status: "READY" } }),
       prisma.product.findMany(),
-      // TODAY'S SALES
       prisma.sale.aggregate({
         where: { createdAt: { gte: today } },
         _sum: { finalAmount: true }
       }),
-      // TODAY'S REPAIR INCOME (Delivered today)
       prisma.serviceTicket.aggregate({
         where: { status: "DELIVERED", deliveredAt: { gte: today } },
         _sum: { actualCost: true }
       }),
-      // COLLECTED PAYMENTS TODAY
       prisma.transaction.aggregate({
-        where: {
-          type: "INCOME",
-          createdAt: { gte: today }
-        },
+        where: { type: "INCOME", createdAt: { gte: today } },
         _sum: { amount: true }
       }),
-      // TOTAL DEBTS
-      prisma.debt.aggregate({
-        where: { isPaid: false },
-        _sum: { remainingAmount: true }
-      }),
-      // For CASH BALANCE
-      prisma.transaction.findMany(),
-      // For PENDING PROCUREMENT
+      prisma.supplier.aggregate({ _sum: { balance: true } }),
       prisma.shortageItem.count({ where: { isResolved: false } }),
-      // For DEAD STOCK
-      getDeadStockCount()
+      getDeadStockCount(),
+      // Kasa account balance (real-time)
+      getOrCreateKasaAccount(),
     ]);
 
     const lowStockCount = products.filter(p => p.stock <= p.criticalStock).length;
+    const kasaBalance = Number(kasaAccount.balance) || 0;
+    const todaySalesAmount = Number(todaySalesAgg._sum.finalAmount) || 0;
 
-    // Financial calculations for CASH BALANCE (Total Income - Total Expense)
-    const financialSummary = allTransactions.reduce((acc, t) => {
-      const amount = Number(t.amount);
-      if (t.type === 'INCOME') {
-        acc.balance += amount;
-      } else {
-        acc.balance -= amount;
-      }
-      return acc;
-    }, { balance: 0 });
+    // Get active session opening balance (if any)
+    let kasaOpeningBalance = 0;
+    try {
+      const activeSession = await prisma.dailySession.findFirst({
+        where: { status: "OPEN" },
+        orderBy: { createdAt: "desc" }
+      });
+      kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
+    } catch { /* ignore */ }
 
     return serializePrisma({
-      todaySales: `₺${(Number(todaySales._sum.finalAmount) || 0).toLocaleString('tr-TR')}`,
+      // Card primary value: actual today's sales
+      todaySales: `₺${todaySalesAmount.toLocaleString('tr-TR')}`,
+      todaySalesRaw: todaySalesAmount,
+      // Sub-label: current kasa balance
+      kasaBalance: `₺${kasaBalance.toLocaleString('tr-TR')}`,
+      kasaBalanceRaw: kasaBalance,
+      kasaOpeningBalance: `₺${kasaOpeningBalance.toLocaleString('tr-TR')}`,
+      kasaOpeningBalanceRaw: kasaOpeningBalance,
       todayRepairIncome: `₺${(Number(todayRepairIncome._sum.actualCost) || 0).toLocaleString('tr-TR')}`,
       collectedPayments: `₺${(Number(todayTransactions._sum.amount) || 0).toLocaleString('tr-TR')}`,
       pendingServices: pendingServices.toString(),
       readyDevices: readyDevices.toString(),
       criticalStock: lowStockCount.toString(),
-      totalDebts: `₺${(Number(totalDebts._sum.remainingAmount) || 0).toLocaleString('tr-TR')}`,
-      cashBalance: `₺${financialSummary.balance.toLocaleString('tr-TR')}`,
+      totalDebts: `₺${(Number(totalDebts._sum.balance) || 0).toLocaleString('tr-TR')}`,
+      cashBalance: `₺${kasaBalance.toLocaleString('tr-TR')}`,
       pendingProcurementCount: pendingProcurementCount.toString(),
       deadStockCount: deadStockCount.toString(),
     });
@@ -96,6 +82,11 @@ export async function getDashboardStats() {
     console.error("Error fetching dashboard stats:", error);
     return serializePrisma({
       todaySales: "₺0",
+      todaySalesRaw: 0,
+      kasaBalance: "₺0",
+      kasaBalanceRaw: 0,
+      kasaOpeningBalance: "₺0",
+      kasaOpeningBalanceRaw: 0,
       todayRepairIncome: "₺0",
       collectedPayments: "₺0",
       pendingServices: "0",
@@ -103,9 +94,12 @@ export async function getDashboardStats() {
       criticalStock: "0",
       totalDebts: "₺0",
       cashBalance: "₺0",
+      pendingProcurementCount: "0",
+      deadStockCount: "0",
     });
   }
 }
+
 
 export async function getRecentServiceTickets() {
   try {

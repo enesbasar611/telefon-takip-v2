@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +30,8 @@ import { SmartInsights } from "@/components/dashboard/smart-insights";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
+import { StatDetailModal, StatType } from "./modals/stat-detail-modal";
+import { useState } from "react";
 
 const statusColors: Record<string, string> = {
   PENDING: "#94a3b8",      // Grey
@@ -62,6 +66,8 @@ export function DashboardCore({
   subtitle = "Operasyonel kontrol ve anlık iş zekası raporu",
   showFullDetails = true
 }: any) {
+  const [selectedStat, setSelectedStat] = useState<StatType | null>(null);
+
   const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
     ...m,
     status: m.name, // Orijinal status key'i sakla
@@ -72,15 +78,27 @@ export function DashboardCore({
   const totalServiceUnits = serviceMetricsRaw.reduce((acc: number, m: any) => acc + m.value, 0);
 
   const stats = [
-    { label: "Günlük satış", value: statsData?.todaySales || "₺0", icon: ShoppingCart, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", trend: "+12%" },
+    { label: "Kasa Bakiyesi", value: statsData?.todaySales || "₺0", subValue: `Kasa: ${statsData?.kasaBalance || "₺0"}`, icon: ShoppingCart, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel" },
     { label: "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", icon: Wrench, accent: "secondary", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%" },
     { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, accent: "tertiary", colorClass: "text-amber-500", bgClass: "bg-amber-500/10" },
     { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, accent: "primary", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, accent: "secondary", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
-    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
-    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10" },
-    { label: "Kasa bakiyesi", value: statsData?.cashBalance || "₺0", icon: Wallet, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10" },
+    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik", type: "CRITICAL_STOCK" },
+    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", type: "TOTAL_DEBTS" },
+    { label: "Kasa & Hesaplar", value: statsData?.cashBalance || "₺0", icon: Wallet, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", type: "CASH_BALANCE" },
   ];
+
+  const statTypes: Record<string, StatType> = {
+    "Kasa Bakiyesi": "DAILY_SALES",
+    "Tamir gelirleri": "REPAIR_INCOME",
+    "Tahsilatlar": "COLLECTIONS",
+    "Bekleyen servisler": "PENDING_SERVICES",
+    "Hazır cihazlar": "READY_DEVICES",
+    "Kritik stok": "CRITICAL_STOCK",
+    "Toplam borçlar": "TOTAL_DEBTS",
+    "Kasa & Hesaplar": "CASH_BALANCE",
+  };
+
 
   return (
     <div className="flex flex-col gap-10 pb-24 bg-background text-foreground min-h-screen lg:px-14 px-6 pt-10 font-sans">
@@ -118,9 +136,11 @@ export function DashboardCore({
       {/* Modernized Stats Grid */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => (
-          <Card key={idx} className={cn(
-            "rounded-[2rem] bg-card border border-border/40 transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-primary/5"
-          )}>
+          <Card key={idx}
+            onClick={() => setSelectedStat(statTypes[stat.label])}
+            className={cn(
+              "rounded-[2rem] bg-card border border-border/40 transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-primary/5 cursor-pointer active:scale-95"
+            )}>
             <CardContent className="p-8 flex flex-col justify-between min-h-[220px] relative z-10 font-sans">
               <stat.icon className="absolute -bottom-4 -right-4 h-32 w-32 opacity-[0.03] -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110" />
 
@@ -158,6 +178,9 @@ export function DashboardCore({
                     <h3 className={cn("text-5xl font-black tracking-tighter", stat.colorClass)}>{stat.value}</h3>
                   )}
                 </div>
+                {stat.subValue && (
+                  <p className="text-[11px] font-bold text-muted-foreground/50 mt-2 tracking-tight">{stat.subValue}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -385,6 +408,13 @@ export function DashboardCore({
           </Card>
         </>
       )}
+
+      <StatDetailModal
+        type={selectedStat}
+        isOpen={selectedStat !== null}
+        onClose={() => setSelectedStat(null)}
+        statsData={statsData}
+      />
     </div>
   );
 }

@@ -23,13 +23,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { getAIAlerts, triggerAIAnalysis, deleteAIAlert } from "@/lib/actions/stock-ai-actions";
+import { getCategories } from "@/lib/actions/product-actions";
+import { addShortageItem } from "@/lib/actions/shortage-actions";
+import { EditProductModal } from "@/components/product/edit-product-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function StockAIPage() {
     const [alerts, setAlerts] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
+
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const fetchAlerts = async () => {
         setLoading(true);
@@ -39,8 +46,14 @@ export default function StockAIPage() {
         setLoading(false);
     };
 
+    const fetchCategories = async () => {
+        const cats = await getCategories();
+        setCategories(cats);
+    };
+
     useEffect(() => {
         fetchAlerts();
+        fetchCategories();
     }, []);
 
     const handleRunAnalysis = () => {
@@ -118,18 +131,19 @@ export default function StockAIPage() {
                         <Badge className="bg-blue-600/10 text-blue-500 border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-[0.2em]">Yapay Zeka Destekli Envanter</Badge>
                     </div>
                     <h1 className="text-5xl font-black text-white tracking-tighter leading-none">
-                        AI <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent italic">Önerileri</span>
+                        AI <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent opacity-90 pb-2 pr-2">Önerileri</span>
                     </h1>
                     <p className="text-slate-400 font-medium max-w-xl text-lg leading-relaxed">
                         Sistemimiz stok hareketlerini, satış trendlerini ve kritik seviyeleri analiz ederek dükkanınız için en kârlı kararları almanıza yardımcı olur.
                     </p>
                 </div>
 
-                <div className="relative z-10">
+                <div className="relative z-10 transition-all hover:scale-105 active:scale-95 group">
+                    <div className="absolute inset-0 bg-blue-600/30 blur-2xl rounded-full scale-[1.2] opacity-0 group-hover:opacity-100 transition-opacity animate-pulse-soft pointer-events-none" />
                     <Button
                         onClick={handleRunAnalysis}
                         disabled={isPending}
-                        className="h-16 px-8 rounded-[2rem] bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest gap-3 shadow-[0_20px_40px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95 group"
+                        className="relative z-10 h-16 px-8 rounded-[2rem] bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest gap-3 shadow-[0_20px_40px_rgba(37,99,235,0.3)] animate-pulse-soft transition-all"
                     >
                         {isPending ? (
                             <RefreshCw className="h-5 w-5 animate-spin" />
@@ -218,8 +232,26 @@ export default function StockAIPage() {
                                             </Button>
                                             <Button
                                                 className="h-12 px-6 rounded-2xl bg-white border border-white/10 text-black hover:bg-white/90 font-black text-[11px] uppercase tracking-widest flex-1 md:flex-none gap-2"
-                                                onClick={() => {
-                                                    if (alert.productId) window.location.href = `/stok?search=${alert.product?.name}`;
+                                                onClick={async () => {
+                                                    if (!alert.product) return;
+
+                                                    if (alert.type === "CRITICAL") {
+                                                        // Send to Shortage List
+                                                        try {
+                                                            await addShortageItem({ productId: alert.product.id, name: alert.product.name, quantity: 1 });
+                                                            toast.success(`${alert.product.name} eksikler listesine eklendi.`);
+                                                            handleDelete(alert.id);
+                                                        } catch (error) {
+                                                            toast.error("Eksikler listesine eklenirken hata oluştu.");
+                                                        }
+                                                    } else if (alert.type === "STAGNANT") {
+                                                        // Prompt for edit to adjust price
+                                                        setSelectedProduct(alert.product);
+                                                        setIsEditModalOpen(true);
+                                                    } else {
+                                                        // Fallback search navigation
+                                                        if (alert.productId) window.location.href = `/stok?search=${alert.product?.name}`;
+                                                    }
                                                 }}
                                             >
                                                 İNCELE VE ÇÖZ
@@ -288,6 +320,17 @@ export default function StockAIPage() {
                     </Card>
                 </div>
             </div>
+
+            <EditProductModal
+                product={selectedProduct}
+                categories={categories}
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    // Refresh AI alerts just in case
+                    fetchAlerts();
+                }}
+            />
         </div>
     );
 }

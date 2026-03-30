@@ -4,6 +4,7 @@ import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, TransactionType } from "@prisma/client";
 import { addShortageItem } from "./shortage-actions";
+import { getOrCreateKasaAccount } from "./finance-actions";
 
 async function getOrCreateDevUser() {
   return await prisma.user.upsert({
@@ -84,16 +85,31 @@ export async function createSale(data: {
       }
     }
 
-    // Create financial transaction
-    await prisma.transaction.create({
-      data: {
-        amount: data.totalAmount,
-        type: TransactionType.INCOME,
-        description: `SATIŞ - ${sale.saleNumber}`,
-        paymentMethod: sale.paymentMethod,
-        userId: user.id,
-        saleId: sale.id,
-      },
+    // Create financial transaction and link to Kasa if payment is not DEBT
+    const isDebt = data.paymentMethod === "DEBT";
+    const kasaAccount = isDebt ? null : await getOrCreateKasaAccount();
+    const activeSession = await prisma.dailySession.findFirst({ where: { status: "OPEN" } });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.create({
+        data: {
+          amount: data.totalAmount,
+          type: TransactionType.INCOME,
+          description: `SATIŞ - ${sale.saleNumber}`,
+          paymentMethod: sale.paymentMethod,
+          userId: user.id,
+          saleId: sale.id,
+          accountId: kasaAccount?.id ?? undefined,
+          dailySessionId: activeSession?.id ?? undefined,
+        },
+      });
+
+      if (kasaAccount) {
+        await tx.account.update({
+          where: { id: kasaAccount.id },
+          data: { balance: { increment: data.totalAmount } },
+        });
+      }
     });
 
     revalidatePath("/satis");
