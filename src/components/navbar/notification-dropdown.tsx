@@ -66,11 +66,12 @@ export function NotificationDropdown() {
     }, []);
 
     const handleAction = async (notification: SystemNotification) => {
-        // Mark read in UI
         if (!notification.isRead) {
             setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
             await markNotificationAsReadAction(notification.id);
+            window.dispatchEvent(new CustomEvent("notification-update"));
+            router.refresh();
         }
 
         // Routing logic

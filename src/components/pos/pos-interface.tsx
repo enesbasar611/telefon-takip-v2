@@ -187,6 +187,7 @@ export function POSInterface({ products, customers, categories }: { products: an
         setCart([]);
         setSearchTerm("");
         setSelectedCustomerId(undefined);
+        window.dispatchEvent(new CustomEvent("notification-update"));
       } else {
         toast({ title: "Hata", description: result.error, variant: "destructive" });
       }

@@ -112,7 +112,7 @@ export async function getSystemNotifications(options?: {
             title: `${t.ticketNumber} Servis Kaydı Onay/Parça Bekliyor`,
             message: `Müşteri: ${t.customer.name} - ${t.deviceBrand} ${t.deviceModel}`,
             createdAt: t.updatedAt,
-            referenceId: t.id, // User needs specific ID for routing
+            referenceId: t.id,
             status: t.status,
             isRead: readIds.has(id),
             metadata: { cost: Number(t.estimatedCost), phone: t.customer.phone }
@@ -175,6 +175,31 @@ export async function getSystemNotifications(options?: {
       }
     });
 
+    // 4. Stock AI Alerts (Pre-generated)
+    const stockAlerts = await (prisma as any).stockAIAlert.findMany({
+      where: {
+        expiresAt: { gt: now },
+        isRead: false
+      },
+      include: { product: true }
+    });
+
+    stockAlerts.forEach((a: any) => {
+      const id = `ai-${a.id}`;
+      if (!deletedIds.has(id)) {
+        notifications.push({
+          id,
+          type: "CRITICAL_STOCK",
+          category: "Stok",
+          title: `AI Stok Uyarısı: ${a.product?.name || 'Ürün'}`,
+          message: a.message,
+          createdAt: a.createdAt,
+          referenceId: a.productId,
+          isRead: readIds.has(id) || a.isRead
+        });
+      }
+    });
+
     // Filter by category if requested
     let filtered = notifications;
     if (options?.category && options.category !== "Tümü") {
@@ -214,6 +239,16 @@ export async function markNotificationAsReadAction(id: string) {
         isRead: true
       }
     });
+
+    // If it's an AI alert, mark that as read too
+    if (id.startsWith("ai-")) {
+      const dbId = id.replace("ai-", "");
+      await (prisma as any).stockAIAlert.update({
+        where: { id: dbId },
+        data: { isRead: true }
+      });
+    }
+
     revalidatePath("/bildirimler");
     return { success: true };
   } catch (error) {
@@ -223,19 +258,43 @@ export async function markNotificationAsReadAction(id: string) {
 
 export async function markAllNotificationsAsReadAction() {
   try {
-    // For manual notifications in DB
+    // 1. Mark all existing DB notifications as read
     await (prisma as any).notification.updateMany({
       where: { isDeleted: false },
       data: { isRead: true }
     });
 
-    // We can't easily mark "virtual" notifications as read without their IDs,
-    // but typically "Mark All" means the user has seen everything current.
-    // In this simplified system, we'll focus on DB-persisted states.
+    // 2. Mark AI alerts as read
+    await (prisma as any).stockAIAlert.updateMany({
+      where: { isRead: false },
+      data: { isRead: true }
+    });
+
+    // 3. Fetch all current "virtual" notifications and mark them as read by creating records
+    const { notifications } = await getSystemNotifications({ limit: 100 });
+    const unreadVirtuals = notifications.filter((n: any) => !n.isRead);
+
+    if (unreadVirtuals.length > 0) {
+      for (const n of unreadVirtuals) {
+        await (prisma as any).notification.upsert({
+          where: { id: n.id },
+          update: { isRead: true },
+          create: {
+            id: n.id,
+            type: n.type,
+            category: n.category,
+            title: n.title,
+            message: n.message,
+            isRead: true
+          }
+        });
+      }
+    }
 
     revalidatePath("/bildirimler");
     return { success: true };
   } catch (error) {
+    console.error("Error marking all notifications as read:", error);
     return { success: false };
   }
 }
@@ -254,6 +313,16 @@ export async function dismissNotificationAction(id: string) {
         isDeleted: true
       }
     });
+
+    // If it's an AI alert, mark that as read/deleted too
+    if (id.startsWith("ai-")) {
+      const dbId = id.replace("ai-", "");
+      await (prisma as any).stockAIAlert.update({
+        where: { id: dbId },
+        data: { isRead: true }
+      });
+    }
+
     revalidatePath("/bildirimler");
     return { success: true };
   } catch (error) {
