@@ -82,7 +82,7 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
     }
 
     revalidatePath("/veresiye");
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
     return { success: true };

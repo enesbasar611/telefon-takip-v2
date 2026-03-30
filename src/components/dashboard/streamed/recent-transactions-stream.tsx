@@ -25,7 +25,7 @@ export async function RecentTransactionsStream() {
                         <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mt-0.5">Son İşlemler</p>
                     </div>
                 </div>
-                <Link href="/finans">
+                <Link href="/satis/kasa">
                     <Button variant="outline" className="text-[10px] font-black uppercase tracking-tighter text-blue-500 border-blue-500/20 hover:bg-blue-500/5 h-9 rounded-xl px-5 transition-all">
                         TÜMÜ <ChevronRight className="h-3 w-3 ml-2" />
                     </Button>

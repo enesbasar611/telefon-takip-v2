@@ -77,7 +77,7 @@ export async function createDeviceEntry(data: any) {
     });
 
     revalidatePath("/cihaz-listesi");
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/stok");
     return { success: true, device: serializePrisma(product) };
   } catch (error) {

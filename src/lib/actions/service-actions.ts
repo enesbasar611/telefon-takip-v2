@@ -106,7 +106,7 @@ export async function createServiceTicket(rawData: any) {
 
     revalidatePath("/servis");
     revalidatePath("/servis/liste");
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/");
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
@@ -203,7 +203,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
 
     revalidatePath("/servis");
     revalidatePath("/stok");
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/");
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {

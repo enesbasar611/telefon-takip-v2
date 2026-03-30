@@ -87,7 +87,7 @@ export function NotificationDropdown() {
         } else if (notification.type === "CRITICAL_STOCK") {
             router.push(`/stok?highlight=${notification.referenceId}`);
         } else if (notification.type === "FINANCIAL_DELAY") {
-            router.push(`/finans?highlight=${notification.referenceId}`);
+            router.push(`/satis/kasa?highlight=${notification.referenceId}`);
         }
     };
 

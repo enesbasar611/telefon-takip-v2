@@ -74,7 +74,6 @@ const menuItems = [
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
   { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
   { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
-  { icon: Banknote, label: "Finansal Akış", href: "/finans" },
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },

@@ -125,12 +125,12 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         switch (type) {
             case "DAILY_SALES": return { title: "KASA HAREKETLERİ", icon: ShoppingCart, color: "text-primary", route: "/satis/gecmis" };
             case "REPAIR_INCOME": return { title: "TAMİR GELİRLERİ", icon: Wrench, color: "text-secondary", route: "/servis/liste" };
-            case "COLLECTIONS": return { title: "TAHSİLATLAR", icon: Banknote, color: "text-amber-500", route: "/finans" };
+            case "COLLECTIONS": return { title: "TAHSİLATLAR", icon: Banknote, color: "text-amber-500", route: "/satis/kasa" };
             case "PENDING_SERVICES": return { title: "BEKLEYEN SERVİSLER", icon: Clock, color: "text-blue-500", route: "/servis/liste" };
             case "READY_DEVICES": return { title: "HAZIR CİHAZLAR", icon: CheckCircle2, color: "text-emerald-500", route: "/servis/liste?status=READY" };
             case "CRITICAL_STOCK": return { title: "KRİTİK STOK", icon: AlertTriangle, color: "text-rose-500", route: "/envanter" };
             case "TOTAL_DEBTS": return { title: "TOPLAM BORÇLAR", icon: ArrowDownCircle, color: "text-indigo-500", route: "/tedarikciler" };
-            case "CASH_BALANCE": return { title: "KASA & HESAPLAR", icon: Wallet, color: "text-primary", route: "/finans" };
+            case "CASH_BALANCE": return { title: "KASA & HESAPLAR", icon: Wallet, color: "text-primary", route: "/satis/kasa" };
             default: return { title: "DETAY", icon: LayoutDashboard, color: "text-primary", route: "/" };
         }
     };

@@ -114,7 +114,7 @@ export async function createSale(data: {
 
     revalidatePath("/satis");
     revalidatePath("/stok");
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
 
     return { success: true, data: serializePrisma(sale) };
   } catch (error) {

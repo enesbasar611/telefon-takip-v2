@@ -20,6 +20,8 @@ import { GlobalSearch } from "@/components/navbar/global-search";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useUI } from "@/lib/context/ui-context";
 import { NotificationDropdown } from "@/components/navbar/notification-dropdown";
+import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
+import { Landmark } from "lucide-react";
 
 export function Navbar() {
   const { isFinancialVisible, toggleFinancialVisibility } = useUI();
@@ -40,6 +42,14 @@ export function Navbar() {
               <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
                 <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                 <span className="font-bold">Yeni Servis</span>
+              </Button>
+            }
+          />
+          <CreateTransactionModal
+            trigger={
+              <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-none transition-all group">
+                <Landmark className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="font-bold whitespace-nowrap">Gelir / Gider</span>
               </Button>
             }
           />

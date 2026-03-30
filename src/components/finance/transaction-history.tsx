@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { History, Search, ArrowUpRight, ArrowDownRight, Paperclip, Pencil } from "lucide-react";
+import { CreateTransactionModal } from "./create-transaction-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
@@ -89,6 +90,7 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                 <TableHead className="pr-10">
                                     <SortableHeader label="TUTAR" field="amount" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
                                 </TableHead>
+                                <TableHead />
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -137,10 +139,28 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                                     {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
                                                     {t.type === 'INCOME' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                                                 </div>
-                                                <Badge variant="outline" className={cn("text-[9px] font-black px-2 py-0.5 mt-1.5 border-none rounded-lg uppercase tracking-widest", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
-                                                    {t.type === 'INCOME' ? 'TAHSİLAT' : 'ÖDEME'}
-                                                </Badge>
+                                                <div className="flex items-center gap-2 mt-1.5">
+                                                    {t.attachments && t.attachments.length > 0 && (
+                                                        <Badge variant="outline" className="text-[9px] font-black px-2 py-0.5 border-none rounded-lg bg-blue-500/10 text-blue-500 uppercase tracking-widest gap-1">
+                                                            <Paperclip className="h-2.5 w-2.5" />
+                                                            {t.attachments.length}
+                                                        </Badge>
+                                                    )}
+                                                    <Badge variant="outline" className={cn("text-[9px] font-black px-2 py-0.5 border-none rounded-lg uppercase tracking-widest", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
+                                                        {t.type === 'INCOME' ? 'TAHSİLAT' : 'ÖDEME'}
+                                                    </Badge>
+                                                </div>
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="pr-10">
+                                            <CreateTransactionModal
+                                                initialData={t}
+                                                trigger={
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 transition-all opacity-0 group-hover:opacity-100">
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                }
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))

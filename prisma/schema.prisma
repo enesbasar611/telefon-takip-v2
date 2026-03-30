@@ -8,6 +8,45 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Shop {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users               User[]
+  customers           Customer[]
+  serviceTickets      ServiceTicket[]
+  serviceLogs         ServiceLog[]
+  serviceUsedParts    ServiceUsedPart[]
+  categories          Category[]
+  products            Product[]
+  stockAIAlerts       StockAIAlert[]
+  notifications       Notification[]
+  reminders           Reminder[]
+  returnTickets       ReturnTicket[]
+  inventoryLogs       InventoryLog[]
+  deviceHubInfos      DeviceHubInfo[]
+  shortageItems       ShortageItem[]
+  inventoryMovements  InventoryMovement[]
+  sales               Sale[]
+  saleItems           SaleItem[]
+  transactions        Transaction[]
+  accounts            Account[]
+  dailySessions       DailySession[]
+  debts               Debt[]
+  suppliers           Supplier[]
+  purchaseOrders      PurchaseOrder[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  supplierTransactions SupplierTransaction[]
+  settings            Setting[]
+  receiptSettings     ReceiptSettings[]
+}
+
 model User {
   id              String          @id @default(cuid())
   name            String?
@@ -17,6 +56,10 @@ model User {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   commissionRate  Decimal         @default(0) @db.Decimal(5, 2)
+  
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id])
+
   inventoryLogs   InventoryLog[]
   purchaseOrders  PurchaseOrder[]
   returns         ReturnTicket[]
@@ -32,7 +75,7 @@ model User {
 model Customer {
   id             String          @id @default(cuid())
   name           String
-  phone          String?         @unique
+  phone          String?
   email          String?
   address        String?
   notes          String?
@@ -43,14 +86,20 @@ model Customer {
   photo          String?
   secondaryPhone String?
   type           String          @default("BIREYSEL")
+  
+  shopId         String
+  shop           Shop            @relation(fields: [shopId], references: [id])
+
   debts          Debt[]
   sales          Sale[]
   tickets        ServiceTicket[]
+
+  @@unique([shopId, phone])
 }
 
 model ServiceTicket {
   id                    String              @id @default(cuid())
-  ticketNumber          String              @unique
+  ticketNumber          String
   customerId            String
   deviceModel           String
   deviceBrand           String
@@ -71,6 +120,10 @@ model ServiceTicket {
   estimatedDeliveryDate DateTime?
   warrantyExpiry        DateTime?
   overhead              Decimal             @default(0) @db.Decimal(10, 2)
+  
+  shopId                String
+  shop                  Shop                @relation(fields: [shopId], references: [id])
+
   inventoryMovements    InventoryMovement[]
   returns               ReturnTicket[]
   logs                  ServiceLog[]
@@ -78,6 +131,8 @@ model ServiceTicket {
   customer              Customer            @relation(fields: [customerId], references: [id])
   technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id])
   usedParts             ServiceUsedPart[]
+
+  @@unique([shopId, ticketNumber])
 }
 
 model ServiceLog {
@@ -86,6 +141,10 @@ model ServiceLog {
   message   String
   status    ServiceStatus
   createdAt DateTime      @default(now())
+  
+  shopId    String
+  shop      Shop          @relation(fields: [shopId], references: [id])
+
   ticket    ServiceTicket @relation(fields: [ticketId], references: [id])
 }
 
@@ -96,23 +155,33 @@ model ServiceUsedPart {
   quantity  Int           @default(1)
   unitPrice Decimal       @db.Decimal(10, 2)
   costPrice Decimal       @default(0) @db.Decimal(10, 2)
+  
+  shopId    String
+  shop      Shop          @relation(fields: [shopId], references: [id])
+
   product   Product       @relation(fields: [productId], references: [id])
   ticket    ServiceTicket @relation(fields: [ticketId], references: [id])
 }
 
 model Category {
   id            String     @id @default(cuid())
-  name          String     @unique
+  name          String
   parentId      String?
+  
+  shopId        String
+  shop          Shop       @relation(fields: [shopId], references: [id])
+
   parent        Category?  @relation("SubCategories", fields: [parentId], references: [id])
   subCategories Category[] @relation("SubCategories")
   products      Product[]
+
+  @@unique([shopId, name])
 }
 
 model Product {
   id             String              @id @default(cuid())
-  sku            String?             @unique
-  barcode        String?             @unique
+  sku            String?
+  barcode        String?
   name           String
   description    String?
   categoryId     String
@@ -128,6 +197,10 @@ model Product {
   supplierId     String?
   location       String?
   warrantyMonths Int                 @default(0)
+  
+  shopId         String
+  shop           Shop                @relation(fields: [shopId], references: [id])
+
   deviceInfo     DeviceHubInfo?
   inventoryLogs  InventoryLog[]
   movements      InventoryMovement[]
@@ -139,6 +212,9 @@ model Product {
   usedInServices ServiceUsedPart[]
   shortageItems  ShortageItem[]
   aiAlerts       StockAIAlert[]
+
+  @@unique([shopId, sku])
+  @@unique([shopId, barcode])
 }
 
 model StockAIAlert {
@@ -149,6 +225,10 @@ model StockAIAlert {
   createdAt DateTime @default(now())
   expiresAt DateTime
   isRead    Boolean  @default(false)
+  
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
   product   Product? @relation(fields: [productId], references: [id])
 }
 
@@ -164,6 +244,9 @@ model Notification {
   isDeleted   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
 }
 
 model Reminder {
@@ -178,12 +261,16 @@ model Reminder {
   isCompleted Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
   user        User?    @relation(fields: [assignedTo], references: [id])
 }
 
 model ReturnTicket {
   id              String        @id @default(cuid())
-  ticketNumber    String        @unique
+  ticketNumber    String
   serviceTicketId String
   productId       String
   supplierId      String?
@@ -193,9 +280,15 @@ model ReturnTicket {
   notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  
+  shopId          String
+  shop            Shop          @relation(fields: [shopId], references: [id])
+
   product         Product       @relation(fields: [productId], references: [id])
   serviceTicket   ServiceTicket @relation(fields: [serviceTicketId], references: [id])
   user            User          @relation(fields: [userId], references: [id])
+
+  @@unique([shopId, ticketNumber])
 }
 
 model InventoryLog {
@@ -206,6 +299,10 @@ model InventoryLog {
   type      String
   notes     String?
   createdAt DateTime @default(now())
+  
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
   product   Product  @relation(fields: [productId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 }
@@ -227,6 +324,10 @@ model DeviceHubInfo {
   buyBackMonths   Int?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  
+  shopId          String
+  shop            Shop      @relation(fields: [shopId], references: [id])
+
   product         Product   @relation(fields: [productId], references: [id])
 }
 
@@ -239,6 +340,10 @@ model ShortageItem {
   isResolved Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+
   product    Product? @relation(fields: [productId], references: [id])
 }
 
@@ -251,6 +356,10 @@ model InventoryMovement {
   createdAt       DateTime       @default(now())
   saleId          String?
   serviceTicketId String?
+  
+  shopId          String
+  shop            Shop           @relation(fields: [shopId], references: [id])
+
   product         Product        @relation(fields: [productId], references: [id])
   sale            Sale?          @relation(fields: [saleId], references: [id])
   serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
@@ -258,7 +367,7 @@ model InventoryMovement {
 
 model Sale {
   id                 String              @id @default(cuid())
-  saleNumber         String              @unique
+  saleNumber         String
   customerId         String?
   userId             String
   totalAmount        Decimal             @db.Decimal(10, 2)
@@ -266,11 +375,17 @@ model Sale {
   finalAmount        Decimal             @db.Decimal(10, 2)
   paymentMethod      PaymentMethod       @default(CASH)
   createdAt          DateTime            @default(now())
+  
+  shopId             String
+  shop               Shop                @relation(fields: [shopId], references: [id])
+
   inventoryMovements InventoryMovement[]
   customer           Customer?           @relation(fields: [customerId], references: [id])
   user               User                @relation(fields: [userId], references: [id])
   items              SaleItem[]
   transaction        Transaction?
+
+  @@unique([shopId, saleNumber])
 }
 
 model SaleItem {
@@ -280,6 +395,10 @@ model SaleItem {
   quantity   Int
   unitPrice  Decimal @db.Decimal(10, 2)
   totalPrice Decimal @db.Decimal(10, 2)
+  
+  shopId     String
+  shop       Shop    @relation(fields: [shopId], references: [id])
+
   product    Product @relation(fields: [productId], references: [id])
   sale       Sale    @relation(fields: [saleId], references: [id])
 }
@@ -296,10 +415,27 @@ model Transaction {
   dailySessionId String?
   category       String?
   createdAt      DateTime      @default(now())
+  
+  shopId         String
+  shop           Shop          @relation(fields: [shopId], references: [id])
+
   account        Account?      @relation(fields: [accountId], references: [id])
   dailySession   DailySession? @relation(fields: [dailySessionId], references: [id])
   sale           Sale?         @relation(fields: [saleId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
+  attachments    Attachment[]
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  url           String
+  filename      String
+  fileType      String
+  fileSize      Int
+  transactionId String
+  createdAt     DateTime @default(now())
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -311,6 +447,10 @@ model Account {
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  
+  shopId       String
+  shop         Shop          @relation(fields: [shopId], references: [id])
+
   transactions Transaction[]
 }
 
@@ -326,6 +466,10 @@ model DailySession {
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  
+  shopId         String
+  shop           Shop          @relation(fields: [shopId], references: [id])
+
   openedBy       User          @relation("OpenedBy", fields: [openedById], references: [id])
   closedBy       User?         @relation("ClosedBy", fields: [closedById], references: [id])
   transactions   Transaction[]
@@ -341,6 +485,10 @@ model Debt {
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  
+  shopId          String
+  shop            Shop      @relation(fields: [shopId], references: [id])
+
   customer        Customer  @relation(fields: [customerId], references: [id])
 }
 
@@ -364,6 +512,10 @@ model Supplier {
   bankName      String?
   iban          String?
   notes         String?
+  
+  shopId        String
+  shop          Shop                  @relation(fields: [shopId], references: [id])
+
   products      Product[]
   purchases     PurchaseOrder[]
   transactions  SupplierTransaction[]
@@ -377,7 +529,7 @@ model PurchaseOrder {
   description   String?
   discount      Decimal             @default(0) @db.Decimal(12, 2)
   netAmount     Decimal             @default(0) @db.Decimal(12, 2)
-  orderNo       String              @unique
+  orderNo       String
   paymentMethod PaymentMethod       @default(CASH)
   paymentStatus PaymentStatus       @default(UNPAID)
   receivedAt    DateTime?
@@ -388,10 +540,16 @@ model PurchaseOrder {
   vatAmount     Decimal             @default(0) @db.Decimal(12, 2)
   status        OrderStatus         @default(PENDING)
   remainingAmount Decimal           @default(0) @db.Decimal(12, 2)
+  
+  shopId        String
+  shop          Shop                @relation(fields: [shopId], references: [id])
+
   responsible   User?               @relation(fields: [responsibleId], references: [id])
   supplier      Supplier            @relation(fields: [supplierId], references: [id])
   items         PurchaseOrderItem[]
   transactions  SupplierTransaction[]
+
+  @@unique([shopId, orderNo])
 }
 
 model PurchaseOrderItem {
@@ -403,6 +561,10 @@ model PurchaseOrderItem {
   receivedQuantity Int           @default(0)
   buyPrice         Decimal       @db.Decimal(12, 2)
   vatRate          Int           @default(20)
+  
+  shopId           String
+  shop             Shop          @relation(fields: [shopId], references: [id])
+
   order            PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product          Product?      @relation(fields: [productId], references: [id])
   buyPriceUsd      Decimal?      @db.Decimal(10, 2)
@@ -416,14 +578,23 @@ model SupplierTransaction {
   type            TransactionType
   description     String
   date            DateTime        @default(now())
+  
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id])
+
   supplier        Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   purchaseOrder   PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
 }
 
 model Setting {
   id    String @id @default(cuid())
-  key   String @unique
+  key   String
   value String
+  
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, key])
 }
 
 model ReceiptSettings {
@@ -436,6 +607,9 @@ model ReceiptSettings {
   website   String   @default("v2.basarteknik.com")
   updatedAt DateTime @updatedAt
   terms     String?
+  
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
 }
 
 enum OrderStatus {
@@ -453,7 +627,6 @@ enum PaymentStatus {
 
 enum Role {
   ADMIN
-  TECHNICIAN
   STAFF
 }
 

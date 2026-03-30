@@ -130,7 +130,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                 notificationId: notification.id
             });
         } else if (notification.type === "FINANCIAL_DELAY") {
-            router.push(`/finans?highlight=${notification.referenceId}`);
+            router.push(`/satis/kasa?highlight=${notification.referenceId}`);
         }
     };
 

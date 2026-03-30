@@ -75,7 +75,7 @@ export async function createAccount(data: { name: string; type: "CASH" | "BANK" 
       });
     }
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
     return { success: false, error: "Hesap oluşturulamadı." };
@@ -89,6 +89,8 @@ export async function createManualTransaction(data: {
   paymentMethod: "CASH" | "CARD" | "TRANSFER";
   accountId?: string;
   category?: string;
+  date?: string;
+  attachments?: { url: string; filename: string; fileType: string; fileSize: number }[];
 }) {
   try {
     const user = await getOrCreateDevUser();
@@ -108,7 +110,16 @@ export async function createManualTransaction(data: {
           accountId: data.accountId,
           category: data.category,
           dailySessionId: activeSession?.id,
-          userId: user.id
+          userId: user.id,
+          createdAt: data.date ? new Date(data.date) : new Date(),
+          attachments: {
+            create: data.attachments?.map(att => ({
+              url: att.url,
+              filename: att.filename,
+              fileType: att.fileType,
+              fileSize: att.fileSize
+            }))
+          }
         }
       });
 
@@ -127,12 +138,104 @@ export async function createManualTransaction(data: {
       return t;
     });
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/");
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
     console.error("Manual transaction error:", error);
     return { success: false, error: "İşlem kaydedilemedi." };
+  }
+}
+
+export async function updateManualTransaction(id: string, data: {
+  type: "INCOME" | "EXPENSE";
+  amount: number;
+  description: string;
+  paymentMethod: "CASH" | "CARD" | "TRANSFER";
+  accountId?: string;
+  category?: string;
+  date?: string;
+  newAttachments?: { url: string; filename: string; fileType: string; fileSize: number }[];
+  removedAttachmentIds?: string[];
+}) {
+  try {
+    const oldTx = await prisma.transaction.findUnique({
+      where: { id },
+      include: { attachments: true }
+    });
+
+    if (!oldTx) return { success: false, error: "İşlem bulunamadı." };
+
+    const transaction = await prisma.$transaction(async (tx) => {
+      // 1. Update the transaction
+      const t = await tx.transaction.update({
+        where: { id },
+        data: {
+          type: data.type,
+          amount: data.amount,
+          description: data.description,
+          paymentMethod: data.paymentMethod,
+          accountId: data.accountId,
+          category: data.category,
+          createdAt: data.date ? new Date(data.date) : oldTx.createdAt,
+          attachments: {
+            deleteMany: data.removedAttachmentIds ? { id: { in: data.removedAttachmentIds } } : {},
+            create: data.newAttachments?.map(att => ({
+              url: att.url,
+              filename: att.filename,
+              fileType: att.fileType,
+              fileSize: att.fileSize
+            }))
+          }
+        }
+      });
+
+      // 2. Adjust account balances if account changed or amount changed
+      if (oldTx.accountId !== data.accountId || Number(oldTx.amount) !== data.amount || oldTx.type !== data.type) {
+        // Reverse old transaction
+        if (oldTx.accountId) {
+          await tx.account.update({
+            where: { id: oldTx.accountId },
+            data: {
+              balance: {
+                [oldTx.type === 'INCOME' ? 'decrement' : 'increment']: oldTx.amount
+              }
+            }
+          });
+        }
+
+        // Apply new transaction
+        if (data.accountId) {
+          await tx.account.update({
+            where: { id: data.accountId },
+            data: {
+              balance: {
+                [data.type === 'INCOME' ? 'increment' : 'decrement']: data.amount
+              }
+            }
+          });
+        }
+      }
+
+      return t;
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true, transaction: serializePrisma(transaction) };
+  } catch (error) {
+    console.error("Update transaction error:", error);
+    return { success: false, error: "İşlem güncellenemedi." };
+  }
+}
+
+export async function deleteAttachment(id: string) {
+  try {
+    await prisma.attachment.delete({
+      where: { id }
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Dosya silinemedi." };
   }
 }
 
@@ -246,7 +349,7 @@ export async function openDailySession(openingBalance: number, notes?: string) {
       }
     });
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     return { success: true, session: serializePrisma(session) };
   } catch (error) {
     return { success: false, error: "Kasa açılamadı." };
@@ -316,7 +419,7 @@ export async function closeDailySession(id: string, actualBalance: number, notes
       }
     });
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
@@ -380,7 +483,7 @@ export async function transferFunds(data: {
       });
     });
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     return { success: true };
   } catch (error) {
     console.error("Transfer error:", error);
@@ -521,7 +624,7 @@ export async function paySupplierDebt(data: {
       return { transaction };
     });
 
-    revalidatePath("/finans");
+    revalidatePath("/satis/kasa");
     revalidatePath("/tedarikciler");
     revalidatePath("/");
     return { success: true, transaction: serializePrisma(result.transaction) };
