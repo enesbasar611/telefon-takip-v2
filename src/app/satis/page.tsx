@@ -1,15 +1,28 @@
 import { POSInterface } from "@/components/pos/pos-interface";
 import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { getCustomers } from "@/lib/actions/customer-actions";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, WifiOff } from "lucide-react";
 import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
 
 export default async function POSPage() {
-  const products = await getProducts();
-  const customers = await getCustomers();
-  const categories = await getCategories();
+  // Graceful fallback: DB down olsa bile sayfa yüklenir
+  let products: any[] = [];
+  let customers: any[] = [];
+  let categories: any[] = [];
+  let dbError = false;
+
+  try {
+    [products, customers, categories] = await Promise.all([
+      getProducts(),
+      getCustomers(),
+      getCategories(),
+    ]);
+  } catch (err) {
+    console.error("POS page: DB connection failed, loading with empty data.", err);
+    dbError = true;
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-12 bg-background text-foreground min-h-screen lg:p-10 p-6">
@@ -23,11 +36,24 @@ export default async function POSPage() {
             <p className="text-[11px] text-slate-500 font-bold mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 px-4 py-2 bg-secondary/5 text-secondary border border-secondary/10 rounded-xl font-bold text-[10px] shadow-sm">
-          <div className="h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" />
-          Sistem Online
+        <div className={`flex items-center gap-3 px-4 py-2 border rounded-xl font-bold text-[10px] shadow-sm ${dbError
+            ? "bg-rose-500/5 text-rose-500 border-rose-500/20"
+            : "bg-secondary/5 text-secondary border-secondary/10"
+          }`}>
+          <div className={`h-2.5 w-2.5 rounded-full ${dbError ? "bg-rose-500" : "bg-secondary animate-pulse"}`} />
+          {dbError ? "Veritabanı Bağlantısı Yok" : "Sistem Online"}
         </div>
       </div>
+
+      {dbError && (
+        <div className="flex items-center gap-4 px-6 py-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-amber-500">
+          <WifiOff className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold">Veritabanına Bağlanamıyor</p>
+            <p className="text-[11px] font-medium opacity-70 mt-0.5">Neon DB uykuda olabilir. Neon konsolundan projeyi uyandırın veya birkaç saniye bekleyip sayfayı yenileyin.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border-none p-1">
         <Suspense fallback={<div className="h-96 flex items-center justify-center text-muted-foreground text-sm font-bold">POS Yükleniyor...</div>}>

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { GeistMono } from 'geist/font/mono';
-import { Outfit } from 'next/font/google';
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { Navbar } from "@/components/navbar";
@@ -8,13 +6,9 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UIProvider } from "@/lib/context/ui-context";
+import { SupplierOrderProvider } from "@/lib/context/supplier-order-context";
+import { ShortageProvider } from "@/lib/context/shortage-context";
 import { getStaff } from "@/lib/actions/staff-actions";
-
-const fontOutfit = Outfit({
-  subsets: ['latin'],
-  variable: '--font-outfit',
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
-});
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -26,10 +20,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const staff = await getStaff();
+  let staff: any[] = [];
+  try {
+    staff = await getStaff();
+  } catch (err) {
+    console.error("Layout: Could not load staff, DB may be down.");
+  }
   const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
   return (
-    <html lang="tr" suppressHydrationWarning className={`${fontOutfit.variable} ${GeistMono.variable}`}>
+    <html lang="tr" suppressHydrationWarning className="antialiased font-sans">
       <body className="bg-background text-foreground antialiased font-sans">
         <ThemeProvider
           attribute="class"
@@ -38,19 +37,23 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <UIProvider>
-            <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-              <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <Navbar />
-                <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
-                  <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
-                    {children}
+            <SupplierOrderProvider>
+              <ShortageProvider>
+                <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
+                  <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <Navbar />
+                    <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
+                      <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
+                        {children}
+                      </div>
+                    </main>
                   </div>
-                </main>
-              </div>
-              <BottomNav />
-            </div>
-            <Toaster position="top-right" expand={false} richColors />
+                  <BottomNav />
+                </div>
+                <Toaster position="bottom-right" expand={false} duration={2500} />
+              </ShortageProvider>
+            </SupplierOrderProvider>
           </UIProvider>
         </ThemeProvider>
       </body>

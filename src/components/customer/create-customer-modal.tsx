@@ -55,14 +55,18 @@ export function CreateCustomerModal() {
 
   const onSubmit = async (data: CustomerFormValues) => {
     startTransition(async () => {
-      const result = await createCustomer(data);
-      if (result.success) {
-        toast({ title: "Başarılı", description: "Müşteri kaydı oluşturuldu." });
-        setOpen(false);
-        reset();
-        setPhoneValue("");
-      } else {
-        toast({ title: "Hata", description: result.error, variant: "destructive" });
+      try {
+        const result = await createCustomer(data);
+        if (result.success) {
+          toast({ title: "Başarılı", description: "Müşteri kaydı oluşturuldu." });
+          setOpen(false);
+          reset();
+          setPhoneValue("");
+        } else {
+          toast({ title: "Hata", description: result.error, variant: "destructive" });
+        }
+      } catch (error) {
+        toast({ title: "Hata", description: "Müşteri kaydedilirken bir sistem hatası oluştu.", variant: "destructive" });
       }
     });
   };
@@ -109,6 +113,7 @@ export function CreateCustomerModal() {
                   onChange={(e) => {
                     let raw = e.target.value.replace(/[^0-9]/g, "");
                     if (raw.startsWith("90")) raw = raw.substring(2);
+                    if (raw.startsWith("0")) raw = raw.substring(1);
                     const trimmed = raw.substring(0, 10);
                     let formatted = trimmed;
                     if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);

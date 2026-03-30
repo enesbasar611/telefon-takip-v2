@@ -36,6 +36,7 @@ const menuItems = [
     href: "/servis",
     subItems: [
       { label: "Komuta Merkezi", href: "/servis" },
+      { label: "Servis Listesi", href: "/servis/liste" },
       { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
     ]
   },
@@ -46,8 +47,8 @@ const menuItems = [
     subItems: [
       { label: "Stok Listesi", href: "/stok" },
       { label: "Hareket Analizi", href: "/stok/hareketler" },
-      { label: "Kritik Seviyeler", href: "/stok/kritik" },
       { label: "Kategoriler", href: "/stok/kategoriler" },
+      { label: "AI Önerileri", href: "/stok/stok-ai" },
     ]
   },
   {

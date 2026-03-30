@@ -42,6 +42,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, formatPhone } from "@/lib/utils";
 import { formatWhatsAppLink, WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import Link from "next/link";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/ui/sortable-header";
 
 interface ServiceTableProps {
   data: any[];
@@ -60,6 +62,8 @@ const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any
 export function ServiceTable({ data }: ServiceTableProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(data, "createdAt", "desc");
 
   const handleStatusUpdate = (id: string, status: ServiceStatus) => {
     startTransition(async () => {
@@ -101,24 +105,36 @@ export function ServiceTable({ data }: ServiceTableProps) {
       <Table>
         <TableHeader className="bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
-            <TableHead className="px-8 py-6 text-xs font-bold text-muted-foreground">Fiş No</TableHead>
-            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Müşteri</TableHead>
-            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Cihaz Analizi</TableHead>
-            <TableHead className="py-6 text-xs font-bold text-muted-foreground">İşlem Durumu</TableHead>
-            <TableHead className="py-6 text-xs font-bold text-muted-foreground">Kayıt Tarihi</TableHead>
-            <TableHead className="py-6 text-xs font-bold text-muted-foreground text-right">Maliyet</TableHead>
+            <TableHead className="px-8 py-6 h-[70px]">
+              <SortableHeader label="Fiş No" field="ticketNumber" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-6 h-[70px]">
+              <SortableHeader label="Müşteri" field="customer.name" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-6 h-[70px]">
+              <SortableHeader label="Cihaz Analizi" field="deviceBrand" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-6 h-[70px]">
+              <SortableHeader label="İşlem Durumu" field="status" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-6 h-[70px]">
+              <SortableHeader label="Kayıt Tarihi" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-6 h-[70px]">
+              <SortableHeader label="Maliyet" field="estimatedCost" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
+            </TableHead>
             <TableHead className="px-8 py-6 text-xs font-bold text-muted-foreground text-right">Aksiyon</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length === 0 ? (
+          {sortedData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="h-40 text-center text-sm font-medium text-muted-foreground bg-card/50">
                 Kayıtlı veri bulunamadı.
               </TableCell>
             </TableRow>
           ) : (
-            data.map((ticket) => (
+            sortedData.map((ticket) => (
               <TableRow key={ticket.id} className="border-b border-white/[0.03] group hover:bg-white/[0.01] transition-colors">
                 <TableCell className="px-8 py-6">
                   <span className="font-bold text-sm text-foreground">#{ticket.ticketNumber}</span>

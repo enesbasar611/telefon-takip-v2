@@ -29,13 +29,13 @@ export async function createSupplier(data: { name: string; contact?: string; pho
 }
 
 export async function deleteSupplier(id: string) {
-    try {
-      await prisma.supplier.delete({ where: { id } });
-      revalidatePath("/tedarikciler");
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: "Tedarikçi silinemedi." };
-    }
+  try {
+    await prisma.supplier.delete({ where: { id } });
+    revalidatePath("/tedarikciler");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Tedarikçi silinemedi." };
+  }
 }
 
 export async function getPurchaseOrders() {
@@ -60,5 +60,19 @@ export async function createPurchaseOrder(data: { supplierId: string; totalAmoun
     return { success: true, order: serializePrisma(order) };
   } catch (error) {
     return { success: false, error: "Sipariş oluşturulamadı." };
+  }
+}
+
+export async function getCriticalAndOutOfStockProducts() {
+  try {
+    const products = await prisma.product.findMany({
+      include: { category: true },
+      orderBy: { stock: 'asc' },
+    });
+    const critical = products.filter((p: any) => p.stock <= p.criticalStock);
+    return serializePrisma(critical);
+  } catch (error) {
+    console.error("Error fetching critical products:", error);
+    return [];
   }
 }

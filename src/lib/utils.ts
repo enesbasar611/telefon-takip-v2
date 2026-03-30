@@ -29,15 +29,19 @@ export function serializePrisma<T>(data: T): any {
     return data.toISOString();
   }
 
-  // Handle Prisma Decimal
-  // More robust check for Decimal objects which might have minified constructor names
-  if (
+  // Handle Prisma Decimal / Decimal.js
+  // Using multiple checks to be highly robust against different environments/versions
+  const isDecimal =
     typeof data === "object" &&
+    data !== null &&
     (
       (data as any).constructor?.name === "Decimal" ||
-      ((data as any).toNumber && (data as any).toFixed && !((data as any) instanceof Function))
-    )
-  ) {
+      ((data as any).toNumber && (data as any).toFixed && !((data as any) instanceof Function)) ||
+      // Characteristic properties of decimal.js used by Prisma
+      ('d' in data && 'e' in data && 's' in data && Array.isArray((data as any).d))
+    );
+
+  if (isDecimal) {
     return Number((data as any).toNumber());
   }
 
@@ -47,18 +51,6 @@ export function serializePrisma<T>(data: T): any {
   }
 
   // Handle Objects recursively
-  if (typeof data === "object" && data.constructor?.name === "Object") {
-    const obj: any = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        obj[key] = serializePrisma((data as any)[key]);
-      }
-    }
-    return obj;
-  }
-
-  // Fallback for objects that might be class instances but not Decimals or Dates
-  // We want to avoid passing functions to Client Components
   if (typeof data === "object") {
     const obj: any = {};
     for (const key in data) {

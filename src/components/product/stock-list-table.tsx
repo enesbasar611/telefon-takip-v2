@@ -40,6 +40,9 @@ import { quickSellProduct } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "./product-detail-drawer";
 import { EditProductModal } from "./edit-product-modal";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/ui/sortable-header";
+
 
 export function StockListTable({ products, categories }: { products: any[], categories: any[] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,13 +56,16 @@ export function StockListTable({ products, categories }: { products: any[], cate
       const matchesSearch =
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.barcode && p.barcode.includes(searchTerm));
+        (p.barcode && p.barcode.includes(searchTerm)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
+
+  const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filteredProducts, "name", "asc");
 
   const handleExport = () => {
     const headers = ["Ürün Adı", "SKU", "Barkod", "Kategori", "Stok", "Alış", "Satış"];
@@ -128,104 +134,116 @@ export function StockListTable({ products, categories }: { products: any[], cate
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/20 p-6 border-b border-border/10/50">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 lg:p-6 border-b border-white/5 bg-transparent">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Ürün adı, SKU veya barkod ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-slate-900/60 border-border/10 rounded-xl text-xs font-bold text-white"
+            className="pl-9 bg-white/[0.02] border-white/5 rounded-xl text-[13px] font-medium text-white h-10 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-[10px] font-bold text-slate-400 bg-slate-900/40 border border-border/10/50 rounded-xl hover:bg-slate-800 hover:text-white">
-                <Filter className="h-3.5 w-3.5 mr-2 text-blue-500" />
-                {selectedCategory === "ALL" ? "TÜM KATEGORİLER" : categories.find(c => c.id === selectedCategory)?.name}
+              <Button variant="outline" className="h-10 px-4 text-[12px] font-medium text-slate-300 bg-white/[0.02] border-white/5 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+                <Filter className="h-3.5 w-3.5 mr-2 text-slate-400" />
+                {selectedCategory === "ALL" ? "Tüm Kategoriler" : categories.find(c => c.id === selectedCategory)?.name}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-white/5 text-white">
-              <DropdownMenuItem onClick={() => setSelectedCategory("ALL")} className="text-[10px] font-bold p-3 cursor-pointer">TÜM KATEGORİLER</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white shadow-xl shadow-black/50 min-w-[200px]">
+              <DropdownMenuItem onClick={() => setSelectedCategory("ALL")} className="text-[12px] font-medium p-2.5 cursor-pointer focus:bg-white/5">Tüm Kategoriler</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
               {categories.map(cat => (
-                <DropdownMenuItem key={cat.id} onClick={() => setSelectedCategory(cat.id)} className="text-[10px] font-bold p-3 cursor-pointer">{cat.name}</DropdownMenuItem>
+                <DropdownMenuItem key={cat.id} onClick={() => setSelectedCategory(cat.id)} className="text-[12px] font-medium p-2.5 cursor-pointer focus:bg-white/5">{cat.name}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button onClick={handleExport} variant="ghost" size="sm" className="text-[10px] font-bold text-slate-400 bg-slate-900/40 border border-border/10/50 rounded-xl hover:bg-slate-800 hover:text-white">
-            <Download className="h-3.5 w-3.5 mr-2 text-emerald-500" /> DIŞA AKTAR
+          <Button onClick={handleExport} variant="outline" className="h-10 px-4 text-[12px] font-medium text-slate-300 bg-white/[0.02] border-white/5 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+            <Download className="h-3.5 w-3.5 mr-2 text-slate-400" /> Dışa Aktar
           </Button>
         </div>
       </div>
 
       <div className="p-0">
         <div className="block lg:hidden space-y-4 p-4">
-          {filteredProducts.length === 0 ? (
+          {sortedData.length === 0 ? (
             <p className="text-center py-10 text-slate-500 font-bold">Ürün bulunamadı.</p>
           ) : (
-            filteredProducts.map((product: any) => (
-              <div key={product.id} className="matte-card p-5 rounded-2xl border-border/10/50 space-y-4" onClick={() => handleProductClick(product)}>
+            sortedData.map((product: any) => (
+              <div key={product.id} className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 space-y-4 cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-white text-sm leading-tight">{product.name}</h3>
-                    <p className="text-[10px] text-slate-500 font-bold mt-1">SKU: {product.sku || '-'}</p>
+                    <h3 className="font-medium text-slate-200 text-[14px] leading-tight">{product.name}</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mt-1">SKU: {product.sku || '-'}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant="outline" className="bg-slate-900 border-border/10 text-[8px] font-bold text-slate-500 px-2 py-0.5">
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className="text-[10px] font-medium text-slate-400 bg-white/5 px-2 py-0.5 rounded-md">
                       {product.category.name}
-                    </Badge>
+                    </div>
                     {product.location && (
-                      <Badge variant="outline" className="bg-blue-500/5 border-blue-500/10 text-[8px] font-bold text-blue-500 px-2 py-0.5">
-                        {product.location}
-                      </Badge>
+                      <div className="flex items-center gap-1 text-slate-500">
+                        <MapPin className="h-3 w-3" />
+                        <span className="text-[10px] font-medium">{product.location}</span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50">
-                    <p className="text-[8px] font-bold text-slate-600 mb-1">STOK DURUMU</p>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <p className="text-[9px] font-medium text-slate-500 mb-1.5 uppercase tracking-wider">STOK DURUMU</p>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>{product.stock}</span>
-                      <span className="text-[8px] text-slate-600 font-bold">ADET</span>
+                      {product.stock <= product.criticalStock ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                          <span className="text-[13px] font-semibold text-rose-400">{product.stock} Adet</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                          <span className="text-[13px] font-medium text-slate-300">{product.stock} Adet</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50 text-right">
-                    <p className="text-[8px] font-bold text-slate-600 mb-1">SATIŞ FİYATI</p>
-                    <div className="flex items-center justify-end gap-1">
-                      <span className="text-sm font-bold text-blue-500">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
-                    </div>
+                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex flex-col justify-center text-right">
+                    <p className="text-[9px] font-medium text-slate-500 mb-1.5 uppercase tracking-wider">SATIŞ FİYATI</p>
+                    <span className="text-[14px] font-semibold text-slate-200">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-border/10/50">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[8px] text-slate-600 font-bold">MALİYET:</span>
-                    <RevealFinancial amount={product.buyPrice} className="text-[10px] text-slate-400 font-bold" />
+                <div className="flex items-center justify-between pt-3 mt-1 border-t border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">MALİYET</span>
+                    <RevealFinancial amount={product.buyPrice} className="text-[11px] text-slate-400 font-medium" />
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => onAddToShortage(product)} variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-blue-500/5 text-blue-500 border border-blue-500/10">
+                    <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
                       <Plus className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-900 border border-border/10">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-white/5 text-white w-48">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[10px] font-bold p-3 gap-3 cursor-pointer focus:bg-white/5">
-                          <ShoppingCart className="h-4 w-4 text-emerald-500" /> HIZLI SATIŞ
+                      <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white w-48 shadow-xl shadow-black/50">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                          <ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Hızlı Satış
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} className="text-[10px] font-bold p-3 gap-3 cursor-pointer focus:bg-white/5">
-                          <Edit className="h-4 w-4 text-blue-500" /> DÜZENLE
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                          <Edit className="h-3.5 w-3.5 text-blue-500" /> Düzenle
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-[10px] font-bold p-3 gap-3 text-rose-500 cursor-pointer focus:bg-rose-500/10">
-                          <Trash2 className="h-4 w-4" /> SİL
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                          <ClipboardList className="h-3.5 w-3.5 text-orange-400" /> Hareket Geçmişi
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
+                          <Trash2 className="h-3.5 w-3.5" /> Sil
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -237,100 +255,106 @@ export function StockListTable({ products, categories }: { products: any[], cate
         </div>
 
         <Table className="hidden lg:table">
-          <TableHeader className="bg-slate-900/40">
-            <TableRow className="border-border/10/50 hover:bg-transparent">
-              <TableHead className="text-[10px] font-bold text-slate-500 py-4 pl-8">ÜRÜN BİLGİSİ</TableHead>
-              <TableHead className="text-[10px] font-bold text-slate-500 py-4">KATEGORİ / KONUM</TableHead>
-              <TableHead className="text-[10px] font-bold text-slate-500 py-4 text-center">STOK DURUMU</TableHead>
-              <TableHead className="text-[10px] font-bold text-slate-500 py-4 text-right">FİYATLANDIRMA</TableHead>
-              <TableHead className="text-[10px] font-bold text-slate-500 py-4 text-right pr-8">İŞLEMLER</TableHead>
+          <TableHeader>
+            <TableRow className="border-b border-white/5 hover:bg-transparent">
+              <TableHead className="py-3 pl-8 h-11">
+                <SortableHeader label="Ürün Bilgisi" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+              </TableHead>
+              <TableHead className="py-3 h-11">
+                <SortableHeader label="Kategori" field="categoryId" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+              </TableHead>
+              <TableHead className="py-3 h-11">
+                <SortableHeader label="Stok" field="stock" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} align="center" />
+              </TableHead>
+              <TableHead className="py-3 h-11">
+                <SortableHeader label="Fiyat" field="sellPrice" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} align="right" />
+              </TableHead>
+              <TableHead className="py-3 pr-8 h-11 text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.length === 0 ? (
+            {sortedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-xs font-bold text-slate-600">Ürün bulunamadı.</TableCell>
+                <TableCell colSpan={5} className="h-32 text-center text-[13px] font-medium text-slate-500">Kayıtlı ürün bulunamadı.</TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((product: any) => (
-                <TableRow key={product.id} className="border-border/10/50 hover:bg-slate-900/30 transition-colors group">
-                  <TableCell className="py-5 pl-8">
+              sortedData.map((product: any) => (
+                <TableRow key={product.id} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => handleProductClick(product)}>
+                  <TableCell className="py-4 pl-8">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white group-hover:text-blue-500 transition-colors">{product.name}</span>
-                      <span className="text-[9px] text-slate-600 font-bold mt-0.5">SKU: {product.sku || 'BELİRTİLMEDİ'}</span>
+                      <span className="text-[13px] font-medium text-slate-200 group-hover:text-blue-400 transition-colors">{product.name}</span>
+                      <span className="text-[11px] text-slate-500 font-medium mt-0.5">SKU: {product.sku || 'Belirtilmedi'}</span>
                     </div>
                   </TableCell>
-                  <TableCell onClick={() => handleProductClick(product)} className="cursor-pointer">
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="outline" className="bg-slate-900 border-border/10 text-[9px] font-bold text-slate-500 py-1 px-3 rounded-xl w-fit">
+                  <TableCell>
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <span className="text-[12px] font-medium text-slate-400 bg-white/5 px-2 py-0.5 rounded-md">
                         {product.category.name}
-                      </Badge>
+                      </span>
                       {product.location && (
-                        <div className="flex items-center gap-1.5 ml-1">
-                          <MapPin className="h-3 w-3 text-blue-500" />
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{product.location}</span>
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <MapPin className="h-3 w-3" />
+                          <span className="text-[11px] font-medium">{product.location}</span>
                         </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col items-center gap-1.5">
+                    <div className="flex flex-col items-center justify-center gap-1">
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm font-bold ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>{product.stock}</span>
-                        <span className="text-[9px] text-slate-600 font-bold">ADET</span>
-                      </div>
-                      <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${product.stock <= product.criticalStock ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' : 'bg-blue-500'}`}
-                          style={{ width: `${Math.min((product.stock / 10) * 100, 100)}%` }}
-                        />
+                        {product.stock <= product.criticalStock ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                            <span className="text-[12px] font-semibold text-rose-400">{product.stock} Adet</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                            <span className="text-[12px] font-medium text-slate-300">{product.stock} Adet</span>
+                          </div>
+                        )}
                       </div>
                       {product.stock <= product.criticalStock && (
-                        <span className="text-[8px] font-bold text-rose-500 animate-pulse">
-                          {product.stock === 0 ? 'STOK TÜKENDİ' : 'KRİTİK SEVİYE'}
+                        <span className="text-[10px] font-medium text-rose-500/80 uppercase tracking-tighter">
+                          {product.stock === 0 ? 'Tükendi' : 'Kritik'}
                         </span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
-                        <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[9px] text-slate-600 font-bold">Maliyet:</span>
-                        <RevealFinancial amount={product.buyPrice} className="text-[9px] text-slate-500 font-bold" />
+                      <span className="text-[14px] font-semibold text-slate-200">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-slate-500">
+                        <span className="text-[10px] font-medium uppercase tracking-wider">Maliyet</span>
+                        <RevealFinancial amount={product.buyPrice} className="text-[11px] font-medium" />
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-8">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button onClick={() => onAddToShortage(product)} variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-blue-500/5 text-blue-500 border border-blue-500/10 hover:bg-blue-500/20 hover:text-blue-400 transition-all" title="Eksik Listesine Ekle">
+                  <TableCell className="text-right pr-4">
+                    <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                      <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Eksik Listesine Ekle">
                         <Plus className="h-4 w-4" />
                       </Button>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-slate-900 border border-border/10 text-slate-500 hover:text-white transition-all">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-white/5 text-white w-48">
-                          <DropdownMenuLabel className="text-[10px] font-bold text-slate-500 p-3">Ürün İşlemleri</DropdownMenuLabel>
-                          <DropdownMenuSeparator className="bg-white/5" />
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[10px] font-bold p-3 gap-3 cursor-pointer focus:bg-white/5">
-                            <ShoppingCart className="h-4 w-4 text-emerald-500" /> HIZLI SATIŞ YAP
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} className="text-[10px] font-bold p-3 gap-3 cursor-pointer focus:bg-white/5">
-                            <Edit className="h-4 w-4 text-blue-500" /> ÜRÜNÜ DÜZENLE
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-[10px] font-bold p-3 gap-3 cursor-pointer focus:bg-white/5">
-                            <ClipboardList className="h-4 w-4 text-orange-500" /> HAREKET GEÇMİŞİ
+                        <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white w-48 shadow-xl shadow-black/50">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                            <ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Hızlı Satış
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-white/5" />
-                          <DropdownMenuItem className="text-[10px] font-bold p-3 gap-3 cursor-pointer text-rose-500 focus:bg-rose-500/10">
-                            <Trash2 className="h-4 w-4" /> ÜRÜNÜ SİL
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                            <Edit className="h-3.5 w-3.5 text-blue-500" /> Düzenle
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
+                            <ClipboardList className="h-3.5 w-3.5 text-orange-400" /> Hareket Geçmişi
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-white/5" />
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
+                            <Trash2 className="h-3.5 w-3.5" /> Sil
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

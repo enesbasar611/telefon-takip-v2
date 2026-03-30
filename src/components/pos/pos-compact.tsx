@@ -49,7 +49,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const filteredProducts = useMemo(() => {
         return products.filter((p) => {
             const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                (p.barcode && p.barcode.includes(productSearch));
+                (p.barcode && p.barcode.includes(productSearch)) ||
+                (p.category?.name && p.category.name.toLowerCase().includes(productSearch.toLowerCase()));
             const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
             return matchesSearch && matchesCategory;
         });

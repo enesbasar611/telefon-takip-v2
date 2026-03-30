@@ -12,6 +12,9 @@ import { RevealFinancial } from "@/components/ui/reveal-financial";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/ui/sortable-header";
+
 
 type Transaction = {
     id: string;
@@ -48,6 +51,8 @@ export function FinansClient({
             paymentFilter === "ALL" || t.paymentMethod === paymentFilter;
         return matchSearch && matchPayment;
     });
+
+    const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filtered, "createdAt", "desc");
 
     const stats = [
         { label: "TOPLAM GELİR", value: summary.totalIncome, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
@@ -130,22 +135,28 @@ export function FinansClient({
                     <Table>
                         <TableHeader className="bg-muted/5">
                             <TableRow className="border-border/40 hover:bg-transparent">
-                                <TableHead className="text-[10px] font-bold text-muted-foreground py-4 pl-8">TARİH &amp; SAAT</TableHead>
-                                <TableHead className="text-[10px] font-bold text-muted-foreground py-4">AÇIKLAMA</TableHead>
+                                <TableHead className="py-4 pl-8 h-[70px]">
+                                    <SortableHeader label="TARİH & SAAT" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+                                </TableHead>
+                                <TableHead className="py-4 h-[70px]">
+                                    <SortableHeader label="AÇIKLAMA" field="description" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+                                </TableHead>
                                 <TableHead className="text-[10px] font-bold text-muted-foreground py-4">ÖDEME KANALI</TableHead>
                                 <TableHead className="text-[10px] font-bold text-muted-foreground py-4">SORUMLU</TableHead>
-                                <TableHead className="text-right pr-8 text-[10px] font-bold text-muted-foreground py-4">TUTAR</TableHead>
+                                <TableHead className="pr-8 h-[70px]">
+                                    <SortableHeader label="TUTAR" field="amount" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filtered.length === 0 ? (
+                            {sortedData.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-32 text-center text-xs font-bold text-muted-foreground">
                                         {search || paymentFilter !== "ALL" ? "Filtre kriterine uyan işlem bulunamadı." : "Henüz finansal hareket yok."}
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filtered.map((t) => (
+                                sortedData.map((t) => (
                                     <TableRow key={t.id} className="border-border/20 hover:bg-muted/5 transition-colors group">
                                         <TableCell className="py-4 pl-8">
                                             <div className="flex items-center gap-2">

@@ -63,17 +63,19 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                         </div>
 
                         <div className="mb-3">
-                            <div className="grid grid-cols-12 gap-2 font-bold border-b border-black pb-1 mb-1">
-                                <span className="col-span-8">ÜRÜN ADI</span>
-                                <span className="col-span-2 text-center">ADET</span>
+                            <div className="grid grid-cols-12 gap-2 font-bold border-b border-black pb-1 mb-1 text-[8px]">
+                                <span className="col-span-6">ÜRÜN ADI</span>
+                                <span className="col-span-2 text-center">MEVCUT</span>
+                                <span className="col-span-2 text-center">ALINACAK</span>
                                 <span className="col-span-2 text-right">DURUM</span>
                             </div>
                             <div className="space-y-1">
                                 {items.map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-12 gap-2 py-0.5 border-b border-black/5 last:border-0">
-                                        <span className="col-span-8 truncate font-bold">{item.name}</span>
-                                        <span className="col-span-2 text-center font-bold">{item.quantity}</span>
-                                        <span className="col-span-2 text-right opacity-50 px-1 border border-black/20 rounded-[2px] text-[7px]"> [ ] </span>
+                                    <div key={idx} className="grid grid-cols-12 gap-2 py-1 border-b border-black/5 last:border-0 items-center">
+                                        <span className="col-span-6 truncate font-bold leading-tight">{item.name}</span>
+                                        <span className="col-span-2 text-center font-bold text-slate-500">{item.product?.stock || 0}</span>
+                                        <span className="col-span-2 text-center font-bold text-black">{item.quantity || 1}</span>
+                                        <span className="col-span-2 text-right opacity-50 px-1 border border-black/20 rounded-[2px] text-[7px] h-3 flex items-center justify-center"> [ ] </span>
                                     </div>
                                 ))}
                             </div>

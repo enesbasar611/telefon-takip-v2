@@ -12,6 +12,15 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingCart,
@@ -28,9 +37,11 @@ import {
   Minimize2,
   Tag,
   Package,
-  UserPlus
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
+import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatPhone } from "@/lib/utils";
@@ -47,9 +58,15 @@ export function POSInterface({ products, customers, categories }: { products: an
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
 
+  // Yeni Müşteri Ekleme State'leri
+  const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "" });
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
   useEffect(() => {
@@ -62,7 +79,8 @@ export function POSInterface({ products, customers, categories }: { products: an
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.barcode && p.barcode.includes(searchTerm));
+        (p.barcode && p.barcode.includes(searchTerm)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -75,6 +93,32 @@ export function POSInterface({ products, customers, categories }: { products: an
     } else {
       document.exitFullscreen();
       setIsFullscreen(false);
+    }
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.name || newCustomer.name.length < 2) {
+      toast({ title: "Eksik Bilgi", description: "Lütfen müşteri adı ve soyadı girin.", variant: "destructive" });
+      return;
+    }
+
+    setIsCreatingCustomer(true);
+    try {
+      const res = await createCustomer({ name: newCustomer.name, phone: newCustomer.phone });
+      if (res.success && res.customer) {
+        toast({ title: "Başarılı", description: "Yeni müşteri sisteme kaydedildi ve seçildi." });
+        customers.push(res.customer); // UI update without reload dependency
+        setSelectedCustomerId(res.customer.id);
+        setIsNewCustomerOpen(false);
+        setNewCustomer({ name: "", phone: "" });
+        router.refresh(); // Fetch new server data
+      } else {
+        toast({ title: "Hata", description: res.error || "Müşteri oluşturulamadı.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: "Sistem hatası oluştu.", variant: "destructive" });
+    } finally {
+      setIsCreatingCustomer(false);
     }
   };
 
@@ -270,13 +314,60 @@ export function POSInterface({ products, customers, categories }: { products: an
             </Button>
           </div>
 
-          {/* Customer Selection */}
           <div className="p-8 border-b border-border/40 bg-muted/5">
             <div className="flex items-center justify-between mb-4">
               <Label className="text-[11px] font-bold text-muted-foreground tracking-[0.2em]">MÜŞTERİ BİLGİSİ</Label>
-              <Button variant="ghost" className="h-8 px-4 rounded-full text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 flex items-center gap-2 group hover:bg-primary hover:text-white transition-all">
-                <UserPlus className="h-3 w-3" /> YENİ EKLE
-              </Button>
+              <Dialog open={isNewCustomerOpen} onOpenChange={setIsNewCustomerOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="h-8 px-4 rounded-full text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 flex items-center gap-2 group hover:bg-primary hover:text-white transition-all">
+                    <UserPlus className="h-3 w-3" /> YENİ EKLE
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] bg-[#0a0a0a] border border-white/10 text-white shadow-2xl p-0 overflow-hidden">
+                  <div className="px-6 py-5 border-b border-white/10 flex flex-col gap-1.5 bg-white/[0.02]">
+                    <DialogTitle className="text-lg font-bold">Hızlı Müşteri Kaydı</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-400 font-medium">
+                      Aktif sepete atamak için sisteme anında müşteri tanımlayın.
+                    </DialogDescription>
+                  </div>
+                  <div className="p-6 space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-name" className="text-xs font-semibold text-slate-400">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
+                      <Input
+                        id="c-name"
+                        placeholder="Örn: Ahmet Yılmaz"
+                        value={newCustomer.name}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                        className="bg-white/[0.03] border-white/10 rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="c-phone" className="text-xs font-semibold text-slate-400">Telefon Numarası (Opsiyonel)</Label>
+                      <Input
+                        id="c-phone"
+                        placeholder="Örn: 0555 123 4567"
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                        className="bg-white/[0.03] border-white/10 rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 bg-white/[0.02] border-t border-white/10 flex justify-end gap-3">
+                    <Button type="button" variant="ghost" className="h-10 px-5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white" onClick={() => setIsNewCustomerOpen(false)}>
+                      İptal
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleCreateCustomer}
+                      disabled={isCreatingCustomer}
+                      className="h-10 px-6 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                    >
+                      {isCreatingCustomer ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                      Müşteriyi Kaydet ve Seç
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
               <SelectTrigger className="bg-background border border-border/60 h-14 rounded-2xl text-[14px] font-medium text-foreground shadow-sm focus:ring-2 focus:ring-primary/10 px-6">
@@ -297,6 +388,7 @@ export function POSInterface({ products, customers, categories }: { products: an
               </SelectContent>
             </Select>
           </div>
+
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">

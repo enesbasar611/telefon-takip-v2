@@ -122,7 +122,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 const normalizedQuery = normalizeTurkish(searchQuery);
                 const filtered = results.filter((p: any) =>
                     normalizeTurkish(p.name).includes(normalizedQuery) ||
-                    normalizeTurkish(p.sku || "").includes(normalizedQuery)
+                    normalizeTurkish(p.sku || "").includes(normalizedQuery) ||
+                    (p.category?.name && normalizeTurkish(p.category.name).includes(normalizedQuery))
                 );
 
                 setSearchResults(filtered);

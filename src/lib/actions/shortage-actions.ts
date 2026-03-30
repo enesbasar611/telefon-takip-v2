@@ -2,31 +2,65 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { serializePrisma } from "@/lib/utils";
 
 export async function getShortageItems() {
-  return await prisma.shortageItem.findMany({
+  const items = await prisma.shortageItem.findMany({
     where: { isResolved: false },
     include: { product: true },
     orderBy: { createdAt: "desc" },
   });
+  return serializePrisma(items);
 }
 
 export async function addShortageItem(data: { productId?: string; name: string; quantity: number; notes?: string }) {
   try {
-    await prisma.shortageItem.create({
+    // Check if an unresolved item with same productId or name already exists
+    const existing = await prisma.shortageItem.findFirst({
+      where: {
+        isResolved: false,
+        OR: [
+          ...(data.productId ? [{ productId: data.productId }] : []),
+          { name: { equals: data.name, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    if (existing) {
+      return { success: true, message: "Ürün zaten eksikler listesinde mevcut." };
+    }
+
+    const newItem = await prisma.shortageItem.create({
       data: {
         productId: data.productId,
         name: data.name,
         quantity: data.quantity,
         notes: data.notes,
       },
+      include: {
+        product: true
+      }
     });
     revalidatePath("/");
     revalidatePath("/stok");
-    return { success: true };
+    revalidatePath("/stok/hareketler");
+    return { success: true, item: serializePrisma(newItem) };
   } catch (error) {
     console.error("Add shortage item error:", error);
     return { success: false, error: "Ekleme başarısız oldu." };
+  }
+}
+
+export async function updateShortageQuantity(id: string, quantity: number) {
+  try {
+    await prisma.shortageItem.update({
+      where: { id },
+      data: { quantity }
+    });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Güncelleme başarısız." };
   }
 }
 
@@ -89,9 +123,28 @@ export async function deleteShortageItem(id: string) {
 }
 
 export async function resolveShortageItem(id: string) {
-  await prisma.shortageItem.update({
-    where: { id },
-    data: { isResolved: true },
-  });
-  revalidatePath("/");
+  try {
+    await prisma.shortageItem.update({
+      where: { id },
+      data: { isResolved: true },
+    });
+    revalidatePath("/");
+    return { success: true };
+  } catch (err) {
+    return { success: false };
+  }
+}
+
+export async function resolveShortageItems(ids: string[]) {
+  if (ids.length === 0) return { success: true };
+  try {
+    await prisma.shortageItem.updateMany({
+      where: { id: { in: ids } },
+      data: { isResolved: true },
+    });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Toplu güncelleme başarısız." };
+  }
 }

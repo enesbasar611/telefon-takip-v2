@@ -3,8 +3,377 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  name            String?
+  email           String          @unique
+  password        String
+  role            Role            @default(STAFF)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  commissionRate  Decimal         @default(0) @db.Decimal(5, 2)
+  inventoryLogs   InventoryLog[]
+  returns         ReturnTicket[]
+  sales           Sale[]
+  createdTickets  ServiceTicket[] @relation("CreatedBy")
+  assignedTickets ServiceTicket[] @relation("AssignedTechnician")
+  transactions    Transaction[]
+  purchaseOrders  PurchaseOrder[]
+}
+
+model Customer {
+  id             String          @id @default(cuid())
+  name           String
+  phone          String?         @unique
+  email          String?
+  address        String?
+  notes          String?
+  loyaltyPoints  Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  isVip          Boolean         @default(false)
+  photo          String?
+  secondaryPhone String?
+  type           String          @default("BIREYSEL")
+  debts          Debt[]
+  sales          Sale[]
+  tickets        ServiceTicket[]
+}
+
+model ServiceTicket {
+  id                    String              @id @default(cuid())
+  ticketNumber          String              @unique
+  customerId            String
+  deviceModel           String
+  deviceBrand           String
+  imei                  String?
+  serialNumber          String?
+  problemDesc           String
+  notes                 String?
+  status                ServiceStatus       @default(PENDING)
+  priority              Int                 @default(1)
+  technicianId          String?
+  createdById           String
+  estimatedCost         Decimal             @default(0) @db.Decimal(10, 2)
+  actualCost            Decimal             @default(0) @db.Decimal(10, 2)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deliveredAt           DateTime?
+  cosmeticCondition     String?
+  estimatedDeliveryDate DateTime?
+  warrantyExpiry        DateTime?
+  overhead              Decimal             @default(0) @db.Decimal(10, 2)
+  inventoryMovements    InventoryMovement[]
+  returns               ReturnTicket[]
+  logs                  ServiceLog[]
+  createdBy             User                @relation("CreatedBy", fields: [createdById], references: [id])
+  customer              Customer            @relation(fields: [customerId], references: [id])
+  technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id])
+  usedParts             ServiceUsedPart[]
+}
+
+model ServiceLog {
+  id        String        @id @default(cuid())
+  ticketId  String
+  message   String
+  status    ServiceStatus
+  createdAt DateTime      @default(now())
+  ticket    ServiceTicket @relation(fields: [ticketId], references: [id])
+}
+
+model ServiceUsedPart {
+  id        String        @id @default(cuid())
+  ticketId  String
+  productId String
+  quantity  Int           @default(1)
+  unitPrice Decimal       @db.Decimal(10, 2)
+  costPrice Decimal       @default(0) @db.Decimal(10, 2)
+  product   Product       @relation(fields: [productId], references: [id])
+  ticket    ServiceTicket @relation(fields: [ticketId], references: [id])
+}
+
+model Category {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  parentId      String?
+  parent        Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  subCategories Category[] @relation("SubCategories")
+  products      Product[]
+}
+
+model Product {
+  id             String              @id @default(cuid())
+  sku            String?             @unique
+  barcode        String?             @unique
+  name           String
+  description    String?
+  categoryId     String
+  buyPrice       Decimal             @db.Decimal(10, 2)
+  sellPrice      Decimal             @db.Decimal(10, 2)
+  stock          Int                 @default(0)
+  criticalStock  Int                 @default(5)
+  isSecondHand   Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  isChronic      Boolean             @default(false)
+  supplierId     String?
+  location       String?
+  warrantyMonths Int                 @default(0)
+  deviceInfo     DeviceHubInfo?
+  inventoryLogs  InventoryLog[]
+  movements      InventoryMovement[]
+  category       Category            @relation(fields: [categoryId], references: [id])
+  returns        ReturnTicket[]
+  saleItems      SaleItem[]
+  usedInServices ServiceUsedPart[]
+  shortageItems  ShortageItem[]
+  aiAlerts       StockAIAlert[]
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  purchaseItems  PurchaseOrderItem[]
+}
+
+model StockAIAlert {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  productId String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  isRead    Boolean  @default(false)
+  product   Product? @relation(fields: [productId], references: [id])
+}
+
+model ReturnTicket {
+  id              String        @id @default(cuid())
+  ticketNumber    String        @unique
+  serviceTicketId String
+  productId       String
+  supplierId      String?
+  userId          String
+  returnReason    ReturnReason
+  lossAmount      Decimal       @default(0) @db.Decimal(10, 2)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  product         Product       @relation(fields: [productId], references: [id])
+  serviceTicket   ServiceTicket @relation(fields: [serviceTicketId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+}
+
+model InventoryLog {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String
+  quantity  Int
+  type      String
+  notes     String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model DeviceHubInfo {
+  id              String    @id @default(cuid())
+  productId       String    @unique
+  imei            String    @unique
+  serialNumber    String?
+  color           String?
+  capacity        String?
+  batteryHealth   Int?
+  cosmeticScore   Int       @default(10)
+  condition       String    @default("NEW")
+  expertChecklist Json?
+  purchaseDate    DateTime?
+  purchasedFrom   String?
+  buyBackPrice    Decimal?  @db.Decimal(10, 2)
+  buyBackMonths   Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  product         Product   @relation(fields: [productId], references: [id])
+}
+
+model ShortageItem {
+  id         String   @id @default(cuid())
+  productId  String?
+  name       String
+  quantity   Int      @default(1)
+  notes      String?
+  isResolved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product? @relation(fields: [productId], references: [id])
+}
+
+model InventoryMovement {
+  id              String         @id @default(cuid())
+  productId       String
+  quantity        Int
+  type            String
+  notes           String?
+  createdAt       DateTime       @default(now())
+  saleId          String?
+  serviceTicketId String?
+  product         Product        @relation(fields: [productId], references: [id])
+  sale            Sale?          @relation(fields: [saleId], references: [id])
+  serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
+}
+
+model Sale {
+  id                 String              @id @default(cuid())
+  saleNumber         String              @unique
+  customerId         String?
+  userId             String
+  totalAmount        Decimal             @db.Decimal(10, 2)
+  discount           Decimal             @default(0) @db.Decimal(10, 2)
+  finalAmount        Decimal             @db.Decimal(10, 2)
+  paymentMethod      PaymentMethod       @default(CASH)
+  createdAt          DateTime            @default(now())
+  inventoryMovements InventoryMovement[]
+  customer           Customer?           @relation(fields: [customerId], references: [id])
+  user               User                @relation(fields: [userId], references: [id])
+  items              SaleItem[]
+  transaction        Transaction?
+}
+
+model SaleItem {
+  id         String  @id @default(cuid())
+  saleId     String
+  productId  String
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+  product    Product @relation(fields: [productId], references: [id])
+  sale       Sale    @relation(fields: [saleId], references: [id])
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2)
+  description   String
+  paymentMethod PaymentMethod   @default(CASH)
+  userId        String
+  saleId        String?         @unique
+  createdAt     DateTime        @default(now())
+  sale          Sale?           @relation(fields: [saleId], references: [id])
+  user          User            @relation(fields: [userId], references: [id])
+}
+
+model Debt {
+  id              String    @id @default(cuid())
+  customerId      String
+  amount          Decimal   @db.Decimal(10, 2)
+  remainingAmount Decimal   @db.Decimal(10, 2)
+  dueDate         DateTime?
+  isPaid          Boolean   @default(false)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  customer        Customer  @relation(fields: [customerId], references: [id])
+}
+
+model Supplier {
+  id            String                @id @default(cuid())
+  name          String
+  contact       String?
+  phone         String?
+  email         String?
+  address       String?
+  category      String?               @default("Genel")
+  trustScore    Int                   @default(100)
+  isApproved    Boolean               @default(false)
+  taxNumber     String?
+  taxOffice     String?
+  logo          String?
+  balance       Decimal               @default(0) @db.Decimal(12, 2)
+  totalShopping Decimal               @default(0) @db.Decimal(12, 2)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  purchases     PurchaseOrder[]
+  transactions  SupplierTransaction[]
+  products      Product[]
+}
+
+model PurchaseOrder {
+  id            String              @id @default(cuid())
+  orderNo       String              @unique
+  supplierId    String
+  totalAmount   Decimal             @db.Decimal(12, 2)
+  vatAmount     Decimal             @default(0) @db.Decimal(12, 2)
+  netAmount     Decimal             @default(0) @db.Decimal(12, 2)
+  discount      Decimal             @default(0) @db.Decimal(12, 2)
+  status        OrderStatus         @default(PENDING)
+  paymentStatus PaymentStatus       @default(UNPAID)
+  paymentMethod PaymentMethod       @default(CASH)
+  shippingInfo  String?
+  trackingNo    String?
+  description   String?
+  receivedAt    DateTime?
+  responsibleId String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  items         PurchaseOrderItem[]
+  responsible   User?               @relation(fields: [responsibleId], references: [id])
+}
+
+model PurchaseOrderItem {
+  id               String        @id @default(cuid())
+  orderId          String
+  productId        String?
+  name             String
+  quantity         Int
+  receivedQuantity Int           @default(0)
+  buyPrice         Decimal       @db.Decimal(12, 2)
+  vatRate          Int           @default(20)
+  order            PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product          Product?      @relation(fields: [productId], references: [id])
+}
+
+model SupplierTransaction {
+  id          String          @id @default(cuid())
+  supplierId  String
+  amount      Decimal         @db.Decimal(12, 2)
+  type        TransactionType
+  description String
+  date        DateTime        @default(now())
+  supplier    Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
+
+enum OrderStatus {
+  PENDING
+  ON_WAY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+  PARTIAL
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model ReceiptSettings {
+  id        String   @id
+  title     String   @default("BAŞAR TEKNİK")
+  subtitle  String   @default("PROFESYONEL TEKNİK SERVİS")
+  phone     String   @default("+90 (5xx) xxx xx xx")
+  address   String?
+  footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
+  website   String   @default("v2.basarteknik.com")
+  updatedAt DateTime @updatedAt
+  terms     String?
 }
 
 enum Role {
@@ -14,13 +383,13 @@ enum Role {
 }
 
 enum ServiceStatus {
-  PENDING      // Beklemede
-  APPROVED     // Onay Bekleyen
-  REPAIRING    // Tamirde
-  WAITING_PART // Parça Bekliyor
-  READY        // Hazır
-  DELIVERED    // Teslim Edildi
-  CANCELLED    // İptal Edildi
+  PENDING
+  APPROVED
+  REPAIRING
+  WAITING_PART
+  READY
+  DELIVERED
+  CANCELLED
 }
 
 enum TransactionType {
@@ -40,325 +409,4 @@ enum ReturnReason {
   LABOR_ERROR
   CUSTOMER_MISUSE
   CUSTOMER_CANCEL
-}
-
-model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String    @unique
-  password        String
-  role            Role      @default(STAFF)
-  commissionRate  Decimal   @default(0) @db.Decimal(5, 2) // Percentage e.g. 10.00%
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  assignedTickets ServiceTicket[] @relation("AssignedTechnician")
-  createdTickets  ServiceTicket[] @relation("CreatedBy")
-  transactions    Transaction[]
-  sales           Sale[]
-  returns         ReturnTicket[]
-  inventoryLogs   InventoryLog[]
-}
-
-model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?  @unique
-  secondaryPhone String?
-  email     String?
-  address   String?
-  notes     String?
-  photo     String?
-  type      String   @default("BIREYSEL") // BIREYSEL, KURUMSAL
-  isVip     Boolean  @default(false)
-  loyaltyPoints Int  @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tickets   ServiceTicket[]
-  sales     Sale[]
-  debts     Debt[]
-}
-
-model ServiceTicket {
-  id              String        @id @default(cuid())
-  ticketNumber    String        @unique // e.g., SRV-1001
-  customerId      String
-  customer        Customer      @relation(fields: [customerId], references: [id])
-
-  deviceModel     String
-  deviceBrand     String
-  imei            String?
-  serialNumber    String?
-  problemDesc     String
-  cosmeticCondition String?
-  notes           String?
-
-  status          ServiceStatus @default(PENDING)
-  priority        Int           @default(1) // 1: Normal, 2: High, 3: Urgent
-
-  technicianId    String?
-  technician      User?         @relation("AssignedTechnician", fields: [technicianId], references: [id])
-  createdById     String
-  createdBy       User          @relation("CreatedBy", fields: [createdById], references: [id])
-
-  estimatedCost   Decimal       @default(0) @db.Decimal(10, 2)
-  actualCost      Decimal       @default(0) @db.Decimal(10, 2)
-  overhead        Decimal       @default(0) @db.Decimal(10, 2)
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  deliveredAt     DateTime?
-  warrantyExpiry  DateTime?
-  estimatedDeliveryDate DateTime?
-
-  logs               ServiceLog[]
-  usedParts          ServiceUsedPart[]
-  inventoryMovements InventoryMovement[]
-  returns            ReturnTicket[]
-}
-
-model ServiceLog {
-  id              String        @id @default(cuid())
-  ticketId        String
-  ticket          ServiceTicket @relation(fields: [ticketId], references: [id])
-  message         String
-  status          ServiceStatus
-  createdAt       DateTime      @default(now())
-}
-
-model ServiceUsedPart {
-  id              String        @id @default(cuid())
-  ticketId        String
-  ticket          ServiceTicket @relation(fields: [ticketId], references: [id])
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id])
-  quantity        Int           @default(1)
-  unitPrice       Decimal       @db.Decimal(10, 2)
-  costPrice       Decimal       @default(0) @db.Decimal(10, 2)
-}
-
-model Category {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  products  Product[]
-}
-
-model Product {
-  id              String    @id @default(cuid())
-  sku             String?   @unique
-  barcode         String?   @unique
-  name            String
-  description     String?
-  categoryId      String
-  category        Category  @relation(fields: [categoryId], references: [id])
-
-  buyPrice        Decimal   @db.Decimal(10, 2)
-  sellPrice       Decimal   @db.Decimal(10, 2)
-  stock           Int       @default(0)
-  criticalStock   Int       @default(5)
-
-  isSecondHand    Boolean   @default(false)
-  isChronic       Boolean   @default(false)
-  supplierId      String?
-  location        String?
-  warrantyMonths  Int       @default(0)
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  movements       InventoryMovement[]
-  saleItems       SaleItem[]
-  usedInServices  ServiceUsedPart[]
-  shortageItems   ShortageItem[]
-  deviceInfo      DeviceHubInfo?
-  returns         ReturnTicket[]
-  inventoryLogs   InventoryLog[]
-}
-
-model ReturnTicket {
-  id              String        @id @default(cuid())
-  ticketNumber    String        @unique // e.g., RET-1001
-  serviceTicketId String
-  serviceTicket   ServiceTicket @relation(fields: [serviceTicketId], references: [id])
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id])
-  supplierId      String?
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
-
-  returnReason    ReturnReason
-  lossAmount      Decimal       @default(0) @db.Decimal(10, 2)
-  notes           String?
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-}
-
-model InventoryLog {
-  id              String        @id @default(cuid())
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id])
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
-
-  quantity        Int
-  type            String        // SALE, PURCHASE, SERVICE_USE, RETURN_RESTORE, RETURN_JUNK, ADJUSTMENT
-  notes           String?
-
-  createdAt       DateTime      @default(now())
-}
-
-model DeviceHubInfo {
-  id              String    @id @default(cuid())
-  productId       String    @unique
-  product         Product   @relation(fields: [productId], references: [id])
-
-  imei            String    @unique
-  serialNumber    String?
-  color           String?
-  capacity        String?
-  batteryHealth   Int?
-  cosmeticScore   Int       @default(10) // 1-10
-  condition       String    @default("NEW") // NEW, USED
-
-  expertChecklist Json?     // Diagnostic results
-
-  purchaseDate    DateTime?
-  purchasedFrom   String?
-  buyBackPrice    Decimal?  @db.Decimal(10, 2)
-  buyBackMonths   Int?
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model ShortageItem {
-  id          String   @id @default(cuid())
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
-  name        String   // Fallback if not linked to a product
-  quantity    Int      @default(1)
-  notes       String?
-  isResolved  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-
-model InventoryMovement {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  quantity    Int      // Positive for stock in, negative for stock out
-  type        String   // SALE, PURCHASE, SERVICE_USE, ADJUSTMENT
-  notes       String?
-
-  serviceTicketId String?
-  serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
-  saleId          String?
-  sale            Sale?          @relation(fields: [saleId], references: [id])
-
-  createdAt       DateTime @default(now())
-}
-
-model Sale {
-  id              String        @id @default(cuid())
-  saleNumber      String        @unique
-  customerId      String?
-  customer        Customer?     @relation(fields: [customerId], references: [id])
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
-
-  totalAmount     Decimal       @db.Decimal(10, 2)
-  discount        Decimal       @default(0) @db.Decimal(10, 2)
-  finalAmount     Decimal       @db.Decimal(10, 2)
-
-  paymentMethod   PaymentMethod @default(CASH)
-
-  createdAt       DateTime      @default(now())
-
-  items              SaleItem[]
-  transaction        Transaction?
-  inventoryMovements InventoryMovement[]
-}
-
-model SaleItem {
-  id          String   @id @default(cuid())
-  saleId      String
-  sale        Sale     @relation(fields: [saleId], references: [id])
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  quantity    Int
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  totalPrice  Decimal  @db.Decimal(10, 2)
-}
-
-model Transaction {
-  id              String          @id @default(cuid())
-  type            TransactionType
-  amount          Decimal         @db.Decimal(10, 2)
-  description     String
-  paymentMethod   PaymentMethod   @default(CASH)
-
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
-
-  saleId          String?         @unique
-  sale            Sale?           @relation(fields: [saleId], references: [id])
-
-  createdAt       DateTime        @default(now())
-}
-
-model Debt {
-  id              String    @id @default(cuid())
-  customerId      String
-  customer        Customer  @relation(fields: [customerId], references: [id])
-  amount          Decimal   @db.Decimal(10, 2)
-  remainingAmount Decimal   @db.Decimal(10, 2)
-  dueDate         DateTime?
-  isPaid          Boolean   @default(false)
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model Supplier {
-  id        String   @id @default(cuid())
-  name      String
-  contact   String?
-  phone     String?
-  email     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  purchases PurchaseOrder[]
-}
-
-model PurchaseOrder {
-  id              String    @id @default(cuid())
-  supplierId      String
-  supplier        Supplier  @relation(fields: [supplierId], references: [id])
-  totalAmount     Decimal   @db.Decimal(10, 2)
-  status          String    // PENDING, COMPLETED, CANCELLED
-  createdAt       DateTime  @default(now())
-}
-
-model Setting {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String
-}
-
-model ReceiptSettings {
-  id        String   @id // "pos", "service", "stock"
-  title     String   @default("BAŞAR TEKNİK")
-  subtitle  String   @default("PROFESYONEL TEKNİK SERVİS")
-  phone     String   @default("+90 (5xx) xxx xx xx")
-  address   String?
-  footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
-  website   String   @default("v2.basarteknik.com")
-  terms     String?  @db.Text
-  updatedAt DateTime @updatedAt
 }

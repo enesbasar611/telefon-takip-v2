@@ -12,16 +12,31 @@ import { DashboardCore } from "@/components/dashboard/dashboard-core";
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const statsData = await getDashboardStats();
-  const recentTicketsRaw = await getRecentServiceTickets();
-  const recentTransactions = await getRecentTransactions();
-  const topProducts = await getTopSellingProducts();
-  const salesTrend = await getSalesReport();
-  const serviceMetricsRaw = await getServiceMetrics();
-  const liveActivity = await getLiveActivity();
-  const profitMatrix = await getProfitMatrix("THIS_MONTH");
+  let statsData: any = null;
+  let recentTicketsRaw: any[] = [];
+  let recentTransactions: any[] = [];
+  let topProducts: any[] = [];
+  let salesTrend: any[] = [];
+  let serviceMetricsRaw: any = null;
+  let liveActivity: any[] = [];
+  let profitMatrix: any = null;
 
-  if (!statsData) return <div className="p-12 text-center text-muted-foreground animate-pulse">Analitik veriler hazırlanıyor...</div>;
+  try {
+    [statsData, recentTicketsRaw, recentTransactions, topProducts, salesTrend, serviceMetricsRaw, liveActivity, profitMatrix] = await Promise.all([
+      getDashboardStats(),
+      getRecentServiceTickets(),
+      getRecentTransactions(),
+      getTopSellingProducts(),
+      getSalesReport(),
+      getServiceMetrics(),
+      getLiveActivity(),
+      getProfitMatrix("THIS_MONTH"),
+    ]);
+  } catch (err) {
+    console.error("Dashboard: DB connection failed", err);
+  }
+
+  if (!statsData) return <div className="p-12 text-center text-muted-foreground">Veritabanı bağlantısı kurulamadı. Lütfen Neon konsolunu kontrol edin ve sayfayı yenileyin.</div>;
 
   const serializeDecimals = (data: any): any => {
     if (data === null || data === undefined) return data;

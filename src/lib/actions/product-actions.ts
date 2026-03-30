@@ -2,6 +2,19 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma, toSentenceCase } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { addShortageItem } from "./shortage-actions";
+
+async function checkStockAndAddShortage(productId: string, productName: string) {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (product && product.stock <= 0) {
+    await addShortageItem({
+      productId: productId,
+      name: productName,
+      quantity: 1,
+      notes: "Otomatik: Stok tükendi."
+    });
+  }
+}
 
 export async function getProducts() {
   try {
@@ -32,7 +45,8 @@ export async function searchProducts(query: string) {
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { sku: { contains: query, mode: 'insensitive' } },
-          { barcode: { contains: query, mode: 'insensitive' } }
+          { barcode: { contains: query, mode: 'insensitive' } },
+          { category: { name: { contains: query, mode: 'insensitive' } } }
         ]
       },
       select: {
@@ -82,6 +96,21 @@ export async function createProduct(data: {
 }) {
   try {
     const user = await getOrCreateDevUser();
+
+    // Check for duplicate product
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { name: { equals: toSentenceCase(data.name), mode: 'insensitive' } },
+          ...(data.barcode ? [{ barcode: data.barcode }] : []),
+          ...(data.sku ? [{ sku: data.sku }] : [])
+        ]
+      }
+    });
+
+    if (existingProduct) {
+      return { success: false, isDuplicate: true, message: "Aynı isimli veya barkodlu ürün stokta zaten mevcut." };
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -203,6 +232,9 @@ export async function updateProduct(id: string, data: any) {
     }
 
     revalidatePath("/stok");
+    if (newStock !== undefined && newStock <= 0) {
+      await checkStockAndAddShortage(id, product.name);
+    }
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
     console.error("Update product error:", error);
@@ -307,6 +339,11 @@ export async function quickSellProduct(productId: string, quantity: number) {
       });
     });
 
+    const finalProduct = await prisma.product.findUnique({ where: { id: productId } });
+    if (finalProduct && finalProduct.stock <= 0) {
+      await checkStockAndAddShortage(productId, finalProduct.name);
+    }
+
     revalidatePath("/stok");
     revalidatePath("/");
     return { success: true };
@@ -409,5 +446,45 @@ export async function createCategory(name: string) {
     return { success: true, category: serializePrisma(category) };
   } catch (error) {
     return { success: false, error: "Kategori oluşturulamadı." };
+  }
+}
+
+export async function getCriticalProducts() {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        stock: { lte: prisma.product.fields.criticalStock }
+      },
+      include: { category: true },
+      orderBy: { stock: "asc" }
+    });
+    return serializePrisma(products);
+  } catch (error) {
+    console.error("Error fetching critical products:", error);
+    return [];
+  }
+}
+
+export async function getAllInventoryMovements() {
+  try {
+    const movements = await prisma.inventoryMovement.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        product: {
+          select: { name: true, sku: true }
+        },
+        serviceTicket: {
+          select: { ticketNumber: true }
+        },
+        sale: {
+          select: { saleNumber: true }
+        }
+      },
+      take: 100
+    });
+    return serializePrisma(movements);
+  } catch (error) {
+    console.error("Error fetching all inventory movements:", error);
+    return [];
   }
 }

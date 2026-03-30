@@ -3,6 +3,7 @@ import { getProducts, getCategories, getInventoryStats } from "@/lib/actions/pro
 import { CreateProductModal } from "@/components/product/create-product-modal";
 import { StockListTable } from "@/components/product/stock-list-table";
 import { StockDashboardMetrics } from "@/components/product/stock-dashboard-metrics";
+import { CategorySummaryCards } from "@/components/product/category-summary-cards";
 import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,10 @@ export default async function StokPage() {
         </div>
       </div>
 
-      <StockDashboardMetrics stats={stats} />
+      <div className="space-y-8">
+        <StockDashboardMetrics stats={stats} />
+        <CategorySummaryCards products={products} categories={categories} />
+      </div>
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none">
         <StockListTable products={products} categories={categories} />

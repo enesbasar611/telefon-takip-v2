@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, Wallet, AlertCircle, History, CalendarClock, TrendingDown, CheckCircle2 } from "lucide-react";
 import { collectDebtPayment } from "@/lib/actions/debt-actions";
 import { toast } from "sonner";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -109,6 +111,10 @@ export function VeresiyeClient({
     const paidDebts = debts.filter((d) => d.isPaid);
     const totalOpenDebt = openDebts.reduce((s, d) => s + Number(d.remainingAmount), 0);
 
+    const { sortedData: sortedOpen, sortField: openField, sortOrder: openOrder, toggleSort: toggleOpen } = useTableSort(openDebts, "customer.name", "asc");
+    const { sortedData: sortedOverdue, sortField: overdueField, sortOrder: overdueOrder, toggleSort: toggleOverdue } = useTableSort(overdueDebts, "dueDate", "asc");
+    const { sortedData: sortedPaid, sortField: paidField, sortOrder: paidOrder, toggleSort: togglePaid } = useTableSort(paidDebts, "customer.name", "asc");
+
     return (
         <div className="flex flex-col gap-8">
             <div>
@@ -173,15 +179,23 @@ export function VeresiyeClient({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Müşteri</TableHead>
-                                        <TableHead>Vade Tarihi</TableHead>
-                                        <TableHead>Toplam Borç</TableHead>
-                                        <TableHead>Kalan Alacak</TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Müşteri" field="customer.name" sortField={openField} sortOrder={openOrder} onSort={toggleOpen} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Vade Tarihi" field="dueDate" sortField={openField} sortOrder={openOrder} onSort={toggleOpen} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Toplam Borç" field="amount" sortField={openField} sortOrder={openOrder} onSort={toggleOpen} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Kalan Alacak" field="remainingAmount" sortField={openField} sortOrder={openOrder} onSort={toggleOpen} />
+                                        </TableHead>
                                         <TableHead className="text-right">Aksiyon</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {openDebts.length === 0 ? (
+                                    {sortedOpen.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500/40" />
@@ -189,7 +203,7 @@ export function VeresiyeClient({
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        openDebts.map((debt) => (
+                                        sortedOpen.map((debt) => (
                                             <TableRow key={debt.id} className="group">
                                                 <TableCell className="font-medium group-hover:text-primary transition-colors">
                                                     {debt.customer.name}
@@ -224,19 +238,25 @@ export function VeresiyeClient({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Müşteri</TableHead>
-                                        <TableHead>Vade Tarihi</TableHead>
-                                        <TableHead>Kalan Borç</TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Müşteri" field="customer.name" sortField={overdueField} sortOrder={overdueOrder} onSort={toggleOverdue} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Vade Tarihi" field="dueDate" sortField={overdueField} sortOrder={overdueOrder} onSort={toggleOverdue} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Kalan Borç" field="remainingAmount" sortField={overdueField} sortOrder={overdueOrder} onSort={toggleOverdue} />
+                                        </TableHead>
                                         <TableHead className="text-right">Aksiyon</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {overdueDebts.length === 0 ? (
+                                    {sortedOverdue.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">Gecikmiş ödeme bulunmuyor.</TableCell>
                                         </TableRow>
                                     ) : (
-                                        overdueDebts.map((debt) => (
+                                        sortedOverdue.map((debt) => (
                                             <TableRow key={debt.id}>
                                                 <TableCell className="font-bold">{debt.customer.name}</TableCell>
                                                 <TableCell className="text-red-500 font-medium">
@@ -266,18 +286,22 @@ export function VeresiyeClient({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Müşteri</TableHead>
-                                        <TableHead>Toplam Borç</TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Müşteri" field="customer.name" sortField={paidField} sortOrder={paidOrder} onSort={togglePaid} />
+                                        </TableHead>
+                                        <TableHead className="h-[60px]">
+                                            <SortableHeader label="Toplam Borç" field="amount" sortField={paidField} sortOrder={paidOrder} onSort={togglePaid} />
+                                        </TableHead>
                                         <TableHead className="text-right">Durum</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {paidDebts.length === 0 ? (
+                                    {sortedPaid.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">Henüz tahsil edilen alacak yok.</TableCell>
                                         </TableRow>
                                     ) : (
-                                        paidDebts.map((debt) => (
+                                        sortedPaid.map((debt) => (
                                             <TableRow key={debt.id}>
                                                 <TableCell className="font-medium">{debt.customer.name}</TableCell>
                                                 <TableCell>₺{Number(debt.amount).toLocaleString('tr-TR')}</TableCell>

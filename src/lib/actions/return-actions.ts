@@ -93,7 +93,7 @@ export async function createReturnTicket(data: {
     // Update Chronic Failure Status
     await updateChronicFailureStatus(data.productId);
 
-    revalidatePath("/servis/iade");
+    revalidatePath("/servis/liste");
     revalidatePath("/stok");
     revalidatePath("/dashboard");
     return { success: true, data: serializePrisma(result) };
@@ -112,8 +112,8 @@ async function updateChronicFailureStatus(productId: string) {
 
   const totalReturns = await prisma.returnTicket.count({
     where: {
-        productId,
-        returnReason: { in: [ReturnReason.PART_FAILURE, ReturnReason.LABOR_ERROR] }
+      productId,
+      returnReason: { in: [ReturnReason.PART_FAILURE, ReturnReason.LABOR_ERROR] }
     }
   });
 

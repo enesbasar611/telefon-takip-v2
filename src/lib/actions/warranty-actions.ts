@@ -148,7 +148,7 @@ export async function createReturnTicket(data: {
             return returnTicket;
         });
 
-        revalidatePath("/servis/iade");
+
         revalidatePath("/servis/liste");
         return { success: true, data: serializePrisma(result) };
     } catch (error: any) {

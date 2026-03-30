@@ -24,6 +24,9 @@ import { MoreHorizontal, Trash, Edit } from "lucide-react";
 import { deleteCustomer } from "@/lib/actions/customer-actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatPhone } from "@/lib/utils";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { SortableHeader } from "@/components/ui/sortable-header";
+
 
 interface CustomerTableProps {
   data: any[];
@@ -32,6 +35,8 @@ interface CustomerTableProps {
 export function CustomerTable({ data }: CustomerTableProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(data, "name", "asc");
+
 
   const handleDelete = (id: string) => {
     if (!confirm("Bu müşteriyi silmek istediğinize emin misiniz?")) return;
@@ -50,22 +55,28 @@ export function CustomerTable({ data }: CustomerTableProps) {
       <Table>
         <TableHeader className="bg-slate-900/50">
           <TableRow className="hover:bg-transparent border-white/5">
-            <TableHead className="text-xs font-bold text-slate-500">Ad Soyad</TableHead>
-            <TableHead className="text-xs font-bold text-slate-500">Telefon</TableHead>
-            <TableHead className="text-xs font-bold text-slate-500">E-posta</TableHead>
-            <TableHead className="text-xs font-bold text-slate-500">Kayıt Tarihi</TableHead>
+            <TableHead className="py-3 pl-4">
+              <SortableHeader label="Ad Soyad" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-3">
+              <SortableHeader label="Telefon" field="phone" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
+            <TableHead className="py-3 text-xs font-bold text-slate-500">E-posta</TableHead>
+            <TableHead className="py-3">
+              <SortableHeader label="Kayıt Tarihi" field="createdAt" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+            </TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length === 0 ? (
+          {sortedData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
                 Müşteri bulunamadı.
               </TableCell>
             </TableRow>
           ) : (
-            data.map((customer) => (
+            sortedData.map((customer) => (
               <TableRow key={customer.id} className="hover:bg-white/[0.02] border-white/5">
                 <TableCell className="font-bold text-sm">{customer.name}</TableCell>
                 <TableCell className="font-bold text-xs text-blue-500">{formatPhone(customer.phone)}</TableCell>

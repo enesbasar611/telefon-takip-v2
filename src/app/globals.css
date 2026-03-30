@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&display=swap');
+
 @layer base {
   :root {
     /* Design System Tokens - The Aeonik Prism (Light Mode) */
@@ -77,14 +79,9 @@
 }
 
 @layer base {
-  * {
-    @apply border-border/40;
-    /* Slightly more visible borders */
-  }
-
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 font-sans h-screen overflow-hidden;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv05" 1;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 h-screen overflow-hidden;
+    font-family: 'Google Sans Flex', sans-serif !important;
     color: hsl(var(--foreground));
   }
 
@@ -94,16 +91,16 @@
   h3,
   h4,
   h5,
-  h6 {
-    @apply font-sans tracking-tight font-extrabold;
-    color: hsl(var(--foreground));
-  }
-
+  h6,
   button,
   label,
   span,
-  p {
-    @apply font-sans;
+  p,
+  div,
+  input,
+  textarea,
+  select {
+    font-family: 'Google Sans Flex', sans-serif !important;
   }
 
 

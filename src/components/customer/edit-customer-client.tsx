@@ -21,10 +21,27 @@ interface EditCustomerClientProps {
 export function EditCustomerClient({ customer }: EditCustomerClientProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const formatInputPhone = (val: string = "") => {
+        let raw = val.replace(/[^0-9]/g, "");
+        if (raw.startsWith("90")) raw = raw.substring(2);
+        if (raw.startsWith("0")) raw = raw.substring(1);
+        const trimmed = raw.substring(0, 10);
+
+        let formatted = trimmed;
+        if (trimmed.length > 3 && trimmed.length <= 6) {
+            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3)}`;
+        } else if (trimmed.length > 6 && trimmed.length <= 8) {
+            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3, 6)} ${trimmed.slice(6)}`;
+        } else if (trimmed.length > 8) {
+            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3, 6)} ${trimmed.slice(6, 8)} ${trimmed.slice(8)}`;
+        }
+        return formatted;
+    };
+
     const [formData, setFormData] = useState({
         name: customer.name || "",
-        phone: customer.phone || "",
-        secondaryPhone: customer.secondaryPhone || "",
+        phone: formatInputPhone(customer.phone),
+        secondaryPhone: formatInputPhone(customer.secondaryPhone),
         email: customer.email || "",
         address: customer.address || "",
         notes: customer.notes || "",
@@ -62,13 +79,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
     };
 
     const handlePhoneFormat = (val: string, fieldName: 'phone' | 'secondaryPhone') => {
-        let raw = val.replace(/[^0-9]/g, "");
-        if (raw.startsWith("90")) raw = raw.substring(2);
-        const trimmed = raw.substring(0, 10);
-        let formatted = trimmed;
-        if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
-        else if (trimmed.length > 6 && trimmed.length <= 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
-        else if (trimmed.length > 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
+        const formatted = formatInputPhone(val);
         setFormData({ ...formData, [fieldName]: formatted });
     };
 

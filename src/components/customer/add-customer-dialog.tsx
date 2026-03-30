@@ -98,6 +98,7 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                                 onChange={(e) => {
                                     let raw = e.target.value.replace(/[^0-9]/g, "");
                                     if (raw.startsWith("90")) raw = raw.substring(2);
+                                    if (raw.startsWith("0")) raw = raw.substring(1);
                                     const trimmed = raw.substring(0, 10);
                                     let formatted = trimmed;
                                     if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
