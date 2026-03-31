@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { Folder, FolderOpen, Plus, ChevronRight, ChevronDown, Trash2, Edit2, Info, Loader2, Package } from "lucide-react";
+import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -243,17 +244,23 @@ export function CategoryManagementClient({
                     <h2 className="text-[14px] font-semibold text-white tracking-wide uppercase flex items-center gap-2">
                         <span className="w-4 h-[1px] bg-slate-600"></span> Kategori Ağacı
                     </h2>
-                    <Button
-                        onClick={() => {
-                            setModalTitle("Ana Kategori Ekle");
-                            setFormData({ name: "", parentId: "null" });
-                            setIsAddModalOpen(true);
-                        }}
-                        variant="default"
-                        className="h-8 px-3 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-                    >
-                        <Plus className="h-4 w-4 mr-1.5" /> Yeni Kategori Ekle
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <AICategoryCreator
+                            categories={categories}
+                            onCategoriesUpdated={setCategories}
+                        />
+                        <Button
+                            onClick={() => {
+                                setModalTitle("Ana Kategori Ekle");
+                                setFormData({ name: "", parentId: "null" });
+                                setIsAddModalOpen(true);
+                            }}
+                            variant="default"
+                            className="h-8 px-3 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
+                        >
+                            <Plus className="h-4 w-4 mr-1.5" /> Manuel Ekle
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="space-y-1">

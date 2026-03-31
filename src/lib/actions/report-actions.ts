@@ -107,3 +107,133 @@ export async function getDashboardStats() {
     return serializePrisma({ activeServices: 0, dailyRevenue: 0, criticalStockCount: 0, totalCustomers: 0, completedServicesThisMonth: 0, revenueGrowth: 0, currentMonthRevenue: 0 });
   }
 }
+
+export async function getTopProductsReport(limit = 6) {
+  try {
+    const shopId = await getShopId();
+    const products = await prisma.product.findMany({
+      where: { shopId },
+      orderBy: { saleItems: { _count: 'desc' } },
+      take: limit,
+      include: {
+        _count: { select: { saleItems: true } },
+        category: true
+      }
+    });
+
+    const data = products.map(p => ({
+      ...p,
+      sales: p._count.saleItems,
+      price: p.sellPrice,
+      categoryName: p.category?.name || "Genel"
+    }));
+    return serializePrisma(data);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getDeviceBrandDistribution() {
+  try {
+    const shopId = await getShopId();
+    const tickets = await prisma.serviceTicket.groupBy({
+      by: ['deviceBrand'],
+      where: { shopId },
+      _count: true,
+      orderBy: { _count: { deviceBrand: 'desc' } }
+    });
+
+    const data = tickets.map(t => ({
+      name: t.deviceBrand || "Diğer",
+      value: t._count
+    }));
+
+    return serializePrisma(data);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getCashflowReport() {
+  try {
+    const shopId = await getShopId();
+    const start = startOfMonth(new Date());
+    const end = endOfMonth(new Date());
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        shopId,
+        createdAt: { gte: start, lte: end }
+      }
+    });
+
+    const days = eachDayOfInterval({ start, end });
+    const trend = days.map(day => {
+      const dayTxs = transactions.filter(t => format(new Date(t.createdAt), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+      return {
+        date: format(day, 'dd MMM', { locale: tr }),
+        income: dayTxs.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + Number(t.amount), 0),
+        expense: dayTxs.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + Number(t.amount), 0),
+      };
+    });
+
+    return serializePrisma(trend);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getDetailedExportData() {
+  try {
+    const shopId = await getShopId();
+    const [sales, tickets, inventory] = await Promise.all([
+      prisma.sale.findMany({
+        where: { shopId },
+        include: { customer: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1000
+      }),
+      prisma.serviceTicket.findMany({
+        where: { shopId },
+        include: { customer: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1000
+      }),
+      prisma.product.findMany({
+        where: { shopId },
+        include: { category: true },
+        orderBy: { name: 'asc' }
+      })
+    ]);
+
+    return serializePrisma({
+      sales: sales.map(s => ({
+        Tarih: format(new Date(s.createdAt), 'dd.MM.yyyy HH:mm'),
+        Müşteri: s.customer?.name || 'Hızlı Satış',
+        Açıklama: s.paymentMethod || '-',
+        Tutar: Number(s.finalAmount)
+      })),
+      tickets: tickets.map(t => ({
+        İş_Emri_No: t.ticketNumber,
+        Tarih: format(new Date(t.createdAt), 'dd.MM.yyyy'),
+        Müşteri: t.customer?.name || 'Bilinmiyor',
+        Cihaz: `${t.deviceBrand} ${t.deviceModel}`,
+        Durum: {
+          PENDING: "Beklemede", APPROVED: "Onay Bekliyor", REPAIRING: "Tamirde",
+          WAITING_PART: "Parça Bekliyor", READY: "Hazır", DELIVERED: "Teslim Edildi", CANCELLED: "İptal"
+        }[t.status] || t.status,
+        Maliyet: Number(t.estimatedCost || 0)
+      })),
+      inventory: inventory.map(i => ({
+        Barkod: i.barcode || '-',
+        Ürün_Adı: i.name,
+        Kategori: i.category?.name || 'Genel',
+        Stok_Adedi: i.stock,
+        Kritik_Stok: i.criticalStock,
+        Satış_Fiyatı: Number(i.sellPrice)
+      }))
+    });
+  } catch (error) {
+    return null;
+  }
+}

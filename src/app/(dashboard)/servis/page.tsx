@@ -32,7 +32,7 @@ export default async function ServisMerkeziPage() {
                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{activeCount} Aktif İşlem</span>
               </div>
             </div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight">Komuta Merkezi</h1>
+            <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight">Servis Merkezi</h1>
             <p className="text-sm text-slate-400 font-medium mt-2">Dükkandaki tüm teknik servis süreçlerini, iadeleri ve teslimatları tek bir ekrandan yönetin.</p>
           </div>
         </div>

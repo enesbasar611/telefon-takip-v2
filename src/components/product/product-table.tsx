@@ -78,8 +78,15 @@ export function ProductTable({ data }: ProductTableProps) {
                     {product.stock}
                   </Badge>
                 </TableCell>
-                <TableCell>₺{Number(product.buyPrice).toLocaleString("tr-TR")}</TableCell>
-                <TableCell className="font-semibold text-green-600">₺{Number(product.sellPrice).toLocaleString("tr-TR")}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">₺{Number(product.buyPrice).toLocaleString("tr-TR")}</span>
+                    {product.buyPriceUsd != null && (
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">${Number(product.buyPriceUsd).toLocaleString("en-US")}</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="font-bold text-emerald-600 dark:text-emerald-400">₺{Number(product.sellPrice).toLocaleString("tr-TR")}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

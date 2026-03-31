@@ -7,7 +7,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({
-    title = "KOMUTA MERKEZİ",
+    title = "Yönetim Paneli",
     subtitle = "Operasyonel akış ve finansal performans verileri"
 }: DashboardHeaderProps) {
     return (

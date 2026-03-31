@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const menuItems = [
   {
     icon: LayoutDashboard,
-    label: "Komuta Merkezi",
+    label: "Anasayfa",
     href: "/dashboard",
   },
   {
@@ -35,7 +35,7 @@ const menuItems = [
     label: "Servis Yönetimi",
     href: "/servis",
     subItems: [
-      { label: "Komuta Merkezi", href: "/servis" },
+      { label: "Servis Merkezi", href: "/servis" },
       { label: "Servis Listesi", href: "/servis/liste" },
       { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
     ]

@@ -62,7 +62,7 @@ export function DashboardCore({
   serviceMetricsRaw,
   liveActivity,
   profitMatrix,
-  title = "Komuta Merkezi",
+  title = "Anasayfa",
   subtitle = "Operasyonel kontrol ve anlık iş zekası raporu",
   showFullDetails = true
 }: any) {
@@ -108,11 +108,11 @@ export function DashboardCore({
           <div className="flex items-center gap-3">
             <div className="h-8 w-1.5 bg-primary rounded-full" />
             <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-foreground font-sans uppercase">
-              KOMUTA MERKEZİ
+              {title}
             </h1>
           </div>
           <p className="text-[15px] text-muted-foreground font-semibold max-w-2xl leading-relaxed opacity-80">
-            Operasyonel akış ve finansal performans verileri • {format(new Date(), "d MMMM yyyy", { locale: tr })}
+            {subtitle} • {format(new Date(), "d MMMM yyyy", { locale: tr })}
           </p>
         </div>
 

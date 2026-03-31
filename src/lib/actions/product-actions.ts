@@ -108,6 +108,7 @@ export async function createProduct(data: {
   name: string;
   categoryId: string;
   buyPrice: number;
+  buyPriceUsd?: number | null;
   sellPrice: number;
   stock: number;
   criticalStock: number;
@@ -145,6 +146,7 @@ export async function createProduct(data: {
         name: toSentenceCase(data.name),
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
+        buyPriceUsd: data.buyPriceUsd ?? null,
         sellPrice: data.sellPrice,
         stock: data.stock,
         criticalStock: data.criticalStock,
