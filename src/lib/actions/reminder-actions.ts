@@ -3,11 +3,13 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function getReminders() {
     try {
+        const shopId = await getShopId();
         const reminders = await prisma.reminder.findMany({
-            where: { isCompleted: false },
+            where: { shopId, isCompleted: false },
             orderBy: { date: 'asc' },
             include: { user: { select: { name: true } } }
         });
@@ -28,9 +30,11 @@ export async function createReminderAction(data: {
     creatorId: string;
 }) {
     try {
+        const shopId = await getShopId();
         const reminder = await prisma.reminder.create({
             data: {
                 ...data,
+                shopId,
                 date: new Date(data.date)
             }
         });
@@ -44,8 +48,9 @@ export async function createReminderAction(data: {
 
 export async function updateReminderStatusAction(id: string, isCompleted: boolean) {
     try {
-        await prisma.reminder.update({
-            where: { id },
+        const shopId = await getShopId();
+        await prisma.reminder.updateMany({
+            where: { id, shopId },
             data: { isCompleted }
         });
         revalidatePath("/bildirimler");
@@ -57,8 +62,9 @@ export async function updateReminderStatusAction(id: string, isCompleted: boolea
 
 export async function deleteReminderAction(id: string) {
     try {
-        await prisma.reminder.delete({
-            where: { id }
+        const shopId = await getShopId();
+        await prisma.reminder.deleteMany({
+            where: { id, shopId }
         });
         revalidatePath("/bildirimler");
         return { success: true };

@@ -6,6 +6,8 @@ import { ServiceStatus } from "@prisma/client";
 import { serializePrisma } from "@/lib/utils";
 import * as z from "zod";
 import { addShortageItem } from "./shortage-actions";
+import { getShopId, getUserId } from "@/lib/auth";
+import { getOrCreateKasaAccount } from "./finance-actions";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -31,27 +33,22 @@ const serviceSchema = z.object({
   downPayment: z.number().optional().default(0),
 });
 
-async function getOrCreateDevUser() {
-  return await prisma.user.upsert({
-    where: { email: "admin@takipv2.com" },
-    update: {},
-    create: {
-      email: "admin@takipv2.com",
-      name: "Admin",
-      password: "hashed_password",
-      role: "ADMIN",
-    },
-  });
-}
+// getOrCreateDevUser removed.
 
 export async function createServiceTicket(rawData: any) {
   try {
     const validatedData = serviceSchema.parse(rawData);
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
-    // Find or create customer
+    // Find or create customer (shop-scoped)
     const customer = await prisma.customer.upsert({
-      where: { phone: validatedData.customerPhone },
+      where: {
+        shopId_phone: {
+          shopId,
+          phone: validatedData.customerPhone
+        }
+      },
       update: {
         name: validatedData.customerName,
         email: validatedData.customerEmail || null
@@ -59,11 +56,12 @@ export async function createServiceTicket(rawData: any) {
       create: {
         name: validatedData.customerName,
         phone: validatedData.customerPhone,
-        email: validatedData.customerEmail || null
+        email: validatedData.customerEmail || null,
+        shopId
       },
     });
 
-    const ticketCount = await prisma.serviceTicket.count();
+    const ticketCount = await prisma.serviceTicket.count({ where: { shopId } });
     const ticketNumber = `SRV-${1000 + ticketCount + 1}`;
 
     const ticket = await prisma.serviceTicket.create({
@@ -80,12 +78,14 @@ export async function createServiceTicket(rawData: any) {
         estimatedCost: validatedData.estimatedCost,
         technicianId: validatedData.technicianId || null,
         estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
-        createdById: user.id,
+        createdById: userId,
+        shopId,
         status: ServiceStatus.PENDING,
         logs: {
           create: {
             message: "Yeni servis kaydı oluşturuldu.",
             status: ServiceStatus.PENDING,
+            shopId
           }
         }
       },
@@ -93,14 +93,23 @@ export async function createServiceTicket(rawData: any) {
 
     // Handle Down Payment (Kapora) as an INCOME transaction
     if (validatedData.downPayment > 0) {
+      const kasaAccount = await getOrCreateKasaAccount();
       await prisma.transaction.create({
         data: {
           type: "INCOME",
           amount: validatedData.downPayment,
           description: `KAPORA ALINDI - ${ticketNumber} (${validatedData.customerName})`,
           paymentMethod: "CASH",
-          userId: user.id,
+          userId,
+          shopId,
+          financeAccountId: kasaAccount.id
         }
+      });
+
+      // Update Kasa balance
+      await prisma.financeAccount.update({
+        where: { id: kasaAccount.id, shopId },
+        data: { balance: { increment: validatedData.downPayment } }
       });
     }
 
@@ -120,11 +129,12 @@ export async function createServiceTicket(rawData: any) {
 
 export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH", message?: string) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
     // Fetch current ticket to calculate costs if delivering
     const currentTicket = await prisma.serviceTicket.findUnique({
-      where: { id: ticketId },
+      where: { id: ticketId, shopId },
       include: { usedParts: { include: { product: true } } }
     });
 
@@ -136,6 +146,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
         create: {
           message: message || `Durum güncellendi: ${status}`,
           status: status,
+          shopId
         }
       }
     };
@@ -144,7 +155,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     if (status === ServiceStatus.CANCELLED && currentTicket.status !== ServiceStatus.CANCELLED) {
       for (const part of currentTicket.usedParts) {
         await prisma.product.update({
-          where: { id: part.productId },
+          where: { id: part.productId, shopId },
           data: { stock: { increment: part.quantity } }
         });
       }
@@ -178,26 +189,36 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
               amount: totalRevenue,
               remainingAmount: totalRevenue,
               notes: `SERVIS BORÇ - ${currentTicket.ticketNumber}`,
-              dueDate: new Date(new Date().setDate(new Date().getDate() + 15)) // Default 15 days due date
+              dueDate: new Date(new Date().setDate(new Date().getDate() + 15)), // Default 15 days due date
+              shopId
             }
           });
         } else {
           // Regular income transaction
+          const kasaAccount = await getOrCreateKasaAccount();
           await prisma.transaction.create({
             data: {
               type: "INCOME",
               amount: totalRevenue,
               description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}`,
               paymentMethod: paymentMethod as any,
-              userId: user.id,
+              userId,
+              shopId,
+              financeAccountId: kasaAccount.id
             }
+          });
+
+          // Update Account balance
+          await prisma.financeAccount.update({
+            where: { id: kasaAccount.id, shopId },
+            data: { balance: { increment: totalRevenue } }
           });
         }
       }
     }
 
     const ticket = await prisma.serviceTicket.update({
-      where: { id: ticketId },
+      where: { id: ticketId, shopId },
       data: updateData,
     });
 
@@ -214,8 +235,9 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
 
 export async function updateServiceCost(ticketId: string, estimatedCost: number, actualCost: number) {
   try {
+    const shopId = await getShopId();
     const ticket = await prisma.serviceTicket.update({
-      where: { id: ticketId },
+      where: { id: ticketId, shopId },
       data: {
         estimatedCost: estimatedCost,
         actualCost: actualCost,
@@ -232,10 +254,17 @@ export async function updateServiceCost(ticketId: string, estimatedCost: number,
 
 export async function updateServicePartPrice(partId: string, unitPrice: number) {
   try {
-    const part = await prisma.serviceUsedPart.update({
-      where: { id: partId },
-      data: { unitPrice: unitPrice },
+    const shopId = await getShopId();
+    const part = await prisma.serviceUsedPart.findUnique({
+      where: { id: partId, shopId },
       include: { product: true }
+    });
+
+    if (!part) throw new Error("Parça bulunamadı.");
+
+    await prisma.serviceUsedPart.update({
+      where: { id: partId, shopId },
+      data: { unitPrice: unitPrice },
     });
 
     // Log the price change
@@ -244,6 +273,7 @@ export async function updateServicePartPrice(partId: string, unitPrice: number) 
         ticketId: part.ticketId,
         status: ServiceStatus.REPAIRING,
         message: `Parça fiyatı güncellendi: ${part.product.name} -> ₺${unitPrice.toLocaleString('tr-TR')}`,
+        shopId
       }
     });
 
@@ -257,17 +287,19 @@ export async function updateServicePartPrice(partId: string, unitPrice: number) 
 
 export async function addServiceLogWithNote(ticketId: string, status: ServiceStatus, message: string) {
   try {
+    const shopId = await getShopId();
     const log = await prisma.serviceLog.create({
       data: {
         ticketId,
         status,
         message,
+        shopId
       },
     });
 
     // Also update ticket status if provided
     await prisma.serviceTicket.update({
-      where: { id: ticketId },
+      where: { id: ticketId, shopId },
       data: { status },
     });
 
@@ -282,14 +314,16 @@ export async function addServiceLogWithNote(ticketId: string, status: ServiceSta
 
 export async function assignTechnician(ticketId: string, technicianId: string) {
   try {
+    const shopId = await getShopId();
     const ticket = await prisma.serviceTicket.update({
-      where: { id: ticketId },
+      where: { id: ticketId, shopId },
       data: {
         technicianId,
         logs: {
           create: {
             message: `Teknisyen atandı.`,
             status: ServiceStatus.PENDING,
+            shopId
           }
         }
       },
@@ -305,8 +339,9 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
 
 export async function addPartToService(ticketId: string, productId: string, quantity: number, unitPrice?: number) {
   try {
-    const user = await getOrCreateDevUser();
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
     if (!product) throw new Error("Ürün bulunamadı");
     if (product.stock < quantity) throw new Error("Yetersiz stok.");
 
@@ -318,11 +353,12 @@ export async function addPartToService(ticketId: string, productId: string, quan
           quantity,
           unitPrice: unitPrice !== undefined ? unitPrice : product.sellPrice,
           costPrice: product.buyPrice,
+          shopId
         }
       });
 
       const updatedProduct = await tx.product.update({
-        where: { id: productId },
+        where: { id: productId, shopId },
         data: {
           stock: { decrement: quantity },
           movements: {
@@ -330,15 +366,17 @@ export async function addPartToService(ticketId: string, productId: string, quan
               quantity: -quantity,
               type: "SERVICE_USE",
               notes: `Servis kullanımı: ${ticketId}`,
-              serviceTicketId: ticketId
+              serviceTicketId: ticketId,
+              shopId
             }
           },
           inventoryLogs: {
             create: {
-              userId: user.id,
+              userId,
               quantity: -quantity,
               type: "SERVICE_USE",
-              notes: `Servis kaydına parça eklendi: ${ticketId}`
+              notes: `Servis kaydına parça eklendi: ${ticketId}`,
+              shopId
             }
           }
         }
@@ -349,6 +387,7 @@ export async function addPartToService(ticketId: string, productId: string, quan
           ticketId,
           status: ServiceStatus.REPAIRING,
           message: `Parça eklendi: ${product.name} (₺${unitPrice !== undefined ? unitPrice : product.sellPrice})`,
+          shopId
         }
       });
 
@@ -376,8 +415,9 @@ export async function addPartToService(ticketId: string, productId: string, quan
 
 export async function removePartFromService(partId: string) {
   try {
+    const shopId = await getShopId();
     const part = await prisma.serviceUsedPart.findUnique({
-      where: { id: partId },
+      where: { id: partId, shopId },
       include: { product: true }
     });
 
@@ -385,7 +425,7 @@ export async function removePartFromService(partId: string) {
 
     await prisma.$transaction([
       prisma.product.update({
-        where: { id: part.productId },
+        where: { id: part.productId, shopId },
         data: {
           stock: { increment: part.quantity },
           movements: {
@@ -393,19 +433,21 @@ export async function removePartFromService(partId: string) {
               quantity: part.quantity,
               type: "ADJUSTMENT",
               notes: `Servisten parça çıkarıldı: ${part.ticketId}`,
-              serviceTicketId: part.ticketId
+              serviceTicketId: part.ticketId,
+              shopId
             }
           }
         }
       }),
       prisma.serviceUsedPart.delete({
-        where: { id: partId }
+        where: { id: partId, shopId }
       }),
       prisma.serviceLog.create({
         data: {
           ticketId: part.ticketId,
           status: ServiceStatus.REPAIRING,
           message: `Parça çıkarıldı: ${part.product.name}`,
+          shopId
         }
       })
     ]);
@@ -422,7 +464,9 @@ export async function removePartFromService(partId: string) {
 
 export async function getServiceCounts() {
   try {
+    const shopId = await getShopId();
     const counts = await prisma.serviceTicket.groupBy({
+      where: { shopId },
       by: ['status'],
       _count: true
     });
@@ -460,7 +504,8 @@ export async function getServiceTickets(options: {
   const skip = (page - 1) * pageSize;
 
   try {
-    const where: any = {};
+    const shopId = await getShopId();
+    const where: any = { shopId };
     if (status) {
       if (Array.isArray(status)) {
         where.status = { in: status };
@@ -492,8 +537,9 @@ export async function getServiceTickets(options: {
 
 export async function getServiceTicketById(id: string) {
   try {
+    const shopId = await getShopId();
     const ticket = await prisma.serviceTicket.findUnique({
-      where: { id },
+      where: { id, shopId },
       include: {
         customer: true,
         technician: true,
@@ -509,6 +555,11 @@ export async function getServiceTicketById(id: string) {
 }
 
 export async function queryServiceStatus(ticketNumber: string, phone: string) {
+  // Querying status doesn't necessarily need shopId in the filter if ticketNumber is globally unique-ish,
+  // but for multi-tenancy it's better to fetch based on what we have.
+  // Actually, a public query page might not have shopId context.
+  // BUT we can use the phone prefix or something.
+  // For now, let's keep it simple.
   try {
     const ticket = await prisma.serviceTicket.findFirst({
       where: {
@@ -530,12 +581,13 @@ export async function queryServiceStatus(ticketNumber: string, phone: string) {
 }
 
 export async function deleteServiceTicket(id: string) {
-  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id } });
+  const shopId = await getShopId();
+  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id, shopId } });
 
   // Restore stock before deletion
   for (const part of usedParts) {
     await prisma.product.update({
-      where: { id: part.productId },
+      where: { id: part.productId, shopId },
       data: {
         stock: { increment: part.quantity },
         movements: {
@@ -543,17 +595,18 @@ export async function deleteServiceTicket(id: string) {
             quantity: part.quantity,
             type: "ADJUSTMENT",
             notes: `Servis silindiği için stok iade edildi: ${id}`,
-            serviceTicketId: id
+            serviceTicketId: id,
+            shopId
           }
         }
       }
     });
   }
 
-  await prisma.serviceLog.deleteMany({ where: { ticketId: id } });
-  await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id } });
-  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id } });
-  await prisma.serviceTicket.delete({ where: { id } });
+  await prisma.serviceLog.deleteMany({ where: { ticketId: id, shopId } });
+  await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id, shopId } });
+  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id, shopId } });
+  await prisma.serviceTicket.delete({ where: { id, shopId } });
 
   revalidatePath("/servis");
   revalidatePath("/stok");

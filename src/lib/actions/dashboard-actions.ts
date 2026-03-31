@@ -3,9 +3,11 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { getDeadStockCount } from "./product-actions";
 import { getOrCreateKasaAccount } from "./finance-actions";
+import { getShopId } from "@/lib/auth";
 
 export async function getDashboardStats() {
   try {
+    const shopId = await getShopId();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -22,24 +24,24 @@ export async function getDashboardStats() {
       kasaAccount,
     ] = await Promise.all([
       prisma.serviceTicket.count({
-        where: { status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
+        where: { shopId, status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
       }),
-      prisma.serviceTicket.count({ where: { status: "READY" } }),
-      prisma.product.findMany(),
+      prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
+      prisma.product.findMany({ where: { shopId } }),
       prisma.sale.aggregate({
-        where: { createdAt: { gte: today } },
+        where: { shopId, createdAt: { gte: today } },
         _sum: { finalAmount: true }
       }),
       prisma.serviceTicket.aggregate({
-        where: { status: "DELIVERED", deliveredAt: { gte: today } },
+        where: { shopId, status: "DELIVERED", deliveredAt: { gte: today } },
         _sum: { actualCost: true }
       }),
       prisma.transaction.aggregate({
-        where: { type: "INCOME", createdAt: { gte: today } },
+        where: { shopId, type: "INCOME", createdAt: { gte: today } },
         _sum: { amount: true }
       }),
-      prisma.supplier.aggregate({ _sum: { balance: true } }),
-      prisma.shortageItem.count({ where: { isResolved: false } }),
+      prisma.supplier.aggregate({ where: { shopId }, _sum: { balance: true } }),
+      prisma.shortageItem.count({ where: { shopId, isResolved: false } }),
       getDeadStockCount(),
       // Kasa account balance (real-time)
       getOrCreateKasaAccount(),
@@ -53,7 +55,7 @@ export async function getDashboardStats() {
     let kasaOpeningBalance = 0;
     try {
       const activeSession = await prisma.dailySession.findFirst({
-        where: { status: "OPEN" },
+        where: { shopId, status: "OPEN" },
         orderBy: { createdAt: "desc" }
       });
       kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
@@ -103,7 +105,9 @@ export async function getDashboardStats() {
 
 export async function getRecentServiceTickets() {
   try {
+    const shopId = await getShopId();
     const tickets = await prisma.serviceTicket.findMany({
+      where: { shopId },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: {
@@ -120,7 +124,9 @@ export async function getRecentServiceTickets() {
 
 export async function getRecentTransactions() {
   try {
+    const shopId = await getShopId();
     const transactions = await prisma.transaction.findMany({
+      where: { shopId },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: {
@@ -140,8 +146,10 @@ export async function getRecentTransactions() {
 
 export async function getTopSellingProducts() {
   try {
+    const shopId = await getShopId();
     // This is a simplified version, ideally you'd join with SaleItem and group by productId
     const products = await prisma.product.findMany({
+      where: { shopId },
       take: 4,
       orderBy: { saleItems: { _count: 'desc' } },
       include: {

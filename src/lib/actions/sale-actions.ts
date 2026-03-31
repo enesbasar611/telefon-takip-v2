@@ -5,19 +5,9 @@ import { revalidatePath } from "next/cache";
 import { PaymentMethod, TransactionType } from "@prisma/client";
 import { addShortageItem } from "./shortage-actions";
 import { getOrCreateKasaAccount } from "./finance-actions";
+import { getShopId, getUserId } from "@/lib/auth";
 
-async function getOrCreateDevUser() {
-  return await prisma.user.upsert({
-    where: { email: "admin@takipv2.com" },
-    update: {},
-    create: {
-      email: "admin@takipv2.com",
-      name: "Admin",
-      password: "hashed_password",
-      role: "ADMIN",
-    },
-  });
-}
+// getOrCreateDevUser removed.
 
 export async function createSale(data: {
   customerId?: string;
@@ -26,15 +16,17 @@ export async function createSale(data: {
   paymentMethod: string;
 }) {
   try {
-    const user = await getOrCreateDevUser();
-    const saleCount = await prisma.sale.count();
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const saleCount = await prisma.sale.count({ where: { shopId } });
     const saleNumber = `SALE-${1000 + saleCount + 1}`;
 
     const sale = await prisma.sale.create({
       data: {
         saleNumber,
         customerId: data.customerId,
-        userId: user.id,
+        userId,
+        shopId,
         totalAmount: data.totalAmount,
         finalAmount: data.totalAmount,
         paymentMethod: (data.paymentMethod === "CASH" ? PaymentMethod.CASH :
@@ -46,6 +38,7 @@ export async function createSale(data: {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: item.unitPrice * item.quantity,
+            shopId
           })),
         },
       },
@@ -62,7 +55,7 @@ export async function createSale(data: {
     // Update stock and create movements
     for (const item of data.items) {
       const updatedProduct = await prisma.product.update({
-        where: { id: item.productId },
+        where: { id: item.productId, shopId },
         data: { stock: { decrement: item.quantity } },
       });
 
@@ -72,6 +65,7 @@ export async function createSale(data: {
           quantity: -item.quantity,
           type: "SALE",
           notes: `SATIŞ - ${sale.saleNumber}`,
+          shopId
         },
       });
 
@@ -88,7 +82,7 @@ export async function createSale(data: {
     // Create financial transaction and link to Kasa if payment is not DEBT
     const isDebt = data.paymentMethod === "DEBT";
     const kasaAccount = isDebt ? null : await getOrCreateKasaAccount();
-    const activeSession = await prisma.dailySession.findFirst({ where: { status: "OPEN" } });
+    const activeSession = await prisma.dailySession.findFirst({ where: { status: "OPEN", shopId } });
 
     await prisma.$transaction(async (tx) => {
       await tx.transaction.create({
@@ -97,16 +91,17 @@ export async function createSale(data: {
           type: TransactionType.INCOME,
           description: `SATIŞ - ${sale.saleNumber}`,
           paymentMethod: sale.paymentMethod,
-          userId: user.id,
+          userId,
+          shopId,
           saleId: sale.id,
-          accountId: kasaAccount?.id ?? undefined,
+          financeAccountId: kasaAccount?.id ?? undefined,
           dailySessionId: activeSession?.id ?? undefined,
         },
       });
 
       if (kasaAccount) {
-        await tx.account.update({
-          where: { id: kasaAccount.id },
+        await tx.financeAccount.update({
+          where: { id: kasaAccount.id, shopId },
           data: { balance: { increment: data.totalAmount } },
         });
       }
@@ -125,7 +120,9 @@ export async function createSale(data: {
 
 export async function getSales() {
   try {
+    const shopId = await getShopId();
     const sales = await prisma.sale.findMany({
+      where: { shopId },
       include: {
         customer: true,
         items: { include: { product: true } },

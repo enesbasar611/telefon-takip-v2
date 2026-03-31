@@ -2,10 +2,13 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getDebts() {
   try {
+    const shopId = await getShopId();
     const debts = await prisma.debt.findMany({
+      where: { shopId },
       include: {
         customer: true
       },
@@ -20,10 +23,12 @@ export async function getDebts() {
 
 export async function getThisMonthCollected() {
   try {
+    const shopId = await getShopId();
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const transactions = await prisma.transaction.findMany({
       where: {
+        shopId,
         type: "INCOME",
         description: { startsWith: "Borç Tahsilatı:" },
         createdAt: { gte: startOfMonth }
@@ -37,10 +42,12 @@ export async function getThisMonthCollected() {
 
 export async function createDebt(data: { customerId: string; amount: number; dueDate?: Date; notes?: string }) {
   try {
+    const shopId = await getShopId();
     const debt = await prisma.debt.create({
       data: {
         ...data,
-        remainingAmount: data.amount
+        remainingAmount: data.amount,
+        shopId
       }
     });
     revalidatePath("/veresiye");
@@ -54,13 +61,14 @@ export async function createDebt(data: { customerId: string; amount: number; due
 
 export async function collectDebtPayment(debtId: string, paymentAmount: number) {
   try {
-    const debt = await prisma.debt.findUnique({ where: { id: debtId } });
+    const shopId = await getShopId();
+    const debt = await prisma.debt.findUnique({ where: { id: debtId, shopId } });
     if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
 
     const newRemaining = Number(debt.remainingAmount) - paymentAmount;
 
     await prisma.debt.update({
-      where: { id: debtId },
+      where: { id: debtId, shopId },
       data: {
         remainingAmount: newRemaining,
         isPaid: newRemaining <= 0
@@ -68,18 +76,17 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
     });
 
     // Create a transaction record for the collection
-    let user = await prisma.user.findFirst(); // Mock user for demo
-    if (user) {
-      await prisma.transaction.create({
-        data: {
-          type: "INCOME",
-          amount: paymentAmount,
-          description: `Borç Tahsilatı: ${debtId}`,
-          paymentMethod: "CASH",
-          userId: user.id
-        }
-      });
-    }
+    const userId = await getUserId();
+    await prisma.transaction.create({
+      data: {
+        type: "INCOME",
+        amount: paymentAmount,
+        description: `Borç Tahsilatı: ${debtId}`,
+        paymentMethod: "CASH",
+        userId: userId,
+        shopId
+      }
+    });
 
     revalidatePath("/veresiye");
     revalidatePath("/satis/kasa");

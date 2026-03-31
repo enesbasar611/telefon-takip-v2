@@ -3,14 +3,17 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfDay, endOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
+import { getShopId } from "@/lib/auth";
 
 export async function getSalesReport(startDate?: Date, endDate?: Date) {
   try {
+    const shopId = await getShopId();
     const start = startDate || startOfMonth(new Date());
     const end = endDate || endOfMonth(new Date());
 
     const sales = await prisma.sale.findMany({
       where: {
+        shopId,
         createdAt: { gte: start, lte: end }
       }
     });
@@ -34,8 +37,10 @@ export async function getSalesReport(startDate?: Date, endDate?: Date) {
 
 export async function getServiceMetrics() {
   try {
+    const shopId = await getShopId();
     const statuses = await prisma.serviceTicket.groupBy({
       by: ['status'],
+      where: { shopId },
       _count: true
     });
 
@@ -52,6 +57,7 @@ export async function getServiceMetrics() {
 
 export async function getDashboardStats() {
   try {
+    const shopId = await getShopId();
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
     const monthStart = startOfMonth(new Date());
@@ -59,20 +65,20 @@ export async function getDashboardStats() {
     const prevMonthEnd = endOfMonth(new Date(new Date().setMonth(new Date().getMonth() - 1)));
 
     const [activeServices, dailySales, products, customers, completedServicesThisMonth, thisMonthSales, prevMonthSales] = await Promise.all([
-      prisma.serviceTicket.count({ where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
+      prisma.serviceTicket.count({ where: { shopId, status: { notIn: ['DELIVERED', 'CANCELLED'] } } }),
       prisma.sale.aggregate({
-        where: { createdAt: { gte: todayStart, lte: todayEnd } },
+        where: { shopId, createdAt: { gte: todayStart, lte: todayEnd } },
         _sum: { finalAmount: true }
       }),
-      prisma.product.findMany(),
-      prisma.customer.count(),
-      prisma.serviceTicket.count({ where: { status: 'DELIVERED', updatedAt: { gte: monthStart } } }),
+      prisma.product.findMany({ where: { shopId } }),
+      prisma.customer.count({ where: { shopId } }),
+      prisma.serviceTicket.count({ where: { shopId, status: 'DELIVERED', updatedAt: { gte: monthStart } } }),
       prisma.sale.aggregate({
-        where: { createdAt: { gte: monthStart, lte: endOfDay(new Date()) } },
+        where: { shopId, createdAt: { gte: monthStart, lte: endOfDay(new Date()) } },
         _sum: { finalAmount: true }
       }),
       prisma.sale.aggregate({
-        where: { createdAt: { gte: prevMonthStart, lte: prevMonthEnd } },
+        where: { shopId, createdAt: { gte: prevMonthStart, lte: prevMonthEnd } },
         _sum: { finalAmount: true }
       })
     ]);

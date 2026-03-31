@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 // Form datası tipleri
 export interface CreateCategoryData {
@@ -21,8 +22,14 @@ export interface UpdateCategoryData {
  */
 export async function createCategory(data: CreateCategoryData) {
     try {
+        const shopId = await getShopId();
         const existing = await prisma.category.findUnique({
-            where: { name: data.name },
+            where: {
+                shopId_name: {
+                    shopId,
+                    name: data.name
+                }
+            },
         });
 
         if (existing) {
@@ -33,6 +40,7 @@ export async function createCategory(data: CreateCategoryData) {
             data: {
                 name: data.name,
                 parentId: data.parentId || null,
+                shopId
             },
         });
 
@@ -51,10 +59,11 @@ export async function createCategory(data: CreateCategoryData) {
  */
 export async function updateCategory(data: UpdateCategoryData) {
     try {
-        // Kendi alt kategorisini parent yapmak deadlock döngüsüne sebep olur.
-        // Ancak bu frontend UI ile de engellenebilir, DB seviyesinde kontrol
-        // için derinlemesine parent ağacı kontrolü gerekebilir. 
-        // Şimdilik sadece ad değişimi ve basit parent değişimi desteklensin.
+        const shopId = await getShopId();
+        const existing = await prisma.category.findUnique({ where: { id: data.id } });
+        if (!existing || existing.shopId !== shopId) {
+            return { success: false, message: "Kategori bulunamadı veya yetkisiz işlem." };
+        }
 
         const category = await prisma.category.update({
             where: { id: data.id },
@@ -80,9 +89,15 @@ export async function updateCategory(data: UpdateCategoryData) {
  */
 export async function deleteCategory(id: string) {
     try {
+        const shopId = await getShopId();
+        const existing = await prisma.category.findUnique({ where: { id } });
+        if (!existing || existing.shopId !== shopId) {
+            return { success: false, message: "Kategori bulunamadı veya yetkisiz işlem." };
+        }
+
         // Kategoriye bağlı alt kategori var mı kontrolü
         const subCategories = await prisma.category.findFirst({
-            where: { parentId: id },
+            where: { parentId: id, shopId },
         });
 
         if (subCategories) {
@@ -91,7 +106,7 @@ export async function deleteCategory(id: string) {
 
         // Kategoriye bağlı ürün var mı kontrolü
         const products = await prisma.product.findFirst({
-            where: { categoryId: id },
+            where: { categoryId: id, shopId },
         });
 
         if (products) {
@@ -117,7 +132,9 @@ export async function deleteCategory(id: string) {
  */
 export async function getAllCategories() {
     try {
+        const shopId = await getShopId();
         const categories = await prisma.category.findMany({
+            where: { shopId },
             orderBy: { name: 'asc' }
         });
         return serializePrisma(categories);

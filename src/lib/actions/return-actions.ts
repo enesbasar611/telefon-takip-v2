@@ -5,18 +5,7 @@ import prisma from "@/lib/prisma";
 import { ReturnReason, ServiceStatus } from "@prisma/client";
 import { serializePrisma } from "@/lib/utils";
 
-async function getOrCreateDevUser() {
-  return await prisma.user.upsert({
-    where: { email: "admin@takipv2.com" },
-    update: {},
-    create: {
-      email: "admin@takipv2.com",
-      name: "Admin",
-      password: "hashed_password",
-      role: "ADMIN",
-    },
-  });
-}
+import { getUserId, getShopId } from "@/lib/auth";
 
 export async function createReturnTicket(data: {
   serviceTicketId: string;
@@ -25,11 +14,14 @@ export async function createReturnTicket(data: {
   notes?: string;
 }) {
   try {
-    const user = await getOrCreateDevUser();
+    const userId = await getUserId();
+    const shopId = await getShopId();
+
+    if (!userId || !shopId) throw new Error("Yetkilendirme hatası.");
 
     // Get original service ticket for actual revenue/cost context
     const serviceTicket = await prisma.serviceTicket.findUnique({
-      where: { id: data.serviceTicketId },
+      where: { id: data.serviceTicketId, shopId },
       include: { usedParts: true }
     });
 
@@ -38,7 +30,7 @@ export async function createReturnTicket(data: {
     const usedPart = serviceTicket.usedParts.find(p => p.productId === data.productId);
     if (!usedPart) throw new Error("Bu ürün servis kaydında kullanılmamış.");
 
-    const returnCount = await prisma.returnTicket.count();
+    const returnCount = await prisma.returnTicket.count({ where: { shopId } });
     const ticketNumber = `RET-${1000 + returnCount + 1}`;
 
     const lossAmount = Number(usedPart.costPrice || 0) + Number(serviceTicket.overhead || 0);
@@ -49,10 +41,11 @@ export async function createReturnTicket(data: {
           ticketNumber,
           serviceTicketId: data.serviceTicketId,
           productId: data.productId,
-          userId: user.id,
+          userId: userId,
           returnReason: data.returnReason,
           lossAmount: lossAmount,
           notes: data.notes,
+          shopId
         }
       });
 
@@ -61,15 +54,16 @@ export async function createReturnTicket(data: {
       // If PART_FAILURE or LABOR_ERROR, do NOT restore stock (it's junk/loss).
       if (data.returnReason === ReturnReason.CUSTOMER_CANCEL) {
         await tx.product.update({
-          where: { id: data.productId },
+          where: { id: data.productId, shopId },
           data: {
             stock: { increment: 1 },
             inventoryLogs: {
               create: {
-                userId: user.id,
+                userId: userId,
                 quantity: 1,
                 type: "RETURN_RESTORE",
-                notes: `İade sonrası stok iade edildi: ${ticketNumber}`
+                notes: `İade sonrası stok iade edildi: ${ticketNumber}`,
+                shopId
               }
             }
           }
@@ -79,10 +73,11 @@ export async function createReturnTicket(data: {
         await tx.inventoryLog.create({
           data: {
             productId: data.productId,
-            userId: user.id,
+            userId: userId,
             quantity: 0, // No stock change
             type: "RETURN_JUNK",
-            notes: `Hatalı parça iadesi (stoka eklenmedi): ${ticketNumber.toLowerCase()}`
+            notes: `Hatalı parça iadesi (stoka eklenmedi): ${ticketNumber.toLowerCase()}`,
+            shopId
           }
         });
       }
@@ -91,7 +86,7 @@ export async function createReturnTicket(data: {
     });
 
     // Update Chronic Failure Status
-    await updateChronicFailureStatus(data.productId);
+    await updateChronicFailureStatus(data.productId, shopId);
 
     revalidatePath("/servis/liste");
     revalidatePath("/stok");
@@ -103,9 +98,9 @@ export async function createReturnTicket(data: {
   }
 }
 
-async function updateChronicFailureStatus(productId: string) {
+async function updateChronicFailureStatus(productId: string, shopId: string) {
   const totalUses = await prisma.serviceUsedPart.count({
-    where: { productId }
+    where: { productId, shopId }
   });
 
   if (totalUses < 5) return; // Need a sample size
@@ -113,6 +108,7 @@ async function updateChronicFailureStatus(productId: string) {
   const totalReturns = await prisma.returnTicket.count({
     where: {
       productId,
+      shopId,
       returnReason: { in: [ReturnReason.PART_FAILURE, ReturnReason.LABOR_ERROR] }
     }
   });
@@ -121,12 +117,12 @@ async function updateChronicFailureStatus(productId: string) {
 
   if (returnRate > 0.10) {
     await prisma.product.update({
-      where: { id: productId },
+      where: { id: productId, shopId },
       data: { isChronic: true }
     });
   } else {
     await prisma.product.update({
-      where: { id: productId },
+      where: { id: productId, shopId },
       data: { isChronic: false }
     });
   }

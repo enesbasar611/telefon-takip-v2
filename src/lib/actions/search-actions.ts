@@ -2,15 +2,18 @@
 
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function globalSearchAction(query: string) {
   if (!query || query.length < 2) return [];
 
   try {
+    const shopId = await getShopId();
     const [products, customers, suppliers, serviceTickets] = await Promise.all([
       // Search Products
       prisma.product.findMany({
         where: {
+          shopId,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { sku: { contains: query, mode: 'insensitive' } },
@@ -21,6 +24,7 @@ export async function globalSearchAction(query: string) {
       // Search Customers
       prisma.customer.findMany({
         where: {
+          shopId,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { phone: { contains: query, mode: 'insensitive' } },
@@ -32,6 +36,7 @@ export async function globalSearchAction(query: string) {
       // Search Suppliers
       prisma.supplier.findMany({
         where: {
+          shopId,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { phone: { contains: query, mode: 'insensitive' } },
@@ -42,6 +47,7 @@ export async function globalSearchAction(query: string) {
       // Search Service Tickets
       prisma.serviceTicket.findMany({
         where: {
+          shopId,
           OR: [
             { ticketNumber: { contains: query, mode: 'insensitive' } },
             { deviceModel: { contains: query, mode: 'insensitive' } },

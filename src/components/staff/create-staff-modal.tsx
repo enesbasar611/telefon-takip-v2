@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 const staffSchema = z.object({
   name: z.string().min(2, "Ad Soyad en az 2 karakter olmalıdır"),
   email: z.string().email("Geçerli bir e-posta giriniz"),
-  role: z.enum(["ADMIN", "TECHNICIAN", "STAFF"]),
+  role: z.enum(["ADMIN", "STAFF"]),
   commissionRate: z.string().min(1, "Komisyon oranı gereklidir"),
   password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
 });
@@ -51,8 +51,8 @@ export function CreateStaffModal() {
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
     defaultValues: {
-        role: "STAFF",
-        commissionRate: "0",
+      role: "STAFF",
+      commissionRate: "0",
     }
   });
 
@@ -106,7 +106,6 @@ export function CreateStaffModal() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="TECHNICIAN">Teknisyen</SelectItem>
                     <SelectItem value="STAFF">Satış Temsilcisi</SelectItem>
                   </SelectContent>
                 </Select>

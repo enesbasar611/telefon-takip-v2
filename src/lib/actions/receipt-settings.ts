@@ -2,18 +2,21 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function getReceiptSettings(type: string = "pos") {
     try {
+        const shopId = await getShopId();
         const settings = await prisma.receiptSettings.findUnique({
-            where: { id: type },
+            where: { id: `${shopId}_${type}` },
         });
 
         if (!settings) {
             // Create default settings if not exists
             const defaultSettings = await prisma.receiptSettings.create({
                 data: {
-                    id: type,
+                    id: `${shopId}_${type}`,
+                    shopId,
                     title: "BAŞAR TEKNİK",
                     subtitle: type === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
                     footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
@@ -32,7 +35,10 @@ export async function getReceiptSettings(type: string = "pos") {
 
 export async function getAllReceiptSettings() {
     try {
-        const settings = await prisma.receiptSettings.findMany();
+        const shopId = await getShopId();
+        const settings = await prisma.receiptSettings.findMany({
+            where: { shopId }
+        });
         return serializePrisma(settings);
     } catch (error) {
         console.error("Error fetching all receipt settings:", error);
@@ -42,10 +48,11 @@ export async function getAllReceiptSettings() {
 
 export async function updateReceiptSettings(type: string, data: any) {
     try {
+        const shopId = await getShopId();
         const settings = await prisma.receiptSettings.upsert({
-            where: { id: type },
+            where: { id: `${shopId}_${type}` },
             update: data,
-            create: { ...data, id: type },
+            create: { ...data, id: `${shopId}_${type}`, shopId },
         });
 
         revalidatePath("/ayarlar");

@@ -3,11 +3,14 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { startOfDay, endOfDay } from "date-fns";
+import { getShopId } from "@/lib/auth";
 
 export async function getDebtDetails() {
     try {
+        const shopId = await getShopId();
         const suppliers = await prisma.supplier.findMany({
             where: {
+                shopId,
                 balance: { gt: 0 }
             },
             include: {
@@ -30,9 +33,11 @@ export async function getDebtDetails() {
 
 export async function getCollectionDetails() {
     try {
+        const shopId = await getShopId();
         const today = new Date();
         const transactions = await prisma.transaction.findMany({
             where: {
+                shopId,
                 type: "INCOME",
                 createdAt: {
                     gte: startOfDay(today),
@@ -43,7 +48,7 @@ export async function getCollectionDetails() {
                 sale: {
                     include: { customer: true }
                 },
-                account: true
+                financeAccount: true
             },
             orderBy: { createdAt: "desc" }
         });
@@ -57,9 +62,11 @@ export async function getCollectionDetails() {
 
 export async function getDailySalesDetails() {
     try {
+        const shopId = await getShopId();
         const today = new Date();
         const sales = await prisma.sale.findMany({
             where: {
+                shopId,
                 createdAt: {
                     gte: startOfDay(today),
                     lte: endOfDay(today)
@@ -83,9 +90,11 @@ export async function getDailySalesDetails() {
 
 export async function getRepairIncomeDetails() {
     try {
+        const shopId = await getShopId();
         const today = new Date();
         const tickets = await prisma.serviceTicket.findMany({
             where: {
+                shopId,
                 status: "DELIVERED",
                 deliveredAt: {
                     gte: startOfDay(today),
@@ -108,8 +117,10 @@ export async function getRepairIncomeDetails() {
 
 export async function getPendingServicesDetails() {
     try {
+        const shopId = await getShopId();
         const tickets = await prisma.serviceTicket.findMany({
             where: {
+                shopId,
                 status: {
                     in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"]
                 }
@@ -130,8 +141,10 @@ export async function getPendingServicesDetails() {
 
 export async function getReadyDevicesDetails() {
     try {
+        const shopId = await getShopId();
         const tickets = await prisma.serviceTicket.findMany({
             where: {
+                shopId,
                 status: "READY"
             },
             include: {
@@ -150,7 +163,9 @@ export async function getReadyDevicesDetails() {
 
 export async function getCriticalStockDetails() {
     try {
+        const shopId = await getShopId();
         const products = await prisma.product.findMany({
+            where: { shopId },
             include: {
                 category: true
             }
@@ -167,8 +182,9 @@ export async function getCriticalStockDetails() {
 
 export async function getAccountBalanceDetails() {
     try {
-        const accounts = await prisma.account.findMany({
-            where: { isActive: true },
+        const shopId = await getShopId();
+        const accounts = await prisma.financeAccount.findMany({
+            where: { shopId, isActive: true },
             orderBy: { name: 'asc' }
         });
         return serializePrisma(accounts);

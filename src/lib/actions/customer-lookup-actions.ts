@@ -1,14 +1,17 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function findCustomerByPhone(phone: string) {
   if (!phone) return null;
   const sanitizedPhone = phone.replace(/\D/g, "");
   if (sanitizedPhone.length < 7) return null;
 
+  const shopId = await getShopId();
+
   const customer = await prisma.customer.findFirst({
-    where: { phone: { contains: sanitizedPhone } },
+    where: { shopId, phone: { contains: sanitizedPhone } },
     include: {
       tickets: { orderBy: { createdAt: "desc" }, take: 3 },
       sales: { orderBy: { createdAt: "desc" }, take: 3 },
@@ -19,8 +22,9 @@ export async function findCustomerByPhone(phone: string) {
 
 export async function findCustomerByName(name: string) {
   if (!name || name.trim().length < 2) return [];
+  const shopId = await getShopId();
   const customers = await prisma.customer.findMany({
-    where: { name: { contains: name.trim(), mode: "insensitive" } },
+    where: { shopId, name: { contains: name.trim(), mode: "insensitive" } },
     include: {
       tickets: { orderBy: { createdAt: "desc" }, take: 3 },
       sales: { orderBy: { createdAt: "desc" }, take: 3 },

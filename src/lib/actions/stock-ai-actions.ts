@@ -4,17 +4,20 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
 import { InventoryMovement } from "@prisma/client";
+import { getShopId } from "@/lib/auth";
 
 export type AIAlertType = "LOW_STOCK" | "STAGNANT" | "TRENDING" | "CRITICAL" | "SUGGESTION";
 
 export async function getAIAlerts() {
     try {
+        const shopId = await getShopId();
         const now = new Date();
         const alerts = await (prisma as any).stockAIAlert.findMany({
             where: {
                 expiresAt: {
                     gt: now,
                 },
+                shopId
             },
             include: {
                 product: {
@@ -36,13 +39,16 @@ export async function getAIAlerts() {
 
 export async function triggerAIAnalysis() {
     try {
+        const shopId = await getShopId();
         const products = await prisma.product.findMany({
+            where: { shopId },
             include: {
                 movements: {
                     where: {
                         createdAt: {
                             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
                         },
+                        shopId
                     },
                 },
                 category: true,
@@ -60,6 +66,7 @@ export async function triggerAIAnalysis() {
                     message: `${product.name} stok seviyesi kritik düzeyde (${product.stock} adet kaldı). Hemen tedarik önerilir.`,
                     productId: product.id,
                     expiresAt,
+                    shopId
                 });
             }
 
@@ -70,6 +77,7 @@ export async function triggerAIAnalysis() {
                     message: `${product.name} stokta kalmadı! Müşteri kaybını önlemek için sipariş geçilmeli.`,
                     productId: product.id,
                     expiresAt,
+                    shopId
                 });
             }
 
@@ -81,6 +89,7 @@ export async function triggerAIAnalysis() {
                     message: `${product.name} son 30 gündür hiç satılmadı. Kampanya veya indirim düşünülebilir.`,
                     productId: product.id,
                     expiresAt,
+                    shopId
                 });
             }
 
@@ -92,6 +101,7 @@ export async function triggerAIAnalysis() {
                     message: `${product.name} bu hafta popüler! (${recentSales} satış). Stok takviyesi iyi bir fikir olabilir.`,
                     productId: product.id,
                     expiresAt,
+                    shopId
                 });
             }
         }
@@ -107,6 +117,7 @@ export async function triggerAIAnalysis() {
                     expiresAt: {
                         lt: new Date(),
                     },
+                    shopId
                 },
             });
 
@@ -117,6 +128,7 @@ export async function triggerAIAnalysis() {
                     where: {
                         productId: alert.productId,
                         type: alert.type,
+                        shopId,
                         createdAt: {
                             gt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
                         }
@@ -141,8 +153,9 @@ export async function triggerAIAnalysis() {
 
 export async function deleteAIAlert(id: string) {
     try {
+        const shopId = await getShopId();
         await (prisma as any).stockAIAlert.delete({
-            where: { id },
+            where: { id, shopId },
         });
         revalidatePath("/stok/stok-ai");
         return { success: true };

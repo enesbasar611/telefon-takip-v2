@@ -3,9 +3,11 @@ import prisma from "@/lib/prisma";
 import { serializePrisma, toSentenceCase } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
+import { getShopId, getUserId } from "@/lib/auth";
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
-  const product = await prisma.product.findUnique({ where: { id: productId } });
+  const shopId = await getShopId();
+  const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
   if (product && product.stock <= 0) {
     await addShortageItem({
       productId: productId,
@@ -25,7 +27,8 @@ export async function getProducts(options: {
   const { categoryId, page, pageSize, search } = options;
 
   try {
-    const where: any = {};
+    const shopId = await getShopId();
+    const where: any = { shopId };
     if (categoryId) where.categoryId = categoryId;
     if (search) {
       where.OR = [
@@ -52,9 +55,11 @@ export async function getProducts(options: {
 export async function searchProducts(query: string) {
   try {
     if (!query || query.length < 2) return [];
+    const shopId = await getShopId();
 
     const products = await prisma.product.findMany({
       where: {
+        shopId,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { sku: { contains: query, mode: 'insensitive' } },
@@ -89,7 +94,10 @@ export async function searchProducts(query: string) {
 
 export async function getCategories() {
   try {
-    const categories = await prisma.category.findMany();
+    const shopId = await getShopId();
+    const categories = await prisma.category.findMany({
+      where: { shopId }
+    });
     return serializePrisma(categories);
   } catch (error) {
     return [];
@@ -113,11 +121,13 @@ export async function createProduct(data: {
   capacity?: string;
 }) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
-    // Check for duplicate product
+    // Check for duplicate product WITHIN the shop
     const existingProduct = await prisma.product.findFirst({
       where: {
+        shopId,
         OR: [
           { name: { equals: toSentenceCase(data.name), mode: 'insensitive' } },
           ...(data.barcode ? [{ barcode: data.barcode }] : []),
@@ -142,12 +152,14 @@ export async function createProduct(data: {
         sku: data.sku,
         location: data.location,
         supplierId: data.supplierId,
+        shopId,
         isSecondHand: data.isSecondHand || false,
         deviceInfo: data.isSecondHand ? {
           create: {
             imei: data.imei || `GEN-${Date.now()}`,
             color: data.color,
             capacity: data.capacity,
+            shopId
           }
         } : undefined,
         // Log the initial stock as a movement
@@ -155,15 +167,17 @@ export async function createProduct(data: {
           create: {
             quantity: data.stock,
             type: "PURCHASE",
-            notes: "İlk stok kaydı."
+            notes: "İlk stok kaydı.",
+            shopId
           }
         } : undefined,
         inventoryLogs: data.stock > 0 ? {
           create: {
-            userId: user.id,
+            userId,
             quantity: data.stock,
             type: "PURCHASE",
-            notes: "İlk stok kaydı."
+            notes: "İlk stok kaydı.",
+            shopId
           }
         } : undefined
       }
@@ -178,28 +192,18 @@ export async function createProduct(data: {
   }
 }
 
-async function getOrCreateDevUser() {
-  return await prisma.user.upsert({
-    where: { email: "admin@takipv2.com" },
-    update: {},
-    create: {
-      email: "admin@takipv2.com",
-      name: "Admin",
-      password: "hashed_password",
-      role: "ADMIN",
-    },
-  });
-}
+// getOrCreateDevUser removed.
 
 export async function updateProduct(id: string, data: any) {
   try {
-    const user = await getOrCreateDevUser();
-    const oldProduct = await prisma.product.findUnique({ where: { id } });
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const oldProduct = await prisma.product.findUnique({ where: { id, shopId } });
     const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
     const newStock = data.stock !== undefined ? Number(data.stock) : undefined;
 
     const product = await prisma.product.update({
-      where: { id },
+      where: { id, shopId },
       data: {
         ...data,
         name: data.name ? toSentenceCase(data.name) : undefined,
@@ -218,16 +222,18 @@ export async function updateProduct(id: string, data: any) {
           productId: id,
           quantity: diff,
           type: "ADJUSTMENT",
-          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`
+          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`,
+          shopId
         }
       });
       await prisma.inventoryLog.create({
         data: {
           productId: id,
-          userId: user.id,
+          userId,
           quantity: diff,
           type: "ADJUSTMENT",
-          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`
+          notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`,
+          shopId
         }
       });
     }
@@ -237,6 +243,7 @@ export async function updateProduct(id: string, data: any) {
       await prisma.serviceUsedPart.updateMany({
         where: {
           productId: id,
+          shopId,
           ticket: {
             status: {
               notIn: ["DELIVERED", "CANCELLED"]
@@ -262,11 +269,12 @@ export async function updateProduct(id: string, data: any) {
 
 export async function addInventoryStock(productId: string, quantity: number, notes?: string) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
     await prisma.$transaction([
       prisma.product.update({
-        where: { id: productId },
+        where: { id: productId, shopId },
         data: { stock: { increment: quantity } }
       }),
       prisma.inventoryMovement.create({
@@ -274,16 +282,18 @@ export async function addInventoryStock(productId: string, quantity: number, not
           productId,
           quantity,
           type: "PURCHASE",
-          notes: notes || "Hızlı stok girişi"
+          notes: notes || "Hızlı stok girişi",
+          shopId
         }
       }),
       prisma.inventoryLog.create({
         data: {
           productId,
-          userId: user.id,
+          userId,
           quantity,
           type: "PURCHASE",
-          notes: notes || "Hızlı stok girişi"
+          notes: notes || "Hızlı stok girişi",
+          shopId
         }
       })
     ]);
@@ -298,8 +308,9 @@ export async function addInventoryStock(productId: string, quantity: number, not
 
 export async function quickSellProduct(productId: string, quantity: number) {
   try {
-    const user = await getOrCreateDevUser();
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
 
     if (!product) throw new Error("Ürün bulunamadı.");
     if (product.stock < quantity) throw new Error("Yetersiz stok.");
@@ -311,7 +322,8 @@ export async function quickSellProduct(productId: string, quantity: number) {
       const sale = await tx.sale.create({
         data: {
           saleNumber,
-          userId: user.id,
+          userId,
+          shopId,
           totalAmount,
           finalAmount: totalAmount,
           items: {
@@ -319,7 +331,8 @@ export async function quickSellProduct(productId: string, quantity: number) {
               productId,
               quantity,
               unitPrice: product.sellPrice,
-              totalPrice: totalAmount
+              totalPrice: totalAmount,
+              shopId
             }
           },
           transaction: {
@@ -327,7 +340,8 @@ export async function quickSellProduct(productId: string, quantity: number) {
               type: "INCOME",
               amount: totalAmount,
               description: `Hızlı Satış: ${product.name} (x${quantity})`,
-              userId: user.id
+              userId,
+              shopId
             }
           },
           inventoryMovements: {
@@ -335,29 +349,31 @@ export async function quickSellProduct(productId: string, quantity: number) {
               productId,
               quantity: -quantity,
               type: "SALE",
-              notes: `Hızlı satış: ${saleNumber}`
+              notes: `Hızlı satış: ${saleNumber}`,
+              shopId
             }
           }
         }
       });
 
       await tx.product.update({
-        where: { id: productId },
+        where: { id: productId, shopId },
         data: {
           stock: { decrement: quantity },
           inventoryLogs: {
             create: {
-              userId: user.id,
+              userId,
               quantity: -quantity,
               type: "SALE",
-              notes: `Hızlı satış yapıldı. Satış No: ${saleNumber}`
+              notes: `Hızlı satış yapıldı. Satış No: ${saleNumber}`,
+              shopId
             }
           }
         }
       });
     });
 
-    const finalProduct = await prisma.product.findUnique({ where: { id: productId } });
+    const finalProduct = await prisma.product.findUnique({ where: { id: productId, shopId } });
     if (finalProduct && finalProduct.stock <= 0) {
       await checkStockAndAddShortage(productId, finalProduct.name);
     }
@@ -373,11 +389,13 @@ export async function quickSellProduct(productId: string, quantity: number) {
 
 export async function getDeadStockCount() {
   try {
+    const shopId = await getShopId();
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
     const productsWithSales = await prisma.saleItem.findMany({
       where: {
+        shopId,
         sale: {
           createdAt: { gte: ninetyDaysAgo }
         }
@@ -390,6 +408,7 @@ export async function getDeadStockCount() {
 
     const deadStockCount = await prisma.product.count({
       where: {
+        shopId,
         stock: { gt: 0 },
         id: { notIn: activeProductIds }
       }
@@ -403,7 +422,8 @@ export async function getDeadStockCount() {
 
 export async function deleteProduct(id: string) {
   try {
-    await prisma.product.delete({ where: { id } });
+    const shopId = await getShopId();
+    await prisma.product.delete({ where: { id, shopId } });
     revalidatePath("/stok");
     revalidatePath("/ikinci-el");
     return { success: true };
@@ -414,8 +434,9 @@ export async function deleteProduct(id: string) {
 
 export async function getProductMovements(productId: string) {
   try {
+    const shopId = await getShopId();
     const movements = await prisma.inventoryMovement.findMany({
-      where: { productId },
+      where: { productId, shopId },
       orderBy: { createdAt: "desc" },
       include: {
         serviceTicket: {
@@ -439,7 +460,8 @@ export async function getProductMovements(productId: string) {
 
 export async function getInventoryStats() {
   try {
-    const products = await prisma.product.findMany({});
+    const shopId = await getShopId();
+    const products = await prisma.product.findMany({ where: { shopId } });
 
     const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
     const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
@@ -459,7 +481,8 @@ export async function getInventoryStats() {
 
 export async function createCategory(name: string) {
   try {
-    const category = await prisma.category.create({ data: { name } });
+    const shopId = await getShopId();
+    const category = await prisma.category.create({ data: { name, shopId } });
     revalidatePath("/stok");
     return { success: true, category: serializePrisma(category) };
   } catch (error) {
@@ -469,8 +492,10 @@ export async function createCategory(name: string) {
 
 export async function getCriticalProducts() {
   try {
+    const shopId = await getShopId();
     const products = await prisma.product.findMany({
       where: {
+        shopId,
         stock: { lte: prisma.product.fields.criticalStock }
       },
       include: { category: true },
@@ -485,7 +510,9 @@ export async function getCriticalProducts() {
 
 export async function getAllInventoryMovements() {
   try {
+    const shopId = await getShopId();
     const movements = await prisma.inventoryMovement.findMany({
+      where: { shopId },
       orderBy: { createdAt: "desc" },
       include: {
         product: {

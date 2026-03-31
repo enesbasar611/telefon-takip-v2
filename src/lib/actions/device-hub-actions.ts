@@ -2,11 +2,14 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getDeviceList() {
   try {
+    const shopId = await getShopId();
     const devices = await prisma.product.findMany({
       where: {
+        shopId,
         deviceInfo: { isNot: null }
       },
       include: {
@@ -24,12 +27,14 @@ export async function getDeviceList() {
 
 export async function createDeviceEntry(data: any) {
   try {
-    const user = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+    const shopId = await getShopId();
+    const user = await prisma.user.findFirst({ where: { role: "ADMIN", shopId } });
     if (!user) throw new Error("Admin user not found");
 
     const product = await prisma.product.create({
       data: {
         name: `${data.brand} ${data.model}`,
+        shopId,
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
@@ -38,6 +43,7 @@ export async function createDeviceEntry(data: any) {
         isSecondHand: data.condition === "USED",
         deviceInfo: {
           create: {
+            shopId,
             imei: data.imei,
             serialNumber: data.serialNumber,
             color: data.color,
@@ -63,6 +69,7 @@ export async function createDeviceEntry(data: any) {
         description: `Cihaz Alımı: ${data.brand} ${data.model} (IMEI: ${data.imei})`,
         paymentMethod: "CASH",
         userId: user.id,
+        shopId,
       }
     });
 
@@ -70,6 +77,7 @@ export async function createDeviceEntry(data: any) {
     await prisma.inventoryMovement.create({
       data: {
         productId: product.id,
+        shopId,
         quantity: 1,
         type: "PURCHASE",
         notes: `Cihaz Alımı: ${data.condition}`
@@ -88,6 +96,10 @@ export async function createDeviceEntry(data: any) {
 
 export async function updateDeviceExpertise(deviceId: string, expertChecklist: any, cosmeticScore: number) {
   try {
+    const shopId = await getShopId();
+    const info = await prisma.deviceHubInfo.findUnique({ where: { id: deviceId }, include: { product: true } });
+    if (!info || info.product.shopId !== shopId) throw new Error("Yetkisiz islem");
+
     await prisma.deviceHubInfo.update({
       where: { id: deviceId },
       data: {

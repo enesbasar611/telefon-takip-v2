@@ -21,42 +21,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let staff: any[] = [];
-  try {
-    staff = await getStaff();
-  } catch (err) {
-    console.error("Layout: Could not load staff, DB may be down.");
-  }
-  const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
   return (
     <html lang="tr" suppressHydrationWarning className="antialiased font-sans">
-      <body className="bg-background text-foreground antialiased font-sans">
+      <body className="bg-background text-foreground antialiased font-sans flex min-h-screen flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <UIProvider>
-            <SupplierOrderProvider>
-              <ShortageProvider>
-                <GlobalSearch />
-                <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-                  <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <Navbar />
-                    <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
-                      <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
-                        {children}
-                      </div>
-                    </main>
-                  </div>
-                  <BottomNav />
-                </div>
-                <Toaster position="bottom-right" expand={false} duration={2500} />
-              </ShortageProvider>
-            </SupplierOrderProvider>
-          </UIProvider>
+          {children}
+          <Toaster position="bottom-right" expand={false} duration={2500} />
         </ThemeProvider>
       </body>
     </html>

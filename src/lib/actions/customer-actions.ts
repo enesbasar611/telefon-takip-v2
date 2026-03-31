@@ -2,10 +2,13 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getCustomers() {
   try {
+    const shopId = await getShopId();
     const customers = await prisma.customer.findMany({
+      where: { shopId },
       include: {
         tickets: true,
         sales: true,
@@ -22,8 +25,9 @@ export async function getCustomers() {
 
 export async function getCustomerById(id: string) {
   try {
+    const shopId = await getShopId();
     const customer = await prisma.customer.findUnique({
-      where: { id },
+      where: { id, shopId },
       include: {
         tickets: {
           orderBy: { createdAt: "desc" },
@@ -58,9 +62,11 @@ export async function createCustomer(data: {
   photo?: string;
 }) {
   try {
+    const shopId = await getShopId();
     const customer = await prisma.customer.create({
       data: {
         ...data,
+        shopId,
         phone: data.phone || "" // Safety fallback
       }
     });
@@ -84,8 +90,9 @@ export async function updateCustomer(id: string, data: {
   photo?: string;
 }) {
   try {
+    const shopId = await getShopId();
     const customer = await prisma.customer.update({
-      where: { id },
+      where: { id, shopId },
       data
     });
     revalidatePath("/musteriler");
@@ -99,7 +106,8 @@ export async function updateCustomer(id: string, data: {
 
 export async function deleteCustomer(id: string) {
   try {
-    await prisma.customer.delete({ where: { id } });
+    const shopId = await getShopId();
+    await prisma.customer.delete({ where: { id, shopId } });
     revalidatePath("/musteriler");
     return { success: true };
   } catch (error) {

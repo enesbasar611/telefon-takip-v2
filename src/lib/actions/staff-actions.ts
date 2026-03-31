@@ -2,15 +2,20 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getStaff() {
   try {
+    const shopId = await getShopId();
     const staff = await prisma.user.findMany({
+      where: { shopId },
       include: {
         assignedTickets: {
-          where: { status: "DELIVERED" }
+          where: { status: "DELIVERED", shopId }
         },
-        sales: true
+        sales: {
+          where: { shopId }
+        }
       },
       orderBy: { createdAt: "desc" }
     });
@@ -21,12 +26,14 @@ export async function getStaff() {
   }
 }
 
-export async function createStaff(data: { name: string; email: string; role: "ADMIN" | "TECHNICIAN" | "STAFF"; commissionRate: number; password?: string }) {
+export async function createStaff(data: { name: string; email: string; role: "ADMIN" | "STAFF"; commissionRate: number; password?: string }) {
   try {
+    const shopId = await getShopId();
     const user = await prisma.user.create({
       data: {
         ...data,
         password: data.password || "password123",
+        shopId
       }
     });
     revalidatePath("/personel");
@@ -38,8 +45,9 @@ export async function createStaff(data: { name: string; email: string; role: "AD
 
 export async function updateStaffCommission(userId: string, rate: number) {
   try {
+    const shopId = await getShopId();
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, shopId },
       data: { commissionRate: rate }
     });
     revalidatePath("/personel");
@@ -50,24 +58,28 @@ export async function updateStaffCommission(userId: string, rate: number) {
 }
 
 export async function deleteStaff(userId: string) {
-    try {
-      await prisma.user.delete({ where: { id: userId } });
-      revalidatePath("/personel");
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: "Personel silinemedi." };
-    }
+  try {
+    const shopId = await getShopId();
+    await prisma.user.delete({ where: { id: userId, shopId } });
+    revalidatePath("/personel");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Personel silinemedi." };
+  }
 }
 
 export async function getStaffPerformance(userId: string) {
   try {
+    const shopId = await getShopId();
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, shopId },
       include: {
         assignedTickets: {
-          where: { status: "DELIVERED" }
+          where: { status: "DELIVERED", shopId }
         },
-        sales: true
+        sales: {
+          where: { shopId }
+        }
       }
     });
 

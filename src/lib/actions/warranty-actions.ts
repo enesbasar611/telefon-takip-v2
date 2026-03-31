@@ -4,20 +4,25 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { ReturnReason, ServiceStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getWarrantyStats() {
     try {
+        const shopId = await getShopId();
         const now = new Date();
 
         const [activeWarranties, expiredWarranties, returnRequests, recentReturns] = await Promise.all([
             prisma.serviceTicket.count({
-                where: { warrantyExpiry: { gt: now } }
+                where: { shopId, warrantyExpiry: { gt: now } }
             }),
             prisma.serviceTicket.count({
-                where: { warrantyExpiry: { lte: now } }
+                where: { shopId, warrantyExpiry: { lte: now } }
             }),
-            prisma.returnTicket.count(),
+            prisma.returnTicket.count({
+                where: { shopId }
+            }),
             prisma.returnTicket.findMany({
+                where: { shopId },
                 take: 10,
                 orderBy: { createdAt: "desc" },
                 include: {
@@ -48,6 +53,7 @@ export async function getWarrantyStats() {
 
 export async function getTicketForWarranty(searchTerm: string) {
     try {
+        const shopId = await getShopId();
         if (!searchTerm || searchTerm.length < 3) return null;
 
         const term = searchTerm.trim().toUpperCase();
@@ -55,6 +61,7 @@ export async function getTicketForWarranty(searchTerm: string) {
         // Aramayı Fiş Numarası (SRV-...) veya Telefon Numarası üzerinden yap
         const tickets = await prisma.serviceTicket.findMany({
             where: {
+                shopId,
                 OR: [
                     { ticketNumber: { contains: term } },
                     { customer: { phone: { contains: term.replace(/\s+/g, '') } } }
@@ -86,13 +93,14 @@ export async function createReturnTicket(data: {
     createZeroFeeService?: boolean;
 }) {
     try {
+        const shopId = await getShopId();
         // Get the first admin user for logging (or technician)
-        const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+        const admin = await prisma.user.findFirst({ where: { role: "ADMIN", shopId } });
         if (!admin) throw new Error("Kullanıcı bulunamadı");
 
         const serviceTicket = await prisma.serviceTicket.findUnique({
-            where: { id: data.serviceTicketId },
-            include: { usedParts: { where: { productId: data.productId } }, customer: true }
+            where: { id: data.serviceTicketId, shopId },
+            include: { usedParts: { where: { productId: data.productId, shopId } }, customer: true }
         });
 
         if (!serviceTicket) throw new Error("Servis fişi bulunamadı");
@@ -115,12 +123,13 @@ export async function createReturnTicket(data: {
                     returnReason: data.returnReason,
                     notes: data.notes,
                     lossAmount: usedPart.costPrice, // The shop lost the buy price of the part
+                    shopId
                 }
             });
 
             // 2. Optionally create a new ZERO-FEE service ticket for the rework
             if (data.createZeroFeeService) {
-                const srvCount = await tx.serviceTicket.count();
+                const srvCount = await tx.serviceTicket.count({ where: { shopId } });
                 const newSrvNumber = `SRV-${1000 + srvCount + 1}`;
 
                 await tx.serviceTicket.create({
@@ -135,10 +144,12 @@ export async function createReturnTicket(data: {
                         estimatedCost: 0,
                         status: ServiceStatus.PENDING,
                         createdById: admin.id,
+                        shopId,
                         logs: {
                             create: {
                                 message: `Garanti iadesi nedeniyle yeni fiş açıldı (Bağlı olduğu fiş: ${serviceTicket.ticketNumber})`,
                                 status: ServiceStatus.PENDING,
+                                shopId
                             }
                         }
                     }

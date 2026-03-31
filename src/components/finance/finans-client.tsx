@@ -90,7 +90,7 @@ export function FinansClient({
                     <p className="text-sm text-muted-foreground font-medium max-w-md mt-1">İşletmenizin finansal sağlığını, nakit akışını ve hesaplarını profesyonelce yönetin.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <CreateTransactionModal accounts={summary.accounts} />
+                    <CreateTransactionModal />
                 </div>
             </div>
 

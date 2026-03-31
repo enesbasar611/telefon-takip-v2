@@ -4,6 +4,7 @@ import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getTransactions(options: {
   accountId?: string;
@@ -15,15 +16,17 @@ export async function getTransactions(options: {
   const skip = (page - 1) * pageSize;
 
   try {
+    const shopId = await getShopId();
     const transactions = await prisma.transaction.findMany({
       where: {
-        ...(accountId ? { accountId } : {}),
+        shopId,
+        ...(accountId ? { financeAccountId: accountId } : {}),
         ...(dailySessionId ? { dailySessionId } : {}),
       },
       include: {
         user: true,
         sale: true,
-        account: true,
+        financeAccount: true,
         dailySession: true
       },
       orderBy: { createdAt: "desc" },
@@ -39,7 +42,9 @@ export async function getTransactions(options: {
 
 export async function getAccounts() {
   try {
-    const accounts = await prisma.account.findMany({
+    const shopId = await getShopId();
+    const accounts = await prisma.financeAccount.findMany({
+      where: { shopId },
       orderBy: { createdAt: "asc" }
     });
     return serializePrisma(accounts);
@@ -50,26 +55,29 @@ export async function getAccounts() {
 
 export async function createAccount(data: { name: string; type: "CASH" | "BANK" | "POS" | "CREDIT_CARD"; initialBalance?: number }) {
   try {
-    const account = await prisma.account.create({
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const account = await prisma.financeAccount.create({
       data: {
         name: data.name,
         type: data.type,
         balance: data.initialBalance || 0,
-        isDefault: false
+        isDefault: false,
+        shopId
       }
     });
 
     if (data.initialBalance && data.initialBalance > 0) {
-      // Create initial balance transaction
-      const user = await getOrCreateDevUser();
       await prisma.transaction.create({
         data: {
           type: "INCOME",
           amount: data.initialBalance,
           description: "Açılış Bakiyesi",
           paymentMethod: data.type === 'CASH' ? 'CASH' : 'TRANSFER',
-          accountId: account.id,
-          userId: user.id,
+          financeAccountId: account.id,
+          userId,
+          shopId,
           category: "AÇILIŞ"
         }
       });
@@ -93,11 +101,12 @@ export async function createManualTransaction(data: {
   attachments?: { url: string; filename: string; fileType: string; fileSize: number }[];
 }) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
     // Get active session if any
     const activeSession = await prisma.dailySession.findFirst({
-      where: { status: "OPEN" }
+      where: { status: "OPEN", shopId }
     });
 
     const transaction = await prisma.$transaction(async (tx) => {
@@ -107,17 +116,19 @@ export async function createManualTransaction(data: {
           amount: data.amount,
           description: data.description,
           paymentMethod: data.paymentMethod,
-          accountId: data.accountId,
+          financeAccountId: data.accountId,
           category: data.category,
           dailySessionId: activeSession?.id,
-          userId: user.id,
+          userId,
+          shopId,
           createdAt: data.date ? new Date(data.date) : new Date(),
           attachments: {
             create: data.attachments?.map(att => ({
               url: att.url,
               filename: att.filename,
               fileType: att.fileType,
-              fileSize: att.fileSize
+              fileSize: att.fileSize,
+              shopId
             }))
           }
         }
@@ -125,7 +136,7 @@ export async function createManualTransaction(data: {
 
       // Update account balance if accountId is provided
       if (data.accountId) {
-        await tx.account.update({
+        await tx.financeAccount.update({
           where: { id: data.accountId },
           data: {
             balance: {
@@ -159,8 +170,9 @@ export async function updateManualTransaction(id: string, data: {
   removedAttachmentIds?: string[];
 }) {
   try {
+    const shopId = await getShopId();
     const oldTx = await prisma.transaction.findUnique({
-      where: { id },
+      where: { id, shopId },
       include: { attachments: true }
     });
 
@@ -175,7 +187,7 @@ export async function updateManualTransaction(id: string, data: {
           amount: data.amount,
           description: data.description,
           paymentMethod: data.paymentMethod,
-          accountId: data.accountId,
+          financeAccountId: data.accountId,
           category: data.category,
           createdAt: data.date ? new Date(data.date) : oldTx.createdAt,
           attachments: {
@@ -184,18 +196,18 @@ export async function updateManualTransaction(id: string, data: {
               url: att.url,
               filename: att.filename,
               fileType: att.fileType,
-              fileSize: att.fileSize
+              fileSize: att.fileSize,
+              shopId
             }))
           }
         }
       });
 
-      // 2. Adjust account balances if account changed or amount changed
-      if (oldTx.accountId !== data.accountId || Number(oldTx.amount) !== data.amount || oldTx.type !== data.type) {
-        // Reverse old transaction
-        if (oldTx.accountId) {
-          await tx.account.update({
-            where: { id: oldTx.accountId },
+      // 2. Adjust account balances
+      if (oldTx.financeAccountId !== data.accountId || Number(oldTx.amount) !== data.amount || oldTx.type !== data.type) {
+        if (oldTx.financeAccountId) {
+          await tx.financeAccount.update({
+            where: { id: oldTx.financeAccountId },
             data: {
               balance: {
                 [oldTx.type === 'INCOME' ? 'decrement' : 'increment']: oldTx.amount
@@ -204,9 +216,8 @@ export async function updateManualTransaction(id: string, data: {
           });
         }
 
-        // Apply new transaction
         if (data.accountId) {
-          await tx.account.update({
+          await tx.financeAccount.update({
             where: { id: data.accountId },
             data: {
               balance: {
@@ -230,8 +241,9 @@ export async function updateManualTransaction(id: string, data: {
 
 export async function deleteAttachment(id: string) {
   try {
+    const shopId = await getShopId();
     await prisma.attachment.delete({
-      where: { id }
+      where: { id, shopId }
     });
     return { success: true };
   } catch (error) {
@@ -239,55 +251,44 @@ export async function deleteAttachment(id: string) {
   }
 }
 
-async function getOrCreateDevUser() {
-  let user = await prisma.user.findFirst();
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: "admin@basarteknik.com",
-        name: "Admin",
-        password: "password123",
-        role: "ADMIN"
-      }
-    });
-  }
-  return user;
-}
+// getOrCreateDevUser removed - using auth() helpers instead.
 
 /**
  * Returns the default "Kasa" (cash register) account.
  * Creates one automatically if it doesn't exist yet.
  */
 export async function getOrCreateKasaAccount() {
+  const shopId = await getShopId();
   // 1. Try the default-flagged account
-  let kasa = await prisma.account.findFirst({ where: { isDefault: true } });
+  let kasa = await prisma.financeAccount.findFirst({ where: { isDefault: true, shopId } });
   if (kasa) return kasa;
 
   // 2. Try by name
-  kasa = await prisma.account.findFirst({ where: { name: { contains: "Kasa" } } });
+  kasa = await prisma.financeAccount.findFirst({ where: { name: { contains: "Kasa" }, shopId } });
   if (kasa) {
-    await prisma.account.update({ where: { id: kasa.id }, data: { isDefault: true } });
+    await prisma.financeAccount.update({ where: { id: kasa.id }, data: { isDefault: true } });
     return kasa;
   }
 
   // 3. Create it fresh
-  kasa = await prisma.account.create({
-    data: { name: "Kasa", type: "CASH", balance: 0, isDefault: true }
+  kasa = await prisma.financeAccount.create({
+    data: { name: "Kasa", type: "CASH", balance: 0, isDefault: true, shopId }
   });
   return kasa;
 }
 
 export async function getFinancialSummary() {
   try {
-    const accounts = await prisma.account.findMany();
-    const transactions = await prisma.transaction.findMany();
+    const shopId = await getShopId();
+    const accounts = await prisma.financeAccount.findMany({ where: { shopId } });
+    const transactions = await prisma.transaction.findMany({ where: { shopId } });
 
     // Calculate total receivables (Customer Debts)
-    const debts = await prisma.debt.findMany({ where: { isPaid: false } });
+    const debts = await prisma.debt.findMany({ where: { isPaid: false, shopId } });
     const totalReceivables = debts.reduce((sum, d) => sum + Number(d.remainingAmount), 0);
 
     // Calculate total payables (Supplier Balances)
-    const suppliers = await prisma.supplier.findMany();
+    const suppliers = await prisma.supplier.findMany({ where: { shopId } });
     const totalPayables = suppliers.reduce((sum, s) => sum + Number(s.balance), 0);
 
     const summaryData = transactions.reduce((acc, t) => {
@@ -319,8 +320,9 @@ export async function getFinancialSummary() {
 
 export async function getDailySession() {
   try {
+    const shopId = await getShopId();
     const session = await prisma.dailySession.findFirst({
-      where: { status: "OPEN" },
+      where: { status: "OPEN", shopId },
       orderBy: { createdAt: "desc" },
       include: { openedBy: true }
     });
@@ -332,10 +334,11 @@ export async function getDailySession() {
 
 export async function openDailySession(openingBalance: number, notes?: string) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
     const existing = await prisma.dailySession.findFirst({
-      where: { status: "OPEN" }
+      where: { status: "OPEN", shopId }
     });
 
     if (existing) return { success: false, error: "Zaten açık bir kasa oturumu mevcut." };
@@ -345,7 +348,8 @@ export async function openDailySession(openingBalance: number, notes?: string) {
         openingBalance,
         notes,
         status: "OPEN",
-        openedById: user.id
+        openedById: userId,
+        shopId
       }
     });
 
@@ -358,7 +362,7 @@ export async function openDailySession(openingBalance: number, notes?: string) {
 
 export async function closeDailySession(id: string, actualBalance: number, notes?: string) {
   try {
-    const user = await getOrCreateDevUser();
+    const userId = await getUserId();
 
     const session = await prisma.dailySession.findUnique({
       where: { id },
@@ -386,20 +390,18 @@ export async function closeDailySession(id: string, actualBalance: number, notes
           closingBalance: expectedBalance,
           actualBalance,
           status: "CLOSED",
-          closedById: user.id,
+          closedById: userId,
           notes: notes ? `${session.notes || ''}\nKapanış Notu: ${notes}` : session.notes
         }
       });
 
-      // 2. Apply the net delta to the Kasa account
-      //    Only count transactions NOT already linked to this Kasa account
-      //    (to avoid double-counting when sales already updated the account)
+      // 2. Apply the delta to Kasa
       const kasaLinkedTxIds = session.transactions
-        .filter(t => t.accountId === kasaAccount.id)
+        .filter(t => t.financeAccountId === kasaAccount.id)
         .map(t => t.id);
 
       const nonKasaTxs = session.transactions.filter(
-        t => !kasaLinkedTxIds.includes(t.id) && t.accountId === null
+        t => !kasaLinkedTxIds.includes(t.id) && t.financeAccountId === null
       );
 
       const unlinkedNet = nonKasaTxs.reduce((acc, t) => {
@@ -408,7 +410,7 @@ export async function closeDailySession(id: string, actualBalance: number, notes
       }, 0);
 
       if (unlinkedNet !== 0) {
-        await tx.account.update({
+        await tx.financeAccount.update({
           where: { id: kasaAccount.id },
           data: {
             balance: {
@@ -436,27 +438,27 @@ export async function transferFunds(data: {
   description: string;
 }) {
   try {
-    const user = await getOrCreateDevUser();
-
+    // Check inside the try block below to get userId
     if (data.fromAccountId === data.toAccountId) {
       return { success: false, error: "Aynı hesaba transfer yapılamaz." };
     }
 
     await prisma.$transaction(async (tx) => {
       // 1. Decrease from source
-      await tx.account.update({
+      await tx.financeAccount.update({
         where: { id: data.fromAccountId },
         data: { balance: { decrement: data.amount } }
       });
 
       // 2. Increase to destination
-      await tx.account.update({
+      await tx.financeAccount.update({
         where: { id: data.toAccountId },
         data: { balance: { increment: data.amount } }
       });
 
       // 3. Create Transfer record (as two linked transactions)
-      const transferId = `TRF-${Date.now()}`;
+      const shopId = await getShopId();
+      const userId = await getUserId();
 
       await tx.transaction.create({
         data: {
@@ -464,8 +466,9 @@ export async function transferFunds(data: {
           amount: data.amount,
           description: `Transfer: ${data.description} (Gönderen)`,
           paymentMethod: "TRANSFER",
-          accountId: data.fromAccountId,
-          userId: user.id,
+          financeAccountId: data.fromAccountId,
+          userId,
+          shopId,
           category: "TRANSFER"
         }
       });
@@ -476,8 +479,9 @@ export async function transferFunds(data: {
           amount: data.amount,
           description: `Transfer: ${data.description} (Alan)`,
           paymentMethod: "TRANSFER",
-          accountId: data.toAccountId,
-          userId: user.id,
+          financeAccountId: data.toAccountId,
+          userId,
+          shopId,
           category: "TRANSFER"
         }
       });
@@ -500,9 +504,11 @@ export async function getAccountAnalytics(accountId: string, period: "DAY" | "WE
     else if (period === "WEEK") startDate.setDate(now.getDate() - 7);
     else if (period === "MONTH") startDate.setMonth(now.getMonth() - 1);
 
+    const shopId = await getShopId();
     const transactions = await prisma.transaction.findMany({
       where: {
-        accountId,
+        financeAccountId: accountId,
+        shopId,
         createdAt: { gte: startDate }
       },
       orderBy: { createdAt: "asc" }
@@ -549,14 +555,15 @@ export async function paySupplierDebt(data: {
   description: string;
 }) {
   try {
-    const user = await getOrCreateDevUser();
+    const shopId = await getShopId();
+    const userId = await getUserId();
     const activeSession = await prisma.dailySession.findFirst({
-      where: { status: "OPEN" }
+      where: { status: "OPEN", shopId }
     });
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Update Account balance
-      const account = await tx.account.update({
+      const account = await tx.financeAccount.update({
         where: { id: data.accountId },
         data: { balance: { decrement: data.amount } }
       });
@@ -574,9 +581,10 @@ export async function paySupplierDebt(data: {
           amount: data.amount,
           description: `Tedarikçi Ödemesi: ${supplier.name} - ${data.description}`,
           paymentMethod: account.type === 'CASH' ? 'CASH' : 'TRANSFER',
-          accountId: data.accountId,
+          financeAccountId: data.accountId,
           dailySessionId: activeSession?.id,
-          userId: user.id,
+          userId,
+          shopId,
           category: "TEDARİKÇİ ÖDEMESİ"
         }
       });
@@ -588,7 +596,8 @@ export async function paySupplierDebt(data: {
           amount: data.amount,
           type: "EXPENSE",
           description: data.description,
-          date: new Date()
+          date: new Date(),
+          shopId
         }
       });
 
@@ -598,7 +607,8 @@ export async function paySupplierDebt(data: {
         where: {
           supplierId: data.supplierId,
           paymentStatus: { in: ["UNPAID", "PARTIAL"] },
-          remainingAmount: { gt: 0 }
+          remainingAmount: { gt: 0 },
+          shopId
         },
         orderBy: { createdAt: 'asc' }
       });

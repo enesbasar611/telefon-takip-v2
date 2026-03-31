@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export type NotificationType =
   | "CRITICAL_STOCK"
@@ -33,6 +34,7 @@ export async function getSystemNotifications(options?: {
   category?: NotificationCategory;
 }) {
   try {
+    const shopId = await getShopId();
     const page = options?.page || 1;
     const limit = options?.limit || 100; // Use a large number if not paginating for navbar
     const skip = (page - 1) * limit;
@@ -43,11 +45,11 @@ export async function getSystemNotifications(options?: {
 
     // Fetch user-specific notification states from DB
     const dbStates = await (prisma as any).notification.findMany({
-      where: { isDeleted: false }
+      where: { isDeleted: false, shopId }
     });
 
     const deletedIds = new Set(await (prisma as any).notification.findMany({
-      where: { isDeleted: true },
+      where: { isDeleted: true, shopId },
       select: { id: true }
     }).then((res: any[]) => res.map((r: any) => r.id)));
 
@@ -55,7 +57,10 @@ export async function getSystemNotifications(options?: {
 
     // 1. CRITICAL_STOCK (Stok)
     const criticalProducts = await prisma.product.findMany({
-      where: { stock: { lte: prisma.product.fields.criticalStock } },
+      where: {
+        shopId,
+        stock: { lte: prisma.product.fields.criticalStock }
+      },
     });
     criticalProducts.forEach(p => {
       const id = `stock-${p.id}`;
@@ -75,7 +80,10 @@ export async function getSystemNotifications(options?: {
 
     // 2. FINANCIAL_DELAY (Finans)
     const suppliersWithDebt = await prisma.supplier.findMany({
-      where: { balance: { gt: 0 } },
+      where: {
+        shopId,
+        balance: { gt: 0 }
+      },
       orderBy: { updatedAt: 'asc' },
       take: 10
     });
@@ -97,6 +105,7 @@ export async function getSystemNotifications(options?: {
 
     // 3. Servis & Garanti
     const tickets = await prisma.serviceTicket.findMany({
+      where: { shopId },
       include: { customer: true }
     });
 
@@ -179,7 +188,8 @@ export async function getSystemNotifications(options?: {
     const stockAlerts = await (prisma as any).stockAIAlert.findMany({
       where: {
         expiresAt: { gt: now },
-        isRead: false
+        isRead: false,
+        shopId
       },
       include: { product: true }
     });
@@ -227,6 +237,7 @@ export async function getSystemNotifications(options?: {
 
 export async function markNotificationAsReadAction(id: string) {
   try {
+    const shopId = await getShopId();
     await (prisma as any).notification.upsert({
       where: { id },
       update: { isRead: true },
@@ -236,7 +247,8 @@ export async function markNotificationAsReadAction(id: string) {
         category: "Tümü",
         title: "Marked Read",
         message: "...",
-        isRead: true
+        isRead: true,
+        shopId
       }
     });
 
@@ -244,7 +256,7 @@ export async function markNotificationAsReadAction(id: string) {
     if (id.startsWith("ai-")) {
       const dbId = id.replace("ai-", "");
       await (prisma as any).stockAIAlert.update({
-        where: { id: dbId },
+        where: { id: dbId, shopId },
         data: { isRead: true }
       });
     }
@@ -258,15 +270,16 @@ export async function markNotificationAsReadAction(id: string) {
 
 export async function markAllNotificationsAsReadAction() {
   try {
+    const shopId = await getShopId();
     // 1. Mark all existing DB notifications as read
     await (prisma as any).notification.updateMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, shopId },
       data: { isRead: true }
     });
 
     // 2. Mark AI alerts as read
     await (prisma as any).stockAIAlert.updateMany({
-      where: { isRead: false },
+      where: { isRead: false, shopId },
       data: { isRead: true }
     });
 
@@ -285,7 +298,8 @@ export async function markAllNotificationsAsReadAction() {
             category: n.category,
             title: n.title,
             message: n.message,
-            isRead: true
+            isRead: true,
+            shopId
           }
         });
       }
@@ -301,6 +315,7 @@ export async function markAllNotificationsAsReadAction() {
 
 export async function dismissNotificationAction(id: string) {
   try {
+    const shopId = await getShopId();
     await (prisma as any).notification.upsert({
       where: { id },
       update: { isDeleted: true },
@@ -310,7 +325,8 @@ export async function dismissNotificationAction(id: string) {
         category: "Tümü",
         title: "Dismissed",
         message: "...",
-        isDeleted: true
+        isDeleted: true,
+        shopId
       }
     });
 
@@ -318,7 +334,7 @@ export async function dismissNotificationAction(id: string) {
     if (id.startsWith("ai-")) {
       const dbId = id.replace("ai-", "");
       await (prisma as any).stockAIAlert.update({
-        where: { id: dbId },
+        where: { id: dbId, shopId },
         data: { isRead: true }
       });
     }

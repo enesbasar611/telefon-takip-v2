@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { startOfWeek, startOfMonth, subMonths, endOfDay } from "date-fns";
+import { getShopId } from "@/lib/auth";
 
 export async function getProfitMatrix(range: string = "THIS_MONTH") {
   try {
@@ -15,9 +16,12 @@ export async function getProfitMatrix(range: string = "THIS_MONTH") {
       startDate = startOfMonth(subMonths(new Date(), 1));
     }
 
+    const shopId = await getShopId();
+
     const [services, returns] = await Promise.all([
       prisma.serviceTicket.findMany({
         where: {
+          shopId,
           status: "DELIVERED",
           deliveredAt: { gte: startDate, lte: endDate },
         },
@@ -25,6 +29,7 @@ export async function getProfitMatrix(range: string = "THIS_MONTH") {
       }),
       prisma.returnTicket.findMany({
         where: {
+          shopId,
           createdAt: { gte: startDate, lte: endDate },
         },
       }),
@@ -62,8 +67,10 @@ export async function getProfitMatrix(range: string = "THIS_MONTH") {
 
 export async function getTopRepairedModels(limit: number = 5) {
   try {
+    const shopId = await getShopId();
     const tickets = await prisma.serviceTicket.groupBy({
       by: ['deviceModel'],
+      where: { shopId },
       _count: {
         id: true,
       },
@@ -87,8 +94,9 @@ export async function getTopRepairedModels(limit: number = 5) {
 
 export async function getProfitabilityByModel() {
   try {
+    const shopId = await getShopId();
     const services = await prisma.serviceTicket.findMany({
-      where: { status: "DELIVERED" },
+      where: { shopId, status: "DELIVERED" },
       include: { usedParts: true, returns: true },
     });
 
@@ -117,8 +125,9 @@ export async function getProfitabilityByModel() {
 
 export async function getReturnAnalytics() {
   try {
+    const shopId = await getShopId();
     const products = await prisma.product.findMany({
-      where: { returns: { some: {} } },
+      where: { shopId, returns: { some: {} } },
       include: {
         returns: true,
         usedInServices: true,

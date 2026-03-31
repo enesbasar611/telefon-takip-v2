@@ -1,16 +1,20 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function getLiveActivity() {
   try {
+    const shopId = await getShopId();
     const [serviceLogs, transactions] = await Promise.all([
       prisma.serviceLog.findMany({
+        where: { shopId },
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { ticket: { include: { customer: true } } }
       }),
       prisma.transaction.findMany({
+        where: { shopId },
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { sale: { include: { customer: true } } }

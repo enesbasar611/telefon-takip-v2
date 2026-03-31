@@ -1,11 +1,15 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { OrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getSuppliers() {
   try {
+    const shopId = await getShopId();
     const suppliers = await prisma.supplier.findMany({
+      where: { shopId },
       include: {
         purchases: {
           include: { items: { include: { product: true } } }
@@ -35,7 +39,13 @@ export async function createSupplier(data: {
   taxOffice?: string | null;
 }) {
   try {
-    const supplier = await prisma.supplier.create({ data });
+    const shopId = await getShopId();
+    const supplier = await prisma.supplier.create({
+      data: {
+        ...data,
+        shopId
+      }
+    });
     revalidatePath("/tedarikciler");
     return { success: true, supplier: serializePrisma(supplier) };
   } catch (error) {
@@ -45,11 +55,13 @@ export async function createSupplier(data: {
 
 export async function deleteSupplier(id: string, force: boolean = false) {
   try {
+    const shopId = await getShopId();
     const supplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, shopId },
       include: {
         purchases: {
           where: {
+            shopId,
             status: { in: ["PENDING", "ON_WAY"] }
           },
           include: { items: true }
@@ -80,7 +92,8 @@ export async function deleteSupplier(id: string, force: boolean = false) {
                 name: item.name,
                 quantity: missingQty,
                 notes: `Tedarikçi (${supplier.name}) silindi. Bekleyen siparişten aktarıldı.`,
-                isResolved: false
+                isResolved: false,
+                shopId
               }
             });
           }
@@ -97,17 +110,17 @@ export async function deleteSupplier(id: string, force: boolean = false) {
 
       // 3. Nullify supplierId on Products (Product -> Supplier is optional)
       await tx.product.updateMany({
-        where: { supplierId: id },
+        where: { supplierId: id, shopId },
         data: { supplierId: null }
       });
 
       // 4. Delete PurchaseOrders
       await tx.purchaseOrder.deleteMany({
-        where: { supplierId: id }
+        where: { supplierId: id, shopId }
       });
 
       // 5. Delete Supplier
-      await tx.supplier.delete({ where: { id } });
+      await tx.supplier.delete({ where: { id, shopId } });
     });
 
     revalidatePath("/tedarikciler");
@@ -120,7 +133,9 @@ export async function deleteSupplier(id: string, force: boolean = false) {
 
 export async function getPurchaseOrders() {
   try {
+    const shopId = await getShopId();
     const orders = await prisma.purchaseOrder.findMany({
+      where: { shopId },
       include: {
         supplier: true,
         items: { include: { product: true } }
@@ -134,13 +149,15 @@ export async function getPurchaseOrders() {
   }
 }
 
-export async function createPurchaseOrder(data: { supplierId: string; totalAmount: number; status: string }) {
+export async function createPurchaseOrder(data: { supplierId: string; totalAmount: number; status: OrderStatus }) {
   try {
+    const shopId = await getShopId();
     const generatedOrderNo = `PO-${data.supplierId.slice(-4)}-${Date.now()}`;
     const order = await prisma.purchaseOrder.create({
       data: {
         ...data,
-        orderNo: generatedOrderNo
+        orderNo: generatedOrderNo,
+        shopId
       }
     });
     revalidatePath("/tedarikciler");
@@ -166,8 +183,9 @@ export async function updateSupplier(id: string, data: Partial<{
   balance?: number;
 }>) {
   try {
+    const shopId = await getShopId();
     const supplier = await prisma.supplier.update({
-      where: { id },
+      where: { id, shopId },
       data
     });
     revalidatePath("/tedarikciler");
@@ -180,7 +198,9 @@ export async function updateSupplier(id: string, data: Partial<{
 
 export async function getCriticalAndOutOfStockProducts() {
   try {
+    const shopId = await getShopId();
     const products = await prisma.product.findMany({
+      where: { shopId },
       include: { category: true },
       orderBy: { stock: 'asc' },
     });

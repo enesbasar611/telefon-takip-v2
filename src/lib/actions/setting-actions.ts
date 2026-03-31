@@ -2,10 +2,12 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { getShopId } from "@/lib/auth";
 
 export async function getSettings() {
   try {
-    const settings = await prisma.setting.findMany();
+    const shopId = await getShopId();
+    const settings = await prisma.setting.findMany({ where: { shopId } });
     return serializePrisma(settings);
   } catch (error) {
     return [];
@@ -14,10 +16,11 @@ export async function getSettings() {
 
 export async function updateSetting(key: string, value: string) {
   try {
+    const shopId = await getShopId();
     await prisma.setting.upsert({
-      where: { key },
+      where: { shopId_key: { shopId, key } },
       update: { value },
-      create: { key, value }
+      create: { key, value, shopId }
     });
     revalidatePath("/ayarlar");
     return { success: true };
@@ -28,11 +31,12 @@ export async function updateSetting(key: string, value: string) {
 
 export async function bulkUpdateSettings(settings: Record<string, string>) {
   try {
+    const shopId = await getShopId();
     const promises = Object.entries(settings).map(([key, value]) =>
       prisma.setting.upsert({
-        where: { key },
+        where: { shopId_key: { shopId, key } },
         update: { value },
-        create: { key, value }
+        create: { key, value, shopId }
       })
     );
     await Promise.all(promises);

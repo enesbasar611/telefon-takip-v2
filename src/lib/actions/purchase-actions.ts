@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
 import { OrderStatus, PaymentStatus, PaymentMethod, TransactionType } from "@prisma/client";
+import { getShopId } from "@/lib/auth";
 
 export async function createPurchaseOrderAction(data: {
     supplierId: string;
@@ -17,8 +18,10 @@ export async function createPurchaseOrderAction(data: {
     paymentMethod?: PaymentMethod;
 }) {
     try {
+        const shopId = await getShopId();
         const order = await prisma.purchaseOrder.create({
             data: {
+                shopId,
                 supplierId: data.supplierId,
                 orderNo: data.orderNo,
                 totalAmount: data.totalAmount,
@@ -36,6 +39,7 @@ export async function createPurchaseOrderAction(data: {
                         quantity: item.quantity,
                         buyPrice: item.buyPrice,
                         vatRate: item.vatRate || 20,
+                        shopId
                     })),
                 },
             },
@@ -58,8 +62,9 @@ export async function createPurchaseOrderAction(data: {
 
 export async function updatePurchaseOrderStatusAction(orderId: string, status: OrderStatus) {
     try {
+        const shopId = await getShopId();
         const order = await prisma.purchaseOrder.update({
-            where: { id: orderId },
+            where: { id: orderId, shopId },
             data: { status },
         });
         // revalidatePath("/tedarikciler");
@@ -71,8 +76,9 @@ export async function updatePurchaseOrderStatusAction(orderId: string, status: O
 
 export async function getSupplierProfileDataAction(supplierId: string) {
     try {
+        const shopId = await getShopId();
         const supplier = await prisma.supplier.findUnique({
-            where: { id: supplierId },
+            where: { id: supplierId, shopId },
             include: {
                 purchases: {
                     orderBy: { createdAt: "desc" },
@@ -104,6 +110,7 @@ export async function createSupplierTransactionAction(data: {
     purchaseOrderId?: string;
 }) {
     try {
+        const shopId = await getShopId();
         const transaction = await prisma.$transaction(async (tx: any) => {
             const t = await tx.supplierTransaction.create({
                 data: {
@@ -112,6 +119,7 @@ export async function createSupplierTransactionAction(data: {
                     type: data.type,
                     description: data.description,
                     purchaseOrderId: data.purchaseOrderId || null,
+                    shopId
                 },
             });
 
@@ -121,7 +129,7 @@ export async function createSupplierTransactionAction(data: {
             // 1. Eğer spesifik bir sipariş için ödeme yapılıyorsa
             if (data.purchaseOrderId && data.type === "EXPENSE") {
                 const order = await tx.purchaseOrder.findUnique({
-                    where: { id: data.purchaseOrderId }
+                    where: { id: data.purchaseOrderId, shopId }
                 });
 
                 if (order) {
@@ -138,7 +146,7 @@ export async function createSupplierTransactionAction(data: {
 
             // 2. Tedarikçi bakiyesini güncelle
             // INCOME = Borçlandık (balance artar), EXPENSE = Ödeme yaptık (balance azalır)
-            const supplier = await tx.supplier.findUnique({ where: { id: data.supplierId } });
+            const supplier = await tx.supplier.findUnique({ where: { id: data.supplierId, shopId } });
             if (!supplier) throw new Error("Tedarikçi bulunamadı");
 
             const currentBalance = Math.round(Number(supplier.balance));
@@ -155,6 +163,7 @@ export async function createSupplierTransactionAction(data: {
                 await tx.purchaseOrder.updateMany({
                     where: {
                         supplierId: data.supplierId,
+                        shopId,
                         paymentStatus: { not: "PAID" }
                     },
                     data: {
@@ -177,9 +186,10 @@ export async function createSupplierTransactionAction(data: {
 
 export async function receivePurchaseOrderAction(orderId: string, receivedItems: { itemId: string; receivedQuantity: number; buyPrice?: number; buyPriceUsd?: number | null }[]) {
     try {
+        const shopId = await getShopId();
         const result = await prisma.$transaction(async (tx: any) => {
             const order = await tx.purchaseOrder.findUnique({
-                where: { id: orderId },
+                where: { id: orderId, shopId },
                 include: { items: true, supplier: true },
             });
 
@@ -195,7 +205,7 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                     newTotalAmount += rItem.receivedQuantity * priceToUse;
 
                     await tx.purchaseOrderItem.update({
-                        where: { id: rItem.itemId },
+                        where: { id: rItem.itemId, shopId },
                         data: {
                             receivedQuantity: { increment: rItem.receivedQuantity },
                             buyPrice: priceToUse,
@@ -205,11 +215,11 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
 
                     // 2. Update Product stock if productId exists
                     if (item.productId && rItem.receivedQuantity > 0) {
-                        const product = await tx.product.findUnique({ where: { id: item.productId } });
+                        const product = await tx.product.findUnique({ where: { id: item.productId, shopId } });
                         const oldPrice = Number(product.buyPrice);
 
                         await tx.product.update({
-                            where: { id: item.productId },
+                            where: { id: item.productId, shopId },
                             data: {
                                 stock: { increment: rItem.receivedQuantity },
                                 buyPrice: priceToUse,
@@ -235,13 +245,14 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                                 quantity: rItem.receivedQuantity,
                                 type: "PURCHASE",
                                 notes: priceNote,
+                                shopId
                             },
                         });
 
                         // Auto-remove from Shortage List as some stock arrived?
                         // Actually, if we received SOME, we remove old entry, but if we still have MISSING below, we'll re-add it.
                         await tx.shortageItem.deleteMany({
-                            where: { productId: item.productId }
+                            where: { productId: item.productId, shopId }
                         });
                     }
 
@@ -255,7 +266,8 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                                 name: item.name,
                                 quantity: missingQty,
                                 notes: `Sipariş #${order.orderNo} uyuşmazlığı - Gelen: ${rItem.receivedQuantity}/${item.quantity}`,
-                                isResolved: false
+                                isResolved: false,
+                                shopId
                             }
                         });
                     }
@@ -277,7 +289,7 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
             });
 
             // 4. Update Supplier Balance & Total Shopping
-            const currentSupplier = await tx.supplier.findUnique({ where: { id: order.supplierId } });
+            const currentSupplier = await tx.supplier.findUnique({ where: { id: order.supplierId, shopId } });
             const oldBalance = Math.round(Number(currentSupplier.balance));
             const newBalance = order.paymentStatus === "UNPAID" ? oldBalance + finalReceivedAmount : oldBalance;
 
