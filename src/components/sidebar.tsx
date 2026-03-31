@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { AISearchModal } from "@/components/basarai/ai-search-modal";
+import { AIUpdateModal } from "@/components/basarai/ai-update-modal";
+import { AIAnalyzeModal } from "@/components/basarai/ai-analyze-modal";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -21,6 +26,10 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
+  Sparkles,
+  Search,
+  RefreshCcw,
+  Activity
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -81,9 +90,13 @@ const menuItems = [
 ];
 
 export function Sidebar({ className, user, onNavigate }: { className?: string; user?: { name: string; role: string }, onNavigate?: () => void }) {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const [aiSearchOpen, setAiSearchOpen] = useState(false);
+  const [aiUpdateOpen, setAiUpdateOpen] = useState(false);
+  const [aiAnalyzeOpen, setAiAnalyzeOpen] = useState(false);
 
   useEffect(() => {
     const activeMenu = menuItems.find(item =>
@@ -108,7 +121,16 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             <Zap className="h-6 w-6 text-white fill-white" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-xl text-foreground leading-none">Başar <span className="text-primary">Teknik</span></span>
+            <span className="font-bold text-xl text-foreground leading-none whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
+              {session?.user?.shopName ? (
+                <>
+                  {session.user.shopName.split(' ').slice(0, -1).join(' ')}{' '}
+                  <span className="text-primary">{session.user.shopName.split(' ').slice(-1)}</span>
+                </>
+              ) : (
+                <>Başar <span className="text-primary">Teknik</span></>
+              )}
+            </span>
             <span className="text-[11px] font-medium text-muted-foreground mt-1">Yönetim Paneli V2.0</span>
           </div>
         </Link>
@@ -182,6 +204,40 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
           })}
         </nav>
       </ScrollArea>
+
+      {/* BAŞAR AI COMMAND CENTER */}
+      <div className="px-6 pb-6">
+        <div className="rounded-2xl border border-[#333333] bg-[#111111] overflow-hidden shadow-sm">
+          <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider">BAŞAR AI</span>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-[#222222]">
+            <button
+              onClick={() => setAiAnalyzeOpen(true)}
+              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
+              <Activity className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+              <span className="text-[9px] font-bold text-slate-500 uppercase">Analiz</span>
+            </button>
+            <button
+              onClick={() => setAiUpdateOpen(true)}
+              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
+              <RefreshCcw className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+              <span className="text-[9px] font-bold text-slate-500 uppercase">Güncelle</span>
+            </button>
+            <button
+              onClick={() => setAiSearchOpen(true)}
+              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
+              <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+              <span className="text-[9px] font-bold text-slate-500 uppercase">Ara</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <AISearchModal open={aiSearchOpen} onOpenChange={setAiSearchOpen} />
+      <AIUpdateModal open={aiUpdateOpen} onOpenChange={setAiUpdateOpen} />
+      <AIAnalyzeModal open={aiAnalyzeOpen} onOpenChange={setAiAnalyzeOpen} />
 
       <div className="p-8 border-t border-border/40 bg-muted/20">
         <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 shadow-none">

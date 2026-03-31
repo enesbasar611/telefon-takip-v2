@@ -1,7 +1,7 @@
 import { getServiceTickets } from "@/lib/actions/service-actions";
 import { getWarrantyStats } from "@/lib/actions/warranty-actions";
 import { ServiceTabsController } from "@/components/service/service-tabs-controller";
-import { Zap, Activity } from "lucide-react";
+import { Zap, Activity, Sparkles } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +31,11 @@ export default async function ServisMerkeziPage() {
                 </span>
                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{activeCount} Aktif İşlem</span>
               </div>
+
+              <button className="flex items-center gap-2 bg-[#111111] hover:bg-[#18181A] px-3 py-1 rounded-full border border-[#333333] transition-colors group">
+                <Sparkles className="h-3.5 w-3.5 text-violet-500 group-hover:animate-pulse" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">BAŞAR AI İLE CİHAZ GİRİŞİ</span>
+              </button>
             </div>
             <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight">Servis Merkezi</h1>
             <p className="text-sm text-slate-400 font-medium mt-2">Dükkandaki tüm teknik servis süreçlerini, iadeleri ve teslimatları tek bir ekrandan yönetin.</p>

@@ -16,6 +16,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { createCategory, updateCategory, deleteCategory } from "@/lib/actions/category-actions";
+import { addInventoryStock } from "@/lib/actions/product-actions";
 
 interface Category {
     id: string;
@@ -43,6 +44,7 @@ export function CategoryManagementClient({
     products: Product[]
 }) {
     const [categories, setCategories] = useState<Category[]>(initialCategories);
+    const [allProducts, setAllProducts] = useState<Product[]>(products);
     const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
 
@@ -55,6 +57,8 @@ export function CategoryManagementClient({
     const [modalTitle, setModalTitle] = useState("");
     const [formData, setFormData] = useState({ name: "", parentId: "null" });
     const [editCatId, setEditCatId] = useState("");
+    const [stockToAdd, setStockToAdd] = useState(0);
+    const [stockNotes, setStockNotes] = useState("");
 
     const [isPending, startTransition] = useTransition();
 
@@ -95,7 +99,7 @@ export function CategoryManagementClient({
         let totalStock = 0;
         let totalCost = 0;
 
-        products.forEach(p => {
+        allProducts.forEach(p => {
             if (familyIds.includes(p.categoryId)) {
                 totalStock += p.stock;
                 totalCost += (Number(p.buyPrice) || 0) * p.stock;
@@ -156,9 +160,22 @@ export function CategoryManagementClient({
             });
 
             if (res.success && res.category) {
+                // Handle Stock Add if quantity > 0
+                if (stockToAdd > 0) {
+                    const directProduct = allProducts.find(p => p.categoryId === editCatId);
+                    if (directProduct) {
+                        const stockRes = await addInventoryStock(directProduct.id, stockToAdd, stockNotes || "Kategori düzenleme ekranından hızlı stok girişi");
+                        if (stockRes.success) {
+                            setAllProducts(prev => prev.map(p => p.id === directProduct.id ? { ...p, stock: p.stock + stockToAdd } : p));
+                        }
+                    }
+                }
+
                 setCategories(categories.map(c => c.id === editCatId ? res.category as Category : c));
-                toast.success("Kategori güncellendi!");
+                toast.success("Güncellendi!");
                 setIsEditModalOpen(false);
+                setStockToAdd(0);
+                setStockNotes("");
             } else {
                 toast.error(res.message || "Hata oluştu");
             }
@@ -313,6 +330,8 @@ export function CategoryManagementClient({
                                     onClick={() => {
                                         setEditCatId(selectedNode.id);
                                         setFormData({ name: selectedNode.name, parentId: selectedNode.parentId || "null" });
+                                        setStockToAdd(0);
+                                        setStockNotes("");
                                         setIsEditModalOpen(true);
                                     }}
                                     size="icon"
@@ -474,6 +493,43 @@ export function CategoryManagementClient({
                                         ))}
                                     </select>
                                 </div>
+
+                                {allProducts.find(p => p.categoryId === editCatId) ? (
+                                    <div className="pt-4 mt-4 border-t border-white/5 space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="h-5 w-5 rounded bg-indigo-500/20 flex items-center justify-center">
+                                                <Package className="h-3 w-3 text-indigo-400" />
+                                            </div>
+                                            <h4 className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest">Hızlı Stok Ekle</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[11px] font-semibold text-slate-400">Eklenecek Adet</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={stockToAdd || ""}
+                                                    onChange={e => setStockToAdd(Math.max(0, parseInt(e.target.value) || 0))}
+                                                    className="bg-indigo-500/5 border-indigo-500/20 h-10 text-[13px] focus-visible:ring-indigo-500/50"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[11px] font-semibold text-slate-400">Not (Opsiyonel)</Label>
+                                                <Input
+                                                    value={stockNotes}
+                                                    onChange={e => setStockNotes(e.target.value)}
+                                                    className="bg-white/[0.03] border-white/10 h-10 text-[13px] focus-visible:ring-indigo-500/50"
+                                                    placeholder="Açıklama..."
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="pt-4 mt-4 border-t border-white/5 opacity-50">
+                                        <p className="text-[10px] text-slate-500 italic">Bu kategoriye direkt bağlı bir ürün bulunamadı. Stok eklemek için önce stok sayfasından ürün oluşturun.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <DialogFooter className="mr-6 mb-6">

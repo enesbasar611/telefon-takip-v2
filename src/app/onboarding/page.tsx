@@ -31,9 +31,15 @@ function OnboardingForm() {
             const result = await createShopOnboarding(formData);
             if (result.success) {
                 toast.success("Dükkan başarıyla oluşturuldu! Yönlendiriliyorsunuz...");
-                await update({ shopId: result.shopId });
-                router.push("/");
-                router.refresh();
+                await update({
+                    shopId: result.shopId,
+                    shopName: result.shopName
+                });
+
+                // Force a full reload to ensure middleware picks up the new session cookie
+                setTimeout(() => {
+                    window.location.href = "/";
+                }, 1000);
             } else {
                 toast.error(result.error || "Bir hata oluştu.");
             }

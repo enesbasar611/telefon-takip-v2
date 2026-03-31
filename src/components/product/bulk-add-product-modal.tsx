@@ -129,24 +129,23 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) handleReset(); }}>
             <DialogTrigger asChild>
                 <Button
-                    variant="outline"
-                    className="gap-2 h-10 px-5 rounded-xl border-violet-500/30 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/60 transition-all font-bold text-xs uppercase tracking-wider"
+                    className="gap-2 h-10 px-5 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all font-bold text-xs uppercase tracking-wider"
                 >
-                    <Layers className="h-4 w-4" />
-                    Toplu AI Stok Ekle
+                    <Sparkles className="h-4 w-4" />
+                    BAŞAR AI Stok Ekle
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[900px] bg-[#0a0a0a] border border-white/10 text-white p-0 overflow-hidden shadow-2xl">
+            <DialogContent className="sm:max-w-[900px] bg-[#111111] border border-[#333333] text-white p-0 overflow-hidden shadow-2xl">
                 <DialogHeader className="p-7 pb-0">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-violet-500/10 flex items-center justify-center border border-violet-500/20">
-                            <Layers className="h-6 w-6 text-violet-400" />
+                        <div className="h-12 w-12 rounded-lg bg-violet-600 flex items-center justify-center shadow-md">
+                            <Sparkles className="h-6 w-6 text-white" />
                         </div>
                         <div className="flex-1">
-                            <DialogTitle className="text-xl font-black tracking-tight">Toplu AI Stok Ekleme</DialogTitle>
+                            <DialogTitle className="text-xl font-bold tracking-tight">Toplu AI Stok Ekleme</DialogTitle>
                             <p className="text-[12px] text-slate-400 mt-1 font-medium">
-                                Tek bir açıklama yazın — Gemini her ürünü ayrı ayrı ayrıştırıp listeleyecek
+                                BAŞAR AI: Tek bir açıklama yazın, yapay zeka envanter tablosunu otomatik oluştursun.
                             </p>
                         </div>
                         {step === "review" && (
@@ -184,9 +183,9 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                             key={i}
                                             type="button"
                                             onClick={() => setDescription(ex)}
-                                            className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[12px] text-slate-400 hover:bg-violet-500/10 hover:border-violet-500/20 hover:text-violet-300 transition-all font-medium leading-relaxed"
+                                            className="w-full text-left px-4 py-3 rounded-lg bg-[#18181A] border border-[#222222] text-[12px] text-slate-300 hover:bg-[#222222] hover:border-[#444] hover:text-white transition-all font-medium leading-relaxed"
                                         >
-                                            <span className="text-violet-500/60 font-black mr-2">{i + 1}.</span>
+                                            <span className="text-violet-400 font-bold mr-2">{i + 1}.</span>
                                             {ex}
                                         </button>
                                     ))}
@@ -195,16 +194,25 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
 
                             {/* Textarea */}
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Ürün Açıklamanızı Yazın</label>
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Komut Verin
+                                </label>
                                 <textarea
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
-                                    placeholder="Örn: iPhone 11'den 17 Pro Max'e kadar tüm modellerin hayalet camı, 10'ar adet, alış 45 TL satış 95 TL, Ekranlar kategorisinde, raf A-2"
+                                    placeholder="Örn: iPhone 11'den 17 Pro Max'e kadar hayalet camı, 10'ar adet, alış 1.5 dolar satış 200 TL"
                                     rows={5}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none transition-all leading-relaxed"
+                                    className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-5 py-4 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none transition-all leading-relaxed"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAnalyze(); }}
                                 />
-                                <p className="text-[10px] text-slate-600">Ctrl+Enter ile hızlı analiz · Ne kadar detaylı olursa o kadar doğru</p>
+                                <div className="flex flex-col gap-1 mt-2">
+                                    <p className="text-[11px] text-slate-500">
+                                        💡 <strong className="text-slate-300">İpucu:</strong> "alış 1.5 dolar" derseniz sistem kuru otomatik hesaplar.
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 font-mono">
+                                        [Ctrl+Enter] Hızlı analiz başlatır
+                                    </p>
+                                </div>
                             </div>
 
                             <Button
@@ -224,11 +232,11 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                     {/* STEP 2: REVIEW TABLE */}
                     {step === "review" && (
                         <div className="space-y-4">
-                            <div className="overflow-x-auto rounded-2xl border border-white/10">
+                            <div className="overflow-x-auto rounded-lg border border-[#333333] bg-[#18181A]">
                                 <table className="w-full text-[12px]">
                                     <thead>
-                                        <tr className="border-b border-white/10 bg-white/[0.02]">
-                                            <th className="text-left px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
+                                        <tr className="border-b border-[#333333] bg-[#111111]">
+                                            <th className="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-8">#</th>
                                             <th className="text-left px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Ürün Adı</th>
                                             <th className="text-left px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Kategori</th>
                                             <th className="text-right px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Maliyet</th>

@@ -19,23 +19,59 @@ async function checkStockAndAddShortage(productId: string, productName: string) 
 }
 
 export async function getProducts(options: {
+  search?: string,
   categoryId?: string,
+  categoryName?: string,
+  minPrice?: number,
+  maxPrice?: number,
+  minStock?: number,
+  maxStock?: number,
+  isCritical?: boolean,
+  currency?: "TL" | "USD",
   page?: number,
-  pageSize?: number,
-  search?: string
+  pageSize?: number
 } = {}) {
-  const { categoryId, page, pageSize, search } = options;
+  const { categoryId, categoryName, page, pageSize, search, minPrice, maxPrice, minStock, maxStock, isCritical, currency } = options;
 
   try {
     const shopId = await getShopId();
     const where: any = { shopId };
+
     if (categoryId) where.categoryId = categoryId;
+    if (categoryName) {
+      where.category = {
+        name: { contains: categoryName, mode: 'insensitive' }
+      };
+    }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { barcode: { contains: search, mode: 'insensitive' } },
       ];
+    }
+
+    // Price filters
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceField = currency === "USD" ? "buyPriceUsd" : "buyPrice";
+      where[priceField] = {};
+      if (minPrice !== undefined) where[priceField].gte = minPrice;
+      if (maxPrice !== undefined) where[priceField].lte = maxPrice;
+    }
+
+    // Stock filters
+    if (minStock !== undefined || maxStock !== undefined) {
+      where.stock = {};
+      if (minStock !== undefined) where.stock.gte = minStock;
+      if (maxStock !== undefined) where.stock.lte = maxStock;
+    }
+
+    // Critical stock filter
+    if (isCritical) {
+      where.stock = {
+        lte: prisma.product.fields.criticalStock
+      };
     }
 
     const products = await prisma.product.findMany({
@@ -266,6 +302,39 @@ export async function updateProduct(id: string, data: any) {
   } catch (error) {
     console.error("Update product error:", error);
     return { success: false, error: "Ürün güncellenemedi." };
+  }
+}
+
+export async function applyBulkAIUpdates(updates: any[]) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const results = await prisma.$transaction(
+      updates.map((update) => {
+        const { id, newName, sellPrice, buyPriceUsd, stock } = update;
+
+        // If there's an USD price, update TL price too (fixed rate 35)
+        const buyPrice = buyPriceUsd ? Math.round(Number(buyPriceUsd) * 35) : undefined;
+
+        return prisma.product.update({
+          where: { id, shopId },
+          data: {
+            name: newName || undefined,
+            sellPrice: sellPrice ? Number(sellPrice) : undefined,
+            buyPriceUsd: buyPriceUsd ? Number(buyPriceUsd) : undefined,
+            buyPrice: buyPrice || undefined,
+            stock: stock !== undefined ? Number(stock) : undefined,
+          }
+        });
+      })
+    );
+
+    revalidatePath("/stok");
+    return { success: true, count: results.length };
+  } catch (error) {
+    console.error("Bulk AI Update error:", error);
+    return { success: false, error: "Bazı ürünler güncellenemedi. Lütfen tekrar deneyin." };
   }
 }
 

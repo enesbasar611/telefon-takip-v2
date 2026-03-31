@@ -152,24 +152,23 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setStep("input"); setRows([]); setDescription(""); } }}>
             <DialogTrigger asChild>
                 <Button
-                    variant="outline"
-                    className="gap-2 h-9 px-4 rounded-xl border-violet-500/30 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/60 transition-all font-bold text-[11px] uppercase tracking-wider"
+                    className="gap-2 h-9 px-4 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all font-bold text-[11px] uppercase tracking-wider"
                 >
                     <Sparkles className="h-4 w-4" />
-                    AI ile Kategori + Ürün Ekle
+                    BAŞAR AI Çoklu Ekle
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[760px] bg-[#0a0a0a] border border-white/10 text-white p-0 overflow-hidden shadow-2xl">
+            <DialogContent className="sm:max-w-[760px] bg-[#111111] border border-[#333333] text-white p-0 overflow-hidden shadow-2xl">
                 <DialogHeader className="p-6 pb-0">
                     <div className="flex items-center gap-4">
-                        <div className="h-11 w-11 rounded-2xl bg-violet-500/10 flex items-center justify-center border border-violet-500/20">
-                            <FolderPlus className="h-5 w-5 text-violet-400" />
+                        <div className="h-11 w-11 rounded-lg bg-violet-600 flex items-center justify-center shadow-md">
+                            <Sparkles className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1">
-                            <DialogTitle className="text-lg font-black tracking-tight">AI ile Kategori + Ürün Oluştur</DialogTitle>
+                            <DialogTitle className="text-lg font-bold tracking-tight">AI ile Kategori + Ürün Oluştur</DialogTitle>
                             <p className="text-[11px] text-slate-400 mt-0.5">
-                                Tek cümleyle hiyerarşiyi ve ürünleri tanımlayın — Gemini otomatik oluşturacak
+                                BAŞAR AI: Tek cümleyle hiyerarşiyi ve ürünleri tanımlayın, yapay zeka otomatik oluştursun.
                             </p>
                         </div>
                     </div>
@@ -183,20 +182,29 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">💡 Örnek Söylemler</p>
                                 {EXAMPLES.map((ex, i) => (
                                     <button key={i} type="button" onClick={() => setDescription(ex)}
-                                        className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[12px] text-slate-400 hover:bg-violet-500/10 hover:border-violet-500/20 hover:text-violet-300 transition-all leading-relaxed">
-                                        <span className="text-violet-500/60 font-black mr-2">{i + 1}.</span>{ex}
+                                        className="w-full text-left px-4 py-3 rounded-lg bg-[#18181A] border border-[#222222] text-[12px] text-slate-300 hover:bg-[#222222] hover:border-[#444] hover:text-white transition-all leading-relaxed">
+                                        <span className="text-violet-400 font-bold mr-2">{i + 1}.</span>{ex}
                                     </button>
                                 ))}
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Açıklamanızı Yazın</label>
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Komut Verin
+                                </label>
                                 <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
-                                    placeholder="Örn: Şarj Aletleri > Type-C > 27W — 10 adet şarj aleti, alış 100 TL satış 500 TL, raf B-3"
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-[13px] text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none leading-relaxed"
+                                    placeholder="Örn: Şarj Aletleri > Type-C > 27W — 10 adet şarj aleti, alış 1.5 dolar satış 500 TL, raf B-3"
+                                    className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAnalyze(); }}
                                 />
-                                <p className="text-[10px] text-slate-600">Ctrl+Enter ile hızlı analiz</p>
+                                <div className="flex flex-col gap-1 mt-2">
+                                    <p className="text-[11px] text-slate-500">
+                                        💡 <strong className="text-slate-300">İpucu:</strong> Kategorileri " {">"} " işareti ile veya virgülle ayırabilirsiniz.
+                                    </p>
+                                    <p className="text-[10px] text-slate-600 font-mono">
+                                        [Ctrl+Enter] Hızlı analiz başlatır
+                                    </p>
+                                </div>
                             </div>
 
                             <Button onClick={handleAnalyze} disabled={isAIPending || !description.trim()}
@@ -223,10 +231,10 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                             <div className="space-y-3">
                                 {rows.map((row) => (
                                     <div key={row._id} className={cn(
-                                        "rounded-2xl border p-4 space-y-3 transition-all",
-                                        row._catStatus === "saved" || row._catStatus === "skipped" ? "border-emerald-500/20 bg-emerald-500/5" :
-                                            row._catStatus === "error" ? "border-red-500/20 bg-red-500/5" :
-                                                "border-white/5 bg-white/[0.02]"
+                                        "rounded-xl border p-4 space-y-3 transition-all",
+                                        row._catStatus === "saved" || row._catStatus === "skipped" ? "border-emerald-500/30 bg-emerald-500/10" :
+                                            row._catStatus === "error" ? "border-red-500/30 bg-red-500/10" :
+                                                "border-[#333333] bg-[#18181A]"
                                     )}>
                                         {/* Category row */}
                                         <div className="flex items-center gap-3">
@@ -240,7 +248,7 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                                                 <Folder className="h-4 w-4 text-indigo-400 shrink-0" />
                                                 <Input value={row.name} onChange={e => updateRow(row._id, "name", e.target.value)}
                                                     disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
-                                                    className="h-8 bg-white/[0.03] border-white/10 rounded-lg text-[12px] font-semibold max-w-[200px] disabled:opacity-60" />
+                                                    className="h-8 bg-[#111111] border-[#333333] rounded-md text-[12px] font-semibold max-w-[200px] disabled:opacity-60" />
                                             </div>
                                             <div>
                                                 {row._catStatus === "pending" && <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 font-black uppercase">Bekliyor</span>}

@@ -1,6 +1,6 @@
 "use server";
 
-import { getCategories } from "@/lib/actions/product-actions";
+import { getCategories, getProducts } from "@/lib/actions/product-actions";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -304,4 +304,152 @@ SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
     } catch {
         return { success: false, error: "AI yanıtı JSON olarak çözümlenemedi. Açıklamayı farklı ifade edip tekrar deneyin." };
     }
+}
+// ── SEMANTIC SEARCH ──────────────────────────────────────────────────────────
+
+export interface AISearchFilters {
+    name?: string;
+    categoryName?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minStock?: number;
+    maxStock?: number;
+    isCritical?: boolean;
+    currency?: "TL" | "USD";
+}
+
+async function getProductSummary() {
+    const products = await getProducts();
+    // Return a minimal list of product names and their categories for context
+    return products.map((p: any) => ({
+        name: p.name,
+        category: p.category?.name || "Kategorisiz",
+        buyPrice: p.buyPrice,
+        buyPriceUsd: p.buyPriceUsd,
+        stock: p.stock
+    }));
+}
+
+export async function semanticSearchWithAI(query: string): Promise<{ success: true; filters: AISearchFilters } | { success: false; error: string }> {
+    const summary = await getProductSummary();
+    const categories = await buildCategoryContext();
+
+    const schema = `{
+  "name": "string | null (ürün adı veya parçası)",
+  "categoryName": "string | null (kategori adı)",
+  "minPrice": "number | null",
+  "maxPrice": "number | null",
+  "minStock": "number | null",
+  "maxStock": "number | null",
+  "isCritical": "boolean | null",
+  "currency": "TL | USD | null"
+}`;
+
+    const systemPrompt = `Sen bir telefon dükkanı envanter arama asistanısın.
+Kullanıcının doğal dildeki arama sorgusunu teknik filtrelere dönüştür.
+
+MEVCUT KATEGORİLER:
+${JSON.stringify(categories.map((c: any) => c.name))}
+
+ÖRNEK ÜRÜNLER (Bağlam için):
+${JSON.stringify(summary.slice(0, 20))}
+
+KURALLAR:
+- Kullanıcı "10 dolardan ucuz" diyorsa: currency: "USD", maxPrice: 10
+- Kullanıcı "bitmek üzere olanlar" diyorsa: isCritical: true veya maxStock: 5
+- "Ekranlar" diyorsa: categoryName: "Ekranlar"
+- SADECE JSON DÖNDÜR, METİN EKLEME:\n${schema}`;
+
+    const userPrompt = `ARAMA SORGUSU:\n${query}`;
+
+    const result = await callGemini([systemPrompt, userPrompt]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    try {
+        const filters = JSON.parse(result.text) as AISearchFilters;
+        return { success: true, filters };
+    } catch {
+        return { success: false, error: "Arama terimi anlaşılamadı. Lütfen daha net bir ifade kullanın." };
+    }
+}
+
+// ── BULK UPDATE ──────────────────────────────────────────────────────────────
+
+export interface AIUpdateOperation {
+    id: string;
+    name: string;
+    newName?: string;
+    sellPrice?: number;
+    buyPriceUsd?: number;
+    stock?: number;
+    reason: string;
+}
+
+export async function parseBulkUpdateWithAI(command: string): Promise<{ success: true; updates: AIUpdateOperation[] } | { success: false; error: string }> {
+    const products = await getProductSummary();
+
+    const schema = `{
+  "updates": [
+    {
+      "id": "string",
+      "name": "string (mevcut isim)",
+      "newName": "string | null",
+      "sellPrice": "number | null",
+      "buyPriceUsd": "number | null",
+      "stock": "number | null",
+      "reason": "string (neden güncelleniyor? Örn: %15 zam)"
+    }
+  ]
+}`;
+
+    const systemPrompt = `Sen bir envanter yönetim asistanısın. Kullanıcının toplu güncelleme komutunu analiz et.
+
+MEVCUT ÜRÜNLER:
+${JSON.stringify(products.slice(0, 50))}
+
+KURALLAR:
+- Kullanıcı "%15 zam yap" diyorsa, mevcut fiyata %15 ekle.
+- "Kabloların fiyatını 200 yap" diyorsa, sadece o kategoriyi/ismi bul.
+- Sadece değişen alanları doldur, değişmeyenleri null bırak.
+- SADECE JSON DÖNDÜR:\n${schema}`;
+
+    const userPrompt = `GÜNCELLEME KOMUTU:\n${command}`;
+
+    const result = await callGemini([systemPrompt, userPrompt]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    try {
+        const parsed = JSON.parse(result.text);
+        return { success: true, updates: parsed.updates || [] };
+    } catch {
+        return { success: false, error: "Güncelleme komutu anlaşılamadı." };
+    }
+}
+
+// ── SHOP ANALYSIS ──────────────────────────────────────────────────────────
+
+export async function getShopHealthAnalysis(): Promise<{ success: true; analysis: string } | { success: false; error: string }> {
+    const products = await getProducts();
+    const categories = await getCategories();
+
+    // Minimal stats for context
+    const stats = {
+        totalProducts: products.length,
+        totalStock: products.reduce((acc: number, p: any) => acc + p.stock, 0),
+        criticalItems: products.filter((p: any) => p.stock <= p.criticalStock).length,
+        categoriesCount: categories.length,
+    };
+
+    const systemPrompt = `Sen profesyonel bir telefon dükkanı danışmanısın. 
+Verilen özet verilere bakarak dükkan sahibine kısa (3-4 paragraf), etkileyici ve aksiyon odaklı bir BAŞAR AI raporu sun.
+Raporunda stok durumunu, kritik ürünleri ve genel dükkan verimliliğini yorumla.
+Türkçe, profesyonel ama samimi bir dil kullan.`;
+
+    const userPrompt = `DÜKKAN ÖZET VERİLERİ:
+${JSON.stringify(stats, null, 2)}`;
+
+    const result = await callGemini([systemPrompt, userPrompt]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    return { success: true, analysis: result.text };
 }

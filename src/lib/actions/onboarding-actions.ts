@@ -67,8 +67,20 @@ export async function createShopOnboarding(formData: {
             });
         }
 
+        // 5. Create default Receipt Settings
+        await prisma.receiptSettings.create({
+            data: {
+                id: `rcpt_${shop.id}`,
+                title: shop.name.toUpperCase(),
+                subtitle: "TEKNİK SERVİS & SATIŞ",
+                phone: shop.phone || "",
+                address: shop.address || "",
+                shopId: shop.id
+            }
+        });
+
         revalidatePath("/");
-        return { success: true, shopId: shop.id };
+        return { success: true, shopId: shop.id, shopName: shop.name };
     } catch (error: any) {
         console.error("Onboarding error:", error);
         return { success: false, error: error?.message || "Dükkan oluşturulamadı." };

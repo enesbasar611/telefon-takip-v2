@@ -73,7 +73,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
   const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filteredProducts, "name", "asc");
 
   const handleExport = () => {
-    const headers = ["Ürün Adı", "SKU", "Barkod", "Kategori", "Stok", "Alış", "Satış"];
+    const headers = ["Ürün Adı", "SKU", "Barkod", "Kategori", "Stok", "Alış (TL)", "Alış (USD)", "Satış"];
     const csvData = filteredProducts.map(p => [
       p.name,
       p.sku || "-",
@@ -81,6 +81,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
       p.category.name,
       p.stock,
       p.buyPrice,
+      p.buyPriceUsd || "-",
       p.sellPrice
     ]);
 
@@ -221,9 +222,16 @@ export function StockListTable({ products, categories }: { products: any[], cate
                 </div>
 
                 <div className="flex items-center justify-between pt-3 mt-1 border-t border-white/5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">MALİYET</span>
-                    <RevealFinancial amount={product.buyPrice} className="text-[11px] text-slate-400 font-medium" />
+                  <div className="flex flex-col items-start gap-1">
+                    <div className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-[9px] text-slate-500">MALİYET</div>
+                    <div className="flex items-center gap-2">
+                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-slate-300 font-bold" />
+                      {product.buyPriceUsd && (
+                        <span className="text-[11px] text-blue-400 font-bold flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                          ${product.buyPriceUsd}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
@@ -328,10 +336,15 @@ export function StockListTable({ products, categories }: { products: any[], cate
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
-                      <span className="text-[14px] font-semibold text-slate-200">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-slate-500">
-                        <span className="text-[10px] font-medium uppercase tracking-wider">Maliyet</span>
-                        <RevealFinancial amount={product.buyPrice} className="text-[11px] font-medium" />
+                      <span className="text-[14px] font-semibold text-slate-200 group-hover:text-white transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Maliyet:</span>
+                        <RevealFinancial amount={product.buyPrice} className="text-[12px] font-bold text-slate-400" />
+                        {product.buyPriceUsd && (
+                          <span className="text-[10px] text-blue-400/90 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                            ${product.buyPriceUsd}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </TableCell>

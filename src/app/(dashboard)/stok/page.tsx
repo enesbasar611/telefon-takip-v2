@@ -33,7 +33,7 @@ function CardSkeleton() {
   );
 }
 
-export default async function StokPage() {
+export default async function StokPage({ searchParams }: { searchParams: any }) {
   const categories = await getCategories();
 
   return (
@@ -66,7 +66,7 @@ export default async function StokPage() {
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none border border-border/40">
         <Suspense fallback={<TableSkeleton />}>
-          <StockTableStream />
+          <StockTableStream searchParams={searchParams} />
         </Suspense>
       </div>
     </div>

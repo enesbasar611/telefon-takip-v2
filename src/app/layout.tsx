@@ -10,6 +10,7 @@ import { SupplierOrderProvider } from "@/lib/context/supplier-order-context";
 import { ShortageProvider } from "@/lib/context/shortage-context";
 import { getStaff } from "@/lib/actions/staff-actions";
 import { GlobalSearch } from "@/components/global-search";
+import { NextAuthProvider } from "@/components/providers/session-provider";
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -30,7 +31,9 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <NextAuthProvider>
+            {children}
+          </NextAuthProvider>
           <Toaster position="bottom-right" expand={false} duration={2500} />
         </ThemeProvider>
       </body>
