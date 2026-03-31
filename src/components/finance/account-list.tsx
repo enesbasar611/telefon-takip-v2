@@ -65,6 +65,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 </div>
                                 <div className="mt-5 pt-5 border-t border-border/40 flex items-center gap-3">
                                     <AccountDetailModal account={account} />
+                                    <CreateAccountModal account={account} />
                                     <TransferModal accounts={accounts} fromAccountId={account.id} />
                                 </div>
                             </CardContent>

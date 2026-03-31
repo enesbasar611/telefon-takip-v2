@@ -497,7 +497,7 @@ export async function getDeadStockCount() {
   }
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string, force: boolean = false) {
   try {
     const shopId = await getShopId();
 
@@ -520,29 +520,40 @@ export async function deleteProduct(id: string) {
 
     const { saleItems, usedInServices, purchaseItems, returns } = usage._count;
 
-    if (saleItems > 0 || usedInServices > 0 || purchaseItems > 0 || returns > 0) {
+    if (!force && (saleItems > 0 || usedInServices > 0 || purchaseItems > 0 || returns > 0)) {
       let reasons = [];
-      if (saleItems > 0) reasons.push("satış kaydı");
-      if (usedInServices > 0) reasons.push("servis kullanımı");
-      if (purchaseItems > 0) reasons.push("alım emri");
-      if (returns > 0) reasons.push("iade kaydı");
+      if (saleItems > 0) reasons.push(`${saleItems} adet satış kaydı`);
+      if (usedInServices > 0) reasons.push(`${usedInServices} adet servis kullanımı`);
+      if (purchaseItems > 0) reasons.push(`${purchaseItems} adet alım emri`);
+      if (returns > 0) reasons.push(`${returns} adet iade kaydı`);
 
       return {
         success: false,
-        error: `Bu ürün silinemez. Çünkü ${reasons.join(", ")} bulunmaktadır. Silmek yerine stok miktarını 0 yapabilir veya ürünü güncelleyebilirsiniz.`
+        requiresConfirmation: true,
+        error: `Bu ürün silinemez. Çünkü sistemde ${reasons.join(", ")} bulunmaktadır. Silmek bu kayıtları da etkileyecektir. Devam edip tüm geçmişiyle birlikte silmek istiyor musunuz?`
       };
     }
 
-    // 2. Güvenli Temizlik (Stok logları, Hareketler, AI Uyarılar, Cihaz Bilgileri)
-    // Bu kayıtlar ürüne bağlı 'yan' kayıtlardır ve ürünün kendisi silindiğinde silinebilirler (transaction içinde).
-    await prisma.$transaction([
-      prisma.inventoryLog.deleteMany({ where: { productId: id, shopId } }),
-      prisma.inventoryMovement.deleteMany({ where: { productId: id, shopId } }),
-      prisma.stockAIAlert.deleteMany({ where: { productId: id, shopId } }),
-      prisma.deviceHubInfo.deleteMany({ where: { productId: id } }),
-      prisma.shortageItem.deleteMany({ where: { productId: id, shopId } }),
-      prisma.product.delete({ where: { id, shopId } })
-    ]);
+    // 2. Güvenli Temizlik (Stok logları, Hareketler, AI Uyarılar, Cihaz Bilgileri + Bağımlılıklar)
+    await prisma.$transaction(async (tx) => {
+      if (force) {
+        // Bağımlı kayıtları temizle
+        await tx.saleItem.deleteMany({ where: { productId: id, shopId } });
+        await tx.serviceUsedPart.deleteMany({ where: { productId: id, shopId } });
+        await tx.returnTicket.deleteMany({ where: { productId: id, shopId } });
+        await tx.purchaseOrderItem.updateMany({
+          where: { productId: id, shopId },
+          data: { productId: null }
+        });
+      }
+
+      await tx.inventoryLog.deleteMany({ where: { productId: id, shopId } });
+      await tx.inventoryMovement.deleteMany({ where: { productId: id, shopId } });
+      await tx.stockAIAlert.deleteMany({ where: { productId: id, shopId } });
+      await tx.deviceHubInfo.deleteMany({ where: { productId: id } });
+      await tx.shortageItem.deleteMany({ where: { productId: id, shopId } });
+      await tx.product.delete({ where: { id, shopId } });
+    });
 
     revalidatePath("/stok");
     revalidatePath("/ikinci-el");

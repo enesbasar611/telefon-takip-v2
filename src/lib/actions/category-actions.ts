@@ -15,6 +15,7 @@ export interface UpdateCategoryData {
     id: string;
     name?: string;
     parentId?: string | null;
+    order?: number;
 }
 
 /**
@@ -32,19 +33,21 @@ export async function createCategory(data: CreateCategoryData) {
             },
         });
 
-        if (existing) {
-            return { success: true, category: serializePrisma(existing), isExisting: true };
-        }
+        // Get max order in the same level
+        const maxOrder = await prisma.category.aggregate({
+            _max: { order: true },
+            where: { shopId, parentId: data.parentId || null }
+        });
 
         const category = await prisma.category.create({
             data: {
                 name: data.name,
                 parentId: data.parentId || null,
+                order: (maxOrder._max.order || 0) + 1,
                 shopId
             },
         });
 
-        // revalidatePath("/stok/kategoriler");
         revalidatePath("/stok");
 
         return { success: true, category: serializePrisma(category) };
@@ -70,7 +73,7 @@ export async function updateCategory(data: UpdateCategoryData) {
             data: {
                 name: data.name,
                 parentId: data.parentId === "null" ? null : data.parentId || undefined,
-                // Eğer frontend "null" string'i yollarsa null yap, aksi takdirde undefined/değer
+                order: data.order !== undefined ? data.order : undefined
             },
         });
 
@@ -81,6 +84,31 @@ export async function updateCategory(data: UpdateCategoryData) {
     } catch (error: any) {
         console.error("updateCategory error:", error);
         return { success: false, message: "Kategori güncellenirken hata oluştu." };
+    }
+}
+
+/**
+ * Toplu Sıralama Güncelleme
+ */
+export async function reorderCategories(items: { id: string, order: number, parentId: string | null }[]) {
+    try {
+        const shopId = await getShopId();
+
+        await prisma.$transaction(
+            items.map(item => prisma.category.update({
+                where: { id: item.id, shopId },
+                data: {
+                    order: item.order,
+                    parentId: item.parentId
+                }
+            }))
+        );
+
+        revalidatePath("/stok");
+        return { success: true };
+    } catch (error) {
+        console.error("reorderCategories error:", error);
+        return { success: false, message: "Sıralama güncellenirken hata oluştu." };
     }
 }
 
@@ -241,7 +269,10 @@ export async function getAllCategories() {
         const shopId = await getShopId();
         const categories = await prisma.category.findMany({
             where: { shopId },
-            orderBy: { name: 'asc' }
+            orderBy: [
+                { order: 'asc' },
+                { name: 'asc' }
+            ]
         });
         return serializePrisma(categories);
     } catch (error) {

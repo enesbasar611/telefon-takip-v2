@@ -4,7 +4,7 @@ import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, TransactionType } from "@prisma/client";
 import { addShortageItem } from "./shortage-actions";
-import { getOrCreateKasaAccount } from "./finance-actions";
+import { getOrCreateAccountByType } from "./finance-actions";
 import { getShopId, getUserId } from "@/lib/auth";
 
 // getOrCreateDevUser removed.
@@ -29,9 +29,13 @@ export async function createSale(data: {
         shopId,
         totalAmount: data.totalAmount,
         finalAmount: data.totalAmount,
-        paymentMethod: (data.paymentMethod === "CASH" ? PaymentMethod.CASH :
-          data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
-            PaymentMethod.TRANSFER) as PaymentMethod,
+        paymentMethod: (
+          data.paymentMethod === "CASH" ? PaymentMethod.CASH :
+            data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
+              data.paymentMethod === "TRANSFER" ? PaymentMethod.TRANSFER :
+                data.paymentMethod === "DEBT" ? PaymentMethod.DEBT :
+                  PaymentMethod.CASH
+        ) as PaymentMethod,
         items: {
           create: data.items.map((item) => ({
             productId: item.productId,
@@ -79,30 +83,59 @@ export async function createSale(data: {
       }
     }
 
-    // Create financial transaction and link to Kasa if payment is not DEBT
-    const isDebt = data.paymentMethod === "DEBT";
-    const kasaAccount = isDebt ? null : await getOrCreateKasaAccount();
+    // Route the transaction to the correct account based on payment method
+    let targetAccount = null;
+    let isDebt = false;
+
+    if (data.paymentMethod === "CASH") {
+      targetAccount = await getOrCreateAccountByType("CASH");
+    } else if (data.paymentMethod === "CREDIT_CARD") {
+      targetAccount = await getOrCreateAccountByType("POS");
+    } else if (data.paymentMethod === "TRANSFER") {
+      targetAccount = await getOrCreateAccountByType("BANK");
+    } else if (data.paymentMethod === "DEBT") {
+      isDebt = true;
+      if (!data.customerId) {
+        return { success: false, error: "Veresiye (Borç) işlemi için müşteri seçilmesi zorunludur." };
+      }
+    }
+
     const activeSession = await prisma.dailySession.findFirst({ where: { status: "OPEN", shopId } });
 
     await prisma.$transaction(async (tx) => {
+      // 1. Financial transaction
       await tx.transaction.create({
         data: {
           amount: data.totalAmount,
           type: TransactionType.INCOME,
-          description: `SATIŞ - ${sale.saleNumber}`,
-          paymentMethod: sale.paymentMethod,
+          description: `SATIŞ - ${sale.saleNumber}${isDebt ? ' (VERESİYE)' : ''}`,
+          paymentMethod: isDebt ? PaymentMethod.DEBT : sale.paymentMethod,
           userId,
           shopId,
           saleId: sale.id,
-          financeAccountId: kasaAccount?.id ?? undefined,
+          financeAccountId: targetAccount?.id ?? undefined,
           dailySessionId: activeSession?.id ?? undefined,
         },
       });
 
-      if (kasaAccount) {
+      // 2. Update Account
+      if (targetAccount) {
         await tx.financeAccount.update({
-          where: { id: kasaAccount.id, shopId },
+          where: { id: targetAccount.id, shopId },
           data: { balance: { increment: data.totalAmount } },
+        });
+      }
+
+      // 3. Create Debt if necessary
+      if (isDebt && data.customerId) {
+        await tx.debt.create({
+          data: {
+            customerId: data.customerId,
+            amount: data.totalAmount,
+            remainingAmount: data.totalAmount, // İlk aşamada tamamı borç
+            shopId,
+            notes: `Satış: ${sale.saleNumber}`
+          }
         });
       }
     });

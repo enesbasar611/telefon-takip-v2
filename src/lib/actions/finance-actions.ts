@@ -109,6 +109,14 @@ export async function createManualTransaction(data: {
       where: { status: "OPEN", shopId }
     });
 
+    // Route for payment method if no accountId specified
+    let targetAccountId = data.accountId;
+    if (!targetAccountId) {
+      const type = data.paymentMethod === "CASH" ? "CASH" : data.paymentMethod === "CARD" ? "POS" : "BANK";
+      const account = await getOrCreateAccountByType(type as any);
+      targetAccountId = account.id;
+    }
+
     const transaction = await prisma.$transaction(async (tx) => {
       const t = await tx.transaction.create({
         data: {
@@ -116,7 +124,7 @@ export async function createManualTransaction(data: {
           amount: data.amount,
           description: data.description,
           paymentMethod: data.paymentMethod,
-          financeAccountId: data.accountId,
+          financeAccountId: targetAccountId,
           category: data.category,
           dailySessionId: activeSession?.id,
           userId,
@@ -134,17 +142,15 @@ export async function createManualTransaction(data: {
         }
       });
 
-      // Update account balance if accountId is provided
-      if (data.accountId) {
-        await tx.financeAccount.update({
-          where: { id: data.accountId },
-          data: {
-            balance: {
-              [data.type === 'INCOME' ? 'increment' : 'decrement']: data.amount
-            }
+      // Update account balance
+      await tx.financeAccount.update({
+        where: { id: targetAccountId! },
+        data: {
+          balance: {
+            [data.type === 'INCOME' ? 'increment' : 'decrement']: data.amount
           }
-        });
-      }
+        }
+      });
 
       return t;
     });
@@ -258,23 +264,68 @@ export async function deleteAttachment(id: string) {
  * Creates one automatically if it doesn't exist yet.
  */
 export async function getOrCreateKasaAccount() {
-  const shopId = await getShopId();
-  // 1. Try the default-flagged account
-  let kasa = await prisma.financeAccount.findFirst({ where: { isDefault: true, shopId } });
-  if (kasa) return kasa;
+  return getOrCreateAccountByType("CASH");
+}
 
-  // 2. Try by name
-  kasa = await prisma.financeAccount.findFirst({ where: { name: { contains: "Kasa" }, shopId } });
-  if (kasa) {
-    await prisma.financeAccount.update({ where: { id: kasa.id }, data: { isDefault: true } });
-    return kasa;
+export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "CREDIT_CARD") {
+  const shopId = await getShopId();
+  const nameMap = {
+    CASH: "Merkez Kasa",
+    BANK: "Banka Hesabı",
+    POS: "POS Hesabı",
+    CREDIT_CARD: "Kredi Kartı"
+  };
+
+  // 1. Try to find the account by type
+  let account = await prisma.financeAccount.findFirst({
+    where: { type, shopId, isActive: true },
+    orderBy: { isDefault: "desc" }
+  });
+
+  if (account) return account;
+
+  // 2. Fallback: try by name if it exists but type is different (rare case)
+  const fallbackName = nameMap[type];
+  account = await prisma.financeAccount.findFirst({
+    where: { name: { contains: fallbackName }, shopId }
+  });
+
+  if (account) {
+    return await prisma.financeAccount.update({
+      where: { id: account.id },
+      data: { type, isDefault: type === "CASH" }
+    });
   }
 
   // 3. Create it fresh
-  kasa = await prisma.financeAccount.create({
-    data: { name: "Kasa", type: "CASH", balance: 0, isDefault: true, shopId }
+  return await prisma.financeAccount.create({
+    data: {
+      name: fallbackName,
+      type,
+      balance: 0,
+      isDefault: type === "CASH",
+      shopId
+    }
   });
-  return kasa;
+}
+
+export async function updateAccount(id: string, data: { name: string; type: any; balance?: number }) {
+  try {
+    const shopId = await getShopId();
+    const account = await prisma.financeAccount.update({
+      where: { id, shopId },
+      data: {
+        name: data.name,
+        type: data.type,
+        ...(data.balance !== undefined ? { balance: data.balance } : {})
+      }
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true, account: serializePrisma(account) };
+  } catch (error) {
+    return { success: false, error: "Hesap güncellenemedi." };
+  }
 }
 
 export async function getFinancialSummary() {
@@ -324,7 +375,12 @@ export async function getDailySession() {
     const session = await prisma.dailySession.findFirst({
       where: { status: "OPEN", shopId },
       orderBy: { createdAt: "desc" },
-      include: { openedBy: true }
+      include: {
+        openedBy: true,
+        transactions: {
+          include: { financeAccount: true }
+        }
+      }
     });
     return serializePrisma(session);
   } catch (error) {

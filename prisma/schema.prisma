@@ -173,6 +173,7 @@ model Category {
   id            String     @id @default(cuid())
   name          String
   parentId      String?
+  order         Int        @default(0)
   
   shopId        String
   shop          Shop       @relation(fields: [shopId], references: [id])
@@ -528,6 +529,7 @@ model Debt {
   remainingAmount Decimal   @db.Decimal(10, 2)
   dueDate         DateTime?
   isPaid          Boolean   @default(false)
+  isTracking      Boolean   @default(false)
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

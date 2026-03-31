@@ -58,17 +58,17 @@ const menuItems = [
     subItems: [
       { label: "Stok Listesi", href: "/stok" },
       { label: "Hareket Analizi", href: "/stok/hareketler" },
-      { label: "Kategoriler", href: "/kategoriler" },
+      { label: "Kategoriler", href: "/stok/kategoriler" },
       { label: "AI Önerileri", href: "/stok/stok-ai" },
     ]
   },
   {
     icon: ShoppingCart,
     label: "POS & Kasa",
-    href: "/pos",
+    href: "/satis",
     subItems: [
-      { label: "Hızlı Satış", href: "/pos" },
-      { label: "Satış Arşivi", href: "/satis-gecmisi" },
+      { label: "Hızlı Satış", href: "/satis" },
+      { label: "Satış Arşivi", href: "/satis/gecmis" },
       { label: "Tahsilat İşlemleri", href: "/satis/tahsilatlar" },
       { label: "Kasa Raporu", href: "/satis/kasa" },
     ]
@@ -84,7 +84,7 @@ const menuItems = [
   },
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
   { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
-  { icon: Truck, label: "Tedarikçiler", href: "/tedarikçiler" },
+  { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },

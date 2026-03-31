@@ -25,7 +25,11 @@ import {
     ShoppingBag,
     UserPlus,
     CheckCircle,
-    Phone
+    Phone,
+    CreditCard,
+    Landmark,
+    History,
+    AlertCircle
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
@@ -81,6 +85,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
 
     const handleCheckout = async () => {
         if (cart.length === 0) return;
+
+        // Debt validation
+        if (paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")) {
+            toast({ title: "Müşteri Seçilmedi", description: "Veresiye işlemi için önce müşteri seçmelisiniz.", variant: "destructive" });
+            return;
+        }
+
         setIsProcessing(true);
         try {
             const result = await createSale({
@@ -98,6 +109,9 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 setLastSale(result.data);
                 setShowReceipt(true);
                 setCart([]);
+                // Reset states for next sale
+                setCustomerSearch("");
+                setSelectedCustomerId(undefined);
                 toast({ title: "Satış Başarılı" });
             } else {
                 toast({ title: "Hata", description: result.error, variant: "destructive" });
@@ -108,6 +122,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
             setIsProcessing(false);
         }
     };
+
+    const isDebtBlocked = paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null");
 
     const activeCustomer = useMemo(() => {
         return customers.find(c => c.id === selectedCustomerId);
@@ -323,14 +339,43 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     </div>
                 </div>
 
+                {/* Ödeme Yöntemi Seçimi */}
+                <div className="grid grid-cols-4 gap-2 pb-2">
+                    {[
+                        { id: "CASH", label: "NAKİT", icon: Banknote },
+                        { id: "CREDIT_CARD", label: "KART", icon: CreditCard },
+                        { id: "BANK_TRANSFER", label: "HAVALE", icon: Landmark },
+                        { id: "DEBT", label: "VERESİYE", icon: History }
+                    ].map((method) => (
+                        <button
+                            key={method.id}
+                            onClick={() => setPaymentMethod(method.id)}
+                            className={cn(
+                                "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border transition-all",
+                                paymentMethod === method.id
+                                    ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/20 text-white"
+                                    : "bg-slate-800/40 border-slate-700/40 text-slate-500 hover:bg-slate-800"
+                            )}
+                        >
+                            <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-slate-500")} />
+                            <span className="text-[8px] font-black">{method.label}</span>
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex gap-4 pt-2">
                     <Button
                         disabled={cart.length === 0 || isProcessing}
                         onClick={handleCheckout}
-                        className="flex-1 h-20 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg tracking-[0.2em] rounded-[1.5rem] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all gap-4"
+                        className={cn(
+                            "flex-1 h-20 font-bold text-base tracking-[0.1em] rounded-[1.5rem] shadow-2xl active:scale-[0.98] transition-all gap-4",
+                            isDebtBlocked
+                                ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20"
+                                : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                        )}
                     >
-                        <Banknote className="h-7 w-7" />
-                        Tahsil Et & Yazdır
+                        {isDebtBlocked ? <AlertCircle className="h-6 w-6" /> : <Banknote className="h-7 w-7" />}
+                        {isDebtBlocked ? "Müşteri Seçiniz" : "Tahsil Et & Yazdır"}
                     </Button>
                     <Button
                         variant="outline"

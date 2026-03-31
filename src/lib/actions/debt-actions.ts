@@ -97,3 +97,34 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
     return { success: false, error: "Tahsilat kaydedilemedi." };
   }
 }
+
+export async function startTrackingDebt(debtId: string, dueDate: Date) {
+  try {
+    const shopId = await getShopId();
+    await prisma.debt.update({
+      where: { id: debtId, shopId },
+      data: {
+        isTracking: true,
+        dueDate: dueDate
+      }
+    });
+
+    const userId = await getUserId();
+    await prisma.reminder.create({
+      data: {
+        title: "Borç Takip Hatırlatması",
+        description: `Ücret tahsilatı için belirlenen gün geldi.`,
+        date: dueDate,
+        category: "FINANCE",
+        creatorId: userId,
+        shopId
+      }
+    });
+
+    revalidatePath("/veresiye");
+    return { success: true };
+  } catch (error) {
+    console.error("startTrackingDebt error:", error);
+    return { success: false, error: "Takip başlatılamadı." };
+  }
+}

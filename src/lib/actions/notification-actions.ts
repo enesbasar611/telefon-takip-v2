@@ -10,7 +10,8 @@ export type NotificationType =
   | "FINANCIAL_DELAY"
   | "COMPLETED"
   | "WARRANTY_EXPIRY"
-  | "PENDING_APPROVAL";
+  | "PENDING_APPROVAL"
+  | "DEBT_TRACKING";
 
 export type NotificationCategory = "Tümü" | "Stok" | "Servis" | "Finans" | "Garanti";
 
@@ -206,6 +207,33 @@ export async function getSystemNotifications(options?: {
           createdAt: a.createdAt,
           referenceId: a.productId,
           isRead: readIds.has(id) || a.isRead
+        });
+      }
+    });
+
+    // 5. DEBT_TRACKING (Finans)
+    const trackedDebts = await prisma.debt.findMany({
+      where: {
+        shopId,
+        isTracking: true,
+        isPaid: false,
+        dueDate: { lte: now }
+      },
+      include: { customer: true }
+    });
+
+    trackedDebts.forEach(d => {
+      const id = `debt-${d.id}`;
+      if (!deletedIds.has(id)) {
+        notifications.push({
+          id,
+          type: "DEBT_TRACKING",
+          category: "Finans",
+          title: `Ödeme Günü: ${d.customer.name}`,
+          message: `${Number(d.remainingAmount).toLocaleString('tr-TR')} TL tahsilat bekliyor. Ödeme sözü tarihi: ${d.dueDate?.toLocaleDateString('tr-TR')}`,
+          createdAt: d.dueDate || d.updatedAt,
+          referenceId: d.id,
+          isRead: readIds.has(id)
         });
       }
     });

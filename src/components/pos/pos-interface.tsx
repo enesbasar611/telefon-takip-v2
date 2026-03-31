@@ -29,6 +29,7 @@ import {
   Plus,
   Minus,
   CheckCircle,
+  AlertCircle,
   CreditCard,
   Banknote,
   Landmark,
@@ -46,6 +47,7 @@ import { ReceiptModal } from "./receipt-modal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatPhone } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
   products: any[];
@@ -184,7 +186,6 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const handleCheckout = () => {
     if (cart.length === 0) return;
     if (paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")) {
-      toast({ title: "Hata", description: "Veresiye işlemi için müşteri seçilmelidir.", variant: "destructive" });
       return;
     }
     setIsProcessing(true);
@@ -424,10 +425,10 @@ export function POSInterface({ products: initialProducts, customers, categories,
             </div>
             <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
               <SelectTrigger className="bg-background border border-border/60 h-14 rounded-2xl text-[14px] font-medium text-foreground shadow-sm focus:ring-2 focus:ring-primary/10 px-6">
-                <SelectValue placeholder="Müşteri Seçin (Hızlı Satış)" />
+                <SelectValue placeholder="Müşteri Seçiniz (Hızlı Satış)" />
               </SelectTrigger>
               <SelectContent className="bg-card border border-border/60 text-foreground rounded-[1.5rem] shadow-2xl p-2 max-h-80">
-                <SelectItem value="null" className="text-[13px] font-medium py-3 rounded-xl hover:bg-muted transition-colors">Hızlı Satış (İsimsiz)</SelectItem>
+                <SelectItem value="null" className="text-[13px] font-medium py-3 rounded-xl hover:bg-muted transition-colors">Varsayılan (İsimsiz)</SelectItem>
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={c.id} className="text-[13px] font-bold py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
                     <div className="flex flex-col gap-1">
@@ -529,8 +530,14 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   <span className="text-5xl font-bold text-foreground drop-shadow-sm">₺{total.toLocaleString('tr-TR')}</span>
                 </div>
               </div>
+
               <Button
-                className="h-20 w-full text-[14px] font-bold gap-4 rounded-[1.5rem] bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-2xl hover:shadow-primary/20 border border-primary/20 active:scale-[0.98]"
+                className={cn(
+                  "h-20 w-full text-[14px] font-bold gap-4 rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98]",
+                  paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
+                    ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
+                )}
                 disabled={cart.length === 0 || isProcessing}
                 onClick={handleCheckout}
               >
@@ -541,8 +548,12 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   </div>
                 ) : (
                   <>
-                    SATIŞI TAMAMLA VE FİŞ YAZDIR
-                    <CheckCircle className="h-5 w-5" />
+                    {paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
+                      ? "MÜŞTERİ SEÇMENİZ GEREKİYOR (VERESİYE)"
+                      : "SATIŞI TAMAMLA VE FİŞ YAZDIR"}
+                    {paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
+                      ? <AlertCircle className="h-5 w-5" />
+                      : <CheckCircle className="h-5 w-5" />}
                   </>
                 )}
               </Button>
