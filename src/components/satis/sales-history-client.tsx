@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import {
     ShoppingCart,
     Search,
-    Calendar,
     ChevronRight,
     User,
     Package,
@@ -17,11 +16,38 @@ import {
     CreditCard,
     Landmark,
     Filter,
-    ArrowUpDown
+    Trash2,
+    AlertCircle,
+    Loader2,
+    Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { deleteSale, deleteSales } from "@/lib/actions/sale-actions";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import { SaleDetailModal } from "./sale-detail-modal";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { isToday, isWithinInterval, startOfWeek, startOfMonth, endOfDay } from "date-fns";
 
 interface SalesHistoryClientProps {
     initialSales: any[];
@@ -32,14 +58,37 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
     const highlightId = searchParams.get("highlight");
     const [searchTerm, setSearchTerm] = useState("");
     const [sales, setSales] = useState(initialSales);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [targetId, setTargetId] = useState<string | null>(null);
+
+    // Detail Modal State
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [selectedSale, setSelectedSale] = useState<any | null>(null);
+
+    // Filter State
+    const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
+    const [dateFilter, setDateFilter] = useState<string>("ALL");
 
     const filteredSales = useMemo(() => {
-        return sales.filter(sale =>
-            sale.saleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            sale.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            sale.items.some((item: any) => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [sales, searchTerm]);
+        return sales.filter(sale => {
+            const matchesSearch =
+                sale.saleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                sale.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                sale.items.some((item: any) => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            const matchesPayment = paymentFilter === "ALL" || sale.paymentMethod === paymentFilter;
+
+            let matchesDate = true;
+            const saleDate = new Date(sale.createdAt);
+            if (dateFilter === "TODAY") matchesDate = isToday(saleDate);
+            else if (dateFilter === "WEEK") matchesDate = isWithinInterval(saleDate, { start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfDay(new Date()) });
+            else if (dateFilter === "MONTH") matchesDate = isWithinInterval(saleDate, { start: startOfMonth(new Date()), end: endOfDay(new Date()) });
+
+            return matchesSearch && matchesPayment && matchesDate;
+        });
+    }, [sales, searchTerm, paymentFilter, dateFilter]);
 
     useEffect(() => {
         if (highlightId) {
@@ -49,6 +98,51 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
             }
         }
     }, [highlightId]);
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === filteredSales.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredSales.map(s => s.id));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            if (targetId) {
+                const res = await deleteSale(targetId);
+                if (res.success) {
+                    setSales(prev => prev.filter(s => s.id !== targetId));
+                    toast.success("Satış başarıyla silindi ve stoklar iade edildi.");
+                } else {
+                    toast.error(res.error || "Silme işlemi başarısız.");
+                }
+            } else if (selectedIds.length > 0) {
+                const res = await deleteSales(selectedIds);
+                if (res.success) {
+                    setSales(prev => prev.filter(s => !selectedIds.includes(s.id)));
+                    setSelectedIds([]);
+                    toast.success(`${selectedIds.length} adet satış silindi ve stoklar iade edildi.`);
+                } else {
+                    toast.error("Bazı satışlar silinemedi.");
+                }
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            toast.error("Bir hata oluştu.");
+        } finally {
+            setIsDeleting(false);
+            setDeleteConfirmOpen(false);
+            setTargetId(null);
+        }
+    };
 
     const getPaymentIcon = (method: string) => {
         switch (method) {
@@ -81,6 +175,22 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                         <p className="text-[11px] text-slate-500 font-bold mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
                     </div>
                 </div>
+
+                {selectedIds.length > 0 && (
+                    <div className="flex items-center gap-4 animate-in slide-in-from-top-4 duration-300">
+                        <span className="text-xs font-bold text-muted-foreground">{selectedIds.length} öğe seçildi</span>
+                        <Button
+                            variant="destructive"
+                            className="rounded-xl h-11 px-6 font-bold text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-destructive/20"
+                            onClick={() => {
+                                setTargetId(null);
+                                setDeleteConfirmOpen(true);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" /> SEÇİLENLERİ SİL
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden bg-card/50 backdrop-blur-xl">
@@ -96,12 +206,40 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                             />
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
-                                <Filter className="h-4 w-4" /> FİLTRELE
-                            </Button>
-                            <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
-                                <Calendar className="h-4 w-4" /> BUGÜN
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
+                                        <Filter className="h-4 w-4" />
+                                        {paymentFilter === "ALL" ? "TÜM ÖDEMELER" : getPaymentLabel(paymentFilter)}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
+                                    <DropdownMenuLabel className="text-[10px] font-black opacity-50 px-3 uppercase tracking-widest">ÖDEME YÖNTEMİ</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜMÜ</DropdownMenuItem>
+                                    <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("CASH")} className="rounded-xl font-bold text-[11px] h-10 px-3">NAKİT</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("CARD")} className="rounded-xl font-bold text-[11px] h-10 px-3">KART</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("TRANSFER")} className="rounded-xl font-bold text-[11px] h-10 px-3">HAVALE</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("DEBT")} className="rounded-xl font-bold text-[11px] h-10 px-3">VERESİYE</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        {dateFilter === "ALL" ? "TÜM ZAMANLAR" : dateFilter === "TODAY" ? "BUGÜN" : dateFilter === "WEEK" ? "BU HAFTA" : "BU AY"}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
+                                    <DropdownMenuLabel className="text-[10px] font-black opacity-50 px-3 uppercase tracking-widest">TARİH ARALIĞI</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setDateFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜM ZAMANLAR</DropdownMenuItem>
+                                    <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
+                                    <DropdownMenuItem onClick={() => setDateFilter("TODAY")} className="rounded-xl font-bold text-[11px] h-10 px-3">BUGÜN</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setDateFilter("WEEK")} className="rounded-xl font-bold text-[11px] h-10 px-3">BU HAFTA</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setDateFilter("MONTH")} className="rounded-xl font-bold text-[11px] h-10 px-3">BU AY</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </CardHeader>
@@ -110,7 +248,14 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-border/40 bg-muted/5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                                    <th className="px-8 py-5 text-left">SATIŞ NO</th>
+                                    <th className="px-8 py-5 text-left w-12">
+                                        <Checkbox
+                                            checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
+                                            onCheckedChange={toggleSelectAll}
+                                            className="rounded-md border-muted-foreground/30 data-[state=checked]:bg-primary"
+                                        />
+                                    </th>
+                                    <th className="px-4 py-5 text-left">SATIŞ NO</th>
                                     <th className="px-8 py-5 text-left">MÜŞTERİ</th>
                                     <th className="px-8 py-5 text-left">ÜRÜNLER</th>
                                     <th className="px-8 py-5 text-left">ÖDEME</th>
@@ -125,11 +270,23 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                         key={sale.id}
                                         id={`sale-${sale.id}`}
                                         className={cn(
-                                            "group transition-all hover:bg-muted/30",
-                                            highlightId === sale.id && "highlight-blink"
+                                            "group transition-all hover:bg-muted/30 cursor-pointer",
+                                            highlightId === sale.id && "highlight-blink",
+                                            selectedIds.includes(sale.id) && "bg-primary/5 hover:bg-primary/10"
                                         )}
+                                        onClick={() => {
+                                            setSelectedSale(sale);
+                                            setIsDetailOpen(true);
+                                        }}
                                     >
-                                        <td className="px-8 py-6">
+                                        <td className="px-8 py-6" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={selectedIds.includes(sale.id)}
+                                                onCheckedChange={() => toggleSelect(sale.id)}
+                                                className="rounded-md border-muted-foreground/30 data-[state=checked]:bg-primary"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-6">
                                             <span className="text-xs font-black text-foreground tracking-tight">{sale.saleNumber}</span>
                                         </td>
                                         <td className="px-8 py-6">
@@ -171,9 +328,27 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                             </span>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full opacity-0 group-hover:opacity-100 transition-all">
-                                                <ChevronRight className="h-5 w-5" />
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setTargetId(sale.id);
+                                                        setDeleteConfirmOpen(true);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-9 w-9 rounded-full opacity-60 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -182,6 +357,53 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                     </div>
                 </CardContent>
             </Card>
+
+            <SaleDetailModal
+                sale={selectedSale}
+                isOpen={isDetailOpen}
+                onClose={() => {
+                    setIsDetailOpen(false);
+                    setSelectedSale(null);
+                }}
+            />
+
+            <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-3 text-2xl font-black">
+                            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                                <AlertCircle className="h-6 w-6 text-destructive" />
+                            </div>
+                            Emin misiniz?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="font-bold text-sm pt-4">
+                            {targetId
+                                ? "Bu satış kaydı kalıcı olarak silinecek ve ilgili ürün stokları iade edilecektir. Bu işlem geri alınamaz."
+                                : `${selectedIds.length} adet satış kaydı ve ilgili stok hareketleri silinecektir. Devam etmek istiyor musunuz?`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3 mt-6">
+                        <AlertDialogCancel className="rounded-xl h-12 px-6 font-bold border-border/40 hover:bg-muted/50">Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="rounded-xl h-12 px-8 font-bold bg-destructive hover:bg-destructive/90 shadow-lg shadow-destructive/20"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDelete();
+                            }}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Siliniyor...
+                                </div>
+                            ) : (
+                                "Evet, Sil"
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

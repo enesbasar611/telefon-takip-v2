@@ -1,6 +1,7 @@
 "use server";
 
 import { getCategories, getProducts } from "@/lib/actions/product-actions";
+import prisma from "@/lib/prisma";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -318,20 +319,80 @@ export interface AISearchFilters {
     currency?: "TL" | "USD";
 }
 
-async function getProductSummary() {
-    const products = await getProducts();
-    // Return a minimal list of product names and their categories for context
+async function getProductSummaryFiltered(filters: { categoryName?: string; search?: string } = {}) {
+    let categoryIds: string[] = [];
+
+    // If a categoryName is provided, find the category and all its descendants
+    if (filters.categoryName) {
+        const allCategories = await prisma.category.findMany();
+
+        // Find categories that match the name (bi-directional check)
+        const matchingCats = allCategories.filter((c: any) =>
+            c.name.toLowerCase().includes(filters.categoryName!.toLowerCase()) ||
+            filters.categoryName!.toLowerCase().includes(c.name.toLowerCase())
+        );
+
+        if (matchingCats.length > 0) {
+            const findDescendants = (parentId: string): string[] => {
+                const results = [parentId];
+                const children = allCategories.filter((c: any) => c.parentId === parentId);
+                children.forEach((child: any) => results.push(...findDescendants(child.id)));
+                return results;
+            };
+
+            const allTargetIds = new Set<string>();
+            matchingCats.forEach((c: any) => {
+                findDescendants(c.id).forEach(id => allTargetIds.add(id));
+            });
+            categoryIds = Array.from(allTargetIds);
+        }
+    }
+
+    // Fetch products based on categoryIds or search
+    const where: any = {};
+    if (categoryIds.length > 0) {
+        where.categoryId = { in: categoryIds };
+    } else if (filters.categoryName) {
+        // If we found no specific category IDs but had a name, try searching the name in global products
+        where.OR = [
+            { name: { contains: filters.categoryName, mode: 'insensitive' } },
+            { category: { name: { contains: filters.categoryName, mode: 'insensitive' } } }
+        ];
+    }
+
+    if (filters.search) {
+        const searchCondition = { contains: filters.search, mode: 'insensitive' as const };
+        if (where.OR) {
+            where.OR.push({ name: searchCondition });
+        } else {
+            where.OR = [
+                { name: searchCondition },
+                { sku: searchCondition },
+                { barcode: searchCondition }
+            ];
+        }
+    }
+
+    const products = await prisma.product.findMany({
+        where,
+        include: { category: true },
+        take: 200 // More for context, but will be sliced later
+    });
+
     return products.map((p: any) => ({
+        id: p.id,
         name: p.name,
         category: p.category?.name || "Kategorisiz",
-        buyPrice: p.buyPrice,
-        buyPriceUsd: p.buyPriceUsd,
-        stock: p.stock
+        buyPrice: Number(p.buyPrice),
+        buyPriceUsd: p.buyPriceUsd ? Number(p.buyPriceUsd) : null,
+        sellPrice: Number(p.sellPrice),
+        stock: p.stock,
+        location: p.location || "Yok"
     }));
 }
 
 export async function semanticSearchWithAI(query: string): Promise<{ success: true; filters: AISearchFilters } | { success: false; error: string }> {
-    const summary = await getProductSummary();
+    const summary = await getProductSummaryFiltered();
     const categories = await buildCategoryContext();
 
     const schema = `{
@@ -382,36 +443,107 @@ export interface AIUpdateOperation {
     sellPrice?: number;
     buyPriceUsd?: number;
     stock?: number;
+    location?: string;
     reason: string;
+    status: "Halledildi" | "Eksik Veri";
 }
 
-export async function parseBulkUpdateWithAI(command: string): Promise<{ success: true; updates: AIUpdateOperation[] } | { success: false; error: string }> {
-    const products = await getProductSummary();
+export interface AIUpdateResponse {
+    updates: AIUpdateOperation[];
+    warnings: string[];
+    affectedCount: number;
+    summary: string;
+}
+
+export async function parseBulkUpdateWithAI(command: string): Promise<{ success: true; data: AIUpdateResponse } | { success: false; error: string }> {
+    const categories = await buildCategoryContext();
+
+    // STEP 1: Extract intent (which category or keyword is targeted?)
+    const intentSchema = `{ "categoryName": "string | null", "search": "string | null" }`;
+    const intentPrompt = `Kullanıcının komutundan hangi kategori veya ürün grubunu güncellemek istediğini çıkar.
+    MEVCUT KATEGORİLER: ${JSON.stringify(categories.map((c: any) => c.name))}
+    
+    ÖNEMLİ: Kategori adını MEVCUT KATEGORİLER listesinden tam olarak seçmeye çalış. Eğer uygun bir kategori yoksa search alanına genel anahtar kelimeyi yaz.
+    SADECE JSON DÖNDÜR: ${intentSchema}
+    KOMUT: ${command}`;
+
+    const intentResult = await callGemini([intentPrompt]);
+    let filters = { categoryName: "", search: "" };
+    if (!("error" in intentResult)) {
+        try {
+            const parsed = JSON.parse(intentResult.text);
+            filters.categoryName = parsed.categoryName || "";
+            filters.search = parsed.search || "";
+        } catch { }
+    }
+
+    // STEP 2: Fetch ONLY relevant products
+    let products = await getProductSummaryFiltered(filters);
+
+    if (products.length === 0) {
+        // Fallback: If category filtering returned nothing, try semantic-like search on the command keywords
+        const keywords = command.replace(/kategorisindeki|tüm|ürünlerin|yap|konumunu|raf/g, "").trim();
+        const fallbackProducts = await getProductSummaryFiltered({ search: keywords });
+        if (fallbackProducts.length > 0) products = fallbackProducts;
+    }
+
+    if (products.length === 0) {
+        // Second Fallback: Just search for the category name if it was extracted but failed
+        if (filters.categoryName) {
+            const catSearch = await getProductSummaryFiltered({ search: filters.categoryName });
+            if (catSearch.length > 0) products = catSearch;
+        }
+    }
 
     const schema = `{
   "updates": [
     {
       "id": "string",
-      "name": "string (mevcut isim)",
+      "name": "string",
       "newName": "string | null",
       "sellPrice": "number | null",
       "buyPriceUsd": "number | null",
       "stock": "number | null",
-      "reason": "string (neden güncelleniyor? Örn: %15 zam)"
+      "location": "string | null",
+      "reason": "string",
+      "status": "Halledildi | Eksik Veri"
     }
-  ]
+  ],
+  "warnings": ["string (uyarı mesajları)"],
+  "affectedCount": number,
+  "summary": "string"
 }`;
 
-    const systemPrompt = `Sen bir envanter yönetim asistanısın. Kullanıcının toplu güncelleme komutunu analiz et.
+    // --- 🛠️ Jules İçin Tamir Kodu 🛠️ ---
+    // STEP 3: Build a quota-friendly system prompt
+    const limitedProducts = products.slice(0, 100).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        buyPriceUsd: p.buyPriceUsd,
+        sellPrice: p.sellPrice || 0,
+        location: p.location || "Yok"
+    }));
 
-MEVCUT ÜRÜNLER:
-${JSON.stringify(products.slice(0, 50))}
+    const systemPrompt = `Sen BAŞAR AI envanter yönetim asistanısın. Kullanıcının toplu güncelleme komutlarını Prisma tabanlı işlemlerine dönüştürürsün.
 
-KURALLAR:
-- Kullanıcı "%15 zam yap" diyorsa, mevcut fiyata %15 ekle.
-- "Kabloların fiyatını 200 yap" diyorsa, sadece o kategoriyi/ismi bul.
-- Sadece değişen alanları doldur, değişmeyenleri null bırak.
-- SADECE JSON DÖNDÜR:\n${schema}`;
+MEVCUT KATEGORİLER:
+${JSON.stringify(filters.categoryName ? [filters.categoryName] : categories.map((c: any) => c.name))}
+
+FİLTRELENMİŞ ÜRÜNLER (SADECE BU ÜRÜNLERİ GÜNCELLE):
+${JSON.stringify(limitedProducts)}
+
+DENETLEME KURALLARI (Polis Modu):
+1. SADECE yukarıda sana verilen "FİLTRELENMİŞ ÜRÜNLER" listesindeki ürünleri güncelle.
+2. Eğer bir ürünün sellPrice değeri 0 ise ve kullanıcı 'Yüzde zam yap' diyorsa (örn: %10 zam), bu ürünü updates listesine EKLEME, warnings listesine ekle (örn: "[Ürün Adı] fiyatı 0 olduğu için yüzde hesaplanamadı").
+3. Eğer kullanıcı 'Rafı/Lokasyonu değiştir' diyor ama bir ürünün kategorisi belirsizse bunu warnings'e ekle.
+4. Verisi tam olanları (id, name ve en az bir değişiklik alanı doluysa) status: 'Halledildi', eksik olanları 'Eksik Veri' olarak sınıflandır.
+
+GÖREVLER:
+- updateProductLocation: Ürünlerin raf bilgisini (location) değiştirir.
+- bulkPriceUpdate: Ürünlerin fiyatlarını günceller.
+- bulkStockUpdate: Stok miktarlarını günceller.
+
+SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `GÜNCELLEME KOMUTU:\n${command}`;
 
@@ -420,9 +552,17 @@ KURALLAR:
 
     try {
         const parsed = JSON.parse(result.text);
-        return { success: true, updates: parsed.updates || [] };
+        return {
+            success: true,
+            data: {
+                updates: parsed.updates || [],
+                warnings: parsed.warnings || [],
+                affectedCount: parsed.affectedCount || (parsed.updates?.length || 0),
+                summary: parsed.summary || `${(parsed.updates?.length || 0)} ürün güncellenecek.`
+            }
+        };
     } catch {
-        return { success: false, error: "Güncelleme komutu anlaşılamadı." };
+        return { success: false, error: "Güncelleme komutu anlaşılamadı. Lütfen daha net bir talimat verin." };
     }
 }
 

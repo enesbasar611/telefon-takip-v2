@@ -7,13 +7,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Sparkles, RefreshCcw, Loader2, Table, Check, AlertTriangle, ArrowLeft } from "lucide-react";
-import { parseBulkUpdateWithAI, AIUpdateOperation } from "@/lib/actions/gemini-actions";
+import { parseBulkUpdateWithAI, AIUpdateOperation, AIUpdateResponse } from "@/lib/actions/gemini-actions";
 import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
+import { useUI } from "@/lib/context/ui-context";
+import { useEffect } from "react";
 
 export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [command, setCommand] = useState("");
     const [isPending, startTransition] = useTransition();
-    const [updates, setUpdates] = useState<AIUpdateOperation[] | null>(null);
+    const { setAiInputFocused, setAiLoading } = useUI();
+    const [aiResponse, setAiResponse] = useState<AIUpdateResponse | null>(null);
+
+    useEffect(() => {
+        setAiLoading(isPending);
+    }, [isPending, setAiLoading]);
+    const updates = aiResponse?.updates || null;
 
     const handleParse = () => {
         if (!command.trim()) return;
@@ -21,12 +29,12 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
         startTransition(async () => {
             const result = await parseBulkUpdateWithAI(command);
             if (result.success) {
-                if (result.updates.length === 0) {
-                    toast.error("Hiçbir ürün eşleşmedi. Lütfen daha net bir ifade kullanın.");
+                if (result.data.updates.length === 0) {
+                    toast.error("BAŞAR AI: Hiçbir ürün eşleşmedi. Lütfen daha net bir ifade kullanın.");
                     return;
                 }
-                setUpdates(result.updates);
-                toast.success(`${result.updates.length} ürün için güncelleme planı hazırlandı.`);
+                setAiResponse(result.data);
+                toast.success(`BAŞAR AI: ${result.data.affectedCount} ürün tespit edildi.`);
             } else {
                 toast.error(result.error);
             }
@@ -38,9 +46,9 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
         startTransition(async () => {
             const result = await applyBulkAIUpdates(updates);
             if (result.success) {
-                toast.success(`${result.count} ürün başarıyla güncellendi.`);
+                toast.success(`BAŞAR AI: ${result.count} ürün başarıyla güncellendi. İşlem Başarılı!`);
                 onOpenChange(false);
-                setUpdates(null);
+                setAiResponse(null);
                 setCommand("");
             } else {
                 toast.error(result.error);
@@ -49,7 +57,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
     };
 
     return (
-        <Dialog open={open} onOpenChange={(v) => { if (!v) { setUpdates(null); onOpenChange(false); } else onOpenChange(v); }}>
+        <Dialog open={open} onOpenChange={(v) => { if (!v) { setAiResponse(null); onOpenChange(false); } else onOpenChange(v); }}>
             <DialogContent className="sm:max-w-2xl bg-[#111111] border border-[#333333] text-white p-0 shadow-2xl">
                 <DialogHeader className="p-6 pb-4 border-b border-[#222]">
                     <div className="flex items-center gap-4">
@@ -75,6 +83,8 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 <textarea
                                     value={command}
                                     onChange={e => setCommand(e.target.value)}
+                                    onFocus={() => setAiInputFocused(true)}
+                                    onBlur={() => setAiInputFocused(false)}
                                     placeholder="Örn: Tüm şarj aletlerinin satış fiyatını %10 artır."
                                     className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed h-32"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleParse(); }}
@@ -97,8 +107,35 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </>
                     ) : (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-4 flex gap-4">
+                                <div className="h-10 w-10 rounded-full bg-violet-600/20 flex items-center justify-center shrink-0">
+                                    <Sparkles className="h-5 w-5 text-violet-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-bold text-violet-200">BAŞAR AI Planı</h3>
+                                    <p className="text-[12px] text-violet-300/80 leading-relaxed font-medium">
+                                        {aiResponse?.summary}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {aiResponse?.warnings && aiResponse.warnings.length > 0 && (
+                                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-2">
+                                    <h3 className="text-[11px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                                        <AlertTriangle className="h-3 w-3" /> Uyarılar
+                                    </h3>
+                                    <ul className="space-y-1">
+                                        {aiResponse.warnings.map((w, i) => (
+                                            <li key={i} className="text-[11px] text-amber-200/70 border-l border-amber-500/30 pl-3 leading-relaxed">
+                                                {w}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
                             <div className="space-y-1">
-                                <h3 className="text-sm font-bold text-slate-200">Güncelleme Özeti</h3>
+                                <h3 className="text-sm font-bold text-slate-200">Etkilenecek Ürünler ({aiResponse?.affectedCount})</h3>
                                 <p className="text-[11px] text-slate-500 italic">Lütfen yapılacak değişiklikleri onaylayın.</p>
                             </div>
 
@@ -107,23 +144,36 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     <thead className="bg-[#111] sticky top-0 border-b border-[#222] text-slate-500 font-bold tracking-wider uppercase text-[9px]">
                                         <tr>
                                             <th className="px-4 py-3 text-left">Ürün</th>
-                                            <th className="px-4 py-3 text-right">Değişiklik</th>
+                                            <th className="px-4 py-3 text-right">Eski Durum</th>
+                                            <th className="px-4 py-3 text-right">Yeni Durum</th>
                                             <th className="px-4 py-3 text-left">Neden</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#222]">
-                                        {updates.map((up) => (
+                                        {updates.map((up: any) => (
                                             <tr key={up.id} className="hover:bg-white/5 transition-colors">
-                                                <td className="px-4 py-3 font-medium text-slate-300">{up.name}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex flex-col items-end">
-                                                        {up.newName && <span className="text-violet-400">İsim Değişimi</span>}
-                                                        {up.sellPrice && <span className="text-emerald-400">₺{up.sellPrice}</span>}
-                                                        {up.buyPriceUsd && <span className="text-blue-400">${up.buyPriceUsd}</span>}
-                                                        {up.stock !== undefined && <span className="text-orange-400">Stok: {up.stock}</span>}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-medium text-slate-300">{up.name}</span>
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit font-bold uppercase ${up.status === 'Halledildi' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                            }`}>
+                                                            {up.status}
+                                                        </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 truncate max-w-[150px]">{up.reason}</td>
+                                                <td className="px-4 py-3 text-right text-slate-500 italic">
+                                                    Güncellenecek...
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex flex-col items-end">
+                                                        {up.newName && <span className="text-violet-400 font-bold">Yeni İsim: {up.newName}</span>}
+                                                        {up.sellPrice !== undefined && <span className="text-emerald-400 font-bold">₺{up.sellPrice}</span>}
+                                                        {up.buyPriceUsd !== undefined && <span className="text-blue-400 font-bold">${up.buyPriceUsd}</span>}
+                                                        {up.stock !== undefined && <span className="text-orange-400 font-bold">Stok: {up.stock}</span>}
+                                                        {up.location && <span className="text-cyan-400 font-bold">Raf: {up.location}</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-500 text-[11px] leading-tight max-w-[150px]">{up.reason}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -140,7 +190,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <div className="flex gap-3">
                                 <Button
                                     variant="outline"
-                                    onClick={() => setUpdates(null)}
+                                    onClick={() => setAiResponse(null)}
                                     disabled={isPending}
                                     className="flex-1 h-11 border-[#333] hover:bg-[#222] text-slate-400 font-bold"
                                 >

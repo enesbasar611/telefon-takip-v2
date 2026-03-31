@@ -1,24 +1,28 @@
 import { POSInterface } from "@/components/pos/pos-interface";
-import { getProducts, getCategories } from "@/lib/actions/product-actions";
-import { getCustomers } from "@/lib/actions/customer-actions";
+import { getPOSInitialData } from "@/lib/actions/product-actions";
+import { getSaleById } from "@/lib/actions/sale-actions";
 import { ShoppingCart, WifiOff } from "lucide-react";
 import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
 
-export default async function POSPage() {
+export default async function POSPage({ searchParams }: { searchParams: { saleId?: string } }) {
   // Graceful fallback: DB down olsa bile sayfa yüklenir
   let products: any[] = [];
   let customers: any[] = [];
   let categories: any[] = [];
+  let initialSale: any = null;
   let dbError = false;
 
   try {
-    [products, customers, categories] = await Promise.all([
-      getProducts(),
-      getCustomers(),
-      getCategories(),
-    ]);
+    const data = await getPOSInitialData();
+    products = data.products;
+    customers = data.customers;
+    categories = data.categories;
+
+    if (searchParams.saleId) {
+      initialSale = await getSaleById(searchParams.saleId);
+    }
   } catch (err) {
     console.error("POS page: DB connection failed, loading with empty data.", err);
     dbError = true;
@@ -37,8 +41,8 @@ export default async function POSPage() {
           </div>
         </div>
         <div className={`flex items-center gap-3 px-4 py-2 border rounded-xl font-bold text-[10px] shadow-sm ${dbError
-            ? "bg-rose-500/5 text-rose-500 border-rose-500/20"
-            : "bg-secondary/5 text-secondary border-secondary/10"
+          ? "bg-rose-500/5 text-rose-500 border-rose-500/20"
+          : "bg-secondary/5 text-secondary border-secondary/10"
           }`}>
           <div className={`h-2.5 w-2.5 rounded-full ${dbError ? "bg-rose-500" : "bg-secondary animate-pulse"}`} />
           {dbError ? "Veritabanı Bağlantısı Yok" : "Sistem Online"}
@@ -56,9 +60,12 @@ export default async function POSPage() {
       )}
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border-none p-1">
-        <Suspense fallback={<div className="h-96 flex items-center justify-center text-muted-foreground text-sm font-bold">POS Yükleniyor...</div>}>
-          <POSInterface products={products} customers={customers} categories={categories} />
-        </Suspense>
+        <POSInterface
+          products={products}
+          customers={customers}
+          categories={categories}
+          initialSale={initialSale}
+        />
       </div>
     </div>
   );

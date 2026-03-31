@@ -9,6 +9,7 @@ import { AISearchModal } from "@/components/basarai/ai-search-modal";
 import { AIUpdateModal } from "@/components/basarai/ai-update-modal";
 import { AIAnalyzeModal } from "@/components/basarai/ai-analyze-modal";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Wrench,
@@ -29,7 +30,8 @@ import {
   Sparkles,
   Search,
   RefreshCcw,
-  Activity
+  Activity,
+  ListTree
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -56,17 +58,17 @@ const menuItems = [
     subItems: [
       { label: "Stok Listesi", href: "/stok" },
       { label: "Hareket Analizi", href: "/stok/hareketler" },
-      { label: "Kategoriler", href: "/stok/kategoriler" },
+      { label: "Kategoriler", href: "/kategoriler" },
       { label: "AI Önerileri", href: "/stok/stok-ai" },
     ]
   },
   {
     icon: ShoppingCart,
     label: "POS & Kasa",
-    href: "/satis",
+    href: "/pos",
     subItems: [
-      { label: "Hızlı Satış", href: "/satis" },
-      { label: "Satış Arşivi", href: "/satis/gecmis" },
+      { label: "Hızlı Satış", href: "/pos" },
+      { label: "Satış Arşivi", href: "/satis-gecmisi" },
       { label: "Tahsilat İşlemleri", href: "/satis/tahsilatlar" },
       { label: "Kasa Raporu", href: "/satis/kasa" },
     ]
@@ -82,7 +84,7 @@ const menuItems = [
   },
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
   { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
-  { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
+  { icon: Truck, label: "Tedarikçiler", href: "/tedarikçiler" },
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },
@@ -206,31 +208,45 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
       </ScrollArea>
 
       {/* BAŞAR AI COMMAND CENTER */}
-      <div className="px-6 pb-6">
-        <div className="rounded-2xl border border-[#333333] bg-[#111111] overflow-hidden shadow-sm">
-          <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet-500" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider">BAŞAR AI</span>
+      <div className="px-6 pb-6 mt-4">
+        <div className="relative group p-[1px] overflow-hidden rounded-2xl bg-gradient-to-b from-[#333] to-[#111]">
+          {/* Animated Border Beam Layer */}
+          <div className="absolute inset-[-100%] aspect-square pointer-events-none overflow-hidden z-0">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 w-full h-full opacity-60 filter blur-[8px] saturate-[1.5]"
+              style={{
+                background: 'conic-gradient(from 0deg, transparent, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4, transparent)',
+              }}
+            />
           </div>
-          <div className="grid grid-cols-3 divide-x divide-[#222222]">
-            <button
-              onClick={() => setAiAnalyzeOpen(true)}
-              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
-              <Activity className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-              <span className="text-[9px] font-bold text-slate-500 uppercase">Analiz</span>
-            </button>
-            <button
-              onClick={() => setAiUpdateOpen(true)}
-              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
-              <RefreshCcw className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-              <span className="text-[9px] font-bold text-slate-500 uppercase">Güncelle</span>
-            </button>
-            <button
-              onClick={() => setAiSearchOpen(true)}
-              className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer">
-              <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-              <span className="text-[9px] font-bold text-slate-500 uppercase">Ara</span>
-            </button>
+
+          <div className="relative z-10 bg-[#111111] rounded-2xl overflow-hidden">
+            <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">BAŞAR AI</span>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-[#222222]">
+              <button
+                onClick={() => setAiAnalyzeOpen(true)}
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                <Activity className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Analiz</span>
+              </button>
+              <button
+                onClick={() => setAiUpdateOpen(true)}
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                <RefreshCcw className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Güncelle</span>
+              </button>
+              <button
+                onClick={() => setAiSearchOpen(true)}
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase">Ara</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

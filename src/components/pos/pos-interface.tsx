@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,27 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatPhone } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
-export function POSInterface({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
+export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
+  products: any[];
+  customers: any[];
+  categories: any[];
+  initialSale?: any;
+}) {
+  const [products, setProducts] = useState(initialProducts);
+
+  // Show receipt if arrived via sale confirmation URL
+  useEffect(() => {
+    if (initialSale) {
+      setLastSale(initialSale);
+      setShowReceipt(true);
+    }
+  }, [initialSale]);
+
+  // Sync prop changes in the background (e.g. after router.refresh)
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [cart, setCart] = useState<any[]>([]);
@@ -67,6 +87,7 @@ export function POSInterface({ products, customers, categories }: { products: an
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
   useEffect(() => {
@@ -160,7 +181,7 @@ export function POSInterface({ products, customers, categories }: { products: an
     return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
   }, [cart]);
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (cart.length === 0) return;
     if (paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")) {
       toast({ title: "Hata", description: "Veresiye işlemi için müşteri seçilmelidir.", variant: "destructive" });
@@ -168,41 +189,72 @@ export function POSInterface({ products, customers, categories }: { products: an
     }
     setIsProcessing(true);
 
-    try {
-      const result = await createSale({
-        customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          unitPrice: item.sellPrice
-        })),
-        totalAmount: total,
-        paymentMethod
-      });
+    startTransition(async () => {
+      try {
+        const result = await createSale({
+          customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            unitPrice: item.sellPrice
+          })),
+          totalAmount: total,
+          paymentMethod
+        });
 
-      if (result.success) {
-        setLastSale(result.data);
-        setShowReceipt(true);
-        toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
-        setCart([]);
-        setSearchTerm("");
-        setSelectedCustomerId(undefined);
-        window.dispatchEvent(new CustomEvent("notification-update"));
-      } else {
-        toast({ title: "Hata", description: result.error, variant: "destructive" });
+        if (result.success) {
+          // 1. Optimistic Stock Update: Update local product state immediately
+          const updatedProducts = products.map((p: any) => {
+            const soldItem = cart.find(item => item.id === p.id);
+            if (soldItem) {
+              return { ...p, stock: p.stock - soldItem.quantity };
+            }
+            return p;
+          });
+          setProducts(updatedProducts);
+
+          // 2. Receipt and Success State
+          setLastSale(result.data);
+          setShowReceipt(true);
+
+          // 3. UI Cleanup
+          setCart([]);
+          setSearchTerm("");
+          setSelectedCustomerId(undefined);
+          toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
+
+          // 4. Notifications
+          window.dispatchEvent(new CustomEvent("notification-update"));
+
+          // 5. Navigate to persistent URL: This causes a refresh while keeping the modal safe via server-side props
+          router.push(`/satis?saleId=${result.data.id}`);
+        } else {
+          toast({ title: "Hata", description: result.error, variant: "destructive" });
+        }
+      } catch (error) {
+        toast({ title: "Sistem Hatası", variant: "destructive" });
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      toast({ title: "Sistem Hatası", variant: "destructive" });
-    } finally {
-      setIsProcessing(false);
-    }
+    });
+  };
+
+  const closeReceiptAndReload = () => {
+    setShowReceipt(false);
+    setLastSale(null);
+    router.replace("/satis"); // URL'i temizle
   };
 
   return (
     <div ref={containerRef} className={cn(
-      "grid grid-cols-1 lg:grid-cols-12 gap-6 bg-background h-full overflow-hidden p-6",
-      isFullscreen && "fixed inset-0 z-50 p-8"
+      "grid grid-cols-1 lg:grid-cols-12 gap-6 bg-background h-full overflow-hidden p-6 relative transition-all duration-700",
+      isFullscreen && "fixed inset-0 z-50 p-8",
+      showReceipt && "bg-emerald-950/20"
     )}>
+      {/* Success Pulse Background */}
+      {showReceipt && (
+        <div className="absolute inset-0 z-0 pointer-events-none animate-success-pulse bg-emerald-500/5 transition-all" />
+      )}
       {/* Product Selection Area (Left Pane) */}
       <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
         <div className="flex flex-col flex-1 overflow-hidden bg-card border border-border/40 rounded-[2.5rem] shadow-sm">
@@ -502,10 +554,21 @@ export function POSInterface({ products, customers, categories }: { products: an
       {lastSale && (
         <ReceiptModal
           isOpen={showReceipt}
-          onClose={() => setShowReceipt(false)}
+          onClose={closeReceiptAndReload}
           sale={lastSale}
         />
       )}
+
+      <style jsx global>{`
+        @keyframes success-pulse {
+          0% { opacity: 0; background-color: rgba(16, 185, 129, 0); }
+          50% { opacity: 1; background-color: rgba(16, 185, 129, 0.15); }
+          100% { opacity: 0.8; background-color: rgba(16, 185, 129, 0.05); }
+        }
+        .animate-success-pulse {
+          animation: success-pulse 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }

@@ -107,7 +107,7 @@ export async function createSale(data: {
       }
     });
 
-    revalidatePath("/satis");
+    // revalidatePath("/satis");
     revalidatePath("/stok");
     revalidatePath("/satis/kasa");
 
@@ -126,6 +126,8 @@ export async function getSales() {
       include: {
         customer: true,
         items: { include: { product: true } },
+        transaction: true,
+        inventoryMovements: { include: { product: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -133,5 +135,97 @@ export async function getSales() {
   } catch (error) {
     console.error("Fetch sales error:", error);
     return [];
+  }
+}
+
+export async function getSaleById(id: string) {
+  try {
+    const shopId = await getShopId();
+    const sale = await prisma.sale.findUnique({
+      where: { id, shopId },
+      include: {
+        customer: true,
+        items: { include: { product: true } },
+        transaction: true,
+        inventoryMovements: { include: { product: true } },
+      },
+    });
+    return serializePrisma(sale);
+  } catch (error) {
+    console.error("Fetch sale error:", error);
+    return null;
+  }
+}
+export async function deleteSale(id: string) {
+  try {
+    const shopId = await getShopId();
+
+    // 1. Get sale details to refund stock
+    const sale = await prisma.sale.findUnique({
+      where: { id, shopId },
+      include: { items: true }
+    });
+
+    if (!sale) return { success: false, error: "Satış bulunamadı." };
+
+    await prisma.$transaction(async (tx) => {
+      // 2. Refund Stocks
+      for (const item of sale.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } }
+        });
+
+        // Add movement for record-keeping
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            shopId,
+            type: "IN",
+            quantity: item.quantity,
+            notes: `Satış İptali: ${sale.saleNumber}`
+          }
+        });
+      }
+
+      // 3. Delete related records
+      // Delete associated transactions
+      await tx.transaction.deleteMany({
+        where: { saleId: id, shopId }
+      });
+
+      // Delete inventory movements that weren't the "IN" we just created
+      await tx.inventoryMovement.deleteMany({
+        where: { saleId: id, shopId }
+      });
+
+      await tx.saleItem.deleteMany({ where: { saleId: id } });
+      await tx.sale.delete({ where: { id } });
+    });
+
+    revalidatePath("/satis/gecmis");
+    revalidatePath("/stok");
+    revalidatePath("/satis/kasa");
+    return { success: true };
+  } catch (error) {
+    console.error("Delete sale error:", error);
+    return { success: false, error: "Satış silinirken bir hata oluştu." };
+  }
+}
+
+export async function deleteSales(ids: string[]) {
+  try {
+    const shopId = await getShopId();
+
+    for (const id of ids) {
+      const res = await deleteSale(id);
+      if (!res.success) throw new Error(res.error);
+    }
+
+    revalidatePath("/satis/gecmis");
+    return { success: true };
+  } catch (error) {
+    console.error("Bulk delete sales error:", error);
+    return { success: false, error: "Birtakım satışlar silinemedi." };
   }
 }

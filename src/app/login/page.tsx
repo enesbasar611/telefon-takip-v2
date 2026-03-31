@@ -3,82 +3,95 @@
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, LogIn, ArrowRight } from "lucide-react";
+import { Smartphone, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
-        await signIn("google", { callbackUrl: "/dashboard" });
+        try {
+            await signIn("google", { callbackUrl: "/dashboard" });
+        } catch (error) {
+            console.error("Giriş hatası:", error);
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-            {/* Background Decorative Elements */}
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50 mix-blend-screen animate-pulse pointer-events-none" />
-            <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-indigo-500/10 rounded-full blur-3xl opacity-50 mix-blend-screen pointer-events-none" />
+        <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4 relative overflow-hidden text-white font-sans">
+            {/* Arkaplan Atmosferi */}
+            <div className="fixed inset-0 bg-[#050505] -z-20" />
+            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-600/10 blur-[120px] rounded-full -z-10 animate-pulse" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full -z-10 animate-pulse transition-all duration-3000" />
+
+            {/* Hafif Izgara (Grid) Deseni */}
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] -z-10 pointer-events-none" />
 
             <div className="z-10 w-full max-w-md">
-                <div className="flex flex-col items-center mb-10 text-center">
-                    <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border border-primary/20 backdrop-blur-xl">
-                        <Smartphone className="h-8 w-8 text-primary" />
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="flex flex-col items-center mb-10 text-center"
+                >
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-violet-600 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                        <div className="relative h-20 w-20 bg-[#111] rounded-3xl flex items-center justify-center mb-6 border border-white/10 shadow-2xl">
+                            <Smartphone className="h-10 w-10 text-violet-500" />
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Başar Teknik</h1>
-                    <p className="text-slate-400">Yeni nesil mağaza ve teknik servis yönetimi</p>
-                </div>
+                    <h1 className="text-4xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent">
+                        BAŞAR TEKNİK
+                    </h1>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+                        <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Güvenli Yönetim Sistemi v2.0</span>
+                    </div>
+                </motion.div>
 
-                <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-2xl shadow-2xl shadow-black/50 overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-10 pointer-events-none" />
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    <Card className="border-white/5 bg-[#0A0A0A]/60 backdrop-blur-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] overflow-hidden">
+                        <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-violet-600 to-transparent opacity-50" />
+                        <CardHeader className="text-center pt-10 pb-6">
+                            <CardTitle className="text-2xl font-black text-white tracking-tight">Giriş Yap</CardTitle>
+                            <CardDescription className="text-slate-500 text-sm mt-2">
+                                Dükkan yönetimine başlamak için Google hesabınızı kullanın
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="px-10 pb-10 flex flex-col gap-6">
+                            <Button
+                                className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg group"
+                                onClick={handleGoogleLogin}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        <img src="https://www.google.com/favicon.ico" className="h-5 w-5 grayscale group-hover:grayscale-0 transition-all" alt="Google" />
+                                        Google ile Devam Et
+                                    </>
+                                )}
+                            </Button>
 
-                    <CardHeader className="space-y-1 pb-8 text-center border-b border-slate-800/50">
-                        <CardTitle className="text-2xl font-bold">Giriş Yap</CardTitle>
-                        <CardDescription className="text-slate-400">
-                            Devam etmek için Google hesabınızla giriş yapın
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-8 pb-10 px-8 flex flex-col gap-6">
-                        <Button
-                            variant="default"
-                            size="lg"
-                            className="w-full text-base font-semibold h-14 bg-white text-black hover:bg-slate-200 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                            onClick={handleGoogleLogin}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                            ) : (
-                                <svg className="mr-3 h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                                    <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
-                                </svg>
-                            )}
-                            {isLoading ? "Giriş Yapılıyor..." : "Google ile Giriş Yap"}
-                            {!isLoading && <ArrowRight className="ml-2 h-4 w-4 opacity-50" />}
-                        </Button>
-
-                        <div className="relative mt-2">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-slate-800" />
+                            <div className="flex items-center gap-3 justify-center text-slate-600">
+                                <Sparkles className="h-3 w-3" />
+                                <span className="text-[10px] font-medium uppercase tracking-[0.2em]">BAŞAR AI Entegrasyonu Aktif</span>
                             </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-slate-900/50 px-2 text-slate-500 backdrop-blur-sm">
-                                    Güvenli Erişim
-                                </span>
-                            </div>
-                        </div>
+                        </CardContent>
+                    </Card>
 
-                        <div className="text-center text-xs text-slate-500 mt-2 flex items-center justify-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Sistem Aktif ve Çalışıyor
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="mt-8 text-center text-sm text-slate-500">
-                    &copy; {new Date().getFullYear()} Başar Teknik Tüm hakları saklıdır.
-                </div>
+                    <p className="text-center mt-8 text-[11px] text-slate-600 font-medium uppercase tracking-widest px-4 leading-relaxed">
+                        Bu sistem sadece yetkili personel kullanımı içindir. <br /> Tüm işlemler kayıt altına alınmaktadır.
+                    </p>
+                </motion.div>
             </div>
         </div>
     );

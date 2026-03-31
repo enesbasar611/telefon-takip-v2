@@ -174,7 +174,12 @@ export async function createProduct(data: {
     });
 
     if (existingProduct) {
-      return { success: false, isDuplicate: true, message: "Aynı isimli veya barkodlu ürün stokta zaten mevcut." };
+      return {
+        success: false,
+        isDuplicate: true,
+        message: "Aynı isimli veya barkodlu ürün stokta zaten mevcut.",
+        product: serializePrisma(existingProduct)
+      };
     }
 
     const product = await prisma.product.create({
@@ -325,6 +330,7 @@ export async function applyBulkAIUpdates(updates: any[]) {
             buyPriceUsd: buyPriceUsd ? Number(buyPriceUsd) : undefined,
             buyPrice: buyPrice || undefined,
             stock: stock !== undefined ? Number(stock) : undefined,
+            location: update.location || undefined,
           }
         });
       })
@@ -494,12 +500,58 @@ export async function getDeadStockCount() {
 export async function deleteProduct(id: string) {
   try {
     const shopId = await getShopId();
-    await prisma.product.delete({ where: { id, shopId } });
+
+    // 1. Kritik Kayıt Var Mı? (Satış, Servis, Alım Emri, İade)
+    const usage = await prisma.product.findUnique({
+      where: { id, shopId },
+      include: {
+        _count: {
+          select: {
+            saleItems: true,
+            usedInServices: true,
+            purchaseItems: true,
+            returns: true,
+          }
+        }
+      }
+    });
+
+    if (!usage) return { success: false, error: "Ürün bulunamadı." };
+
+    const { saleItems, usedInServices, purchaseItems, returns } = usage._count;
+
+    if (saleItems > 0 || usedInServices > 0 || purchaseItems > 0 || returns > 0) {
+      let reasons = [];
+      if (saleItems > 0) reasons.push("satış kaydı");
+      if (usedInServices > 0) reasons.push("servis kullanımı");
+      if (purchaseItems > 0) reasons.push("alım emri");
+      if (returns > 0) reasons.push("iade kaydı");
+
+      return {
+        success: false,
+        error: `Bu ürün silinemez. Çünkü ${reasons.join(", ")} bulunmaktadır. Silmek yerine stok miktarını 0 yapabilir veya ürünü güncelleyebilirsiniz.`
+      };
+    }
+
+    // 2. Güvenli Temizlik (Stok logları, Hareketler, AI Uyarılar, Cihaz Bilgileri)
+    // Bu kayıtlar ürüne bağlı 'yan' kayıtlardır ve ürünün kendisi silindiğinde silinebilirler (transaction içinde).
+    await prisma.$transaction([
+      prisma.inventoryLog.deleteMany({ where: { productId: id, shopId } }),
+      prisma.inventoryMovement.deleteMany({ where: { productId: id, shopId } }),
+      prisma.stockAIAlert.deleteMany({ where: { productId: id, shopId } }),
+      prisma.deviceHubInfo.deleteMany({ where: { productId: id } }),
+      prisma.shortageItem.deleteMany({ where: { productId: id, shopId } }),
+      prisma.product.delete({ where: { id, shopId } })
+    ]);
+
     revalidatePath("/stok");
     revalidatePath("/ikinci-el");
+    revalidatePath("/stok/kategoriler");
+
     return { success: true };
   } catch (error) {
-    return { success: false, error: "Ürün silinemedi." };
+    console.error("deleteProduct error:", error);
+    return { success: false, error: "Ürün silinirken beklenmedik bir hata oluştu." };
   }
 }
 
@@ -602,5 +654,31 @@ export async function getAllInventoryMovements() {
   } catch (error) {
     console.error("Error fetching all inventory movements:", error);
     return [];
+  }
+}
+
+export async function getPOSInitialData() {
+  try {
+    const shopId = await getShopId();
+    const [products, customers, categories] = await Promise.all([
+      prisma.product.findMany({
+        where: { shopId },
+        include: { category: true },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.customer.findMany({
+        where: { shopId },
+        select: { id: true, name: true, phone: true },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.category.findMany({
+        where: { shopId },
+        orderBy: { name: "asc" }
+      })
+    ]);
+    return serializePrisma({ products, customers, categories });
+  } catch (error) {
+    console.error("Error fetching POS initial data:", error);
+    return { products: [], customers: [], categories: [] };
   }
 }

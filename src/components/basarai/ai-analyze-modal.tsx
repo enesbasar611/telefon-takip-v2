@@ -8,10 +8,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Sparkles, Activity, Loader2, CheckCircle2 } from "lucide-react";
 import { getShopHealthAnalysis } from "@/lib/actions/gemini-actions";
+import { useUI } from "@/lib/context/ui-context";
+import { useEffect } from "react";
 
 export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [isPending, startTransition] = useTransition();
     const [analysis, setAnalysis] = useState<string | null>(null);
+    const { setAiLoading } = useUI();
+
+    useEffect(() => {
+        setAiLoading(isPending);
+    }, [isPending, setAiLoading]);
 
     const handleAnalyze = () => {
         startTransition(async () => {

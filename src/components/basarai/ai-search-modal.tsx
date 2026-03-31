@@ -9,11 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Sparkles, Search, Loader2 } from "lucide-react";
+import { useUI } from "@/lib/context/ui-context";
+import { useEffect } from "react";
 
 export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [query, setQuery] = useState("");
     const [isPending, startTransition] = useTransition();
+    const { setAiInputFocused, setAiLoading } = useUI();
     const router = useRouter();
+
+    useEffect(() => {
+        setAiLoading(isPending);
+    }, [isPending, setAiLoading]);
 
     const handleSearch = () => {
         if (!query.trim()) return;
@@ -47,6 +54,8 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         <Input
                             value={query}
                             onChange={e => setQuery(e.target.value)}
+                            onFocus={() => setAiInputFocused(true)}
+                            onBlur={() => setAiInputFocused(false)}
                             placeholder="Aramak istediğiniz şeyi yazın..."
                             className="bg-[#18181A] border-[#333333] text-white placeholder:text-slate-500 h-12 text-sm"
                             onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}

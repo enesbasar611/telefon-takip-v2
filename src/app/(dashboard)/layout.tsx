@@ -8,6 +8,7 @@ import { getStaff } from "@/lib/actions/staff-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
 import { getShopId } from "@/lib/auth";
+import { AnimatedAura } from "@/components/ui/animated-aura";
 
 export default async function DashboardLayout({
     children,
@@ -35,6 +36,7 @@ export default async function DashboardLayout({
         <UIProvider>
             <SupplierOrderProvider>
                 <ShortageProvider>
+                    <AnimatedAura />
                     <GlobalSearch />
                     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
                         <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />

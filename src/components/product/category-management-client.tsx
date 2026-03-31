@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
-import { Folder, FolderOpen, Plus, ChevronRight, ChevronDown, Trash2, Edit2, Info, Loader2, Package } from "lucide-react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
+import { Folder, FolderOpen, Plus, ChevronRight, ChevronDown, Trash2, Edit2, Info, Loader2, Package, AlertTriangle, GripVertical } from "lucide-react";
 import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,10 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { createCategory, updateCategory, deleteCategory } from "@/lib/actions/category-actions";
-import { addInventoryStock } from "@/lib/actions/product-actions";
+import { cn } from "@/lib/utils";
+import { createCategory, updateCategory, deleteCategory, clearCategoryProducts } from "@/lib/actions/category-actions";
+import { addInventoryStock, deleteProduct } from "@/lib/actions/product-actions";
+import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 
 interface Category {
     id: string;
@@ -26,6 +28,7 @@ interface Category {
 
 interface Product {
     id: string;
+    name: string;
     categoryId: string;
     stock: number;
     buyPrice: number;
@@ -34,6 +37,102 @@ interface Product {
 
 interface CategoryNode extends Category {
     children: CategoryNode[];
+}
+
+interface CategoryItemProps {
+    node: CategoryNode;
+    level: number;
+    isSelected: boolean;
+    isExpanded: boolean;
+    hasChildren: boolean;
+    stats: { totalStock: number };
+    onSelect: (id: string) => void;
+    onToggle: (id: string, e: React.MouseEvent) => void;
+    activeId: string | null;
+}
+
+function TreeItem({ node, level, isSelected, isExpanded, hasChildren, stats, onSelect, onToggle, activeId }: CategoryItemProps) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: node.id,
+    });
+    const { setNodeRef: setDropRef, isOver } = useDroppable({
+        id: node.id,
+    });
+
+    const style = transform ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 50,
+    } : undefined;
+
+    return (
+        <div ref={setDropRef} className="w-full">
+            <div
+                ref={setNodeRef}
+                onClick={() => onSelect(node.id)}
+                className={cn(
+                    "flex items-center justify-between py-2 px-3 rounded-lg border border-transparent select-none transition-all",
+                    isSelected ? "bg-indigo-500/10 border-indigo-500/20 text-white font-semibold" : "hover:bg-white/[0.03] text-slate-300 hover:text-white",
+                    isOver && activeId !== node.id && "bg-emerald-500/30 border-emerald-500/50 scale-[1.02] ring-2 ring-emerald-500/20",
+                    isDragging && "opacity-20 grayscale"
+                )}
+                style={{ ...style, marginLeft: `${level * 16}px` }}
+            >
+                <div className="flex items-center gap-2">
+                    {/* Drag Handle */}
+                    <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-white/10 rounded">
+                        <GripVertical className="h-3.5 w-3.5 text-slate-500" />
+                    </div>
+
+                    <span
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (hasChildren) onToggle(node.id, e);
+                        }}
+                        className={`w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 ${hasChildren ? "cursor-pointer" : "opacity-0"}`}
+                    >
+                        {hasChildren && (isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />)}
+                    </span>
+                    {hasChildren && isExpanded ? (
+                        <FolderOpen className={`h-4 w-4 shrink-0 ${isSelected ? "text-indigo-400" : "text-blue-400"}`} />
+                    ) : (
+                        <Folder className={`h-4 w-4 shrink-0 ${isSelected ? "text-indigo-400" : "text-slate-500"}`} />
+                    )}
+                    <span className={`text-[13px] truncate ${isSelected ? "font-semibold" : "font-medium"}`}>{node.name}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-right shrink-0">
+                    <div className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${isSelected ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-300" : "bg-white/[0.02] border-white/5 text-slate-500"}`}>
+                        {stats.totalStock} Adet
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function RootDropZone() {
+    const { setNodeRef, isOver } = useDroppable({
+        id: 'null',
+    });
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={cn(
+                "w-full h-14 border border-dashed rounded-2xl flex items-center justify-center transition-all duration-300",
+                isOver
+                    ? "bg-emerald-500/20 border-emerald-500/50 scale-[1.02] shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                    : "bg-white/[0.02] border-white/10 hover:border-white/20"
+            )}
+        >
+            <span className={cn(
+                "text-[11px] font-black uppercase tracking-[0.2em] transition-colors",
+                isOver ? "text-emerald-400" : "text-white/20"
+            )}>
+                Ana Dizine Taşı
+            </span>
+        </div>
+    );
 }
 
 export function CategoryManagementClient({
@@ -48,6 +147,16 @@ export function CategoryManagementClient({
     const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
 
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
+
     // Modals
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -61,37 +170,53 @@ export function CategoryManagementClient({
     const [stockNotes, setStockNotes] = useState("");
 
     const [isPending, startTransition] = useTransition();
+    const [deleteCountdown, setDeleteCountdown] = useState(0);
+    const [isForceDeleteEnabled, setIsForceDeleteEnabled] = useState(false);
+    const [deleteMode, setDeleteMode] = useState<"full" | "products">("full");
 
-    // 1. Build Tree
-    const tree = useMemo(() => {
+    useEffect(() => {
+        let timer: any;
+        if (isDeleteModalOpen && deleteCountdown > 0) {
+            timer = setInterval(() => {
+                setDeleteCountdown(prev => Math.max(0, prev - 1));
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [isDeleteModalOpen, deleteCountdown]);
+
+    const categoryNodesMap = useMemo(() => {
         const map = new Map<string, CategoryNode>();
-        const roots: CategoryNode[] = [];
-
         categories.forEach(cat => {
             map.set(cat.id, { ...cat, children: [] });
         });
-
         categories.forEach(cat => {
-            const node = map.get(cat.id);
             if (cat.parentId && map.has(cat.parentId)) {
-                map.get(cat.parentId)!.children.push(node!);
-            } else {
-                roots.push(node!);
+                map.get(cat.parentId)!.children.push(map.get(cat.id)!);
             }
         });
-
-        return roots;
+        return map;
     }, [categories]);
 
-    // 2. Calculate Total Nested Stock Function
-    const getCategoryFamilyIds = (catId: string): string[] => {
-        const children = categories.filter(c => c.parentId === catId).map(c => c.id);
-        let allIds = [catId, ...children];
-        children.forEach(childId => {
-            // Recursive call, avoiding loops by simple tree nature
-            allIds = [...allIds, ...getCategoryFamilyIds(childId).filter(id => id !== childId)];
+    const tree = useMemo(() => {
+        const roots: CategoryNode[] = [];
+        categoryNodesMap.forEach(node => {
+            if (!node.parentId || !categoryNodesMap.has(node.parentId)) {
+                roots.push(node);
+            }
         });
-        return Array.from(new Set(allIds));
+        return roots;
+    }, [categoryNodesMap]);
+
+    const selectedNode = selectedCatId ? categoryNodesMap.get(selectedCatId) : null;
+
+    const getCategoryFamilyIds = (catId: string): string[] => {
+        const node = categoryNodesMap.get(catId);
+        if (!node) return [];
+        let ids = [catId];
+        node.children.forEach(child => {
+            ids = [...ids, ...getCategoryFamilyIds(child.id)];
+        });
+        return Array.from(new Set(ids));
     };
 
     const getCumulativeStats = (catId: string) => {
@@ -109,22 +234,63 @@ export function CategoryManagementClient({
         return { totalStock, totalCost, familyIds };
     };
 
-    const selectedNode = categories.find(c => c.id === selectedCatId);
     const selectedStats = selectedNode ? getCumulativeStats(selectedNode.id) : null;
     const directChildren = categories.filter(c => c.parentId === selectedCatId);
 
-    // Toggle Node
     const toggleNode = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    // Select Node
     const selectNode = (id: string) => {
         setSelectedCatId(id);
     };
 
-    // Handlers
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (!over) return;
+
+        const sourceId = active.id as string;
+        const targetId = over.id as string;
+
+        if (sourceId === targetId) return;
+
+        // Circular move check
+        if (targetId !== "null") {
+            const familyIdsOfSource = getCategoryFamilyIds(sourceId);
+            if (familyIdsOfSource.includes(targetId)) {
+                toast.error("Bir kategori kendi alt dalına taşınamaz!");
+                return;
+            }
+        }
+
+        startTransition(async () => {
+            const res = await updateCategory({
+                id: sourceId,
+                parentId: targetId === "null" ? "null" : targetId
+            });
+
+            if (res.success) {
+                setCategories(prev => prev.map(c =>
+                    c.id === sourceId ? { ...c, parentId: targetId === "null" ? null : targetId } : c
+                ));
+                toast.success("Hiyerarşi güncellendi.");
+
+                if (targetId !== "null") {
+                    setExpandedNodes(prev => ({ ...prev, [targetId]: true }));
+                }
+            } else {
+                toast.error(res.message);
+            }
+        });
+    };
+
     const handleAddSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name) return toast.error("Kategori adı zorunludur!");
@@ -136,12 +302,14 @@ export function CategoryManagementClient({
             });
 
             if (res.success && res.category) {
-                setCategories([...categories, res.category as Category]);
+                const newCat = res.category as Category;
+                setCategories([...categories, newCat]);
                 toast.success("Kategori eklendi!");
                 setIsAddModalOpen(false);
-                if (formData.parentId !== "null") {
-                    setExpandedNodes(prev => ({ ...prev, [formData.parentId]: true }));
+                if (newCat.parentId) {
+                    setExpandedNodes(prev => ({ ...prev, [newCat.parentId!]: true }));
                 }
+                setSelectedCatId(newCat.id);
             } else {
                 toast.error(res.message);
             }
@@ -160,91 +328,106 @@ export function CategoryManagementClient({
             });
 
             if (res.success && res.category) {
-                // Handle Stock Add if quantity > 0
-                if (stockToAdd > 0) {
-                    const directProduct = allProducts.find(p => p.categoryId === editCatId);
-                    if (directProduct) {
-                        const stockRes = await addInventoryStock(directProduct.id, stockToAdd, stockNotes || "Kategori düzenleme ekranından hızlı stok girişi");
-                        if (stockRes.success) {
-                            setAllProducts(prev => prev.map(p => p.id === directProduct.id ? { ...p, stock: p.stock + stockToAdd } : p));
-                        }
-                    }
-                }
-
-                setCategories(categories.map(c => c.id === editCatId ? res.category as Category : c));
-                toast.success("Güncellendi!");
+                setCategories(prev => prev.map(c => (c.id === editCatId ? (res.category as Category) : c)));
+                toast.success("Kategori güncellendi!");
                 setIsEditModalOpen(false);
-                setStockToAdd(0);
-                setStockNotes("");
-            } else {
-                toast.error(res.message || "Hata oluştu");
-            }
-        });
-    };
-
-    const handleDelete = () => {
-        if (!selectedCatId) return;
-
-        startTransition(async () => {
-            const res = await deleteCategory(selectedCatId);
-            if (res.success) {
-                setCategories(categories.filter(c => c.id !== selectedCatId));
-                toast.success("Kategori silindi!");
-                setSelectedCatId(null);
-                setIsDeleteModalOpen(false);
             } else {
                 toast.error(res.message);
             }
         });
     };
 
-    // Render Tree recursively
+    const handleAddStock = async () => {
+        if (!selectedCatId || stockToAdd <= 0) return;
+
+        startTransition(async () => {
+            // In this app, we add stock to the first product in the category if there are multiple, 
+            // or we should have a specific category stock action. 
+            // For now, let's find the first product.
+            const product = allProducts.find(p => p.categoryId === selectedCatId);
+            if (!product) {
+                toast.error("Bu kategoride ürün bulunamadı. Önce ürün eklemelisiniz.");
+                return;
+            }
+
+            const res = await addInventoryStock(
+                product.id,
+                stockToAdd,
+                stockNotes || "Kategori üzerinden hızlı stok eklendi"
+            );
+
+            if (res.success) {
+                setAllProducts(prev => prev.map(p =>
+                    p.id === product.id ? { ...p, stock: p.stock + stockToAdd } : p
+                ));
+                toast.success("Stok güncellendi");
+                setStockToAdd(0);
+                setStockNotes("");
+            } else {
+                toast.error((res as any).error || "Stok eklenemedi");
+            }
+        });
+    };
+
+    const handleDeleteCategory = async () => {
+        if (!selectedCatId || (deleteCountdown > 0 && isForceDeleteEnabled)) return;
+
+        startTransition(async () => {
+            let res;
+            if (deleteMode === "products") {
+                res = await clearCategoryProducts(selectedCatId);
+            } else {
+                res = await deleteCategory(selectedCatId);
+            }
+
+            if (res.success) {
+                if (deleteMode === "full") {
+                    setCategories(prev => prev.filter(c => c.id !== selectedCatId));
+                    setSelectedCatId(null);
+                }
+                toast.success(res.message || "İşlem başarılı");
+                setIsDeleteModalOpen(false);
+            } else {
+                toast.error(res.message || "Bir hata oluştu");
+            }
+        });
+    };
+
+    const handleDeleteSingleProduct = async (productId: string) => {
+        startTransition(async () => {
+            const res = await deleteProduct(productId);
+            if (res.success) {
+                setAllProducts(prev => prev.filter(p => p.id !== productId));
+                toast.success("Ürün silindi");
+            } else {
+                toast.error(res.error || "Ürün silinemedi");
+            }
+        });
+    };
+
     const renderTree = (nodes: CategoryNode[], level = 0) => {
         return (
             <div className="flex flex-col gap-1 w-full relative">
                 {nodes.map(node => {
                     const isExpanded = !!expandedNodes[node.id];
                     const isSelected = selectedCatId === node.id;
-                    const hasChildren = node.children.length > 0;
+                    const hasChildren = (node.children?.length ?? 0) > 0;
                     const stats = getCumulativeStats(node.id);
 
                     return (
                         <div key={node.id} className="w-full">
-                            <div
-                                onClick={() => selectNode(node.id)}
-                                className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-all border border-transparent
-                  ${isSelected ? "bg-indigo-500/10 border-indigo-500/20 text-white" : "hover:bg-white/[0.03] text-slate-300 hover:text-white"}
-                `}
-                                style={{ marginLeft: `${level * 16}px` }}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        onClick={(e) => hasChildren ? toggleNode(node.id, e) : undefined}
-                                        className={`w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 ${hasChildren ? "cursor-pointer" : "opacity-0"}`}
-                                    >
-                                        {hasChildren && (isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />)}
-                                    </span>
-                                    {hasChildren && isExpanded ? (
-                                        <FolderOpen className={`h-4 w-4 ${isSelected ? "text-indigo-400" : "text-blue-400"}`} />
-                                    ) : (
-                                        <Folder className={`h-4 w-4 ${isSelected ? "text-indigo-400" : "text-slate-500"}`} />
-                                    )}
-                                    <span className={`text-[13px] ${isSelected ? "font-semibold" : "font-medium"}`}>{node.name}</span>
-                                </div>
-
-                                {/* Meta Badge */}
-                                <div className="flex items-center gap-2">
-                                    <div className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${isSelected ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-300" : "bg-white/[0.02] border-white/5 text-slate-500"}`}>
-                                        {stats.totalStock} Adet
-                                    </div>
-                                </div>
-                            </div>
-
-                            {hasChildren && isExpanded && (
-                                <div className="mt-1 relative before:content-[''] before:absolute before:left-[-6px] before:top-0 before:bottom-0 before:w-px before:bg-white/5">
-                                    {renderTree(node.children, level + 1)}
-                                </div>
-                            )}
+                            <TreeItem
+                                node={node}
+                                level={level}
+                                isSelected={isSelected}
+                                isExpanded={isExpanded}
+                                hasChildren={hasChildren}
+                                stats={stats}
+                                onSelect={selectNode}
+                                onToggle={toggleNode}
+                                activeId={activeId}
+                            />
+                            {hasChildren && isExpanded && renderTree(node.children, level + 1)}
                         </div>
                     );
                 })}
@@ -253,318 +436,419 @@ export function CategoryManagementClient({
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="flex h-[calc(100vh-140px)] w-full overflow-hidden bg-slate-950/40 rounded-3xl border border-white/5 backdrop-blur-sm">
+                {/* Sidebar Tree */}
+                <div className="w-[320px] h-full bg-[#0D0D0F] border-r border-white/5 p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar">
+                    <div className="flex flex-col gap-1 mb-10 text-left">
+                        <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
+                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-none">Envanter Hiyerarşisi</p>
+                    </div>
+                    {/* Categories Scroll Area Wrapper */}
+                    <div className="flex-1 space-y-2 pb-10">
+                        <div className="flex items-center gap-2 mb-6">
+                            <AICategoryCreator
+                                categories={categories}
+                                allProducts={allProducts}
+                                onCategoriesUpdated={(newCats) => setCategories(newCats)}
+                                onProductsUpdated={(newProds) => setAllProducts(newProds)}
+                            />
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-10 w-10 flex-shrink-0 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl"
+                                onClick={() => {
+                                    setModalTitle("Yeni Kategori Ekle");
+                                    setFormData({ name: "", parentId: "null" });
+                                    setIsAddModalOpen(true);
+                                }}
+                            >
+                                <Plus className="h-5 w-5" />
+                            </Button>
+                        </div>
 
-            {/* Sol Pane - Tree View */}
-            <div className="lg:col-span-4 bg-[#0a0a0a] border border-white/5 shadow-2xl shadow-black/40 rounded-2xl p-6 min-h-[500px]">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                    <h2 className="text-[14px] font-semibold text-white tracking-wide uppercase flex items-center gap-2">
-                        <span className="w-4 h-[1px] bg-slate-600"></span> Kategori Ağacı
-                    </h2>
-                    <div className="flex items-center gap-2">
-                        <AICategoryCreator
-                            categories={categories}
-                            onCategoriesUpdated={setCategories}
-                        />
-                        <Button
-                            onClick={() => {
-                                setModalTitle("Ana Kategori Ekle");
-                                setFormData({ name: "", parentId: "null" });
-                                setIsAddModalOpen(true);
-                            }}
-                            variant="default"
-                            className="h-8 px-3 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-                        >
-                            <Plus className="h-4 w-4 mr-1.5" /> Manuel Ekle
-                        </Button>
+                        <RootDropZone />
+
+                        <div className="space-y-1">
+                            {tree.length > 0 ? renderTree(tree) : (
+                                <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
+                                    <Folder className="h-8 w-8 text-slate-700 mb-3" />
+                                    <p className="text-sm text-slate-500 font-medium">Henüz kategori bulunmuyor.</p>
+                                    <Button
+                                        variant="link"
+                                        className="text-indigo-400 text-xs mt-2"
+                                        onClick={() => setIsAddModalOpen(true)}
+                                    >
+                                        İlk kategoriyi oluştur
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    {tree.length > 0 ? renderTree(tree) : (
-                        <div className="py-10 text-center flex flex-col items-center justify-center opacity-50">
-                            <Folder className="h-10 w-10 text-slate-600 mb-3" />
-                            <p className="text-[12px] font-medium text-slate-400">Henüz kategori bulunmuyor, sağ üstten yeni ekleyebilirsiniz.</p>
+                {/* Content Area */}
+                <div className="flex-1 h-full overflow-y-auto bg-slate-950/50">
+                    {selectedNode ? (
+                        <div className="p-8 max-w-5xl mx-auto">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                        <FolderOpen className="h-6 w-6 text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-white tracking-tight">{selectedNode.name}</h1>
+                                        <p className="text-sm text-slate-500 font-medium mt-0.5">Toplu Özet • {selectedNode.children?.length ?? 0} Bağlı Düğüm</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-white/[0.03] border-white/5 hover:bg-white/10"
+                                        onClick={() => {
+                                            setEditCatId(selectedNode.id);
+                                            setFormData({ name: selectedNode.name, parentId: selectedNode.parentId || "null" });
+                                            setIsEditModalOpen(true);
+                                        }}
+                                    >
+                                        <Edit2 className="h-4 w-4 mr-2 text-indigo-400" />
+                                        Düzenle
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
+                                        onClick={() => {
+                                            setDeleteCountdown(3);
+                                            setIsDeleteModalOpen(true);
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Sil
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Package className="h-12 w-12 text-indigo-400" />
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">KÜMÜLATİF STOK</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-bold text-white">{selectedStats?.totalStock}</span>
+                                        <span className="text-sm text-slate-400 font-medium">Adet</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-600 mt-2">Alt kategorilerdeki ({selectedStats?.familyIds.length}) ürünler dahildir.</p>
+                                </div>
+                                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Info className="h-12 w-12 text-indigo-400" />
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">DİREKT ALT VARYANTLAR</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-bold text-white">{selectedNode.children?.length ?? 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Middle Section: Quick Actions & Details */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 space-y-6">
+                                    {/* Products Table Area */}
+                                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="font-bold text-white flex items-center gap-2">
+                                                <Package className="h-4 w-4 text-indigo-400" />
+                                                Bu Kategorideki Ürünler
+                                            </h3>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {allProducts.filter(p => p.categoryId === selectedNode.id).map(product => (
+                                                <div key={product.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                                            <Package className="h-4 w-4 text-indigo-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-white">{product.name}</p>
+                                                            <p className="text-[10px] text-slate-500">Stok: {product.stock} Adet • {product.sellPrice} TL</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 hover:bg-red-500/10 text-slate-600 hover:text-red-400"
+                                                        onClick={() => handleDeleteSingleProduct(product.id)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            {allProducts.filter(p => p.categoryId === selectedNode.id).length === 0 && (
+                                                <p className="text-center py-8 text-xs text-slate-600">Bu kategoride direkt ürün bulunmuyor.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Quick Controls */}
+                                <div className="space-y-6">
+                                    <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
+                                        <h3 className="font-bold text-white text-sm mb-4 flex items-center gap-2">
+                                            <Plus className="h-4 w-4 text-indigo-400" />
+                                            Hızlı Stok Ekle
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] text-slate-400 uppercase tracking-wider">MİKTAR</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={stockToAdd}
+                                                    onChange={e => setStockToAdd(Number(e.target.value))}
+                                                    placeholder="0"
+                                                    className="bg-black/20 border-white/5 h-9"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] text-slate-400 uppercase tracking-wider">NOT</Label>
+                                                <Input
+                                                    value={stockNotes}
+                                                    onChange={e => setStockNotes(e.target.value)}
+                                                    placeholder="Opsiyonel not..."
+                                                    className="bg-black/20 border-white/5 h-9"
+                                                />
+                                            </div>
+                                            <Button
+                                                className="w-full bg-indigo-500 hover:bg-indigo-600 h-9 text-xs font-bold"
+                                                disabled={isPending || stockToAdd <= 0}
+                                                onClick={handleAddStock}
+                                            >
+                                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Stoku Kaydet"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center p-8">
+                            <div className="w-24 h-24 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-6">
+                                <Folder className="h-10 w-10 text-slate-800" />
+                            </div>
+                            <h2 className="text-xl font-bold text-white mb-2">Ağaçtan bir kategori seçin</h2>
+                            <p className="text-slate-500 text-sm max-w-xs text-center">
+                                Detayları, özel metrikleri ve alt varyant erişimlerini görmek için sol taraftan bir seçim yapın.
+                            </p>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Sağ Pane - Detaylar */}
-            <div className="lg:col-span-8 bg-[#0a0a0a] border border-white/5 shadow-2xl shadow-black/40 rounded-2xl p-8 min-h-[500px] flex flex-col">
-                {selectedNode && selectedStats ? (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                                    <FolderOpen className="h-6 w-6 text-indigo-400" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white mb-1">{selectedNode.name}</h2>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-[12px] font-medium text-slate-500">
-                                            Toplu Özet
-                                        </span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                                        <span className="text-[12px] font-medium text-slate-500">
-                                            {selectedStats.familyIds.length} Bağlı Düğüm
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 border border-white/10 bg-white/[0.02] p-1 rounded-xl">
-                                <Button
-                                    onClick={() => {
-                                        setModalTitle(`"${selectedNode.name}" için Alt Kategori`);
-                                        setFormData({ name: "", parentId: selectedNode.id });
-                                        setIsAddModalOpen(true);
-                                    }}
-                                    variant="ghost"
-                                    className="h-9 px-4 text-[12px] font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg"
-                                >
-                                    <Plus className="h-4 w-4 mr-1.5" /> Alt Varyant
-                                </Button>
-                                <div className="w-px h-5 bg-white/10" />
-                                <Button
-                                    onClick={() => {
-                                        setEditCatId(selectedNode.id);
-                                        setFormData({ name: selectedNode.name, parentId: selectedNode.parentId || "null" });
-                                        setStockToAdd(0);
-                                        setStockNotes("");
-                                        setIsEditModalOpen(true);
-                                    }}
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg"
-                                >
-                                    <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    onClick={() => setIsDeleteModalOpen(true)}
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Metrikler Bento */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="flex items-center gap-3 mb-4 relative z-10">
-                                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
-                                        <Package className="h-4 w-4" />
-                                    </div>
-                                    <h3 className="text-[12px] font-semibold text-slate-400 uppercase tracking-wider">Kümülatif Stok</h3>
-                                </div>
-                                <div className="text-3xl font-bold text-white relative z-10">
-                                    {selectedStats.totalStock} <span className="text-[14px] font-medium text-slate-500 ml-1">Adet</span>
-                                </div>
-                                <p className="text-[10px] font-medium text-slate-500 mt-2 relative z-10">Alt kategorilerdeki ({directChildren.length}) ürünler dahildir.</p>
-                            </div>
-
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <div className="flex items-center gap-3 mb-4 relative z-10">
-                                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                                        <Info className="h-4 w-4" />
-                                    </div>
-                                    <h3 className="text-[12px] font-semibold text-slate-400 uppercase tracking-wider">Direkt Alt Varyantlar</h3>
-                                </div>
-                                <div className="text-3xl font-bold text-white relative z-10">
-                                    {directChildren.length}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* List connected alt categories thinly */}
-                        <div className="flex-1 bg-black/20 rounded-2xl border border-white/5 p-5">
-                            <h4 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-3 mb-4">
-                                <div className="w-4 h-[1px] bg-slate-700"></div> Alt Kategori Hiyerarşisi
-                            </h4>
-                            {directChildren.length > 0 ? (
-                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {directChildren.map(child => (
-                                        <div key={child.id} onClick={() => selectNode(child.id)} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 cursor-pointer transition-colors">
-                                            <div className="flex items-center gap-2">
-                                                <Folder className="h-3.5 w-3.5 text-blue-400" />
-                                                <span className="text-[12px] font-semibold text-slate-300">{child.name}</span>
-                                            </div>
-                                            <ChevronRight className="h-3 w-3 text-slate-600" />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-6">
-                                    <p className="text-[12px] font-medium text-slate-500">Bu kategoriye ait alt varyant bulunamadı.</p>
-                                </div>
-                            )}
-                        </div>
-
+            <DragOverlay>
+                {activeId ? (
+                    <div className="bg-indigo-500/20 border border-indigo-500/40 p-2 rounded shadow-2xl backdrop-blur-sm">
+                        <p className="text-white text-xs font-bold">{categories.find(c => c.id === activeId)?.name}</p>
                     </div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-50 py-20">
-                        <Package className="h-16 w-16 text-slate-700 mb-6" />
-                        <p className="text-[15px] font-semibold text-slate-400">Ağaçtan bir kategori seçin</p>
-                        <p className="text-[12px] font-medium text-slate-500 mt-2 text-center max-w-[280px]">Detayları, özel metrikleri ve alt varyant erişimlerini görmek için sol taraftan bir seçim yapın.</p>
-                    </div>
-                )}
-            </div>
+                ) : null}
+            </DragOverlay>
 
-            {/* MODALS */}
-
-            {/* Add Kategori */}
+            {/* AD MODAL */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="sm:max-w-[400px] bg-[#0a0a0a] border border-white/10 text-white p-0 overflow-hidden shadow-2xl">
+                <DialogContent className="bg-slate-900 border-white/5 text-white max-w-md">
                     <form onSubmit={handleAddSubmit}>
-                        <div className="p-6 space-y-6">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-semibold">{modalTitle}</DialogTitle>
-                                <DialogDescription className="text-xs text-slate-400">Yeni bir varyant veya kategori düğümü oluştur.</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[11px] font-semibold text-slate-400">İsim</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="bg-white/[0.03] border-white/10 h-11 text-[13px] focus-visible:ring-indigo-500/50"
-                                        placeholder="Örn: 20W Adaptör"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[11px] font-semibold text-slate-400">Üst Kategori Konumu</Label>
-                                    <select
-                                        value={formData.parentId}
-                                        onChange={e => setFormData({ ...formData, parentId: e.target.value })}
-                                        className="flex h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500/50 outline-none text-white"
-                                    >
-                                        <option value="null" className="bg-[#0f172a] text-slate-400">-- Ana Kategori (Kök) --</option>
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id} className="bg-[#0f172a]">{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <DialogFooter className="mr-6 mb-6">
-                            <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>İptal</Button>
-                            <Button type="submit" disabled={isPending} className="bg-indigo-500 text-white font-semibold hover:bg-indigo-600">
-                                {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                Ekle
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Kategori */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="sm:max-w-[400px] bg-[#0a0a0a] border border-white/10 text-white p-0 overflow-hidden shadow-2xl">
-                    <form onSubmit={handleEditSubmit}>
-                        <div className="p-6 space-y-6">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-semibold">Kategoriyi Düzenle</DialogTitle>
-                                <DialogDescription className="text-xs text-slate-400">İsimlendirmeyi veya kategorinin ait olduğu dalı güncelleyin.</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[11px] font-semibold text-slate-400">İsim</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="bg-white/[0.03] border-white/10 h-11 text-[13px] focus-visible:ring-indigo-500/50"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[11px] font-semibold text-slate-400">Üst Kategori Konumu</Label>
-                                    <select
-                                        value={formData.parentId}
-                                        onChange={e => setFormData({ ...formData, parentId: e.target.value })}
-                                        className="flex h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500/50 outline-none text-white"
-                                    >
-                                        <option value="null" className="bg-[#0f172a] text-slate-400">-- Ana Kategori (Kök) --</option>
-                                        {categories.filter(c => c.id !== editCatId).map(c => (
-                                            <option key={c.id} value={c.id} className="bg-[#0f172a]">{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {allProducts.find(p => p.categoryId === editCatId) ? (
-                                    <div className="pt-4 mt-4 border-t border-white/5 space-y-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="h-5 w-5 rounded bg-indigo-500/20 flex items-center justify-center">
-                                                <Package className="h-3 w-3 text-indigo-400" />
-                                            </div>
-                                            <h4 className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest">Hızlı Stok Ekle</h4>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-[11px] font-semibold text-slate-400">Eklenecek Adet</Label>
-                                                <Input
-                                                    type="number"
-                                                    value={stockToAdd || ""}
-                                                    onChange={e => setStockToAdd(Math.max(0, parseInt(e.target.value) || 0))}
-                                                    className="bg-indigo-500/5 border-indigo-500/20 h-10 text-[13px] focus-visible:ring-indigo-500/50"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[11px] font-semibold text-slate-400">Not (Opsiyonel)</Label>
-                                                <Input
-                                                    value={stockNotes}
-                                                    onChange={e => setStockNotes(e.target.value)}
-                                                    className="bg-white/[0.03] border-white/10 h-10 text-[13px] focus-visible:ring-indigo-500/50"
-                                                    placeholder="Açıklama..."
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="pt-4 mt-4 border-t border-white/5 opacity-50">
-                                        <p className="text-[10px] text-slate-500 italic">Bu kategoriye direkt bağlı bir ürün bulunamadı. Stok eklemek için önce stok sayfasından ürün oluşturun.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <DialogFooter className="mr-6 mb-6">
-                            <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>İptal</Button>
-                            <Button type="submit" disabled={isPending} className="bg-indigo-500 text-white font-semibold hover:bg-indigo-600">
-                                {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                Kaydet
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Kategori */}
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent className="sm:max-w-[400px] bg-red-950/20 border border-red-500/20 text-white p-0 overflow-hidden shadow-2xl">
-                    <div className="p-6 space-y-6">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold text-red-500">Düğümü Sil</DialogTitle>
-                            <DialogDescription className="text-xs text-slate-400 mt-2">
-                                <strong>{selectedNode?.name}</strong> kategorisini silmek istediğinize emin misiniz? <br />
-                                <span className="text-rose-400/80">İçerisinde ürün veya alt kategori varsa silme işlemi başarısız olacaktır.</span>
+                            <DialogTitle className="text-xl font-bold">{modalTitle}</DialogTitle>
+                            <DialogDescription className="text-slate-400 text-xs">
+                                Yeni kategori oluştururken hiyerarşi düzeyini belirleyebilirsiniz.
                             </DialogDescription>
                         </DialogHeader>
-                    </div>
-                    <DialogFooter className="mr-6 mb-6">
-                        <Button type="button" variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>İptal</Button>
-                        <Button type="button" onClick={handleDelete} disabled={isPending} className="bg-red-500 text-white font-semibold hover:bg-red-600">
-                            {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Evet, Kalıcı Olarak Sil
-                        </Button>
-                    </DialogFooter>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name" className="text-xs text-slate-400">KATEGORİ ADI</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="Örn: Telefon Kılıfları"
+                                    className="bg-black/20 border-white/5"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="parentId" className="text-xs text-slate-400">ÜST KATEGORİ</Label>
+                                <select
+                                    id="parentId"
+                                    value={formData.parentId}
+                                    onChange={e => setFormData({ ...formData, parentId: e.target.value })}
+                                    className="w-full h-10 px-3 rounded-md bg-black/20 border-white/5 text-sm outline-none focus:ring-1 ring-indigo-500"
+                                >
+                                    <option value="null">--- Ana Dizin (Root) ---</option>
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)} className="text-xs">Vazgeç</Button>
+                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs font-bold" disabled={isPending}>
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet ve Oluştur"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
 
-        </div>
+            {/* EDIT MODAL */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="bg-slate-900 border-white/5 text-white max-w-md">
+                    <form onSubmit={handleEditSubmit}>
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold">Kategoriyi Düzenle</DialogTitle>
+                            <DialogDescription className="text-slate-400 text-xs">
+                                Kategori adını ve ağaçtaki yerini değiştirebilirsiniz.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit_name" className="text-xs text-slate-400">KATEGORİ ADI</Label>
+                                <Input
+                                    id="edit_name"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="bg-black/20 border-white/5"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit_parentId" className="text-xs text-slate-400">ÜST KATEGORİ</Label>
+                                <select
+                                    id="edit_parentId"
+                                    value={formData.parentId}
+                                    onChange={e => setFormData({ ...formData, parentId: e.target.value })}
+                                    className="w-full h-10 px-3 rounded-md bg-black/20 border-white/5 text-sm outline-none focus:ring-1 ring-indigo-500"
+                                >
+                                    <option value="null">--- Ana Dizin (Root) ---</option>
+                                    {categories.filter(c => c.id !== editCatId).map(c => {
+                                        // Simple circular dependency prevention: don't allow selecting current category as parent
+                                        return <option key={c.id} value={c.id}>{c.name}</option>
+                                    })}
+                                </select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)} className="text-xs">Vazgeç</Button>
+                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs font-bold" disabled={isPending}>
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Güncelle"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* DELETE SAFETY MODAL */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="bg-slate-950 border-red-500/20 text-white max-w-lg p-0 overflow-hidden">
+                    <div className="p-8">
+                        <DialogHeader className="mb-6">
+                            <DialogTitle className="text-2xl font-bold flex items-center gap-3 text-red-500">
+                                <AlertTriangle className="h-8 w-8" />
+                                Kritik İşlem Onayı
+                            </DialogTitle>
+                            <DialogDescription className="text-slate-400 text-sm leading-relaxed mt-2">
+                                <span className="text-white font-semibold">"{selectedNode?.name}"</span> kategorisi ve bağlı tüm alt veriler silinmek üzere. Bu işlem geri alınamaz.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-6">
+                            {/* Mode Selection */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setDeleteMode("full")}
+                                    className={cn(
+                                        "p-4 rounded-2xl border transition-all text-left group",
+                                        deleteMode === "full"
+                                            ? "bg-red-500/10 border-red-500/50 ring-2 ring-red-500/20"
+                                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                                    )}
+                                >
+                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", deleteMode === "full" ? "bg-red-500/20 text-red-400" : "bg-white/5 text-slate-500")}>
+                                        <Trash2 className="h-5 w-5" />
+                                    </div>
+                                    <p className={cn("font-bold text-sm", deleteMode === "full" ? "text-white" : "text-slate-400")}>Tamamen Sil</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Kategori ve tüm alt ürünleri yok eder.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => setDeleteMode("products")}
+                                    className={cn(
+                                        "p-4 rounded-2xl border transition-all text-left group",
+                                        deleteMode === "products"
+                                            ? "bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/20"
+                                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                                    )}
+                                >
+                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", deleteMode === "products" ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-slate-500")}>
+                                        <Package className="h-5 w-5" />
+                                    </div>
+                                    <p className={cn("font-bold text-sm", deleteMode === "products" ? "text-white" : "text-slate-400")}>Sadece Ürünleri Sil</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Kategori kalır, içindeki tüm stok temizlenir.</p>
+                                </button>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <Info className="h-5 w-5 text-red-400 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-slate-300">
+                                            Bu kategoride toplam <span className="text-white font-bold">{selectedStats?.totalStock}</span> adet ürün bulunuyor.
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                            Silme işlemi finansal tabloları etkilemez ancak stok takibini sonlandırır.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsDeleteModalOpen(false)}
+                            className="text-slate-400 hover:text-white"
+                        >
+                            İptal Et
+                        </Button>
+                        <div className="flex items-center gap-3">
+                            {deleteCountdown > 0 ? (
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Bekleniyor ({deleteCountdown}s)
+                                </div>
+                            ) : (
+                                <Button
+                                    className={cn(
+                                        "px-8 font-bold transition-all",
+                                        deleteMode === "full" ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" : "bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20"
+                                    )}
+                                    onClick={handleDeleteCategory}
+                                >
+                                    {deleteMode === "full" ? "Kategoriyi Tamamen Yok Et" : "Kategori İçeriğini Temizle"}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </DndContext>
     );
 }
+

@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addShortageItem } from "@/lib/actions/shortage-actions";
-import { quickSellProduct } from "@/lib/actions/product-actions";
+import { quickSellProduct, deleteProduct } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "./product-detail-drawer";
 import { EditProductModal } from "./edit-product-modal";
@@ -136,6 +136,22 @@ export function StockListTable({ products, categories }: { products: any[], cate
   const handleEditClick = (product: any) => {
     setSelectedProduct(product);
     setIsEditModalOpen(true);
+  };
+
+  const handleDeleteClick = async (product: any) => {
+    const confirm = window.confirm(`${product.name} silinecek. Emin misiniz?`);
+    if (!confirm) return;
+
+    try {
+      const res = await deleteProduct(product.id);
+      if (res.success) {
+        toast.success("Ürün silindi.");
+      } else {
+        toast.error(res.error);
+      }
+    } catch (error) {
+      toast.error("Ürün silinirken bir hata oluştu.");
+    }
   };
 
   return (
@@ -255,7 +271,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
                           <ClipboardList className="h-3.5 w-3.5 text-orange-400" /> Hareket Geçmişi
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
                           <Trash2 className="h-3.5 w-3.5" /> Sil
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -371,7 +387,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
                             <ClipboardList className="h-3.5 w-3.5 text-orange-400" /> Hareket Geçmişi
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-white/5" />
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer text-rose-500 focus:text-rose-400 focus:bg-rose-400/10">
                             <Trash2 className="h-3.5 w-3.5" /> Sil
                           </DropdownMenuItem>
                         </DropdownMenuContent>

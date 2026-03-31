@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { parseCategoryTreeWithAI, AICategoryNode } from "@/lib/actions/gemini-actions";
 import { createCategory } from "@/lib/actions/category-actions";
-import { createProduct } from "@/lib/actions/product-actions";
+import { createProduct, addInventoryStock } from "@/lib/actions/product-actions";
 import {
     Sparkles, Loader2, FolderPlus, CheckCircle2,
     AlertTriangle, RotateCcw, ArrowRight, Folder, Package, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUI } from "@/lib/context/ui-context";
 
 interface Category {
     id: string;
@@ -22,9 +23,20 @@ interface Category {
     parentId: string | null;
 }
 
+interface Product {
+    id: string;
+    name: string;
+    categoryId: string;
+    stock: number;
+    buyPrice: number;
+    sellPrice: number;
+}
+
 interface AICategoryCreatorProps {
     categories: Category[];
+    allProducts: Product[];
     onCategoriesUpdated: (newCategories: Category[]) => void;
+    onProductsUpdated: (newProducts: Product[]) => void;
 }
 
 type NodeRow = AICategoryNode & {
@@ -40,13 +52,23 @@ const EXAMPLES = [
     "Piller > iPhone Batarya > iPhone 11, 12, 13, 14 her biri 8 adet alış 180 satış 350",
 ];
 
-export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategoryCreatorProps) {
+export function AICategoryCreator({
+    categories,
+    allProducts,
+    onCategoriesUpdated,
+    onProductsUpdated
+}: AICategoryCreatorProps) {
+    const { setAiLoading, setAiInputFocused } = useUI();
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<"input" | "review">("input");
     const [description, setDescription] = useState("");
     const [rows, setRows] = useState<NodeRow[]>([]);
     const [isAIPending, startAI] = useTransition();
     const [isSavePending, startSave] = useTransition();
+
+    useEffect(() => {
+        setAiLoading(isAIPending || isSavePending);
+    }, [isAIPending, isSavePending, setAiLoading]);
 
     const handleAnalyze = () => {
         if (!description.trim()) { toast.warning("Açıklama boş olamaz."); return; }
@@ -77,6 +99,7 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
             categories.forEach(c => { createdMap[c.name.toLowerCase()] = c.id; });
 
             const updatedCats: Category[] = [...categories];
+            const updatedProds: Product[] = [...allProducts];
 
             for (const row of rows) {
                 if (row._catStatus === "saved" || row._catStatus === "skipped") continue;
@@ -131,7 +154,26 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                         location: p.location,
                     });
 
-                    const pStatus = pRes.success ? "saved" : "error";
+                    let pStatus: "saved" | "error" = pRes.success ? "saved" : "error";
+
+                    if (pRes.success && pRes.product) {
+                        updatedProds.push(pRes.product as Product);
+                    }
+
+                    // If duplicate, try adding stock
+                    if (!pRes.success && (pRes as any).isDuplicate && (pRes as any).product) {
+                        const existingProdId = (pRes as any).product.id;
+                        const addRes = await addInventoryStock(existingProdId, p.stock, "AI Çoklu Ekle (Mevcut Ürün)");
+                        if (addRes.success) {
+                            pStatus = "saved";
+                            // Update existing product in state
+                            const index = updatedProds.findIndex(up => up.id === existingProdId);
+                            if (index !== -1) {
+                                updatedProds[index] = { ...updatedProds[index], stock: updatedProds[index].stock + p.stock };
+                            }
+                        }
+                    }
+
                     setRows(prev => prev.map(r => {
                         if (r._id !== row._id) return r;
                         const ps = [...r._prodStatuses]; ps[pi] = pStatus;
@@ -141,11 +183,13 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
             }
 
             onCategoriesUpdated(updatedCats);
+            onProductsUpdated(updatedProds);
             toast.success("Tüm işlemler tamamlandı!");
         });
     };
 
-    const totalCats = rows.filter(r => r._catStatus !== "saved" && r._catStatus !== "skipped").length;
+    const totalPendingCats = rows.filter(r => r._catStatus === "pending").length;
+    const totalPendingProds = rows.reduce((a, r) => a + r._prodStatuses.filter(ps => ps === "pending").length, 0);
     const totalProds = rows.reduce((a, r) => a + r.products.length, 0);
 
     return (
@@ -192,7 +236,12 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Komut Verin
                                 </label>
-                                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
+                                <textarea
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                    rows={4}
+                                    onFocus={() => setAiInputFocused(true)}
+                                    onBlur={() => setAiInputFocused(false)}
                                     placeholder="Örn: Şarj Aletleri > Type-C > 27W — 10 adet şarj aleti, alış 1.5 dolar satış 500 TL, raf B-3"
                                     className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAnalyze(); }}
@@ -287,7 +336,7 @@ export function AICategoryCreator({ categories, onCategoriesUpdated }: AICategor
                             </div>
 
                             <div className="flex justify-end pt-2">
-                                <Button onClick={handleSaveAll} disabled={isSavePending || totalCats === 0}
+                                <Button onClick={handleSaveAll} disabled={isSavePending || (totalPendingCats === 0 && totalPendingProds === 0)}
                                     className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[13px] uppercase tracking-wider gap-2 disabled:opacity-40 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
                                     {isSavePending
                                         ? <><Loader2 className="h-5 w-5 animate-spin" /> Oluşturuluyor...</>

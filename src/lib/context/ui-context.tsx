@@ -5,12 +5,18 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 interface UIContextType {
   isFinancialVisible: boolean;
   toggleFinancialVisibility: () => void;
+  isAiLoading: boolean;
+  setAiLoading: (v: boolean) => void;
+  isAiInputFocused: boolean;
+  setAiInputFocused: (v: boolean) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isFinancialVisible, setIsFinancialVisible] = useState(false);
+  const [isAiLoading, setAiLoading] = useState(false);
+  const [isAiInputFocused, setAiInputFocused] = useState(false);
 
   // Initialize from localStorage on mount
   useEffect(() => {
@@ -29,7 +35,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <UIContext.Provider value={{ isFinancialVisible, toggleFinancialVisibility }}>
+    <UIContext.Provider value={{
+      isFinancialVisible,
+      toggleFinancialVisibility,
+      isAiLoading,
+      setAiLoading,
+      isAiInputFocused,
+      setAiInputFocused
+    }}>
       {children}
     </UIContext.Provider>
   );

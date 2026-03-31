@@ -38,36 +38,42 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-card border-none p-0 overflow-hidden shadow-2xl">
-        <DialogHeader className="p-10 bg-emerald-500/10 border-b border-emerald-500/10 flex flex-col items-center text-center relative overflow-hidden">
-          {/* Success Background Animation */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+        {/* Global Success Pulse Overlay (Outside the modal) */}
+        <div className="fixed inset-0 -z-50 bg-emerald-500/20 backdrop-blur-[2px] animate-pulse pointer-events-none transition-all duration-1000" />
+        <div className="fixed inset-0 -z-50 bg-gradient-to-tr from-emerald-500/40 via-transparent to-emerald-500/40 pointer-events-none" />
 
-          <div className="h-20 w-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 relative z-10 animate-in zoom-in-50 duration-500">
-            <div className="h-14 w-14 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/50 animate-bounce-short">
-              <CheckCircle2 className="h-8 w-8 text-white scale-125 transition-transform" />
+        <DialogHeader className="p-10 bg-emerald-600 border-b border-emerald-700 flex flex-col items-center text-center relative overflow-hidden shrink-0">
+          {/* Success Background Animation */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.15),transparent)] pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-black/10 rounded-full blur-3xl" />
+
+          <div className="h-20 w-20 rounded-full bg-white/20 flex items-center justify-center mb-6 relative z-10 animate-in zoom-in-50 duration-500">
+            <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center shadow-lg shadow-black/20 animate-bounce-short">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600 scale-125 transition-transform" />
             </div>
           </div>
 
-          <DialogTitle className="text-3xl font-bold text-white leading-none z-10">SATIŞ BAŞARILI</DialogTitle>
-          <p className="text-[10px] font-bold text-emerald-400 mt-3 tracking-[0.3em] z-10">{sale.saleNumber} KAYDEDİLDİ</p>
+          <DialogTitle className="text-3xl font-black text-white leading-none z-10 tracking-tight">SATIŞ BAŞARILI</DialogTitle>
+          <p className="text-[11px] font-bold text-white/80 mt-3 tracking-[0.4em] z-10 uppercase">{sale.saleNumber} KAYDEDİLDİ</p>
         </DialogHeader>
 
-        <div className="p-8 space-y-6">
-          {/* Quick Stats */}
+        <div className="p-8 space-y-6 bg-card">
+          {/* Quick Stats (No green tint here) */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="h-3 w-3 text-slate-500" />
-                <span className="text-[10px] font-bold text-slate-500">TARİH</span>
+            <div className="bg-muted/40 p-4 rounded-2xl border border-border/40">
+              <div className="flex items-center gap-2 mb-1 opacity-60">
+                <Calendar className="h-3 w-3" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">TARİH</span>
               </div>
-              <p className="text-xs font-extrabold text-foreground">{sale.createdAt ? format(new Date(sale.createdAt), "dd MMM yyyy", { locale: tr }) : ""}</p>
+              <p className="text-[13px] font-bold text-foreground">{sale.createdAt ? format(new Date(sale.createdAt), "dd MMM yyyy", { locale: tr }) : ""}</p>
             </div>
-            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5">
-              <div className="flex items-center gap-2 mb-1">
-                <CreditCard className="h-3 w-3 text-slate-500" />
-                <span className="text-[10px] font-bold text-slate-500">ÖDEME</span>
+            <div className="bg-muted/40 p-4 rounded-2xl border border-border/40">
+              <div className="flex items-center gap-2 mb-1 opacity-60">
+                <CreditCard className="h-3 w-3" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">ÖDEME</span>
               </div>
-              <p className="text-xs font-extrabold text-foreground">{sale.paymentMethod}</p>
+              <p className="text-[13px] font-bold text-foreground">{sale.paymentMethod}</p>
             </div>
           </div>
 
