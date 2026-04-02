@@ -26,7 +26,19 @@ export async function getStaff() {
   }
 }
 
-export async function createStaff(data: { name: string; email: string; role: "ADMIN" | "STAFF"; commissionRate: number; password?: string }) {
+export async function createStaff(data: {
+  name: string;
+  surname?: string;
+  email: string;
+  phone?: string;
+  role: "ADMIN" | "TECHNICIAN" | "STAFF";
+  commissionRate: number;
+  password?: string;
+  canSell?: boolean;
+  canService?: boolean;
+  canStock?: boolean;
+  canFinance?: boolean;
+}) {
   try {
     const shopId = await getShopId();
     const user = await prisma.user.create({
@@ -39,6 +51,7 @@ export async function createStaff(data: { name: string; email: string; role: "AD
     revalidatePath("/personel");
     return { success: true, user: serializePrisma(user) };
   } catch (error) {
+    console.error("Error creating staff:", error);
     return { success: false, error: "Personel eklenemedi." };
   }
 }

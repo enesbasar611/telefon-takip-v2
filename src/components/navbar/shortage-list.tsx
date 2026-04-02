@@ -36,7 +36,7 @@ import { useShortage } from "@/lib/context/shortage-context";
 type Tab = "main" | string; // "main" = Ana Eksik Liste, supplierId = supplier tab
 
 export function ShortageList() {
-  const { items, loading, addShortage, removeShortage, updateQty: updateShortageQty } = useShortage();
+  const { items = [], loading, addShortage, removeShortage, updateQty: updateShortageQty } = useShortage();
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -187,7 +187,8 @@ export function ShortageList() {
   };
 
 
-  const totalBadge = items.length + totalItemCount;
+  const safeItems = items || [];
+  const totalBadge = safeItems.length + totalItemCount;
 
   return (
     <>

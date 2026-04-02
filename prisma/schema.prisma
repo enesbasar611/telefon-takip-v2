@@ -59,6 +59,12 @@ model User {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   commissionRate  Decimal         @default(0) @db.Decimal(5, 2)
+  surname         String?
+  phone           String?
+  canSell         Boolean         @default(true)
+  canService      Boolean         @default(true)
+  canStock        Boolean         @default(true)
+  canFinance      Boolean         @default(false)
   
   shopId          String?
   shop            Shop?           @relation(fields: [shopId], references: [id])
@@ -676,6 +682,7 @@ enum PaymentStatus {
 enum Role {
   ADMIN
   STAFF
+  TECHNICIAN
 }
 
 enum ServiceStatus {

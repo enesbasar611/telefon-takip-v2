@@ -69,7 +69,6 @@ const menuItems = [
     subItems: [
       { label: "Hızlı Satış", href: "/satis" },
       { label: "Satış Arşivi", href: "/satis/gecmis" },
-      { label: "Tahsilat İşlemleri", href: "/satis/tahsilatlar" },
       { label: "Kasa Raporu", href: "/satis/kasa" },
     ]
   },
@@ -140,7 +139,20 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
       <ScrollArea className="flex-1 px-4 py-6">
         <nav className="flex flex-col gap-1.5">
-          {menuItems.map((item) => {
+          {menuItems.filter(item => {
+            if (session?.user?.role === "ADMIN") return true;
+
+            if (item.label === "Servis Yönetimi" && session?.user?.canService === false) return false;
+            if (item.label === "Envanter" && session?.user?.canStock === false) return false;
+            if (item.label === "POS & Kasa" && session?.user?.canSell === false) return false;
+            if (item.label === "Veresiye" && session?.user?.canSell === false) return false;
+            if (item.label === "Müşteri CRM" && session?.user?.canSell === false && session?.user?.canService === false) return false;
+            if (item.label === "İstatistikler" && session?.user?.canFinance === false) return false;
+            if (item.label === "Ekip" && session?.user?.role !== "ADMIN") return false;
+            if (item.label === "Sistem Ayarları" && session?.user?.role !== "ADMIN") return false;
+
+            return true;
+          }).map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const isOpen = openMenus.includes(item.label);
             const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));

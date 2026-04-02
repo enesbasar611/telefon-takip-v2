@@ -6,21 +6,22 @@ import { TrendingUp, TrendingDown, Scale, PiggyBank, Receipt } from "lucide-reac
 import { RevealFinancial } from "@/components/ui/reveal-financial";
 
 export function FinanceDashboard({ summary }: { summary: any }) {
-    const mainStats = [
-        { label: "NET VARLIK", value: summary.netAssets, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Kasa + Banka + Alacaklar - Borçlar" },
-        { label: "TOPLAM ALACAK", value: summary.totalReceivables, icon: PiggyBank, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Müşterilerden beklenen ödemeler" },
-        { label: "TOPLAM BORÇ", value: summary.totalPayables, icon: Receipt, color: "text-rose-500", bg: "bg-rose-500/10", description: "Tedarikçilere yapılacak ödemeler" },
-    ];
+    const posBankBalance = summary.bankBalance || 0;
+    const nakitBalance = summary.cashBalance || 0;
+    const bugunGelir = summary.todayIncome || 0;
+    const bugunGider = summary.todayExpense || 0;
 
-    const incomeStats = [
-        { label: "TOPLAM GELİR", value: summary.totalIncome, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { label: "TOPLAM GİDER", value: summary.totalExpense, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10" },
+    const cards = [
+        { label: "BUGÜNKÜ GELİR", value: bugunGelir, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Bugün yapılan toplam tahsilat" },
+        { label: "BUGÜNKÜ GİDER", value: bugunGider, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10", description: "Bugün yapılan toplam çıkış" },
+        { label: "NAKİT & KASA", value: nakitBalance, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", description: "Nakit kasa hesaplarının toplamı" },
+        { label: "BANKA & POS", value: posBankBalance, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Banka ve Sanal POS bakiyeleri" },
     ];
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-                {mainStats.map((stat, i) => (
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                {cards.map((stat, i) => (
                     <Card key={i} className="border-border/40 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem]">
                         <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-[0.03] rounded-full bg-foreground group-hover:opacity-[0.06] transition-opacity" />
                         <CardContent className="p-8">
@@ -38,29 +39,6 @@ export function FinanceDashboard({ summary }: { summary: any }) {
                         </CardContent>
                     </Card>
                 ))}
-            </div>
-
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
-                <div className="lg:col-span-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-                    {incomeStats.map((stat, i) => (
-                        <Card key={i} className="border-border/40 bg-card/30 rounded-[2rem] overflow-hidden">
-                            <CardContent className="p-6">
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                                        <stat.icon className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-2 opacity-60">{stat.label}</p>
-                                        <RevealFinancial amount={stat.value} className="text-2xl font-black tracking-tight" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-                <div className="lg:col-span-3">
-                    {/* Placeholder for future trends or charts */}
-                </div>
             </div>
         </div>
     );

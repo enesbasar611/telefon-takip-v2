@@ -18,6 +18,10 @@ export const authOptions: NextAuthOptions = {
                 token.role = user.role;
                 token.shopId = user.shopId;
                 token.shopName = user.shop?.name;
+                token.canSell = user.canSell;
+                token.canService = user.canService;
+                token.canStock = user.canStock;
+                token.canFinance = user.canFinance;
             }
             if (trigger === "update" && session?.shopId) {
                 token.shopId = session.shopId;
@@ -31,6 +35,10 @@ export const authOptions: NextAuthOptions = {
                 session.user.role = token.role;
                 session.user.shopId = token.shopId;
                 session.user.shopName = token.shopName;
+                session.user.canSell = token.canSell;
+                session.user.canService = token.canService;
+                session.user.canStock = token.canStock;
+                session.user.canFinance = token.canFinance;
             }
             return session;
         },

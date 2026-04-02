@@ -328,44 +328,46 @@ export async function updateAccount(id: string, data: { name: string; type: any;
   }
 }
 
-export async function getFinancialSummary() {
+export async function getDailySummary() {
   try {
     const shopId = await getShopId();
-    const accounts = await prisma.financeAccount.findMany({ where: { shopId } });
-    const transactions = await prisma.transaction.findMany({ where: { shopId } });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Calculate total receivables (Customer Debts)
-    const debts = await prisma.debt.findMany({ where: { isPaid: false, shopId } });
-    const totalReceivables = debts.reduce((sum, d) => sum + Number(d.remainingAmount), 0);
-
-    // Calculate total payables (Supplier Balances)
-    const suppliers = await prisma.supplier.findMany({ where: { shopId } });
-    const totalPayables = suppliers.reduce((sum, s) => sum + Number(s.balance), 0);
-
-    const summaryData = transactions.reduce((acc, t) => {
-      const amount = Number(t.amount);
-      if (t.type === 'INCOME') {
-        acc.totalIncome += amount;
-      } else {
-        acc.totalExpense += amount;
-      }
-      return acc;
-    }, { totalIncome: 0, totalExpense: 0 });
+    const [accounts, todayIncomeAgg, todayExpenseAgg, totalReceivablesAgg, totalPayablesAgg] = await Promise.all([
+      prisma.financeAccount.findMany({ where: { shopId } }),
+      prisma.transaction.aggregate({
+        where: { shopId, type: 'INCOME', createdAt: { gte: today } },
+        _sum: { amount: true }
+      }),
+      prisma.transaction.aggregate({
+        where: { shopId, type: 'EXPENSE', createdAt: { gte: today } },
+        _sum: { amount: true }
+      }),
+      prisma.debt.aggregate({
+        where: { shopId, isPaid: false },
+        _sum: { remainingAmount: true }
+      }),
+      prisma.supplier.aggregate({
+        where: { shopId },
+        _sum: { balance: true }
+      })
+    ]);
 
     const cashBalance = accounts.filter(a => a.type === 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
     const bankBalance = accounts.filter(a => a.type !== 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
 
     return {
-      ...summaryData,
+      todayIncome: Number(todayIncomeAgg._sum.amount) || 0,
+      todayExpense: Number(todayExpenseAgg._sum.amount) || 0,
       cashBalance,
       bankBalance,
-      totalReceivables,
-      totalPayables,
-      netAssets: cashBalance + bankBalance + totalReceivables - totalPayables,
+      totalReceivables: Number(totalReceivablesAgg._sum.remainingAmount) || 0,
+      totalPayables: Number(totalPayablesAgg._sum.balance) || 0,
       accounts: serializePrisma(accounts)
     };
   } catch (error) {
-    return { totalIncome: 0, totalExpense: 0, cashBalance: 0, bankBalance: 0, totalReceivables: 0, totalPayables: 0, netAssets: 0, accounts: [] };
+    return { todayIncome: 0, todayExpense: 0, cashBalance: 0, bankBalance: 0, totalReceivables: 0, totalPayables: 0, accounts: [] };
   }
 }
 

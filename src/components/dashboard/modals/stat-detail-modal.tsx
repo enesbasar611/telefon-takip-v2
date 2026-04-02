@@ -80,6 +80,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
 
     useEffect(() => {
         if (isOpen && type) {
+            console.log("İstek atıldı: StatDetailModal fetch", type);
             fetchData();
         } else {
             setData([]);

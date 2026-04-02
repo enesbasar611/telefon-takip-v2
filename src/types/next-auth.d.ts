@@ -7,6 +7,10 @@ declare module "next-auth" {
             role: string;
             shopId: string | null;
             shopName?: string | null;
+            canSell?: boolean;
+            canService?: boolean;
+            canStock?: boolean;
+            canFinance?: boolean;
         } & DefaultSession["user"];
     }
 
@@ -15,6 +19,10 @@ declare module "next-auth" {
         role: string;
         shopId: string | null;
         shopName?: string | null;
+        canSell?: boolean;
+        canService?: boolean;
+        canStock?: boolean;
+        canFinance?: boolean;
     }
 }
 
@@ -24,5 +32,9 @@ declare module "next-auth/jwt" {
         role: string;
         shopId: string | null;
         shopName?: string | null;
+        canSell?: boolean;
+        canService?: boolean;
+        canStock?: boolean;
+        canFinance?: boolean;
     }
 }

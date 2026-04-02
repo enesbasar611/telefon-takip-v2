@@ -30,13 +30,12 @@ type Transaction = {
 };
 
 type Summary = {
-    totalIncome: number;
-    totalExpense: number;
+    todayIncome: number;
+    todayExpense: number;
     cashBalance: number;
     bankBalance: number;
     totalReceivables: number;
     totalPayables: number;
-    netAssets: number;
     accounts: any[];
 };
 
@@ -65,14 +64,14 @@ export function FinansClient({
     const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filtered, "createdAt", "desc");
 
     const mainStats = [
-        { label: "NET VARLIK", value: summary.netAssets, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Kasa + Banka + Alacaklar - Borçlar" },
-        { label: "TOPLAM ALACAK", value: summary.totalReceivables, icon: PiggyBank, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Müşterilerden beklenen ödemeler" },
-        { label: "TOPLAM BORÇ", value: summary.totalPayables, icon: Receipt, color: "text-rose-500", bg: "bg-rose-500/10", description: "Tedarikçilere yapılacak ödemeler" },
+        { label: "NET VARLIK", value: (summary.cashBalance + summary.bankBalance + summary.totalReceivables - summary.totalPayables) || 0, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Kasa + Banka + Alacaklar - Borçlar" },
+        { label: "TOPLAM ALACAK", value: summary.totalReceivables || 0, icon: PiggyBank, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Müşterilerden beklenen ödemeler" },
+        { label: "TOPLAM BORÇ", value: summary.totalPayables || 0, icon: Receipt, color: "text-rose-500", bg: "bg-rose-500/10", description: "Tedarikçilere yapılacak ödemeler" },
     ];
 
     const incomeStats = [
-        { label: "TOPLAM GELİR", value: summary.totalIncome, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { label: "TOPLAM GİDER", value: summary.totalExpense, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10" },
+        { label: "BUGÜNKÜ GELİR", value: summary.todayIncome || 0, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { label: "BUGÜNKÜ GİDER", value: summary.todayExpense || 0, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10" },
     ];
 
     const paymentLabels: Record<string, string> = { CASH: "NAKİT", CARD: "KART", TRANSFER: "HAVALE" };

@@ -1,10 +1,10 @@
-import { getFinancialSummary } from "@/lib/actions/finance-actions";
+import { getDailySummary } from "@/lib/actions/finance-actions";
 import { serializePrisma } from "@/lib/utils";
 import { AccountList } from "../account-list";
 import { FinanceDashboard } from "../finance-dashboard";
 
 export async function FinancialSummaryStream() {
-    const summaryRaw = await getFinancialSummary();
+    const summaryRaw = await getDailySummary();
     const summary = serializePrisma(summaryRaw);
 
     return (
