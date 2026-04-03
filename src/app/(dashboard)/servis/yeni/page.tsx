@@ -39,6 +39,7 @@ import { searchDeviceModels } from "@/lib/actions/model-lookup-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -360,43 +361,21 @@ export default function NewServicePage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className={labelClass}>Telefon Numarası <span className="text-destructive">*</span></Label>
-                  <div className={cn(
-                    "flex items-center bg-muted/30 border-2 rounded-xl overflow-hidden transition-all shadow-sm focus-within:bg-background h-[calc(3rem+4px)]",
-                    errors.customerPhone
-                      ? "border-destructive/50 ring-4 ring-destructive/10"
-                      : "border-transparent hover:border-border/80 focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10"
-                  )}>
-                    <div className="pl-4 pr-3 flex items-center justify-center border-r border-border/50 h-full bg-muted/20">
-                      <span className="text-sm font-black text-primary/80 select-none">+90</span>
-                    </div>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={14}
-                      placeholder="5xx xxx xx xx"
-                      className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-bold text-foreground placeholder:text-muted-foreground/40 h-full w-full"
-                      value={form.watch("customerPhone")}
-                      onChange={(e) => {
-                        let raw = e.target.value.replace(/[^0-9]/g, "");
-                        if (raw.startsWith("90") && raw.length > 2) raw = raw.substring(2);
-                        if (raw.startsWith("0")) raw = raw.substring(1);
-                        if (raw.length > 0 && raw[0] !== "5") {
-                          form.setError("customerPhone", { message: "Numara 5 ile başlamalıdır" });
-                        } else {
-                          form.clearErrors("customerPhone");
-                        }
-                        const trimmed = raw.substring(0, 10);
-                        let formatted = trimmed;
-                        if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
-                        else if (trimmed.length > 6 && trimmed.length <= 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
-                        else if (trimmed.length > 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
-                        form.setValue("customerPhone", formatted);
-                      }}
-                    />
-                    {isLookingUp && <Loader2 className="mr-4 h-4 w-4 animate-spin text-primary" />}
-                  </div>
-                  {errors.customerPhone && <p className="text-xs text-destructive font-bold mt-2 animate-in slide-in-from-top-1 px-1">*{errors.customerPhone.message}</p>}
+                  <PhoneInput
+                    label="Telefon Numarası"
+                    required
+                    value={form.watch("customerPhone")}
+                    error={errors.customerPhone?.message}
+                    isLookingUp={isLookingUp}
+                    onChange={(val) => {
+                      form.setValue("customerPhone", val);
+                      if (val.length > 0 && val[0] !== "5") {
+                        form.setError("customerPhone", { message: "Numara 5 ile başlamalıdır" });
+                      } else {
+                        form.clearErrors("customerPhone");
+                      }
+                    }}
+                  />
                 </div>
 
                 <div className="md:col-span-2 space-y-1">

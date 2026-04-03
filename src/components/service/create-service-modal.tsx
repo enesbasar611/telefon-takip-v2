@@ -21,6 +21,7 @@ import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -130,33 +131,16 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                 {errors.customerName && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.customerName.message}</p>}
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="customerPhone" className="text-xs font-bold text-muted-foreground">Telefon Numarası</Label>
-                <div className="flex items-center h-14 bg-slate-900 border border-white/5 rounded-2xl overflow-hidden focus-within:border-blue-500/30 transition-all">
-                  <span className="pl-5 pr-2 text-sm font-bold text-emerald-500/70 select-none">+90</span>
-                  <input
-                    id="customerPhone"
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={13}
-                    placeholder="5xx xxx xx xx"
-                    className="flex-1 bg-transparent border-none outline-none pr-5 text-sm font-bold placeholder:text-muted-foreground/40"
-                    value={phoneValue}
-                    onChange={(e) => {
-                      let raw = e.target.value.replace(/[^0-9]/g, "");
-                      if (raw.startsWith("90")) raw = raw.substring(2);
-                      const trimmed = raw.substring(0, 10);
-                      let formatted = trimmed;
-                      if (trimmed.length > 3 && trimmed.length <= 6) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
-                      else if (trimmed.length > 6 && trimmed.length <= 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
-                      else if (trimmed.length > 8) formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
-                      setPhoneValue(formatted);
-                      setValue("customerPhone", formatted);
-                    }}
-                  />
-                </div>
-                {errors.customerPhone && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.customerPhone.message}</p>}
-              </div>
+              <PhoneInput
+                label="Telefon Numarası"
+                required
+                value={phoneValue}
+                error={errors.customerPhone?.message}
+                onChange={(val: string) => {
+                  setPhoneValue(val);
+                  setValue("customerPhone", val);
+                }}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-6">

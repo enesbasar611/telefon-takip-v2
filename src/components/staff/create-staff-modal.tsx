@@ -26,6 +26,7 @@ import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus } from "lucide-react
 import { createStaff } from "@/lib/actions/staff-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
@@ -147,14 +148,13 @@ export function CreateStaffModal() {
                   className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TELEFON</Label>
-                <Input
-                  {...register("phone")}
-                  placeholder="+90 5xx xxx xx xx"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
+              <PhoneInput
+                label="TELEFON"
+                value={watch("phone") || ""}
+                onChange={(val: string) => setValue("phone", val)}
+                error={errors.phone?.message}
+                className="h-11"
+              />
             </div>
           </div>
 

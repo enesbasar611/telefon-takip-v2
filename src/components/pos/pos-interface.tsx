@@ -45,6 +45,7 @@ import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { cn, formatPhone } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -395,16 +396,13 @@ export function POSInterface({ products: initialProducts, customers, categories,
                         className="bg-white/[0.03] border-white/10 rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="c-phone" className="text-xs font-semibold text-slate-400">Telefon Numarası (Opsiyonel)</Label>
-                      <Input
-                        id="c-phone"
-                        placeholder="Örn: 0555 123 4567"
-                        value={newCustomer.phone}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                        className="bg-white/[0.03] border-white/10 rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
-                      />
-                    </div>
+                    <PhoneInput
+                      label="Telefon Numarası (Opsiyonel)"
+                      id="c-phone"
+                      value={newCustomer.phone}
+                      onChange={(val: string) => setNewCustomer({ ...newCustomer, phone: val })}
+                      className="bg-white/[0.03] border-white/10 h-11"
+                    />
                   </div>
                   <div className="px-6 py-4 bg-white/[0.02] border-t border-white/10 flex justify-end gap-3">
                     <Button type="button" variant="ghost" className="h-10 px-5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white" onClick={() => setIsNewCustomerOpen(false)}>

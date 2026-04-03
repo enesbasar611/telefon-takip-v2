@@ -11,6 +11,7 @@ import { Save, Printer, Eye, Settings2, Info, ShoppingCart, Wrench, Package } fr
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[] }) {
     const [activeType, setActiveType] = useState("pos");
@@ -108,14 +109,11 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-bold text-slate-400 tracking-[0.2em] ml-1">İletişim Hattı</Label>
-                                    <Input
-                                        value={localSettings.phone || ""}
-                                        onChange={(e) => setLocalSettings({ ...localSettings, phone: e.target.value })}
-                                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-sm font-bold text-white focus:bg-white/[0.05] transition-all"
-                                    />
-                                </div>
+                                <PhoneInput
+                                    label="İletişim Hattı"
+                                    value={localSettings.phone || ""}
+                                    onChange={(val: string) => setLocalSettings({ ...localSettings, phone: val })}
+                                />
                                 <div className="space-y-3">
                                     <Label className="text-[10px] font-bold text-slate-400 tracking-[0.2em] ml-1">Web Adresi</Label>
                                     <Input

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, Bell, Printer, Smartphone, Loader2 } from "lucide-react";
 import { bulkUpdateSettings } from "@/lib/actions/setting-actions";
 import { useToast } from "@/hooks/use-toast";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { ReceiptSettingsForm } from "@/components/settings/receipt-settings-form";
 
 interface SettingsProps {
@@ -90,10 +91,12 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
                   <Label htmlFor="companyName" className="text-xs font-bold text-slate-400 ml-1">Firma adı</Label>
                   <Input id="companyName" value={formData.companyName} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="companyPhone" className="text-xs font-bold text-slate-400 ml-1">İletişim hattı</Label>
-                  <Input id="companyPhone" value={formData.companyPhone} onChange={handleChange} className="h-14 text-base font-bold px-6 shadow-sm" />
-                </div>
+                <PhoneInput
+                  label="İletişim hattı"
+                  id="companyPhone"
+                  value={formData.companyPhone}
+                  onChange={(val: string) => setFormData(prev => ({ ...prev, companyPhone: val }))}
+                />
               </div>
               <div className="space-y-3">
                 <Label htmlFor="companyAddress" className="text-xs font-bold text-slate-400 ml-1">Global adres bilgisi</Label>

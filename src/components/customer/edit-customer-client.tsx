@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ArrowLeft, Save, User } from "lucide-react";
 import { updateCustomer } from "@/lib/actions/customer-actions";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -124,37 +125,18 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">Telefon</Label>
-                                    <div className="flex items-center bg-background rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all border">
-                                        <span className="pl-4 pr-2 text-sm font-bold text-blue-500 select-none">+90</span>
-                                        <input
-                                            type="tel"
-                                            inputMode="numeric"
-                                            maxLength={13}
-                                            placeholder="5xx xxx xx xx"
-                                            className="flex-1 bg-transparent border-none outline-none h-12 pr-4 text-sm focus:ring-0"
-                                            value={formData.phone}
-                                            onChange={(e) => handlePhoneFormat(e.target.value, 'phone')}
-                                        />
-                                    </div>
-                                </div>
+                                <PhoneInput
+                                    label="Telefon"
+                                    required
+                                    value={formData.phone}
+                                    onChange={(val: string) => setFormData({ ...formData, phone: val })}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">2. Telefon (Opsiyonel)</Label>
-                                    <div className="flex items-center bg-background rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all border">
-                                        <span className="pl-4 pr-2 text-sm font-bold text-muted-foreground select-none">+90</span>
-                                        <input
-                                            type="tel"
-                                            inputMode="numeric"
-                                            maxLength={13}
-                                            placeholder="5xx xxx xx xx"
-                                            className="flex-1 bg-transparent border-none outline-none h-12 pr-4 text-sm focus:ring-0"
-                                            value={formData.secondaryPhone}
-                                            onChange={(e) => handlePhoneFormat(e.target.value, 'secondaryPhone')}
-                                        />
-                                    </div>
-                                </div>
+                                <PhoneInput
+                                    label="2. Telefon (Opsiyonel)"
+                                    value={formData.secondaryPhone}
+                                    onChange={(val: string) => setFormData({ ...formData, secondaryPhone: val })}
+                                />
 
                                 <div className="space-y-2">
                                     <Label className="text-xs font-bold text-muted-foreground uppercase">E-Posta (Opsiyonel)</Label>
