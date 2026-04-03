@@ -59,33 +59,76 @@ export async function createDebt(data: { customerId: string; amount: number; due
   }
 }
 
-export async function collectDebtPayment(debtId: string, paymentAmount: number) {
+export async function collectDebtPayment(debtId: string, paymentAmount: number, paymentMethod: "CASH" | "CARD" | "TRANSFER" = "CASH", accountId?: string) {
   try {
     const shopId = await getShopId();
-    const debt = await prisma.debt.findUnique({ where: { id: debtId, shopId } });
+    const userId = await getUserId();
+
+    // Get the debt and customer info for better transaction description
+    const debt = await prisma.debt.findUnique({
+      where: { id: debtId, shopId },
+      include: { customer: true }
+    });
     if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
 
     const newRemaining = Number(debt.remainingAmount) - paymentAmount;
 
-    await prisma.debt.update({
-      where: { id: debtId, shopId },
-      data: {
-        remainingAmount: newRemaining,
-        isPaid: newRemaining <= 0
-      }
-    });
+    // Use a transaction to ensure all updates happen together
+    await prisma.$transaction(async (tx) => {
+      // 1. Update the debt record
+      await tx.debt.update({
+        where: { id: debtId, shopId },
+        data: {
+          remainingAmount: newRemaining,
+          isPaid: newRemaining <= 0
+        }
+      });
 
-    // Create a transaction record for the collection
-    const userId = await getUserId();
-    await prisma.transaction.create({
-      data: {
-        type: "INCOME",
-        amount: paymentAmount,
-        description: `Borç Tahsilatı: ${debtId}`,
-        paymentMethod: "CASH",
-        userId: userId,
-        shopId
+      // 2. Identify the target finance account
+      let targetAccountId = accountId;
+      if (!targetAccountId) {
+        const type = paymentMethod === "CASH" ? "CASH" : paymentMethod === "CARD" ? "POS" : "BANK";
+        // Helper to get or create default account by type
+        const nameMap = { CASH: "Merkez Kasa", BANK: "Banka Hesabı", POS: "POS Hesabı", CREDIT_CARD: "Kredi Kartı" };
+        let account = await tx.financeAccount.findFirst({
+          where: { type: type as any, shopId, isActive: true },
+          orderBy: { isDefault: "desc" }
+        });
+
+        if (!account) {
+          account = await tx.financeAccount.create({
+            data: {
+              name: (nameMap as any)[type],
+              type: type as any,
+              balance: 0,
+              isDefault: type === "CASH",
+              shopId
+            }
+          });
+        }
+        targetAccountId = account.id;
       }
+
+      // 3. Create the transaction record
+      await tx.transaction.create({
+        data: {
+          type: "INCOME",
+          amount: paymentAmount,
+          description: `Borç Tahsilatı: ${debt.customer.name}`,
+          paymentMethod,
+          financeAccountId: targetAccountId,
+          userId,
+          shopId
+        }
+      });
+
+      // 4. Update the finance account balance
+      await tx.financeAccount.update({
+        where: { id: targetAccountId },
+        data: {
+          balance: { increment: paymentAmount }
+        }
+      });
     });
 
     revalidatePath("/veresiye");
@@ -94,6 +137,7 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number) 
     revalidatePath("/musteriler");
     return { success: true };
   } catch (error) {
+    console.error("collectDebtPayment error:", error);
     return { success: false, error: "Tahsilat kaydedilemedi." };
   }
 }

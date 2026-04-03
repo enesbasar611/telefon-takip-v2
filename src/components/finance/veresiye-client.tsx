@@ -17,7 +17,8 @@ import {
     Download,
     SlidersHorizontal,
     ArrowUpRight,
-    Loader2
+    Loader2,
+    RefreshCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -55,6 +56,13 @@ import { toast } from "sonner";
 import { collectDebtPayment, startTrackingDebt } from "@/lib/actions/debt-actions";
 import { cn } from "@/lib/utils";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     AlertDialog,
     AlertDialogContent,
     AlertDialogHeader,
@@ -79,21 +87,24 @@ type Debt = {
 interface VeresiyeClientProps {
     debts: Debt[];
     thisMonthCollected: number;
+    accounts?: any[];
 }
 
-export function VeresiyeClient({ debts, thisMonthCollected }: VeresiyeClientProps) {
+export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: VeresiyeClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'tracking'>('all');
     const [isPending, startTransition] = useTransition();
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
     const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
     // Tracking Modal State
     const [trackingDebt, setTrackingDebt] = useState<Debt | null>(null);
     const [trackingDate, setTrackingDate] = useState("");
 
     // --- Data Aggregation & Calculations ---
-    const now = new Date();
+    const now = useMemo(() => new Date(), []);
 
     // 1. Group by Customer and Calculate Totals
     const aggregatedData = useMemo(() => {
@@ -197,11 +208,13 @@ export function VeresiyeClient({ debts, thisMonthCollected }: VeresiyeClientProp
         }
 
         startTransition(async () => {
-            const res = await collectDebtPayment(selectedDebt.id, amount);
+            const res = await collectDebtPayment(selectedDebt.id, amount, paymentMethod, selectedAccountId || undefined);
             if (res.success) {
                 toast.success("Ödeme başarıyla tahsil edildi.");
                 setSelectedDebt(null);
                 setPaymentAmount("");
+                setPaymentMethod("CASH");
+                setSelectedAccountId("");
             } else {
                 toast.error(res.error || "Tahsilat sırasında bir hata oluştu.");
             }
@@ -595,8 +608,8 @@ export function VeresiyeClient({ debts, thisMonthCollected }: VeresiyeClientProp
                             {selectedDebt?.customer.name} için ödeme alınıyor. Kalan toplam: <span className="text-indigo-500">₺{selectedDebt?.remainingAmount.toLocaleString('tr-TR')}</span>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <div className="py-6 space-y-4">
-                        <div className="space-y-2">
+                    <div className="py-4 space-y-6">
+                        <div className="space-y-3">
                             <Label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">ÖDEME TUTARI (₺)</Label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-indigo-500">₺</span>
@@ -605,10 +618,81 @@ export function VeresiyeClient({ debts, thisMonthCollected }: VeresiyeClientProp
                                     value={paymentAmount}
                                     onChange={(e) => setPaymentAmount(e.target.value)}
                                     placeholder="0.00"
-                                    className="pl-10 h-14 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-lg font-black"
+                                    className="pl-10 h-14 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-lg font-black focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
                         </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">ÖDEME YÖNTEMİ</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { id: 'CASH', label: 'Nakit', icon: Wallet },
+                                    { id: 'CARD', label: 'Kart', icon: CreditCard },
+                                    { id: 'TRANSFER', label: 'Havale', icon: RefreshCcw }
+                                ].map((method) => (
+                                    <Button
+                                        key={method.id}
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setPaymentMethod(method.id as any);
+                                            // Reset account if switching back to cash
+                                            if (method.id === 'CASH') setSelectedAccountId("");
+                                        }}
+                                        className={cn(
+                                            "flex flex-col h-16 gap-1 rounded-xl border-none transition-all",
+                                            paymentMethod === method.id
+                                                ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 ring-2 ring-indigo-500/10"
+                                                : "bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        )}
+                                    >
+                                        <method.icon className="w-4 h-4" />
+                                        <span className="text-[10px] font-bold uppercase">{method.label}</span>
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {paymentMethod !== 'CASH' && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="space-y-3"
+                            >
+                                <Label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                                    {paymentMethod === 'CARD' ? 'POS HESABI' : 'BANKA HESABI'}
+                                </Label>
+                                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                                    <SelectTrigger className="h-12 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold text-xs ring-offset-transparent focus:ring-2 focus:ring-indigo-500/20">
+                                        <SelectValue placeholder="Hesap seçiniz..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-900 border-white/5 rounded-xl">
+                                        {accounts
+                                            .filter(acc =>
+                                                paymentMethod === 'CARD'
+                                                    ? (acc.type === 'POS' || acc.type === 'BANK')
+                                                    : (acc.type === 'BANK')
+                                            )
+                                            .map(acc => (
+                                                <SelectItem key={acc.id} value={acc.id} className="text-white focus:bg-indigo-500 rounded-lg">
+                                                    {acc.name} (₺{Number(acc.balance).toLocaleString('tr-TR')})
+                                                </SelectItem>
+                                            ))
+                                        }
+                                        {accounts.filter(acc =>
+                                            paymentMethod === 'CARD'
+                                                ? (acc.type === 'POS' || acc.type === 'BANK')
+                                                : (acc.type === 'BANK')
+                                        ).length === 0 && (
+                                                <div className="p-3 text-[10px] text-slate-500 font-bold uppercase text-center italic">
+                                                    Kayıtlı hesap bulunamadı.<br />Varsayılan hesap kullanılacak.
+                                                </div>
+                                            )}
+                                    </SelectContent>
+                                </Select>
+                            </motion.div>
+                        )}
                     </div>
                     <AlertDialogFooter className="flex-col md:flex-row gap-3">
                         <AlertDialogCancel className="h-12 rounded-2xl font-black text-xs uppercase tracking-widest order-2 md:order-1">İptal</AlertDialogCancel>

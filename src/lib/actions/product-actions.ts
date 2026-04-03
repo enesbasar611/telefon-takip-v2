@@ -642,29 +642,58 @@ export async function getCriticalProducts() {
   }
 }
 
-export async function getAllInventoryMovements() {
+export async function getAllInventoryMovements(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}) {
   try {
+    const { page = 1, limit = 50, search } = options;
     const shopId = await getShopId();
-    const movements = await prisma.inventoryMovement.findMany({
-      where: { shopId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        product: {
-          select: { name: true, sku: true }
+
+    const whereCondition: any = { shopId };
+
+    if (search) {
+      whereCondition.OR = [
+        { notes: { contains: search, mode: 'insensitive' } },
+        { type: { contains: search, mode: 'insensitive' } },
+        { product: { name: { contains: search, mode: 'insensitive' } } },
+        { product: { sku: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, movements] = await prisma.$transaction([
+      prisma.inventoryMovement.count({ where: whereCondition }),
+      prisma.inventoryMovement.findMany({
+        where: whereCondition,
+        orderBy: { createdAt: "desc" },
+        include: {
+          product: {
+            select: { name: true, sku: true }
+          },
+          serviceTicket: {
+            select: { ticketNumber: true }
+          },
+          sale: {
+            select: { saleNumber: true }
+          }
         },
-        serviceTicket: {
-          select: { ticketNumber: true }
-        },
-        sale: {
-          select: { saleNumber: true }
-        }
-      },
-      take: 100
-    });
-    return serializePrisma(movements);
+        skip: (page - 1) * limit,
+        take: limit
+      })
+    ]);
+
+    return {
+      success: true,
+      data: serializePrisma(movements),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   } catch (error) {
     console.error("Error fetching all inventory movements:", error);
-    return [];
+    return { success: false, data: [], total: 0, page: 1, limit: 50, totalPages: 0 };
   }
 }
 

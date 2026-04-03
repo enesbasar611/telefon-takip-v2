@@ -36,9 +36,34 @@ export function AuraProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Navigation Tracker
+    // Navigation Tracker - Çevrim içi geçişleri yakalama
     useEffect(() => {
-        triggerAura("navigation");
+        // Hedefe ulaşıldığında hemen kapat (veya temizle)
+        triggerAura("idle");
+    }, [pathname, searchParams, triggerAura]);
+
+    // Anlık Tıklama Yakalayıcı (Linklere tıklanır tıklanmaz blur için)
+    useEffect(() => {
+        const handleGlobalClick = (e: MouseEvent) => {
+            const target = (e.target as Element).closest('a[href]');
+            if (target) {
+                const href = target.getAttribute('href');
+                const targetAttr = target.getAttribute('target');
+
+                // Aynı sayfaya tıklamadığımızı kontrol edelim
+                const isInternal = href && href.startsWith('/') && targetAttr !== '_blank';
+                // URL farklıysa veya query string değişiyorsa hemen tetikle
+                if (isInternal) {
+                    const currentUrl = pathname + searchParams.toString();
+                    if (href !== currentUrl && href !== pathname) {
+                        triggerAura("navigation");
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('click', handleGlobalClick);
+        return () => document.removeEventListener('click', handleGlobalClick);
     }, [pathname, searchParams, triggerAura]);
 
     return (

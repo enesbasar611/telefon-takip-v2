@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
     BarChart3,
     RefreshCcw,
@@ -10,7 +11,9 @@ import {
     TrendingDown,
     TrendingUp,
     Package,
-    Activity
+    Activity,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CriticalStockDialog } from "./critical-stock-dialog";
@@ -36,23 +40,51 @@ interface StockMovementsClientProps {
         totalMovements: number;
         criticalCount: number;
     };
+    pagination?: {
+        page: number;
+        totalPages: number;
+        search: string;
+    };
 }
 
 export function StockMovementsClient({
     movements,
     criticalProducts,
     stats,
+    pagination = { page: 1, totalPages: 1, search: "" },
 }: StockMovementsClientProps) {
-    const [searchTerm, setSearchTerm] = useState("");
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const [searchTerm, setSearchTerm] = useState(pagination.search);
     const [isCriticalDialogOpen, setIsCriticalDialogOpen] = useState(false);
 
-    const filteredMovements = movements.filter((m) =>
-        (m.product?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (m.notes || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.type.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter local if no pagination search is active during input, but debounce actually fetches from server.
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (searchTerm !== pagination.search) {
+                const params = new URLSearchParams(searchParams);
+                if (searchTerm) {
+                    params.set("search", searchTerm);
+                } else {
+                    params.delete("search");
+                }
+                params.set("page", "1"); // Reset to page 1 on search
+                router.push(`${pathname}?${params.toString()}`);
+            }
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, pagination.search, pathname, router, searchParams]);
 
-    const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filteredMovements, "createdAt", "desc");
+    const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(movements, "createdAt", "desc");
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        const params = new URLSearchParams(searchParams);
+        params.set("page", newPage.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -239,9 +271,32 @@ export function StockMovementsClient({
                     </Table>
                 </CardContent>
 
-                <div className="p-8 border-t border-white/5 mt-auto flex items-center justify-between text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] bg-white/[0.01]">
-                    <span>TOPLAM {filteredMovements.length} HAREKET</span>
-                    <span className="text-slate-600 uppercase">Tüm zamanlar verisi yükleniyor...</span>
+                <div className="p-8 border-t border-white/5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] bg-white/[0.01]">
+                    <span>SAYFADAKİ KAYIT: {movements.length}</span>
+
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={pagination.page <= 1}
+                            className="bg-transparent border-white/10 hover:bg-white/5 text-white/70 h-9 px-4 rounded-xl shadow-none"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Önceki
+                        </Button>
+                        <span className="text-white/40 tracking-widest">
+                            SAYFA {pagination.page} / {pagination.totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={pagination.page >= pagination.totalPages}
+                            className="bg-transparent border-white/10 hover:bg-white/5 text-white/70 h-9 px-4 rounded-xl shadow-none"
+                        >
+                            Sonraki <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                    </div>
                 </div>
             </Card>
 

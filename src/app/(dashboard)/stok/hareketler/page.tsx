@@ -4,12 +4,19 @@ import { BarChart3 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-export default async function StokHareketleriPage() {
-    const [stats, criticalProducts, allMovements] = await Promise.all([
+export default async function StokHareketleriPage({ searchParams }: { searchParams: { page?: string, search?: string } }) {
+    const page = Number(searchParams?.page) || 1;
+    const search = searchParams?.search || "";
+
+    const [stats, criticalProducts, movementData] = await Promise.all([
         getInventoryStats(),
         getCriticalProducts(),
-        getAllInventoryMovements(),
+        getAllInventoryMovements({ page, limit: 50, search }),
     ]);
+
+    const allMovements = movementData.success ? movementData.data : [];
+    const totalMovements = movementData.success ? movementData.total : 0;
+    const totalPages = movementData.success ? movementData.totalPages : 1;
 
     return (
         <div className="flex flex-col gap-10 bg-black text-white min-h-screen lg:p-16 p-8 pb-32">
@@ -39,8 +46,13 @@ export default async function StokHareketleriPage() {
                 movements={allMovements}
                 criticalProducts={criticalProducts}
                 stats={{
-                    totalMovements: allMovements.length,
+                    totalMovements: totalMovements,
                     criticalCount: stats.criticalCount
+                }}
+                pagination={{
+                    page,
+                    totalPages,
+                    search
                 }}
             />
         </div>
