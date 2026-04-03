@@ -35,7 +35,7 @@ export function GlobalSearch() {
         const down = (e: KeyboardEvent) => {
             if (e.key === "S" && e.shiftKey) {
                 e.preventDefault();
-                setOpen((open) => !open);
+                setOpen(open => !open);
             }
         };
 

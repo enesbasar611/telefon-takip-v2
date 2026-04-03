@@ -1,4 +1,5 @@
 "use server";
+import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
@@ -85,7 +86,7 @@ export async function syncAllRates() {
   }
 }
 
-export async function getExchangeRates() {
+export const getExchangeRates = cache(async function getExchangeRatesInternal() {
   try {
     const shopId = await getShopId();
     let settings = await prisma.setting.findMany({
@@ -140,7 +141,7 @@ export async function getExchangeRates() {
       remainingMinutes: 0
     };
   }
-}
+});
 
 // Keeping this for backward compatibility if used elsewhere, but updating it to use the new ga field
 export async function updateExchangeRates(rates: { usd: number; eur: number; ga?: number }) {

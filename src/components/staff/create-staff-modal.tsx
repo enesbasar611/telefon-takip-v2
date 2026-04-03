@@ -31,14 +31,14 @@ const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
   surname: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
   email: z.string().email("Geçerli bir e-posta giriniz"),
-  phone: z.string().optional(),
   role: z.enum(["ADMIN", "TECHNICIAN", "STAFF"]),
-  branch: z.string().default("Ana Şube"),
-  canSell: z.boolean().default(true),
-  canService: z.boolean().default(true),
-  canStock: z.boolean().default(true),
-  canFinance: z.boolean().default(false),
-});
+  branch: z.string().min(1, "Şube seçiniz"),
+  canSell: z.boolean(),
+  canService: z.boolean(),
+  canStock: z.boolean(),
+  canFinance: z.boolean(),
+  phone: z.string().optional(),
+}).required();
 
 type StaffFormValues = z.infer<typeof staffSchema>;
 
@@ -56,12 +56,16 @@ export function CreateStaffModal() {
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
     defaultValues: {
+      name: "",
+      surname: "",
+      email: "",
       role: "STAFF",
       branch: "Ana Şube",
-      canSell: true,
-      canService: true,
-      canStock: true,
+      canSell: false,
+      canService: false,
+      canStock: false,
       canFinance: false,
+      phone: "",
     }
   });
 

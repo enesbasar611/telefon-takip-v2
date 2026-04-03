@@ -15,11 +15,12 @@ import {
     getCriticalStockDetails,
     getAccountBalanceDetails
 } from "@/lib/actions/dashboard-detail-actions";
-import { Loader2, ChevronRight, ArrowRight, Wallet, Landmark, CreditCard, User, Package, Wrench, ShoppingCart, Banknote, Clock, CheckCircle2, AlertTriangle, ArrowDownCircle } from "lucide-react";
+import { Loader2, Plus, ChevronRight, ArrowRight, Wallet, Landmark, CreditCard, User, Package, Wrench, ShoppingCart, Banknote, Clock, CheckCircle2, AlertTriangle, ArrowDownCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
+import { useShortage } from "@/lib/context/shortage-context";
 import { toast } from "sonner";
 
 export type StatType =
@@ -40,6 +41,7 @@ interface StatDetailModalProps {
 }
 
 export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetailModalProps) {
+    const { addShortage } = useShortage();
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
@@ -48,6 +50,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
     const [paymentAmount, setPaymentAmount] = useState<string>("");
     const [paymentDescription, setPaymentDescription] = useState<string>("");
     const [paying, setPaying] = useState(false);
+    const [addingToShortage, setAddingToShortage] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         if (!type) return;
@@ -87,8 +90,22 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
             setSelectedSupplier(null);
             setPaymentAmount("");
             setPaymentDescription("");
+            setAddingToShortage(null);
         }
     }, [isOpen, type, fetchData]);
+
+    const handleAddShortage = async (product: any) => {
+        setAddingToShortage(product.id);
+        try {
+            await addShortage({
+                productId: product.id,
+                name: product.name,
+                quantity: product.criticalStock > product.stock ? (product.criticalStock - product.stock) : 5
+            });
+        } finally {
+            setAddingToShortage(null);
+        }
+    };
 
     const handlePayDebt = async () => {
         if (!selectedSupplier || !selectedAccountId || !paymentAmount) {
@@ -129,7 +146,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
             case "COLLECTIONS": return { title: "TAHSİLATLAR", icon: Banknote, color: "text-amber-500", route: "/satis/kasa" };
             case "PENDING_SERVICES": return { title: "BEKLEYEN SERVİSLER", icon: Clock, color: "text-blue-500", route: "/servis/liste" };
             case "READY_DEVICES": return { title: "HAZIR CİHAZLAR", icon: CheckCircle2, color: "text-emerald-500", route: "/servis/liste?status=READY" };
-            case "CRITICAL_STOCK": return { title: "KRİTİK STOK", icon: AlertTriangle, color: "text-rose-500", route: "/envanter" };
+            case "CRITICAL_STOCK": return { title: "KRİTİK STOK", icon: AlertTriangle, color: "text-rose-500", route: "/stok" };
             case "TOTAL_DEBTS": return { title: "TOPLAM BORÇLAR", icon: ArrowDownCircle, color: "text-indigo-500", route: "/tedarikciler" };
             case "CASH_BALANCE": return { title: "KASA & HESAPLAR", icon: Wallet, color: "text-primary", route: "/satis/kasa" };
             default: return { title: "DETAY", icon: LayoutDashboard, color: "text-primary", route: "/" };
@@ -335,23 +352,38 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                             {data.map((product: any) => (
                                                 <div key={product.id} className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex items-center justify-between group hover:bg-rose-500/10 transition-all">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="h-12 w-12 rounded-xl bg-background border border-border/40 flex items-center justify-center shadow-inner relative overflow-hidden">
+                                                        <div className="h-12 w-12 rounded-xl bg-background border border-border/40 flex items-center justify-center shadow-sm relative overflow-hidden shrink-0">
                                                             <Package className={cn("h-6 w-6", product.stock === 0 ? "text-rose-500" : "text-amber-500")} />
                                                             {product.stock === 0 && <div className="absolute inset-0 bg-rose-500/10 animate-pulse" />}
                                                         </div>
-                                                        <div>
+                                                        <div className="min-w-0">
                                                             <h4 className="text-sm font-black uppercase tracking-tight line-clamp-1">{product.name}</h4>
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <Badge variant="outline" className="text-[8px] font-black border-rose-500/30 text-rose-500 px-2 py-0">KRİTİK</Badge>
-                                                                <span className="text-[10px] font-black text-muted-foreground/60 uppercase">{product.category?.name}</span>
+                                                                <span className="text-[10px] font-black text-muted-foreground/60 uppercase truncate">{product.category?.name}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1">STOK DURUMU</p>
-                                                        <p className={cn("text-base font-black tracking-tight", product.stock === 0 ? "text-rose-600" : "text-amber-600")}>
-                                                            {product.stock} {product.unit || 'ADET'}
-                                                        </p>
+                                                    <div className="flex items-center gap-4 shrink-0 px-2">
+                                                        <div className="text-right hidden sm:block">
+                                                            <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1">STOK</p>
+                                                            <p className={cn("text-base font-black tracking-tight", product.stock === 0 ? "text-rose-600" : "text-amber-600")}>
+                                                                {product.stock} {product.unit || 'ADET'}
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleAddShortage(product)}
+                                                            disabled={addingToShortage === product.id}
+                                                            className="h-9 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 shadow-none transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
+                                                        >
+                                                            {addingToShortage === product.id ? (
+                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                            ) : (
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                            )}
+                                                            <span className="hidden xs:inline">Eksiğe Ekle</span>
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}

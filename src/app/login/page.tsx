@@ -21,14 +21,9 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4 relative overflow-hidden text-white font-sans">
-            {/* Arkaplan Atmosferi */}
-            <div className="fixed inset-0 bg-[#050505] -z-20" />
-            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-600/10 blur-[120px] rounded-full -z-10 animate-pulse" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full -z-10 animate-pulse transition-all duration-3000" />
-
-            {/* Hafif Izgara (Grid) Deseni */}
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] -z-10 pointer-events-none" />
+        <div className="min-h-screen flex items-center justify-center bg-black p-4 relative overflow-hidden text-white font-sans">
+            {/* Pure Dark Atmosphere */}
+            <div className="fixed inset-0 bg-black -z-20" />
 
             <div className="z-10 w-full max-w-md">
                 <motion.div

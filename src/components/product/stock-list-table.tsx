@@ -100,8 +100,12 @@ export function StockListTable({ products, categories }: { products: any[], cate
 
   const onAddToShortage = async (product: any) => {
     try {
-      await addShortageItem({ productId: product.id, name: product.name, quantity: 1 });
-      toast.success(`${product.name} eksikler listesine eklendi.`);
+      const res = await addShortageItem({ productId: product.id, name: product.name, quantity: 1 });
+      if (res.isDuplicate) {
+        toast.warning(res.message);
+      } else {
+        toast.success(`${product.name} eksikler listesine eklendi.`);
+      }
     } catch (error) {
       toast.error("İşlem başarısız.");
     }

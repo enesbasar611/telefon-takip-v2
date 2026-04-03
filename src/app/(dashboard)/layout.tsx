@@ -4,11 +4,17 @@ import { BottomNav } from "@/components/bottom-nav";
 import { UIProvider } from "@/lib/context/ui-context";
 import { SupplierOrderProvider } from "@/lib/context/supplier-order-context";
 import { ShortageProvider } from "@/lib/context/shortage-context";
+import { DashboardDataProvider } from "@/lib/context/dashboard-data-context";
+import { AuraProvider } from "@/lib/context/aura-context";
+import { AuraSystem } from "@/components/ui/aura-system";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
 import { getShopId } from "@/lib/auth";
-import { AnimatedAura } from "@/components/ui/animated-aura";
 
 export default async function DashboardLayout({
     children,
@@ -24,34 +30,53 @@ export default async function DashboardLayout({
     }
 
     let staff: any[] = [];
+    let initialRates: any = null;
+    let initialStats: any = null;
+
     try {
-        staff = await getStaff();
+        // Parallel fetch for data needed throughout the dashboard
+        const [staffRes, ratesRes, statsRes] = await Promise.all([
+            getStaff().catch(() => []),
+            getExchangeRates().catch(() => null),
+            getDashboardStats().catch(() => null),
+        ]);
+        staff = staffRes;
+        initialRates = ratesRes;
+        initialStats = statsRes;
     } catch (err) {
-        console.error("DashboardLayout: Could not load staff.");
+        console.error("DashboardLayout: Could not load initial data.", err);
     }
 
     const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
 
     return (
-        <UIProvider>
-            <SupplierOrderProvider>
-                <ShortageProvider>
-                    <AnimatedAura />
-                    <GlobalSearch />
-                    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-                        <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
-                        <div className="flex flex-1 flex-col overflow-hidden">
-                            <Navbar />
-                            <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
-                                <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
-                                    {children}
-                                </div>
-                            </main>
-                        </div>
-                        <BottomNav />
-                    </div>
-                </ShortageProvider>
-            </SupplierOrderProvider>
-        </UIProvider>
+        <QueryProvider>
+            <ProgressBarProvider>
+                <UIProvider>
+                    <AuraProvider>
+                        <DashboardDataProvider initialRates={initialRates} initialStats={initialStats}>
+                            <SupplierOrderProvider>
+                                <ShortageProvider>
+                                    <AuraSystem />
+                                    <GlobalSearch />
+                                    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
+                                        <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
+                                        <div className="flex flex-1 flex-col overflow-hidden">
+                                            <Navbar />
+                                            <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
+                                                <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
+                                                    {children}
+                                                </div>
+                                            </main>
+                                        </div>
+                                        <BottomNav />
+                                    </div>
+                                </ShortageProvider>
+                            </SupplierOrderProvider>
+                        </DashboardDataProvider>
+                    </AuraProvider>
+                </UIProvider>
+            </ProgressBarProvider>
+        </QueryProvider>
     );
 }

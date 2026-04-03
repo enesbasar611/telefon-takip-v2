@@ -10,17 +10,27 @@ import { Sparkles, RefreshCcw, Loader2, Table, Check, AlertTriangle, ArrowLeft }
 import { parseBulkUpdateWithAI, AIUpdateOperation, AIUpdateResponse } from "@/lib/actions/gemini-actions";
 import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
 import { useUI } from "@/lib/context/ui-context";
+import { useAura } from "@/lib/context/aura-context";
 import { useEffect } from "react";
 
 export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [command, setCommand] = useState("");
     const [isPending, startTransition] = useTransition();
     const { setAiInputFocused, setAiLoading } = useUI();
+    const { triggerAura } = useAura();
     const [aiResponse, setAiResponse] = useState<AIUpdateResponse | null>(null);
 
     useEffect(() => {
         setAiLoading(isPending);
     }, [isPending, setAiLoading]);
+
+    // Ensure aura is reset when modal closes
+    useEffect(() => {
+        if (!open) {
+            triggerAura("idle");
+        }
+    }, [open, triggerAura]);
+
     const updates = aiResponse?.updates || null;
 
     const handleParse = () => {
@@ -82,9 +92,17 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 </label>
                                 <textarea
                                     value={command}
-                                    onChange={e => setCommand(e.target.value)}
-                                    onFocus={() => setAiInputFocused(true)}
-                                    onBlur={() => setAiInputFocused(false)}
+                                    onChange={e => {
+                                        setCommand(e.target.value);
+                                    }}
+                                    onFocus={() => {
+                                        setAiInputFocused(true);
+                                        triggerAura("focus");
+                                    }}
+                                    onBlur={() => {
+                                        setAiInputFocused(false);
+                                        triggerAura("idle");
+                                    }}
                                     placeholder="Örn: Tüm şarj aletlerinin satış fiyatını %10 artır."
                                     className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed h-32"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleParse(); }}

@@ -33,6 +33,9 @@ import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { useAura } from "@/lib/context/aura-context";
+
 const productSchema = z.object({
   name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
   categoryId: z.string().min(1, "Kategori seçiniz"),
@@ -57,11 +60,12 @@ interface CreateProductModalProps {
 }
 
 export function CreateProductModal({ categories }: CreateProductModalProps) {
+  const { rates: exchangeRates } = useDashboardData();
+  const { triggerAura } = useAura();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isAIPending, startAITransition] = useTransition();
   const [currency, setCurrency] = useState<"TRY" | "USD" | "EUR">("TRY");
-  const [exchangeRates, setExchangeRates] = useState({ usd: 1, eur: 1 });
   const [categoryPath, setCategoryPath] = useState<string[]>([]);
   const [aiExpanded, setAiExpanded] = useState(false);
   const [aiDescription, setAiDescription] = useState("");
@@ -81,14 +85,6 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
   const watchBuyPrice = watch("buyPrice");
 
-  useEffect(() => {
-    async function fetchRates() {
-      const rates = await getExchangeRates();
-      setExchangeRates(rates);
-    }
-    fetchRates();
-  }, []);
-
   const calculateTryPrice = (val: string) => {
     const num = parseFloat(val) || 0;
     if (currency === "USD") return (num * exchangeRates.usd).toFixed(2);
@@ -103,14 +99,18 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
     }
     startAITransition(async () => {
       setAiStatus("idle");
+      triggerAura("analyzing");
       const result = await parseProductWithAI(aiDescription);
       if (!result.success) {
         setAiStatus("error");
+        triggerAura("error");
         toast.error(result.error || "AI analizi başarısız oldu.");
         return;
       }
 
       const { data } = result;
+      setAiStatus("success");
+      triggerAura("success");
       // Auto-fill the form fields
       if (data.name) setValue("name", data.name, { shouldValidate: true });
       if (data.buyPrice) setValue("buyPrice", String(data.buyPrice), { shouldValidate: true });
@@ -154,6 +154,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
       if (result.success) {
         toast.success("Ürün başarıyla eklendi.");
+        triggerAura("success");
         setAiDescription("");
         setAiStatus("idle");
       } else if (result.isDuplicate) {

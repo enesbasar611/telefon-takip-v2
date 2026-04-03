@@ -73,16 +73,16 @@ export function ReplenishStockModal({
                     notes: "Bildirim üzerinden eklendi."
                 });
                 if (res.success) {
-                    toast.success("Ürün eksikler listesine eklendi.");
+                    if (res.isDuplicate) {
+                        toast.warning(res.message);
+                    } else {
+                        toast.success("Ürün eksikler listesine eklendi.");
+                    }
                 } else {
                     throw new Error(res.error || "Hata oluştu");
                 }
             } else {
                 // If supplier selected, for now we still add to shortage but tag the supplier
-                // or we could create a purchase order directly, but user said:
-                // "tedarikçi yoksa eksik listesinde ana listeye eklesin"
-                // which implies if there's a supplier, maybe it goes somewhere else?
-                // But usually shortage list is the "to-buy" list.
                 const res = await addShortageItem({
                     productId,
                     name: productName,
@@ -90,7 +90,11 @@ export function ReplenishStockModal({
                     notes: `Sipariş: ${suppliers.find(s => s.id === selectedSupplier)?.name} üzerinden tedarik edilecek.`
                 });
                 if (res.success) {
-                    toast.success("Sipariş planı oluşturuldu.");
+                    if (res.isDuplicate) {
+                        toast.warning(res.message);
+                    } else {
+                        toast.success("Sipariş planı oluşturuldu.");
+                    }
                 } else {
                     throw new Error(res.error || "Hata oluştu");
                 }

@@ -31,7 +31,7 @@ export async function addShortageItem(data: { productId?: string; name: string; 
     });
 
     if (existing) {
-      return { success: true, message: "Ürün zaten eksikler listesinde mevcut." };
+      return { success: true, isDuplicate: true, message: "Ürün zaten eksikler listesinde mevcut." };
     }
 
     const newItem = await prisma.shortageItem.create({

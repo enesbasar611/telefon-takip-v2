@@ -152,12 +152,14 @@ export async function getSystemNotifications(options?: {
       if (t.estimatedDeliveryDate && t.estimatedDeliveryDate <= now && t.status !== "DELIVERED") {
         const id = `deliv-${t.id}`;
         if (!deletedIds.has(id)) {
+          const delayDays = Math.floor((now.getTime() - t.estimatedDeliveryDate.getTime()) / (1000 * 60 * 60 * 24));
+          const delayMsg = delayDays > 0 ? `${delayDays} gün gecikti!` : "Bugün teslim edilmeli!";
           notifications.push({
             id,
             type: "DELIVERY_TIME",
             category: "Servis",
-            title: `Teslimat günü: ${t.deviceBrand}`,
-            message: `IMEI: ${t.imei || '...'}. Müşteri: ${t.customer.name}.`,
+            title: `${t.ticketNumber} Servis Gecikti!`,
+            message: `${delayMsg} Müşteri: ${t.customer.name}`,
             createdAt: t.estimatedDeliveryDate,
             referenceId: t.id,
             status: t.status,

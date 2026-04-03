@@ -46,9 +46,13 @@ export function CriticalStockDialog({
             });
 
             if (result.success) {
-                toast.success(`${product.name} eksikler listesine eklendi.`);
+                if (result.isDuplicate) {
+                    toast.warning(result.message);
+                } else {
+                    toast.success(`${product.name} eksikler listesine eklendi.`);
+                }
             } else {
-                toast.error(result.message || "İşlem başarısız.");
+                toast.error(result.error || "İşlem başarısız.");
             }
         } catch (error) {
             toast.error("Bir hata oluştu.");

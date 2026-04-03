@@ -116,7 +116,7 @@ export function DashboardCore({
           </p>
         </div>
 
-        <div className="flex items-center gap-5 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-[1.8rem] shadow-sm">
+        <div className="flex items-center gap-5 bg-card border border-border/40 p-1 rounded-[1.8rem] shadow-sm">
           <div className="flex items-center gap-4 px-5 py-3 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/10">
             <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
             <div className="flex flex-col">

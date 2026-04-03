@@ -34,6 +34,7 @@ import {
   ListTree
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 const menuItems = [
   {
@@ -98,8 +99,11 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
   const [aiUpdateOpen, setAiUpdateOpen] = useState(false);
   const [aiAnalyzeOpen, setAiAnalyzeOpen] = useState(false);
+  const [isAiHovered, setIsAiHovered] = useState(false);
+  const [localActivePath, setLocalActivePath] = useState(pathname);
 
   useEffect(() => {
+    setLocalActivePath(pathname);
     const activeMenu = menuItems.find(item =>
       item.subItems?.some(sub => sub.href === pathname) || (item.href !== "/dashboard" && pathname.startsWith(item.href))
     );
@@ -112,6 +116,11 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
     setOpenMenus(prev =>
       prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
     );
+  };
+
+  const handleNavigation = (href: string) => {
+    setLocalActivePath(href);
+    onNavigate?.();
   };
 
   return (
@@ -155,7 +164,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
           }).map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const isOpen = openMenus.includes(item.label);
-            const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+            const isActive = localActivePath === item.href || (item.href !== "/" && localActivePath?.startsWith(item.href));
 
             return (
               <div key={item.label} className="relative">
@@ -181,7 +190,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                 ) : (
                   <Link
                     href={item.href}
-                    onClick={() => onNavigate?.()}
+                    onClick={() => handleNavigation(item.href)}
                     className={cn(
                       "flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
                       isActive
@@ -200,10 +209,10 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                       <Link
                         key={sub.label}
                         href={sub.href}
-                        onClick={() => onNavigate?.()}
+                        onClick={() => handleNavigation(sub.href)}
                         className={cn(
                           "px-4 py-2.5 text-[13.5px] font-medium rounded-lg transition-all",
-                          pathname === sub.href
+                          localActivePath === sub.href
                             ? "text-primary bg-primary/10 font-semibold"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         )}
@@ -221,20 +230,18 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
       {/* BAŞAR AI COMMAND CENTER */}
       <div className="px-6 pb-6 mt-4">
-        <div className="relative group p-[1px] overflow-hidden rounded-2xl bg-gradient-to-b from-[#333] to-[#111]">
-          {/* Animated Border Beam Layer */}
-          <div className="absolute inset-[-100%] aspect-square pointer-events-none overflow-hidden z-0">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 w-full h-full opacity-60 filter blur-[8px] saturate-[1.5]"
-              style={{
-                background: 'conic-gradient(from 0deg, transparent, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4, transparent)',
-              }}
-            />
-          </div>
+        <div
+          className="relative overflow-hidden rounded-2xl border border-border/40 group"
+          onMouseEnter={() => setIsAiHovered(true)}
+          onMouseLeave={() => setIsAiHovered(false)}
+        >
+          {/* Border Beam Magic */}
+          <BorderBeam
+            isActive={isAiHovered}
+            duration={15}
+          />
 
-          <div className="relative z-10 bg-[#111111] rounded-2xl overflow-hidden">
+          <div className="relative z-10 bg-card rounded-2xl overflow-hidden">
             <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-violet-500" />
               <span className="text-xs font-bold text-white uppercase tracking-wider">BAŞAR AI</span>

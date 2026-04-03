@@ -134,12 +134,16 @@ export function SupplierOrderProvider({ children }: { children: React.ReactNode 
 
             if (moveBackToShortage) {
                 try {
-                    await addShortageItemAction({
+                    const res = await addShortageItemAction({
                         productId: productId ?? undefined,
                         name: productName,
                         quantity: 1
                     });
-                    toast.success(`${productName} tekrar eksiklere eklendi.`);
+                    if (res.isDuplicate) {
+                        toast.warning(res.message);
+                    } else {
+                        toast.success(`${productName} tekrar eksiklere eklendi.`);
+                    }
                 } catch (err) {
                     console.error("Back to shortage error:", err);
                 }

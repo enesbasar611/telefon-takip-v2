@@ -5,21 +5,12 @@ import { DollarSign, Euro, Coins, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { CurrencyConverterModal } from "./currency-converter-modal";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 export function CurrencyDisplay() {
-  const [rates, setRates] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { rates } = useDashboardData();
 
-  useEffect(() => {
-    async function fetchRates() {
-      const data = await getExchangeRates();
-      setRates(data);
-      setLoading(false);
-    }
-    fetchRates();
-  }, []);
-
-  if (loading) {
+  if (!rates) {
     return (
       <div className="flex gap-3">
         <div className="h-10 w-24 bg-muted animate-pulse rounded-xl border border-border" />

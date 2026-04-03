@@ -20,7 +20,7 @@ export const revalidate = 0;
 
 export default async function DashboardPage() {
   return (
-    <div className="flex-1 space-y-10 p-8 pt-6 bg-gradient-to-br from-background via-background/95 to-muted/30 min-h-screen font-sans selection:bg-primary/20">
+    <div className="flex-1 space-y-10 p-8 pt-6 bg-background min-h-screen font-sans selection:bg-primary/20">
       <DashboardHeader />
 
       {/* Phase 1: Key Stats */}

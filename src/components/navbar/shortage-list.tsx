@@ -335,17 +335,17 @@ export function ShortageList() {
                           </PopoverContent>
                         </Popover>
 
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg" title="Stok Tamamla">
+                        <div className="flex items-center gap-1 transition-opacity">
+                          <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black rounded-lg transition-all" title="Stok Tamamla">
                             <CheckCircle2 className="h-4 w-4" />
                           </Button>
-                          <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg" title="Kaldır">
+                          <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-black rounded-lg transition-all" title="Kaldır">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 overflow-hidden pr-20">
+                      <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
                         <span className="text-[10px] font-bold text-gray-300 leading-tight truncate flex-1">{item.name}</span>
                       </div>
 

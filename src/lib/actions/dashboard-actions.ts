@@ -1,11 +1,13 @@
 "use server";
+import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { getDeadStockCount } from "./product-actions";
 import { getOrCreateKasaAccount } from "./finance-actions";
 import { getShopId } from "@/lib/auth";
+import { getExchangeRates } from "./currency-actions";
 
-export async function getDashboardStats() {
+export const getDashboardStats = cache(async function getDashboardStatsInternal() {
   try {
     const shopId = await getShopId();
     const today = new Date();
@@ -100,7 +102,7 @@ export async function getDashboardStats() {
       deadStockCount: "0",
     });
   }
-}
+});
 
 
 export async function getRecentServiceTickets() {
@@ -173,4 +175,13 @@ export async function getTopSellingProducts() {
     console.error("Error fetching top products:", error);
     return [];
   }
+}
+
+export async function getDashboardInit() {
+  const [stats, rates] = await Promise.all([
+    getDashboardStats(),
+    getExchangeRates(),
+  ]);
+
+  return { stats, rates };
 }

@@ -238,8 +238,12 @@ export default function StockAIPage() {
                                                     if (alert.type === "CRITICAL") {
                                                         // Send to Shortage List
                                                         try {
-                                                            await addShortageItem({ productId: alert.product.id, name: alert.product.name, quantity: 1 });
-                                                            toast.success(`${alert.product.name} eksikler listesine eklendi.`);
+                                                            const res = await addShortageItem({ productId: alert.product.id, name: alert.product.name, quantity: 1 });
+                                                            if (res.isDuplicate) {
+                                                                toast.warning(res.message);
+                                                            } else {
+                                                                toast.success(`${alert.product.name} eksikler listesine eklendi.`);
+                                                            }
                                                             handleDelete(alert.id);
                                                         } catch (error) {
                                                             toast.error("Eksikler listesine eklenirken hata oluştu.");

@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export function NotificationSidebar({ notifications: incomingNotifications }: { notifications: any }) {
+export function NotificationSidebar({
+    notifications: incomingNotifications,
+    serviceStats
+}: {
+    notifications: any;
+    serviceStats?: { active: number; ready: number; done: number; all: number; };
+}) {
     const router = useRouter();
     const notifications = Array.isArray(incomingNotifications)
         ? incomingNotifications
@@ -14,6 +20,7 @@ export function NotificationSidebar({ notifications: incomingNotifications }: { 
 
     const warrantyAlerts = notifications.filter((n: any) => n.type === "WARRANTY_EXPIRY");
     const pendingApprovals = notifications.filter((n: any) => n.type === "PENDING_APPROVAL");
+    const delayedServices = notifications.filter((n: any) => n.type === "DELIVERY_TIME");
 
     const openWhatsApp = (phone: string, message: string) => {
         const cleanPhone = phone.replace(/\D/g, "");
@@ -54,7 +61,7 @@ export function NotificationSidebar({ notifications: incomingNotifications }: { 
                 </div>
             )}
 
-            {/* Onay Bekleyenler Widget - Image 2 Style */}
+            {/* Onay Bekleyenler & Gecikmiş Servis Widget */}
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
 
@@ -89,7 +96,6 @@ export function NotificationSidebar({ notifications: incomingNotifications }: { 
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {/* WhatsApp Instead of Ara */}
                                         <Button
                                             onClick={() => openWhatsApp(pending.metadata?.phone || "", "Merhaba, cihazınızın onarım onayı hakkında görüşmek istemiştik.")}
                                             className="h-8 px-4 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px] font-black transition-all gap-1.5 border border-emerald-500/20"
@@ -110,29 +116,39 @@ export function NotificationSidebar({ notifications: incomingNotifications }: { 
                     )}
                 </div>
 
-                {/* Gecikmiş Servis Alert */}
-                <div className="mt-6 pt-5 border-t border-white/5 flex gap-3 relative z-10 transition-all hover:translate-x-1">
-                    <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
-                        <AlertCircle className="h-4 w-4 text-rose-500" />
+                {/* Gecikmiş Servis Alert - Real Data */}
+                {delayedServices.length > 0 && (
+                    <div className="mt-6 pt-5 border-t border-white/5 space-y-4 relative z-10">
+                        {delayedServices.slice(0, 2).map((delayed: SystemNotification) => (
+                            <div key={delayed.id} className="flex gap-3 transition-all hover:translate-x-1">
+                                <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+                                    <AlertCircle className="h-4 w-4 text-rose-500" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <h4 className="text-[12px] font-bold text-white leading-none">
+                                        {delayed.title}
+                                    </h4>
+                                    <p className="text-[10px] font-medium text-slate-400 leading-tight">
+                                        {delayed.message}
+                                    </p>
+                                    <Button
+                                        onClick={() => router.push(`/servis?highlight=${delayed.referenceId}`)}
+                                        className="h-7 px-4 mt-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black self-start transition-all shadow-lg shadow-rose-600/20"
+                                    >
+                                        HIZLANDIR
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <h4 className="text-[13px] font-bold text-white leading-none">
-                            TS-2024-001 Servis
-                        </h4>
-                        <p className="text-[10px] font-bold text-rose-500 leading-tight">
-                            2 gün gecikti!
-                        </p>
-                        <Button
-                            className="h-7 px-4 mt-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black self-start transition-all shadow-lg shadow-rose-600/20"
-                        >
-                            Hızlandır
-                        </Button>
-                    </div>
-                </div>
+                )}
             </div>
 
-            {/* Cihaz Takibi Widget */}
-            <div className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all cursor-pointer">
+            {/* Cihaz Takibi Widget - Real Data */}
+            <div
+                onClick={() => router.push('/servis')}
+                className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all cursor-pointer"
+            >
                 <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
                 <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">
                     <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
@@ -140,12 +156,15 @@ export function NotificationSidebar({ notifications: incomingNotifications }: { 
                     </h3>
                     <div className="flex items-end justify-between mb-4">
                         <span className="text-xl font-black text-white leading-none tracking-tight">
-                            24 Cihaz Onarımda
+                            {serviceStats?.active || 0} Cihaz Onarımda
                         </span>
                         <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-all group-hover:translate-x-1" />
                     </div>
                     <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 w-[65%] rounded-full shadow-[0_0_12px_rgba(37,99,235,0.7)]" />
+                        <div
+                            className="h-full bg-blue-500 rounded-full shadow-[0_0_12px_rgba(37,99,235,0.7)] transition-all duration-1000"
+                            style={{ width: `${serviceStats ? (serviceStats.active / (serviceStats.all || 1)) * 100 : 0}%` }}
+                        />
                     </div>
                 </div>
             </div>
