@@ -11,6 +11,7 @@ import { ShortageProvider } from "@/lib/context/shortage-context";
 import { getStaff } from "@/lib/actions/staff-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { NextAuthProvider } from "@/components/providers/session-provider";
+import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
 
 export const metadata: Metadata = {
   title: "Takip V2 - Mobil Servis & ERP",
@@ -32,7 +33,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <NextAuthProvider>
-            {children}
+            <ProgressBarProvider>
+              {children}
+            </ProgressBarProvider>
           </NextAuthProvider>
           <Toaster position="bottom-right" expand={false} duration={2500} />
         </ThemeProvider>

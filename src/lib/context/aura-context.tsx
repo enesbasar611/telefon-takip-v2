@@ -1,73 +1,46 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 export type AuraType = "idle" | "focus" | "analyzing" | "success" | "error" | "navigation";
 
 interface AuraContextType {
     aura: AuraType;
-    triggerAura: (type: AuraType, coords?: { x: number; y: number }) => void;
-    auraCoords: { x: number; y: number } | null;
+    triggerAura: (type: AuraType) => void;
+    MapsWithAura: (href: string) => void;
 }
 
 const AuraContext = createContext<AuraContextType | null>(null);
 
 export function AuraProvider({ children }: { children: React.ReactNode }) {
     const [aura, setAura] = useState<AuraType>("idle");
-    const [auraCoords, setAuraCoords] = useState<{ x: number; y: number } | null>(null);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pathname = usePathname();
-    const searchParams = useSearchParams();
+    const router = useRouter();
 
-    const triggerAura = useCallback((type: AuraType, coords?: { x: number; y: number }) => {
-        // Clear any pending resets
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
+    const triggerAura = useCallback((type: AuraType) => {
         setAura(type);
-        if (coords) setAuraCoords(coords);
-
-        // Dynamic reset logic
-        if (type === "success" || type === "error" || type === "navigation" || type === "analyzing") {
-            timeoutRef.current = setTimeout(() => {
-                setAura("idle");
-                setAuraCoords(null);
-            }, type === "navigation" ? 1500 : 2000);
+        // Only non-navigation types reset via timeout if needed, 
+        // but for this flow we focus on navigation which resets via pathname change
+        if (type !== "navigation" && type !== "idle") {
+            setTimeout(() => setAura("idle"), 2000);
         }
     }, []);
 
-    // Navigation Tracker - Çevrim içi geçişleri yakalama
+    const MapsWithAura = useCallback((href: string) => {
+        // Immediate visual feedback
+        setAura("navigation");
+        // Start Next.js navigation
+        router.push(href);
+    }, [router]);
+
+    // Reset aura to idle ONLY when pathname changes (meaning navigation completed)
     useEffect(() => {
-        // Hedefe ulaşıldığında hemen kapat (veya temizle)
-        triggerAura("idle");
-    }, [pathname, searchParams, triggerAura]);
-
-    // Anlık Tıklama Yakalayıcı (Linklere tıklanır tıklanmaz blur için)
-    useEffect(() => {
-        const handleGlobalClick = (e: MouseEvent) => {
-            const target = (e.target as Element).closest('a[href]');
-            if (target) {
-                const href = target.getAttribute('href');
-                const targetAttr = target.getAttribute('target');
-
-                // Aynı sayfaya tıklamadığımızı kontrol edelim
-                const isInternal = href && href.startsWith('/') && targetAttr !== '_blank';
-                // URL farklıysa veya query string değişiyorsa hemen tetikle
-                if (isInternal) {
-                    const currentUrl = pathname + searchParams.toString();
-                    if (href !== currentUrl && href !== pathname) {
-                        triggerAura("navigation");
-                    }
-                }
-            }
-        };
-
-        document.addEventListener('click', handleGlobalClick);
-        return () => document.removeEventListener('click', handleGlobalClick);
-    }, [pathname, searchParams, triggerAura]);
+        setAura("idle");
+    }, [pathname]);
 
     return (
-        <AuraContext.Provider value={{ aura, triggerAura, auraCoords }}>
+        <AuraContext.Provider value={{ aura, triggerAura, MapsWithAura }}>
             {children}
         </AuraContext.Provider>
     );

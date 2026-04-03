@@ -7,6 +7,7 @@ import { ShortageProvider } from "@/lib/context/shortage-context";
 import { DashboardDataProvider } from "@/lib/context/dashboard-data-context";
 import { AuraProvider } from "@/lib/context/aura-context";
 import { AuraSystem } from "@/components/ui/aura-system";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
 import { getStaff } from "@/lib/actions/staff-actions";
@@ -61,14 +62,14 @@ export default async function DashboardLayout({
                                     <GlobalSearch />
                                     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
                                         <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
-                                        <div className="flex flex-1 flex-col overflow-hidden">
+                                        <DashboardContent>
                                             <Navbar />
                                             <main className="flex-1 p-4 lg:p-8 overflow-auto custom-scrollbar">
                                                 <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
                                                     {children}
                                                 </div>
                                             </main>
-                                        </div>
+                                        </DashboardContent>
                                         <BottomNav />
                                     </div>
                                 </ShortageProvider>

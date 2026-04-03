@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -8,8 +7,9 @@ import { toast } from "sonner";
 import { AISearchModal } from "@/components/basarai/ai-search-modal";
 import { AIUpdateModal } from "@/components/basarai/ai-update-modal";
 import { AIAnalyzeModal } from "@/components/basarai/ai-analyze-modal";
+import { useAura } from "@/lib/context/aura-context";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Wrench,
@@ -94,7 +94,7 @@ const menuItems = [
 export function Sidebar({ className, user, onNavigate }: { className?: string; user?: { name: string; role: string }, onNavigate?: () => void }) {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const router = useRouter();
+  const { MapsWithAura } = useAura();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
   const [aiUpdateOpen, setAiUpdateOpen] = useState(false);
@@ -120,13 +120,14 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
   const handleNavigation = (href: string) => {
     setLocalActivePath(href);
+    MapsWithAura(href);
     onNavigate?.();
   };
 
   return (
     <div className={cn("flex h-screen w-72 flex-col bg-background border-r border-border/40 shadow-none z-20 overflow-hidden font-sans", className)}>
       <div className="flex h-24 items-center px-8 border-b border-border/10 flex-shrink-0">
-        <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-105">
+        <button onClick={() => handleNavigation("/")} className="flex items-center gap-3 group transition-transform hover:scale-105 outline-none">
           <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
             <Zap className="h-6 w-6 text-white fill-white" />
           </div>
@@ -143,7 +144,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             </span>
             <span className="text-[11px] font-medium text-muted-foreground mt-1">Yönetim Paneli V2.0</span>
           </div>
-        </Link>
+        </button>
       </div>
 
       <ScrollArea className="flex-1 px-4 py-6">
@@ -177,7 +178,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                       toggleMenu(item.label);
                     }}
                     className={cn(
-                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
+                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group outline-none",
                       isActive
                         ? "text-primary bg-primary/10"
                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
@@ -188,37 +189,35 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                     {isOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50" />}
                   </button>
                 ) : (
-                  <Link
-                    href={item.href}
+                  <button
                     onClick={() => handleNavigation(item.href)}
                     className={cn(
-                      "flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium transition-all group",
+                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group outline-none",
                       isActive
                         ? "text-primary bg-primary/10"
                         : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                     )}
                   >
                     <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1">{item.label}</span>
-                  </Link>
+                    <span className="flex-1 text-left">{item.label}</span>
+                  </button>
                 )}
 
                 {hasSubItems && isOpen && (
                   <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-border/40 pl-4 py-1">
                     {item.subItems.map((sub) => (
-                      <Link
+                      <button
                         key={sub.label}
-                        href={sub.href}
                         onClick={() => handleNavigation(sub.href)}
                         className={cn(
-                          "px-4 py-2.5 text-[13.5px] font-medium rounded-lg transition-all",
+                          "px-4 py-2.5 text-left text-[13.5px] font-medium rounded-lg transition-all outline-none",
                           localActivePath === sub.href
                             ? "text-primary bg-primary/10 font-semibold"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         )}
                       >
                         {sub.label}
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -235,11 +234,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
           onMouseEnter={() => setIsAiHovered(true)}
           onMouseLeave={() => setIsAiHovered(false)}
         >
-          {/* Border Beam Magic */}
-          <BorderBeam
-            isActive={isAiHovered}
-            duration={15}
-          />
+          <BorderBeam isActive={isAiHovered} duration={15} />
 
           <div className="relative z-10 bg-card rounded-2xl overflow-hidden">
             <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
@@ -249,19 +244,19 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             <div className="grid grid-cols-3 divide-x divide-[#222222]">
               <button
                 onClick={() => setAiAnalyzeOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
                 <Activity className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase">Analiz</span>
               </button>
               <button
                 onClick={() => setAiUpdateOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
                 <RefreshCcw className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase">Güncelle</span>
               </button>
               <button
                 onClick={() => setAiSearchOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20">
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
                 <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase">Ara</span>
               </button>
