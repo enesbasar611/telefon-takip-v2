@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, formatName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
@@ -31,10 +31,33 @@ export async function getCustomerById(id: string) {
       include: {
         tickets: {
           orderBy: { createdAt: "desc" },
-          include: { technician: true }
+          include: {
+            technician: true,
+            usedParts: {
+              include: {
+                product: {
+                  include: {
+                    supplier: true,
+                    category: true
+                  }
+                }
+              }
+            }
+          }
         },
         sales: {
-          include: { items: { include: { product: true } } },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    supplier: true,
+                    category: true
+                  }
+                }
+              }
+            }
+          },
           orderBy: { createdAt: "desc" }
         },
         debts: { orderBy: { createdAt: "desc" } }
@@ -66,6 +89,7 @@ export async function createCustomer(data: {
     const customer = await prisma.customer.create({
       data: {
         ...data,
+        name: formatName(data.name),
         shopId,
         phone: data.phone || "" // Safety fallback
       }
@@ -93,7 +117,10 @@ export async function updateCustomer(id: string, data: {
     const shopId = await getShopId();
     const customer = await prisma.customer.update({
       where: { id, shopId },
-      data
+      data: {
+        ...data,
+        ...(data.name ? { name: formatName(data.name) } : {})
+      }
     });
     revalidatePath("/musteriler");
     revalidatePath(`/musteriler/${id}`);

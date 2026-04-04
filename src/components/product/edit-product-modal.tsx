@@ -25,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import { Edit, Loader2, Package, Barcode, TrendingUp, AlertTriangle, MapPin } from "lucide-react";
 import { updateProduct } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
+import { PriceInput } from "@/components/ui/price-input";
+import { formatCurrency } from "@/lib/utils";
 
 const productSchema = z.object({
     name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
@@ -52,6 +54,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
     const {
         register,
         handleSubmit,
+        watch,
         setValue,
         formState: { errors },
         reset,
@@ -144,14 +147,24 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="buyPrice" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Alış Fiyatı (₺)</Label>
-                                    <Input id="buyPrice" type="number" step="0.01" {...register("buyPrice")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm font-bold" />
+                                    <Label htmlFor="buyPrice" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Alış Fiyatı</Label>
+                                    <PriceInput
+                                        id="buyPrice"
+                                        value={watch("buyPrice")}
+                                        onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
+                                        className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm font-bold"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="sellPrice" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış Fiyatı (₺)
+                                        <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış Fiyatı
                                     </Label>
-                                    <Input id="sellPrice" type="number" step="0.01" {...register("sellPrice")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm font-bold" />
+                                    <PriceInput
+                                        id="sellPrice"
+                                        value={watch("sellPrice")}
+                                        onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
+                                        className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm font-bold"
+                                    />
                                 </div>
                             </div>
 

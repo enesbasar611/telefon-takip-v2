@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, formatName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
@@ -44,6 +44,7 @@ export async function createStaff(data: {
     const user = await prisma.user.create({
       data: {
         ...data,
+        name: formatName(data.name),
         password: data.password || "password123",
         shopId
       }
@@ -116,5 +117,19 @@ export async function getStaffPerformance(userId: string) {
       totalRevenue: 0,
       commission: 0
     };
+  }
+}
+export async function updateStaffName(userId: string, name: string) {
+  try {
+    const shopId = await getShopId();
+    await prisma.user.update({
+      where: { id: userId, shopId },
+      data: { name: formatName(name) }
+    });
+    revalidatePath("/personel");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "İsim güncellenemedi." };
   }
 }

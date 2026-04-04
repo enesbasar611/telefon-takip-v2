@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { ServiceStatus } from "@prisma/client";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, formatName, toTitleCase } from "@/lib/utils";
 import * as z from "zod";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
@@ -31,6 +31,10 @@ const serviceSchema = z.object({
   technicianId: z.string().optional().or(z.literal("")),
   estimatedDeliveryDate: z.string().optional().or(z.literal("")),
   downPayment: z.number().optional().default(0),
+  photos: z.array(z.string()).optional().default([]),
+  devicePassword: z.string().optional().or(z.literal("")),
+  serviceType: z.string().optional().or(z.literal("")),
+  priority: z.number().optional().default(1),
 });
 
 // getOrCreateDevUser removed.
@@ -50,11 +54,11 @@ export async function createServiceTicket(rawData: any) {
         }
       },
       update: {
-        name: validatedData.customerName,
+        name: formatName(validatedData.customerName),
         email: validatedData.customerEmail || null
       },
       create: {
-        name: validatedData.customerName,
+        name: formatName(validatedData.customerName),
         phone: validatedData.customerPhone,
         email: validatedData.customerEmail || null,
         shopId
@@ -64,19 +68,29 @@ export async function createServiceTicket(rawData: any) {
     const ticketCount = await prisma.serviceTicket.count({ where: { shopId } });
     const ticketNumber = `SRV-${1000 + ticketCount + 1}`;
 
+    // Get default technician (first admin found or the creator)
+    const defaultAdmin = await prisma.user.findFirst({
+      where: { shopId, role: "ADMIN" },
+      orderBy: { createdAt: "asc" }
+    });
+
     const ticket = await prisma.serviceTicket.create({
       data: {
         ticketNumber,
         customerId: customer.id,
-        deviceBrand: validatedData.deviceBrand,
-        deviceModel: validatedData.deviceModel,
+        deviceBrand: toTitleCase(validatedData.deviceBrand),
+        deviceModel: toTitleCase(validatedData.deviceModel),
         imei: validatedData.imei || null,
         serialNumber: validatedData.serialNumber || null,
-        problemDesc: validatedData.problemDesc,
-        cosmeticCondition: validatedData.cosmeticCondition || null,
+        problemDesc: toTitleCase(validatedData.problemDesc),
+        cosmeticCondition: validatedData.cosmeticCondition ? toTitleCase(validatedData.cosmeticCondition) : null,
         notes: validatedData.notes || null,
-        estimatedCost: validatedData.estimatedCost,
-        technicianId: validatedData.technicianId || null,
+        estimatedCost: Math.round(Number(validatedData.estimatedCost || 0) * 100) / 100,
+        technicianId: validatedData.technicianId || defaultAdmin?.id || userId,
+        photos: validatedData.photos || [],
+        devicePassword: validatedData.devicePassword || null,
+        serviceType: validatedData.serviceType ? toTitleCase(validatedData.serviceType) : null,
+        priority: validatedData.priority ?? 1,
         estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
         createdById: userId,
         shopId,
@@ -88,7 +102,7 @@ export async function createServiceTicket(rawData: any) {
             shopId
           }
         }
-      },
+      } as any,
     });
 
     // Handle Down Payment (Kapora) as an INCOME transaction
@@ -97,7 +111,7 @@ export async function createServiceTicket(rawData: any) {
       await prisma.transaction.create({
         data: {
           type: "INCOME",
-          amount: validatedData.downPayment,
+          amount: Math.round(Number(validatedData.downPayment) * 100) / 100,
           description: `KAPORA ALINDI - ${ticketNumber} (${validatedData.customerName})`,
           paymentMethod: "CASH",
           userId,
@@ -109,7 +123,7 @@ export async function createServiceTicket(rawData: any) {
       // Update Kasa balance
       await prisma.financeAccount.update({
         where: { id: kasaAccount.id, shopId },
-        data: { balance: { increment: validatedData.downPayment } }
+        data: { balance: { increment: Math.round(Number(validatedData.downPayment) * 100) / 100 } }
       });
     }
 
@@ -308,7 +322,8 @@ export async function addServiceLogWithNote(ticketId: string, status: ServiceSta
     return { success: true, data: serializePrisma(log) };
   } catch (error) {
     console.error("Error adding service log:", error);
-    return { success: false, error: "Not eklenirken bir hata oluştu." };
+    console.error("Order and add part error:", error);
+    return { success: false, error: (error as Error).message || "Beklenmedik bir hata oluştu." };
   }
 }
 
@@ -337,7 +352,7 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
   }
 }
 
-export async function addPartToService(ticketId: string, productId: string, quantity: number, unitPrice?: number) {
+export async function addPartToService(ticketId: string, productId: string, quantity: number, unitPrice?: number, warrantyMonths: number = 1) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -353,8 +368,9 @@ export async function addPartToService(ticketId: string, productId: string, quan
           quantity,
           unitPrice: unitPrice !== undefined ? unitPrice : product.sellPrice,
           costPrice: product.buyPrice,
+          warrantyMonths,
           shopId
-        }
+        } as any
       });
 
       const updatedProduct = await tx.product.update({
@@ -459,6 +475,149 @@ export async function removePartFromService(partId: string) {
   } catch (error: any) {
     console.error("Error removing part from service:", error);
     return { success: false, error: error.message || "Parça çıkarılırken bir hata oluştu." };
+  }
+}
+
+export async function updateServiceUsedPart(partId: string, data: { unitPrice?: number, costPrice?: number, warrantyMonths?: number, warrantyDays?: number }) {
+  try {
+    const shopId = await getShopId();
+    const part = await prisma.serviceUsedPart.update({
+      where: { id: partId, shopId },
+      data: {
+        unitPrice: data.unitPrice !== undefined ? data.unitPrice : undefined,
+        costPrice: data.costPrice !== undefined ? data.costPrice : undefined,
+        warrantyMonths: data.warrantyMonths !== undefined ? data.warrantyMonths : undefined,
+        warrantyDays: data.warrantyDays !== undefined ? data.warrantyDays : undefined
+      } as any
+    });
+
+    await prisma.serviceLog.create({
+      data: {
+        ticketId: part.ticketId,
+        status: ServiceStatus.REPAIRING,
+        message: `Parça güncellendi: ${partId} (Fiyat/Garanti)`,
+        shopId
+      }
+    });
+
+    revalidatePath(`/servis/liste`);
+    revalidatePath(`/servis/${part.ticketId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating service part:", error);
+    return { success: false, error: "Parça güncellenemedi." };
+  }
+}
+
+export async function orderAndAddPartToService(data: {
+  ticketId: string;
+  productId?: string;
+  name: string;
+  supplierId: string;
+  buyPrice: number;
+  buyPriceUsd?: number;
+  warrantyMonths?: number;
+  warrantyDays?: number;
+}) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Ürünü bul veya oluştur
+      let productId = data.productId;
+      if (!productId) {
+        const existing = await tx.product.findFirst({ where: { name: data.name, shopId } });
+        if (existing) {
+          productId = existing.id;
+        } else {
+          let cat = await tx.category.findFirst({ where: { name: { contains: "Servis" }, shopId } });
+          if (!cat) cat = await tx.category.findFirst({ where: { shopId } });
+
+          // Eğer hala kategori yoksa yeni oluştur
+          if (!cat) {
+            cat = await tx.category.create({
+              data: {
+                name: "Servis Parçaları",
+                shopId
+              }
+            });
+          }
+
+          const newProd = await tx.product.create({
+            data: {
+              name: toTitleCase(data.name),
+              sku: `SP-${Date.now()}`,
+              categoryId: cat.id,
+              buyPrice: data.buyPrice,
+              buyPriceUsd: data.buyPriceUsd || null,
+              sellPrice: 0,
+              stock: 0,
+              shopId
+            }
+          });
+          productId = newProd.id;
+        }
+      }
+
+      // 2. Tedarikçi İşlemi Oluştur (Borç)
+      const currentRate = data.buyPriceUsd ? (data.buyPrice / data.buyPriceUsd) : 1;
+      await (tx.supplierTransaction as any).create({
+        data: {
+          supplierId: data.supplierId,
+          amount: data.buyPrice,
+          amountUsd: data.buyPriceUsd || null,
+          exchangeRate: currentRate,
+          type: "INCOME", // Borç artışı
+          description: `Servis #${data.ticketId} için parça tedariği: ${data.name}`,
+          shopId
+        }
+      });
+
+      // Bakiye güncelle
+      await (tx.supplier as any).update({
+        where: { id: data.supplierId },
+        data: {
+          balance: { increment: data.buyPrice },
+          balanceUsd: { increment: data.buyPriceUsd || 0 }
+        }
+      });
+
+      // 3. Servis Parça Kaydı
+      const part = await tx.serviceUsedPart.create({
+        data: {
+          ticketId: data.ticketId,
+          productId: productId!,
+          quantity: 1,
+          unitPrice: 0, // Müşteriye satış fiyatı 0 (işçilik içinde)
+          costPrice: Math.round(Number(data.buyPrice) * 100) / 100,
+          costPriceUsd: data.buyPriceUsd ? Math.round(Number(data.buyPriceUsd) * 100) / 100 : null,
+          warrantyMonths: data.warrantyMonths || 1,
+          warrantyDays: data.warrantyDays || null,
+          shopId
+        } as any
+      });
+
+      // 4. Servis Logu
+      await tx.serviceLog.create({
+        data: {
+          ticketId: data.ticketId,
+          status: ServiceStatus.WAITING_PART,
+          message: `Parça tedarikçiden borç ile eklendi: ${data.name} (Maliyet: ₺${data.buyPrice}${data.buyPriceUsd ? ` / $${data.buyPriceUsd}` : ""})`,
+          shopId
+        }
+      });
+
+      return part;
+    });
+
+    revalidatePath(`/servis/liste`);
+    revalidatePath(`/servis/${data.ticketId}`);
+    revalidatePath("/tedarikciler");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Order and add part error:", error);
+    return { success: false, error: error.message || "Tedarik işlemi başarısız oldu." };
   }
 }
 

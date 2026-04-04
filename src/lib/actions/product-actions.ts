@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma, toSentenceCase } from "@/lib/utils";
+import { serializePrisma, toTitleCase } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
@@ -166,7 +166,7 @@ export async function createProduct(data: {
       where: {
         shopId,
         OR: [
-          { name: { equals: toSentenceCase(data.name), mode: 'insensitive' } },
+          { name: { equals: toTitleCase(data.name), mode: 'insensitive' } },
           ...(data.barcode ? [{ barcode: data.barcode }] : []),
           ...(data.sku ? [{ sku: data.sku }] : [])
         ]
@@ -184,7 +184,7 @@ export async function createProduct(data: {
 
     const product = await prisma.product.create({
       data: {
-        name: toSentenceCase(data.name),
+        name: toTitleCase(data.name),
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
         buyPriceUsd: data.buyPriceUsd ?? null,
@@ -249,7 +249,7 @@ export async function updateProduct(id: string, data: any) {
       where: { id, shopId },
       data: {
         ...data,
-        name: data.name ? toSentenceCase(data.name) : undefined,
+        name: data.name ? toTitleCase(data.name) : undefined,
         buyPrice,
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
         stock: newStock,
@@ -325,7 +325,7 @@ export async function applyBulkAIUpdates(updates: any[]) {
         return prisma.product.update({
           where: { id, shopId },
           data: {
-            name: newName || undefined,
+            name: newName ? toTitleCase(newName) : undefined,
             sellPrice: sellPrice ? Number(sellPrice) : undefined,
             buyPriceUsd: buyPriceUsd ? Number(buyPriceUsd) : undefined,
             buyPrice: buyPrice || undefined,
@@ -616,7 +616,7 @@ export async function getInventoryStats() {
 export async function createCategory(name: string) {
   try {
     const shopId = await getShopId();
-    const category = await prisma.category.create({ data: { name, shopId } });
+    const category = await prisma.category.create({ data: { name: toTitleCase(name), shopId } });
     revalidatePath("/stok");
     return { success: true, category: serializePrisma(category) };
   } catch (error) {

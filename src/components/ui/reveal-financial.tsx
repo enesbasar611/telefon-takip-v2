@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { useUI } from "@/lib/context/ui-context";
 
 interface RevealFinancialProps {
@@ -14,7 +14,7 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
   const { isFinancialVisible } = useUI();
 
   const formattedAmount = typeof amount === "number"
-    ? amount.toLocaleString('tr-TR')
+    ? formatCurrency(amount)
     : amount.replace('₺', '').trim();
 
   return (

@@ -36,10 +36,13 @@ function OnboardingForm() {
                     shopName: result.shopName
                 });
 
-                // Force a full reload to ensure middleware picks up the new session cookie
+                // Immediate router refresh to update server-side session state for middleware
+                router.refresh();
+
+                // Force a full reload to the absolute dashboard path to bypass any root-level redirects
                 setTimeout(() => {
-                    window.location.href = "/";
-                }, 1000);
+                    window.location.href = "/dashboard";
+                }, 800);
             } else {
                 toast.error(result.error || "Bir hata oluştu.");
             }

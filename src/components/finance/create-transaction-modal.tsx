@@ -45,6 +45,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { formatCurrency } from "@/lib/utils";
+import { PriceInput } from "@/components/ui/price-input";
 
 const transactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
@@ -296,12 +298,10 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <Landmark className="h-3 w-3" /> TUTAR
                 </Label>
                 <div className="relative group">
-                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg font-black text-primary opacity-50 group-focus-within:opacity-100 transition-opacity">₺</span>
-                  <Input
+                  <PriceInput
                     id="amount"
-                    type="number"
-                    step="0.01"
-                    {...register("amount")}
+                    value={watch("amount")}
+                    onChange={(v) => setValue("amount", String(v), { shouldValidate: true })}
                     placeholder="0,00"
                     className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-black text-2xl pl-12 shadow-inner group-hover:bg-muted/30 transition-all"
                   />

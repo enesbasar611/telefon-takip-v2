@@ -31,7 +31,8 @@ import { createProduct } from "@/lib/actions/product-actions";
 import { parseProductWithAI } from "@/lib/actions/gemini-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { PriceInput } from "@/components/ui/price-input";
 
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { useAura } from "@/lib/context/aura-context";
@@ -388,10 +389,13 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                       Birim Tedarik Maliyeti ({currency})
                     </Label>
                     <div className="relative">
-                      <Input id="buyPrice" type="number" step="0.01" {...register("buyPrice")} className="bg-black/40 border-stone-800 rounded-xl h-12 pl-12 text-[15px] font-bold text-white focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner" />
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-amber-500/80">
-                        {currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
-                      </span>
+                      <PriceInput
+                        id="buyPrice"
+                        value={watch("buyPrice")}
+                        onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
+                        prefix={currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
+                        className="bg-black/40 border-stone-800 rounded-xl h-12 pl-12 text-[15px] font-bold text-white focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner"
+                      />
                     </div>
                     {currency !== "TRY" && (
                       <div className="flex items-center gap-1.5 mt-2 px-1 opacity-90">
@@ -408,8 +412,12 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                       Hedef Satış Fiyatı (₺)
                     </Label>
                     <div className="relative">
-                      <Input id="sellPrice" type="number" step="0.01" {...register("sellPrice")} className="bg-black/40 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px] font-bold text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner" />
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-emerald-500/80">₺</span>
+                      <PriceInput
+                        id="sellPrice"
+                        value={watch("sellPrice")}
+                        onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
+                        className="bg-black/40 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px] font-bold text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner"
+                      />
                     </div>
                   </div>
                 </div>

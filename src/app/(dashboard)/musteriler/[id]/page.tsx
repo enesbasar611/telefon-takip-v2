@@ -35,7 +35,7 @@ import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,16 +71,68 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
     const totalDebt = customer.debts?.reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0) || 0;
     const tier = getLoyaltyTier(customer.loyaltyPoints);
 
-    // Collect used parts from service tickets
-    const usedParts = customer.tickets?.flatMap((t: any) =>
-        (t.usedParts || []).map((p: any) => ({
-            ...p,
-            ticketNumber: t.ticketNumber,
-            ticketId: t.id,
-            date: t.deliveredAt || t.createdAt,
-            warrantyExpiry: t.warrantyExpiry
-        }))
-    ).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [];
+    // Collect all items (Service parts + Sale items)
+    const serviceParts = customer.tickets?.flatMap((t: any) =>
+        (t.usedParts || []).map((p: any) => {
+            const startDate = t.deliveredAt || t.createdAt;
+            let expiry = t.warrantyExpiry;
+
+            // If ticket doesn't have expiry, calculate from part's warranty info
+            if (!expiry) {
+                const date = new Date(startDate);
+                if (p.warrantyDays) {
+                    date.setDate(date.getDate() + p.warrantyDays);
+                    expiry = date;
+                } else if (p.warrantyMonths) {
+                    date.setMonth(date.getMonth() + p.warrantyMonths);
+                    expiry = date;
+                }
+            }
+
+            return {
+                ...p,
+                itemName: p.product?.name,
+                itemCategory: p.product?.category?.name,
+                supplierName: p.product?.supplier?.name,
+                cost: p.costPrice,
+                price: p.unitPrice,
+                referenceNumber: t.ticketNumber,
+                referenceId: t.id,
+                type: 'SERVICE',
+                date: startDate,
+                warrantyExpiry: expiry
+            };
+        })
+    ) || [];
+
+    const saleItems = customer.sales?.flatMap((s: any) =>
+        (s.items || []).map((item: any) => {
+            const date = s.createdAt;
+            const warrantyMonths = item.product?.warrantyMonths || 0;
+            let expiry = null;
+            if (warrantyMonths > 0) {
+                const d = new Date(date);
+                d.setMonth(d.getMonth() + warrantyMonths);
+                expiry = d;
+            }
+
+            return {
+                ...item,
+                itemName: item.product?.name,
+                itemCategory: item.product?.category?.name,
+                supplierName: item.product?.supplier?.name,
+                cost: item.product?.buyPrice,
+                price: item.unitPrice,
+                referenceNumber: s.saleNumber,
+                referenceId: s.id,
+                type: 'SALE',
+                date: date,
+                warrantyExpiry: expiry
+            };
+        })
+    ) || [];
+
+    const allUsedItems = [...serviceParts, ...saleItems].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
         <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
@@ -185,7 +237,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-muted-foreground mb-1">Toplam işlem hacmi</p>
-                                <h3 className="text-4xl font-extrabold">₺{totalRevenue.toLocaleString('tr-TR')}</h3>
+                                <h3 className="text-4xl font-extrabold">₺{formatCurrency(totalRevenue)}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -209,7 +261,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-muted-foreground mb-1">Güncel borç bakiyesi</p>
-                                <h3 className="text-4xl font-extrabold text-rose-500">₺{totalDebt.toLocaleString('tr-TR')}</h3>
+                                <h3 className="text-4xl font-extrabold text-rose-500">₺{formatCurrency(totalDebt)}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -258,7 +310,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                 </div>
                                                 <div className="text-right min-w-[120px]">
                                                     <p className="text-[10px] font-bold text-muted-foreground mb-1.5">Net tutar</p>
-                                                    <span className="text-2xl font-extrabold">₺{(Number(item.actualCost) || Number(item.finalAmount) || 0).toLocaleString('tr-TR')}</span>
+                                                    <span className="text-2xl font-extrabold">₺{formatCurrency(Number(item.actualCost) || Number(item.finalAmount) || 0)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -267,107 +319,172 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                             </TabsContent>
 
                             <TabsContent value="parts" className="space-y-6 outline-none">
-                                {usedParts.length === 0 ? (
+                                {allUsedItems.length === 0 ? (
                                     <div className="p-20 text-center bg-card rounded-xl border border-border border-dashed">
                                         <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                                        <p className="text-sm font-bold text-muted-foreground">Henüz parça kullanımı kaydedilmemiş</p>
+                                        <p className="text-sm font-bold text-muted-foreground">Henüz parça/ürün kullanımı kaydedilmemiş</p>
                                     </div>
                                 ) : (
-                                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-muted/30 border-b border-border">
-                                                <tr>
-                                                    <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground">Parça adı</th>
-                                                    <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Tarih</th>
-                                                    <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Servis no</th>
-                                                    <th className="px-6 py-5 text-[10px] font-bold text-muted-foreground">Fiyat</th>
-                                                    <th className="px-8 py-5 text-[10px] font-bold text-muted-foreground text-right">Garanti durumu</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-border">
-                                                {usedParts.map((p: any) => {
-                                                    const isExpired = p.warrantyExpiry && new Date(p.warrantyExpiry) < new Date();
-                                                    return (
-                                                        <tr key={p.id} className="hover:bg-muted/10 transition-colors">
-                                                            <td className="px-8 py-6">
-                                                                <div className="font-bold text-sm">{p.product?.name}</div>
-                                                                <div className="text-[10px] text-muted-foreground font-medium mt-1">{p.product?.category?.name}</div>
-                                                            </td>
-                                                            <td className="px-6 py-6 text-xs font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</td>
-                                                            <td className="px-6 py-6 text-xs font-bold text-blue-500">#{p.ticketNumber}</td>
-                                                            <td className="px-6 py-6 font-extrabold text-sm">₺{Number(p.unitPrice).toLocaleString('tr-TR')}</td>
-                                                            <td className="px-8 py-6 text-right">
-                                                                {p.warrantyExpiry ? (
-                                                                    <Badge variant="outline" className={cn(
-                                                                        "text-[10px] font-bold border-none px-3 py-1 rounded-full",
-                                                                        isExpired ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"
-                                                                    )}>
-                                                                        {isExpired ? "Süresi doldu" : "Devam ediyor"}
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <span className="text-[10px] font-bold text-muted-foreground">Belirtilmemiş</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
+                                    <div className="bg-card border border-border rounded-xl shadow-sm">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-muted/30 border-b border-border">
+                                                    <tr>
+                                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Parça / Ürün</th>
+                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tedarikçi</th>
+                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">İşlem</th>
+                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Maliyet/Fiyat</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Garanti Durumu</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border">
+                                                    {allUsedItems.map((p: any, idx: number) => {
+                                                        const isExpired = p.warrantyExpiry && new Date(p.warrantyExpiry) < new Date();
+                                                        const now = new Date();
+                                                        let percent = 0;
+                                                        let daysLeft = 0;
+
+                                                        if (p.warrantyExpiry) {
+                                                            const expiry = new Date(p.warrantyExpiry);
+                                                            const start = new Date(p.date);
+                                                            const totalDays = differenceInDays(expiry, start) || 1; // Prevent div by zero
+                                                            daysLeft = differenceInDays(expiry, now);
+                                                            percent = Math.max(0, Math.min(100, (daysLeft / totalDays) * 100));
+                                                        }
+
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-muted/10 transition-colors">
+                                                                <td className="px-8 py-6">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className={cn(
+                                                                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+                                                                            p.type === 'SERVICE' ? "bg-blue-500/10 text-blue-500" : "bg-emerald-500/10 text-emerald-500"
+                                                                        )}>
+                                                                            {p.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <div className="font-bold text-sm truncate">{p.itemName}</div>
+                                                                            <div className="text-[10px] text-muted-foreground font-bold mt-1 uppercase tracking-tighter">{p.itemCategory || 'Genel'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-6">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Building2 className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                                                        <span className="text-xs font-bold">{p.supplierName || 'Bilinmiyor'}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-6">
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <div className={cn(
+                                                                            "text-[10px] font-black uppercase tracking-widest",
+                                                                            p.type === 'SERVICE' ? "text-blue-500" : "text-emerald-500"
+                                                                        )}>#{p.referenceNumber}</div>
+                                                                        <div className="text-[10px] text-muted-foreground font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-6">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] font-bold text-muted-foreground">M: ₺{formatCurrency(p.cost || 0)}</span>
+                                                                        <span className="text-sm font-black text-foreground">S: ₺{formatCurrency(p.price || 0)}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-6">
+                                                                    {p.warrantyExpiry ? (
+                                                                        <div className="w-[180px] space-y-2">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className={cn(
+                                                                                    "text-[9px] font-black uppercase tracking-widest",
+                                                                                    isExpired ? "text-rose-500" : "text-emerald-500"
+                                                                                )}>
+                                                                                    {isExpired ? "Süre Doldu" : `${daysLeft} Gün Kaldı`}
+                                                                                </span>
+                                                                                <span className="text-[9px] font-bold text-muted-foreground/60">{format(new Date(p.warrantyExpiry), "d/MM/yy")}</span>
+                                                                            </div>
+                                                                            <Progress value={percent} className={cn(
+                                                                                "h-1.5 bg-muted rounded-full",
+                                                                                isExpired ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500 shadow-sm shadow-emerald-500/10"
+                                                                            )} />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">- Garanti Tanımsız -</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 )}
                             </TabsContent>
 
                             <TabsContent value="warranty" className="space-y-6 outline-none">
                                 <div className="grid gap-8 md:grid-cols-2">
-                                    {customer.tickets?.filter((t: any) => t.warrantyExpiry).map((ticket: any) => {
+                                    {[...allUsedItems].filter(p => p.warrantyExpiry).map((p: any, idx: number) => {
                                         const now = new Date();
-                                        const expiry = new Date(ticket.warrantyExpiry);
-                                        const start = new Date(ticket.deliveredAt || ticket.createdAt);
-                                        const totalDays = differenceInDays(expiry, start);
+                                        const expiry = new Date(p.warrantyExpiry);
+                                        const start = new Date(p.date);
+                                        const totalDays = differenceInDays(expiry, start) || 1;
                                         const daysLeft = differenceInDays(expiry, now);
                                         const percent = Math.max(0, Math.min(100, (daysLeft / totalDays) * 100));
                                         const isExpired = daysLeft < 0;
 
                                         return (
-                                            <Card key={ticket.id} className="bg-card border-border shadow-sm overflow-hidden group rounded-xl">
+                                            <Card key={idx} className="bg-card border-border shadow-sm overflow-hidden group rounded-xl hover:border-blue-500/30 transition-all">
                                                 <CardHeader className="pb-4 border-b border-border bg-muted/10">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
-                                                                <ShieldCheck className="h-5 w-5" />
+                                                            <div className={cn(
+                                                                "h-10 w-10 rounded-xl flex items-center justify-center border border-border shadow-sm",
+                                                                p.type === 'SERVICE' ? "bg-blue-500/10 text-blue-500 shadow-blue-500/5" : "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5"
+                                                            )}>
+                                                                {p.type === 'SERVICE' ? <ShieldCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                                                             </div>
                                                             <div>
-                                                                <CardTitle className="text-xs font-bold">{ticket.deviceBrand} {ticket.deviceModel}</CardTitle>
-                                                                <CardDescription className="text-[10px] font-bold">Servis no: {ticket.ticketNumber}</CardDescription>
+                                                                <CardTitle className="text-xs font-bold leading-tight truncate max-w-[150px]">{p.itemName}</CardTitle>
+                                                                <CardDescription className="text-[10px] font-bold uppercase tracking-tighter">no: {p.referenceNumber}</CardDescription>
                                                             </div>
                                                         </div>
                                                         <Badge variant="outline" className={cn(
                                                             "border-none font-bold text-[10px] px-3 py-1.5 rounded-xl",
                                                             isExpired ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10'
                                                         )}>
-                                                            {isExpired ? 'Garanti sonlandı' : 'Aktif koruma'}
+                                                            {isExpired ? 'Süre Doldu' : 'Aktif Koruma'}
                                                         </Badge>
                                                     </div>
                                                 </CardHeader>
                                                 <CardContent className="pt-10">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <span className="text-[10px] font-bold text-muted-foreground">Koruma periyodu</span>
-                                                        <span className={cn(
-                                                            "text-[10px] font-extrabold",
-                                                            isExpired ? 'text-rose-500' : 'text-emerald-500'
-                                                        )}>
-                                                            {isExpired ? '0 gün' : `${daysLeft} gün kaldı`}
-                                                        </span>
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Kalan Süre</span>
+                                                            <span className={cn(
+                                                                "text-lg font-black mt-0.5",
+                                                                isExpired ? 'text-rose-500/50' : 'text-emerald-500'
+                                                            )}>
+                                                                {isExpired ? 'Tamamlandı' : `${daysLeft} GÜN`}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-[9px] font-bold text-muted-foreground uppercase">Tedarikçi</div>
+                                                            <div className="text-[11px] font-black text-foreground">{p.supplierName || '-'}</div>
+                                                        </div>
                                                     </div>
-                                                    <Progress value={percent} className="h-2 bg-muted rounded-full" />
+                                                    <Progress value={percent} className={cn(
+                                                        "h-2 bg-muted rounded-full",
+                                                        isExpired ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500 shadow-sm shadow-emerald-500/10"
+                                                    )} />
                                                     <div className="flex items-center justify-between mt-6">
                                                         <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
                                                             <Calendar className="h-3.5 w-3.5 text-blue-500" />
                                                             <span>Bitiş: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
                                                         </div>
-                                                        <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
-                                                            Detayı gör <ArrowUpRight className="h-3 w-3 ml-1" />
-                                                        </Button>
+                                                        <Link href={p.type === 'SERVICE' ? `/servis/liste` : `/satis/kasa`}>
+                                                            <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
+                                                                Detayı gör <ArrowUpRight className="h-3 w-3 ml-1" />
+                                                            </Button>
+                                                        </Link>
                                                     </div>
                                                 </CardContent>
                                             </Card>

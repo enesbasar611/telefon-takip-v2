@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { toTitleCase } from "@/lib/utils";
 
 export async function createShopOnboarding(formData: {
     name: string;
@@ -21,8 +22,8 @@ export async function createShopOnboarding(formData: {
         // 1. Create the Shop
         const shop = await prisma.shop.create({
             data: {
-                name: formData.name,
-                address: formData.address,
+                name: toTitleCase(formData.name),
+                address: toTitleCase(formData.address),
                 phone: formData.phone,
                 // We could add currency to shop model if we update the schema again, 
                 // but for now let's assume it's stored in settings or just used in UI.
@@ -79,7 +80,23 @@ export async function createShopOnboarding(formData: {
             }
         });
 
+        // 6. Initialize Global Settings (for general settings page)
+        const globalSettings = [
+            { key: "companyName", value: shop.name },
+            { key: "companyPhone", value: shop.phone || "" },
+            { key: "companyAddress", value: shop.address || "" },
+            { key: "whatsappNewService", value: `Sayın {customer}, {device} cihazınız {ticket} numarası ile servisimize kabul edilmiştir.` },
+            { key: "whatsappReady", value: `Sayın {customer}, {device} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz.` },
+        ];
+
+        await Promise.all(globalSettings.map(s =>
+            prisma.setting.create({
+                data: { ...s, shopId: shop.id }
+            })
+        ));
+
         revalidatePath("/");
+        revalidatePath("/ayarlar");
         return { success: true, shopId: shop.id, shopName: shop.name };
     } catch (error: any) {
         console.error("Onboarding error:", error);

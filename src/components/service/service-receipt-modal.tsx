@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, CheckCircle2, ShoppingBag, Calendar, User, CreditCard, Smartphone, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { cn, formatPhone } from "@/lib/utils";
+import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { getReceiptSettings } from "@/lib/actions/receipt-settings";
 import { useEffect, useState } from "react";
 import { Barcode } from "@/components/barcode/barcode";
@@ -114,7 +114,7 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
 
                         <div className="flex justify-between border-t-2 border-black pt-3 items-center">
                             <span className="font-bold text-[9px]">TAHMİNİ ÜCRET:</span>
-                            <span className="text-lg font-bold">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
+                            <span className="text-lg font-bold">₺{formatCurrency(ticket.estimatedCost)}</span>
                         </div>
 
                         <div className="flex justify-between items-end px-3 mt-8 pb-4 opacity-40">

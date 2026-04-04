@@ -2,36 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&display=swap');
+/* Nexus SaaS Design System — Inter Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    /* Design System Tokens - The Aeonik Prism (Light Mode) */
-    --background: 210 20% 98%;
-    /* Ultra clean background */
-    --foreground: 224 71.4% 4.1%;
-    /* Deepest Black for best contrast */
+    /* Nexus Design Tokens — Light Mode */
+    --background: 0 0% 98%;
+    --foreground: 240 10% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 240 10% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
+    --popover-foreground: 240 10% 8%;
 
     --primary: 221.2 83.2% 53.3%;
-    /* Premium Blue */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 161 84% 35%;
-    /* Sharper Green */
     --secondary-foreground: 210 40% 98%;
 
     --tertiary: 38 92% 50%;
     --tertiary-foreground: 210 40% 98%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 25% 35%;
-    /* Darker for better contrast */
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 4% 40%;
 
     --accent: 221.2 83.2% 96%;
     --accent-foreground: 221.2 83.2% 53.3%;
@@ -39,23 +35,26 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 1rem;
   }
 
   .dark {
-    /* Pure Border Beam & Zero-Waste Pure Dark Tokens */
-    --background: 0 0% 0%; /* Pure Black */
-    --foreground: 210 40% 98%;
+    /* Nexus Dark Mode — Zinc-950 Base */
+    --background: 240 10% 3.9%;
+    /* #09090b — Zinc-950 */
+    --foreground: 214 32% 91%;
+    /* #e2e8f0 — Slate-200, gözü yormayan */
 
-    --card: 0 0% 8%; /* Deep Gray Card */
-    --card-foreground: 210 40% 98%;
+    --card: 240 6% 5.5%;
+    /* #0c0c0e — Kart yüzeyi */
+    --card-foreground: 214 32% 91%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 6% 5.5%;
+    --popover-foreground: 214 32% 91%;
 
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -66,26 +65,34 @@
     --tertiary: 38 92% 60%;
     --tertiary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 215 20.2% 75.1%;
+    --muted: 240 5% 10%;
+    /* Hafif kart tonu */
+    --muted-foreground: 215 20% 60%;
+    /* Okunabilir gri text */
 
-    --accent: 0 0% 12%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 5% 10%;
+    --accent-foreground: 214 32% 91%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 224.3 76.3% 48%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 5% 20%;
+    /* zinc-800 tonu — Nefes alan border */
+    --input: 240 5% 18%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 h-screen overflow-hidden;
-    font-family: 'Google Sans Flex', sans-serif !important;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 h-screen overflow-hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Design System Typography Rules */
+  /* Nexus Typography System — Only Inter */
   h1,
   h2,
   h3,
@@ -100,41 +107,88 @@
   input,
   textarea,
   select {
-    font-family: 'Google Sans Flex', sans-serif !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
   }
 
+  /* Nexus Heading Hierarchy */
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-lg font-medium tracking-tight;
+  }
+
+  h4 {
+    @apply text-base font-medium;
+  }
 
   .helper-text {
-    @apply text-muted-foreground font-medium;
+    @apply text-muted-foreground text-sm leading-relaxed font-normal;
   }
 }
 
 @layer components {
+
+  /* Nexus Card — Mat, Jilet Gibi Net */
   .matte-card {
-    @apply bg-card border border-border/10 shadow-xl shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300;
+    @apply bg-card border border-border/50 rounded-2xl shadow-sm transition-all duration-200;
   }
 
+  /* Whisper Border — Hafif Sınır */
   .whisper-border {
     border-width: 1px;
-    @apply border-border/20;
+    @apply border-border/40;
+  }
+
+  /* Nexus Section Title */
+  .nexus-label {
+    @apply text-xs font-semibold text-muted-foreground uppercase tracking-widest;
   }
 }
 
-/* Custom Scrollbar - Premium Matte */
+/* Nexus Scrollbar — İnce ve Zarif */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-muted/30;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full border-2 border-transparent bg-clip-padding transition-colors hover:bg-muted-foreground/40;
+  @apply bg-border/60 rounded-full transition-colors;
 }
 
-/* Animations - Systemic */
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border;
+}
+
+/* Custom Scrollbar helpers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-border/50 rounded-full;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+/* Nexus Animations */
 @keyframes pulse-soft {
 
   0%,
@@ -143,20 +197,18 @@
     transform: scale(1);
   }
 
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
   50% {
-    opacity: 0.8;
-    transform: scale(0.99);
+    opacity: 0.85;
+    transform: scale(0.995);
   }
 }
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-soft 4s ease-in-out infinite;
 }
 
 @keyframes blink-blue {
@@ -170,16 +222,32 @@
 
   50% {
     background-color: rgba(59, 130, 246, 0.05);
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.15);
   }
 }
 
 .animate-blink-blue {
   animation: blink-blue 2s ease-in-out 3;
-  /* Blink 3 times then stay still or use infinite if preferred */
 }
 
 .highlight-blink {
   animation: blink-blue 2s ease-in-out 3;
+}
+
+/* Nexus Fade In */
+@keyframes nexus-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nexus-fade-in {
+  animation: nexus-fade-in 0.2s ease-out forwards;
 }

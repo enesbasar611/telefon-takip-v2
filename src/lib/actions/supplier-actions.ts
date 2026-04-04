@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, toTitleCase } from "@/lib/utils";
 import { OrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
@@ -43,6 +43,7 @@ export async function createSupplier(data: {
     const supplier = await prisma.supplier.create({
       data: {
         ...data,
+        name: toTitleCase(data.name),
         shopId
       }
     });
@@ -186,7 +187,10 @@ export async function updateSupplier(id: string, data: Partial<{
     const shopId = await getShopId();
     const supplier = await prisma.supplier.update({
       where: { id, shopId },
-      data
+      data: {
+        ...data,
+        ...(data.name ? { name: toTitleCase(data.name) } : {})
+      }
     });
     revalidatePath("/tedarikciler");
     return { success: true, supplier: serializePrisma(supplier) };

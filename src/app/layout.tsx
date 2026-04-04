@@ -24,8 +24,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning className="antialiased font-sans">
-      <body className="bg-background text-foreground antialiased font-sans flex min-h-screen flex-col">
+    <html lang="tr" suppressHydrationWarning className="antialiased">
+      <body className="bg-background text-foreground antialiased flex min-h-screen flex-col" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

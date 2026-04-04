@@ -83,9 +83,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
     }
 
     const pendingOrders = purchaseOrders.filter((o: any) => o.status === "PENDING" || o.status === "ORDERED");
-    const totalDebt = purchaseOrders
-        .filter((o: any) => o.status === "PENDING" || o.status === "ORDERED")
-        .reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
+    const totalDebtTry = suppliers.reduce((sum: number, s: any) => sum + Number(s.balance || 0), 0);
+    const totalDebtUsd = suppliers.reduce((sum: number, s: any) => sum + Number(s.balanceUsd || 0), 0);
     const lastMonthPurchase = purchaseOrders.slice(0, 3).reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
 
     const criticalAlerts = aiAlerts.filter((a: any) => a.type === "CRITICAL" || a.type === "LOW_STOCK");
@@ -197,12 +196,12 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     },
                     {
                         label: "Toplam Borç",
-                        value: `₺${totalDebt.toLocaleString("tr-TR")}`,
+                        value: `₺${totalDebtTry.toLocaleString("tr-TR")}`,
                         icon: CreditCard,
                         color: "text-rose-500",
                         bg: "bg-rose-500/10",
-                        badge: pendingOrders.length > 0 ? `${pendingOrders.length} bekliyor` : "₺0",
-                        badgeColor: totalDebt > 0 ? "bg-rose-500/10 text-rose-400" : "bg-white/5 text-muted-foreground",
+                        badge: totalDebtUsd > 0 ? `$${totalDebtUsd.toLocaleString()}` : "₺0",
+                        badgeColor: totalDebtTry > 0 ? "bg-rose-500/10 text-rose-400" : "bg-white/5 text-muted-foreground",
                     },
                     {
                         label: "Son Alım Tutarı",

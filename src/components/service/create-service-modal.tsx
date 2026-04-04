@@ -22,6 +22,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { PriceInput } from "@/components/ui/price-input";
+import { formatCurrency } from "@/lib/utils";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -64,6 +66,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
     reset,
     setValue,
@@ -172,10 +175,13 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
 
               <div className="space-y-3">
                 <Label htmlFor="estimatedCost" className="text-xs font-bold text-muted-foreground">Tahmini Ücret</Label>
-                <div className="relative group">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-500/50">₺</span>
-                  <Input id="estimatedCost" type="number" {...register("estimatedCost")} placeholder="0.00" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm font-bold transition-all tabular-nums text-emerald-500" />
-                </div>
+                <PriceInput
+                  id="estimatedCost"
+                  value={watch("estimatedCost")}
+                  onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
+                  placeholder="0,00"
+                  className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm font-bold transition-all tabular-nums text-emerald-500"
+                />
                 {errors.estimatedCost && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.estimatedCost.message}</p>}
               </div>
             </div>

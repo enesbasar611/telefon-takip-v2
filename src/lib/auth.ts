@@ -23,6 +23,20 @@ export const authOptions: NextAuthOptions = {
                 token.canStock = user.canStock;
                 token.canFinance = user.canFinance;
             }
+
+            // Recovery: If shopId is missing in token, check DB (helps with onboarding sync issues)
+            if (token.id && !token.shopId) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: token.id },
+                    select: { shopId: true, shop: { select: { name: true } }, role: true }
+                });
+                if (dbUser?.shopId) {
+                    token.shopId = dbUser.shopId;
+                    token.shopName = dbUser.shop?.name;
+                    token.role = dbUser.role;
+                }
+            }
+
             if (trigger === "update" && session?.shopId) {
                 token.shopId = session.shopId;
                 if (session.shopName) token.shopName = session.shopName;

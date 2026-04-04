@@ -1,7 +1,7 @@
 "use server";
 import { cache } from "react";
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { serializePrisma, formatCurrency } from "@/lib/utils";
 import { getDeadStockCount } from "./product-actions";
 import { getOrCreateKasaAccount } from "./finance-actions";
 import { getShopId } from "@/lib/auth";
@@ -65,20 +65,20 @@ export const getDashboardStats = cache(async function getDashboardStatsInternal(
 
     return serializePrisma({
       // Card primary value: actual today's sales
-      todaySales: `₺${todaySalesAmount.toLocaleString('tr-TR')}`,
+      todaySales: `₺${formatCurrency(todaySalesAmount)}`,
       todaySalesRaw: todaySalesAmount,
       // Sub-label: current kasa balance
-      kasaBalance: `₺${kasaBalance.toLocaleString('tr-TR')}`,
+      kasaBalance: `₺${formatCurrency(kasaBalance)}`,
       kasaBalanceRaw: kasaBalance,
-      kasaOpeningBalance: `₺${kasaOpeningBalance.toLocaleString('tr-TR')}`,
+      kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
       kasaOpeningBalanceRaw: kasaOpeningBalance,
-      todayRepairIncome: `₺${(Number(todayRepairIncome._sum.actualCost) || 0).toLocaleString('tr-TR')}`,
-      collectedPayments: `₺${(Number(todayTransactions._sum.amount) || 0).toLocaleString('tr-TR')}`,
+      todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncome._sum.actualCost) || 0)}`,
+      collectedPayments: `₺${formatCurrency(Number(todayTransactions._sum.amount) || 0)}`,
       pendingServices: pendingServices.toString(),
       readyDevices: readyDevices.toString(),
       criticalStock: lowStockCount.toString(),
-      totalDebts: `₺${(Number(totalDebts._sum.balance) || 0).toLocaleString('tr-TR')}`,
-      cashBalance: `₺${kasaBalance.toLocaleString('tr-TR')}`,
+      totalDebts: `₺${formatCurrency(Number(totalDebts._sum.balance) || 0)}`,
+      cashBalance: `₺${formatCurrency(kasaBalance)}`,
       pendingProcurementCount: pendingProcurementCount.toString(),
       deadStockCount: deadStockCount.toString(),
     });

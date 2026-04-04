@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     Users,
     UserCheck,
@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -41,6 +42,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreateStaffModal } from "./create-staff-modal";
+import { updateStaffName } from "@/lib/actions/staff-actions";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from "@/components/ui/dialog";
 
 interface StaffMember {
     id: string;
@@ -64,12 +73,61 @@ interface StaffManagementClientProps {
     logs: any[];
 }
 
+function EditNameModal({ isOpen, onClose, member, onUpdate }: { isOpen: boolean, onClose: () => void, member: StaffMember | null, onUpdate: (id: string, name: string) => void }) {
+    const [name, setName] = useState(member?.name || "");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (member) setName(member.name || "");
+    }, [member]);
+
+    const handleSave = async () => {
+        if (!member) return;
+        setLoading(true);
+        const res = await updateStaffName(member.id, name);
+        if (res.success) {
+            onUpdate(member.id, name);
+            onClose();
+        }
+        setLoading(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-md bg-slate-900 border-white/5 text-white rounded-[2.5rem]">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black">İsim Düzenle</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">YENİ İSİM</Label>
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold"
+                        />
+                    </div>
+                </div>
+                <DialogFooter className="gap-2">
+                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-slate-400 font-bold">İptal</Button>
+                    <Button onClick={handleSave} disabled={loading} className="rounded-xl bg-blue-600 hover:bg-blue-500 font-black px-8">
+                        {loading ? "Kaydediliyor..." : "Kaydet"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export function StaffManagementClient({ staff: initialStaff, logs }: StaffManagementClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState<"all" | "TECHNICIAN">("all");
+    const [localStaff, setLocalStaff] = useState(initialStaff);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
 
     const filteredStaff = useMemo(() => {
-        return initialStaff.filter(member => {
+        return localStaff.filter(member => {
             const matchesSearch = (member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.email.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesTab = activeTab === "all" || member.role === activeTab;
@@ -275,6 +333,15 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="bg-slate-900 border-white/5 text-white w-48 rounded-2xl p-2">
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setSelectedMember(member);
+                                                                setEditModalOpen(true);
+                                                            }}
+                                                            className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs"
+                                                        >
+                                                            <ChevronDown className="w-4 h-4" /> İsim Düzenle
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs">
                                                             <TrendingUp className="w-4 h-4" /> Performans Analizi
                                                         </DropdownMenuItem>

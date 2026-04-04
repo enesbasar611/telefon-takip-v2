@@ -7,6 +7,13 @@ import { getShopId } from "@/lib/auth";
 export async function syncAllRates() {
   try {
     const shopId = await getShopId();
+    // Verify shop exists
+    const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+    if (!shop) {
+      console.warn(`[syncAllRates] Shop ${shopId} not found, skipping sync.`);
+      return { success: false, error: "İşletme bilgisi bulunamadı. Lütfen tekrar giriş yapın." };
+    }
+
     // Rate limiting check
     const now = new Date();
     const lastRefreshSetting = await prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "currency_last_refresh" } } });

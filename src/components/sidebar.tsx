@@ -19,7 +19,6 @@ import {
   CreditCard,
   Smartphone,
   Truck,
-  Banknote,
   BarChart3,
   UserCog,
   Bell,
@@ -87,8 +86,8 @@ const menuItems = [
   { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
   { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
-  { icon: Bell, label: "Bildirim Merkezi", href: "/bildirimler" },
-  { icon: Settings, label: "Sistem Ayarları", href: "/ayarlar" },
+  { icon: Bell, label: "Bildirimler", href: "/bildirimler" },
+  { icon: Settings, label: "Ayarlar", href: "/ayarlar" },
 ];
 
 export function Sidebar({ className, user, onNavigate }: { className?: string; user?: { name: string; role: string }, onNavigate?: () => void }) {
@@ -125,33 +124,30 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
   };
 
   return (
-    <div className={cn("flex h-screen w-72 flex-col bg-background border-r border-border/40 shadow-none z-20 overflow-hidden font-sans", className)}>
-      <div className="flex h-24 items-center px-8 border-b border-border/10 flex-shrink-0">
-        <button onClick={() => handleNavigation("/")} className="flex items-center gap-3 group transition-transform hover:scale-105 outline-none">
-          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <Zap className="h-6 w-6 text-white fill-white" />
+    <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
+      {/* Logo / Brand */}
+      <div className="flex h-16 items-center px-6 border-b border-border/50 flex-shrink-0">
+        <button onClick={() => handleNavigation("/")} className="flex items-center gap-3 group outline-none">
+          <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25 flex-shrink-0">
+            <Zap className="h-4 w-4 text-white fill-white" strokeWidth={1.5} />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-xl text-foreground leading-none whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
-              {session?.user?.shopName ? (
-                <>
-                  {session.user.shopName.split(' ').slice(0, -1).join(' ')}{' '}
-                  <span className="text-primary">{session.user.shopName.split(' ').slice(-1)}</span>
-                </>
-              ) : (
-                <>Başar <span className="text-primary">Teknik</span></>
-              )}
+          <div className="flex flex-col overflow-hidden">
+            <span className="font-semibold text-sm text-foreground leading-tight truncate max-w-[160px]">
+              Başar <span className="text-primary">Teknik</span>
             </span>
-            <span className="text-[11px] font-medium text-muted-foreground mt-1">Yönetim Paneli V2.0</span>
+            <span className="text-[10px] font-medium text-muted-foreground leading-tight mt-0.5">Yönetim Paneli v2</span>
           </div>
         </button>
       </div>
 
-      <ScrollArea className="flex-1 px-4 py-6">
-        <nav className="flex flex-col gap-1.5">
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="flex flex-col gap-0.5">
+          {/* Section Label */}
+          <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest px-3 mb-2">Menü</p>
+
           {menuItems.filter(item => {
             if (session?.user?.role === "ADMIN") return true;
-
             if (item.label === "Servis Yönetimi" && session?.user?.canService === false) return false;
             if (item.label === "Envanter" && session?.user?.canStock === false) return false;
             if (item.label === "POS & Kasa" && session?.user?.canSell === false) return false;
@@ -159,8 +155,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             if (item.label === "Müşteri CRM" && session?.user?.canSell === false && session?.user?.canService === false) return false;
             if (item.label === "İstatistikler" && session?.user?.canFinance === false) return false;
             if (item.label === "Ekip" && session?.user?.role !== "ADMIN") return false;
-            if (item.label === "Sistem Ayarları" && session?.user?.role !== "ADMIN") return false;
-
+            if (item.label === "Ayarlar" && session?.user?.role !== "ADMIN") return false;
             return true;
           }).map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
@@ -168,52 +163,57 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             const isActive = localActivePath === item.href || (item.href !== "/" && localActivePath?.startsWith(item.href));
 
             return (
-              <div key={item.label} className="relative">
-                {isActive && (
-                  <div className="absolute left-[-32px] top-1/2 -translate-y-1/2 h-8 w-1.5 bg-primary rounded-r-full shadow-[2px_0_10px_rgba(var(--primary),0.3)]" />
-                )}
+              <div key={item.label}>
                 {hasSubItems ? (
                   <button
-                    onClick={() => {
-                      toggleMenu(item.label);
-                    }}
+                    onClick={() => toggleMenu(item.label)}
                     className={cn(
-                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group outline-none",
+                      "flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 outline-none group",
                       isActive
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                        ? "text-primary bg-primary/8"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {isOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50" />}
+                    <item.icon
+                      className={cn("h-4 w-4 flex-shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground")}
+                      strokeWidth={1.5}
+                    />
+                    <span className="flex-1 text-left leading-none">{item.label}</span>
+                    {isOpen
+                      ? <ChevronDown className="h-3 w-3 opacity-40 flex-shrink-0" strokeWidth={1.5} />
+                      : <ChevronRight className="h-3 w-3 opacity-40 flex-shrink-0" strokeWidth={1.5} />
+                    }
                   </button>
                 ) : (
                   <button
                     onClick={() => handleNavigation(item.href)}
                     className={cn(
-                      "flex items-center gap-4 w-full rounded-xl px-4 py-3 text-[15px] font-medium transition-all group outline-none",
+                      "flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 outline-none group",
                       isActive
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                        ? "text-primary bg-primary/8"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <item.icon
+                      className={cn("h-4 w-4 flex-shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground")}
+                      strokeWidth={1.5}
+                    />
+                    <span className="flex-1 text-left leading-none">{item.label}</span>
+                    {isActive && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
                   </button>
                 )}
 
                 {hasSubItems && isOpen && (
-                  <div className="flex flex-col gap-1 ml-6 mt-1 mb-2 border-l border-border/40 pl-4 py-1">
-                    {item.subItems.map((sub) => (
+                  <div className="flex flex-col gap-0.5 ml-4 mt-0.5 mb-1 border-l border-border/40 pl-3 py-0.5">
+                    {item.subItems!.map((sub) => (
                       <button
                         key={sub.label}
                         onClick={() => handleNavigation(sub.href)}
                         className={cn(
-                          "px-4 py-2.5 text-left text-[13.5px] font-medium rounded-lg transition-all outline-none",
+                          "px-3 py-2 text-left text-[12.5px] font-medium rounded-lg transition-all duration-150 outline-none leading-none",
                           localActivePath === sub.href
-                            ? "text-primary bg-primary/10 font-semibold"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                            ? "text-primary bg-primary/8 font-semibold"
+                            : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
                         )}
                       >
                         {sub.label}
@@ -227,38 +227,40 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
         </nav>
       </ScrollArea>
 
-      {/* BAŞAR AI COMMAND CENTER */}
-      <div className="px-6 pb-6 mt-4">
+      {/* Başar AI Command Center */}
+      <div className="px-4 pb-4">
         <div
-          className="relative overflow-hidden rounded-2xl border border-border/40 group"
+          className="relative overflow-hidden rounded-2xl border border-border/50 group"
           onMouseEnter={() => setIsAiHovered(true)}
           onMouseLeave={() => setIsAiHovered(false)}
         >
           <BorderBeam isActive={isAiHovered} duration={15} />
-
           <div className="relative z-10 bg-card rounded-2xl overflow-hidden">
-            <div className="bg-[#18181A] px-4 py-3 border-b border-[#222222] flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-violet-500" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">BAŞAR AI</span>
+            <div className="px-4 py-2.5 border-b border-border/50 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" strokeWidth={1.5} />
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Başar AI</span>
             </div>
-            <div className="grid grid-cols-3 divide-x divide-[#222222]">
+            <div className="grid grid-cols-3">
               <button
                 onClick={() => setAiAnalyzeOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
-                <Activity className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-                <span className="text-[9px] font-bold text-slate-500 uppercase">Analiz</span>
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none"
+              >
+                <Activity className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
+                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Analiz</span>
               </button>
               <button
                 onClick={() => setAiUpdateOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
-                <RefreshCcw className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-                <span className="text-[9px] font-bold text-slate-500 uppercase">Güncelle</span>
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none border-x border-border/50"
+              >
+                <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
+                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Güncelle</span>
               </button>
               <button
                 onClick={() => setAiSearchOpen(true)}
-                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/10 transition-colors group cursor-pointer relative z-20 outline-none">
-                <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400" />
-                <span className="text-[9px] font-bold text-slate-500 uppercase">Ara</span>
+                className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none"
+              >
+                <Search className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
+                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Ara</span>
               </button>
             </div>
           </div>
@@ -269,14 +271,17 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
       <AIUpdateModal open={aiUpdateOpen} onOpenChange={setAiUpdateOpen} />
       <AIAnalyzeModal open={aiAnalyzeOpen} onOpenChange={setAiAnalyzeOpen} />
 
-      <div className="p-8 border-t border-border/40 bg-muted/20">
-        <div className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 shadow-none">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary border border-primary/20">
+      {/* User Profile */}
+      <div className="px-4 pb-4 border-t border-border/50 pt-4">
+        <div className="flex items-center gap-3 rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-xs text-primary border border-primary/20 flex-shrink-0">
             {(user?.name || "A").charAt(0).toUpperCase()}
           </div>
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-[14px] font-bold text-foreground truncate">{user?.name || "Yönetici"}</span>
-            <span className="text-[11px] font-medium text-muted-foreground">{user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}</span>
+          <div className="flex flex-col overflow-hidden flex-1 min-w-0">
+            <span className="text-[13px] font-medium text-foreground truncate leading-tight">{user?.name || "Yönetici"}</span>
+            <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+              {user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}
+            </span>
           </div>
         </div>
       </div>

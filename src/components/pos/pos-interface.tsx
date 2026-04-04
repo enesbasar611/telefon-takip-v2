@@ -46,7 +46,7 @@ import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { cn, formatPhone } from "@/lib/utils";
+import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
@@ -338,7 +338,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   </div>
 
                   <div className="mt-auto flex flex-col gap-1">
-                    <div className="font-bold text-foreground text-4xl">₺{product.sellPrice.toLocaleString('tr-TR')}</div>
+                    <div className="font-bold text-foreground text-4xl">₺{formatCurrency(product.sellPrice)}</div>
                     <div className="font-bold text-muted-foreground text-[14px] line-clamp-2 leading-tight">
                       {product.name}
                     </div>
@@ -460,7 +460,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                       <span className="text-[15px] font-bold text-foreground block leading-tight mb-1 truncate">{item.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-[13px] text-primary font-bold">
-                          ₺{item.sellPrice.toLocaleString('tr-TR')}
+                          ₺{formatCurrency(item.sellPrice)}
                         </span>
                         <div className="h-1 w-1 rounded-full bg-border" />
                         <span className="text-[10px] text-muted-foreground font-bold">MEVCUT: {item.stock}</span>
@@ -525,7 +525,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
               <div className="flex items-center justify-between px-2">
                 <span className="text-[11px] font-bold text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-bold text-foreground drop-shadow-sm">₺{total.toLocaleString('tr-TR')}</span>
+                  <span className="text-5xl font-bold text-foreground drop-shadow-sm">₺{formatCurrency(total)}</span>
                 </div>
               </div>
 

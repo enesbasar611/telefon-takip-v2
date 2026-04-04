@@ -132,6 +132,9 @@ model ServiceTicket {
   estimatedDeliveryDate DateTime?
   warrantyExpiry        DateTime?
   overhead              Decimal             @default(0) @db.Decimal(10, 2)
+  photos                String[]
+  devicePassword        String?
+  serviceType           String?
   
   shopId                String
   shop                  Shop                @relation(fields: [shopId], references: [id])
@@ -165,8 +168,11 @@ model ServiceUsedPart {
   ticketId  String
   productId String
   quantity  Int           @default(1)
-  unitPrice Decimal       @db.Decimal(10, 2)
-  costPrice Decimal       @default(0) @db.Decimal(10, 2)
+  unitPrice       Decimal       @db.Decimal(10, 2)
+  costPrice       Decimal       @default(0) @db.Decimal(10, 2)
+  costPriceUsd    Decimal?      @db.Decimal(10, 2)
+  warrantyMonths  Int           @default(1)
+  warrantyDays    Int?
   
   shopId    String
   shop      Shop          @relation(fields: [shopId], references: [id])
@@ -556,6 +562,7 @@ model Supplier {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   balance       Decimal               @default(0) @db.Decimal(12, 2)
+  balanceUsd    Decimal               @default(0) @db.Decimal(12, 2)
   category      String?               @default("Genel")
   isApproved    Boolean               @default(false)
   logo          String?
@@ -629,6 +636,8 @@ model SupplierTransaction {
   supplierId      String
   purchaseOrderId String?
   amount          Decimal         @db.Decimal(12, 2)
+  amountUsd       Decimal?        @db.Decimal(12, 2)
+  exchangeRate    Decimal?        @db.Decimal(10, 4)
   type            TransactionType
   description     String
   date            DateTime        @default(now())

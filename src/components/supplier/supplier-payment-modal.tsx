@@ -17,7 +17,8 @@ import { Loader2, CreditCard, Save } from "lucide-react";
 import { createSupplierTransactionAction } from "@/lib/actions/purchase-actions";
 import { getSupplierProfileDataAction } from "@/lib/actions/purchase-actions";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { PriceInput } from "@/components/ui/price-input";
 import {
     Select,
     SelectContent,
@@ -225,18 +226,12 @@ export function SupplierPaymentModal({
 
                     <div className="space-y-2">
                         <Label htmlFor="amount" className="text-[10px] font-black tracking-wider text-slate-500 uppercase">TUTAR (₺)</Label>
-                        <Input
+                        <PriceInput
                             id="amount"
-                            type="number"
-                            step="1"
-                            {...register("amount")}
-                            placeholder="0"
+                            value={watch("amount")}
+                            onChange={(v) => setValue("amount", v, { shouldValidate: true })}
+                            placeholder="0,00"
                             className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg font-black text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
-                            onChange={(e) => {
-                                // Clamp to integer
-                                const val = parseInt(e.target.value) || 0;
-                                setValue("amount", val);
-                            }}
                         />
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>

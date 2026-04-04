@@ -6,15 +6,49 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Converts a string to Sentence Case.
- * Example: "IPHONE 11" -> "Iphone 11"
+ * Converts a string to Sentence Case with Turkish support.
  */
 export function toSentenceCase(str: string): string {
   if (!str) return str;
   const trimmed = str.trim();
   if (trimmed.length === 0) return str;
-  const lower = trimmed.toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
+  const lower = trimmed.toLocaleLowerCase('tr-TR');
+  return lower.charAt(0).toLocaleUpperCase('tr-TR') + lower.slice(1);
+}
+
+/**
+ * Converts a string to Title Case with Turkish support.
+ * Example: "a36 ekran değişimi" -> "A36 Ekran Değişimi"
+ */
+export function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .trim()
+    .split(/\s+/)
+    .map(word => {
+      if (!word) return "";
+      const lower = word.toLocaleLowerCase('tr-TR');
+      return lower.charAt(0).toLocaleUpperCase('tr-TR') + lower.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Formats a name string: First Name(s) in Title Case, Last Name in UPPER CASE.
+ * Example: "enes başar" -> "Enes BAŞAR"
+ */
+export function formatName(str: string): string {
+  if (!str) return str;
+  const parts = str.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].toLocaleUpperCase('tr-TR');
+
+  const lastName = parts.pop()?.toLocaleUpperCase('tr-TR') || "";
+  const firstNames = parts.map(name => {
+    const lower = name.toLocaleLowerCase('tr-TR');
+    return lower.charAt(0).toLocaleUpperCase('tr-TR') + lower.slice(1);
+  }).join(" ");
+
+  return `${firstNames} ${lastName}`;
 }
 
 /**
@@ -71,4 +105,32 @@ export function formatPhone(phone: string | null | undefined): string {
   const part2 = cleaned.substring(3, 6);
   const part3 = cleaned.substring(6, 10);
   return `+90 ${part1} ${part2} ${part3}`;
+}
+/**
+ * Formats a number or string to Turkish currency format (1.234,56)
+ * @param amount Number or string to format
+ * @param showSymbol Whether to include ₺ symbol
+ */
+export function formatCurrency(amount: number | string | null | undefined, showSymbol: boolean = false): string {
+  if (amount === null || amount === undefined || amount === "") return showSymbol ? "₺0" : "0,00";
+  const num = typeof amount === "string" ? parseFloat(amount.replace(",", ".")) : amount;
+  if (isNaN(num)) return showSymbol ? "₺0" : "0,00";
+
+  const formatted = new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+
+  return showSymbol ? `₺${formatted}` : formatted;
+}
+
+/**
+ * Parses a Turkish formatted number string (e.g. "1.234,56") back to a standard number
+ */
+export function parseCurrency(value: string): number {
+  if (!value) return 0;
+  // Remove group separator (dot) and replace decimal separator (comma) with dot
+  const cleaned = value.replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 }
