@@ -21,19 +21,11 @@ import {
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
+import { cleanFormData } from "@/lib/formatters";
 
 type Condition = "NEW" | "USED" | "INTERNATIONAL";
 
 /* ─── Utility helpers ─── */
-function toTitleCase(str: string): string {
-  if (!str) return str;
-  return str
-    .toLowerCase()
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
 function formatCurrencyInput(val: string): string {
   const numeric = val.replace(/\D/g, "");
   if (!numeric) return "";
@@ -187,47 +179,68 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
 
         let sellerIdFrontUrl = "";
         let sellerIdBackUrl = "";
+        let uploadedPhotoUrls: string[] = [];
+
+        if (photoFiles.length > 0) {
+          const photoFormData = new FormData();
+          photoFiles.forEach(f => photoFormData.append("files", f));
+          const pRes = await fetch("/api/finance/upload", { method: "POST", body: photoFormData });
+          const pJson = await pRes.json();
+          if (pJson.success) {
+            uploadedPhotoUrls = pJson.attachments.map((a: any) => a.url);
+          }
+        }
 
         if (sellerIdFront) {
           const formData = new FormData();
-          formData.append("file", sellerIdFront);
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          formData.append("files", sellerIdFront);
+          const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
           const json = await res.json();
-          sellerIdFrontUrl = json.url;
+          sellerIdFrontUrl = json.attachments[0].url;
         }
 
         if (sellerIdBack) {
           const formData = new FormData();
-          formData.append("file", sellerIdBack);
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          formData.append("files", sellerIdBack);
+          const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
           const json = await res.json();
-          sellerIdBackUrl = json.url;
+          sellerIdBackUrl = json.attachments[0].url;
         }
 
+        // Data Standardization (The Constitution)
+        const cleaned = cleanFormData(data, {
+          brand: "title",
+          model: "title",
+          color: "title",
+          imei: "upper",
+          sellerName: "proper",
+          replacedParts: "sentence"
+        });
+
         const result = await createDeviceEntry({
-          brand: toTitleCase(data.brand),
-          model: toTitleCase(data.model),
-          imei: data.imei.trim(),
-          color: data.color ? toTitleCase(data.color) : undefined,
-          ram: data.ram || undefined,
-          storage: data.storage || undefined,
-          condition: data.condition,
-          warrantyEndDate: warrantyMode === "date" && !isNew ? data.warrantyEndDate || undefined : undefined,
-          warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? data.warrantyMonths || undefined : undefined),
-          sim1ExpirationDate: data.sim1ExpirationDate || undefined,
-          sim1NotUsed: data.sim1NotUsed,
-          sim2ExpirationDate: data.sim2ExpirationDate || undefined,
-          sim2NotUsed: data.sim2NotUsed,
-          batteryHealth: data.batteryHealth ? parseInt(data.batteryHealth) : undefined,
-          cosmeticScore: parseInt(data.cosmeticScore || "10"),
-          expertChecklist,
-          buyPrice: parseFloat(data.buyPrice),
-          sellPrice: parseFloat(data.sellPrice),
-          sellerName: data.sellerName || undefined,
-          sellerTC: data.sellerTC || undefined,
-          sellerPhone: data.sellerPhone || undefined,
+          brand: cleaned.brand,
+          model: cleaned.model,
+          imei: cleaned.imei,
+          color: cleaned.color || undefined,
+          ram: cleaned.ram || undefined,
+          storage: cleaned.storage || undefined,
+          condition: cleaned.condition,
+          warrantyEndDate: warrantyMode === "date" && !isNew ? cleaned.warrantyEndDate || undefined : undefined,
+          warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? cleaned.warrantyMonths || undefined : undefined),
+          sim1ExpirationDate: cleaned.sim1ExpirationDate || undefined,
+          sim1NotUsed: cleaned.sim1NotUsed,
+          sim2ExpirationDate: cleaned.sim2ExpirationDate || undefined,
+          sim2NotUsed: cleaned.sim2NotUsed,
+          batteryHealth: cleaned.batteryHealth ? parseInt(cleaned.batteryHealth) : undefined,
+          cosmeticScore: parseInt(cleaned.cosmeticScore || "10"),
+          expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
+          buyPrice: parseFloat(cleaned.buyPrice),
+          sellPrice: parseFloat(cleaned.sellPrice),
+          sellerName: cleaned.sellerName || undefined,
+          sellerTC: cleaned.sellerTC || undefined,
+          sellerPhone: cleaned.sellerPhone || undefined,
           sellerIdPhotoUrl: sellerIdFrontUrl || undefined,
-          photoUrls: [],
+          photoUrls: uploadedPhotoUrls,
           invoiceUrl: null,
         });
 
@@ -349,15 +362,23 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <div className="col-span-2 space-y-1.5">
                   <Label className={labelCls}>Renk Seçimi</Label>
                   <div className="space-y-3">
-                    <Input
-                      {...register("color")}
-                      placeholder="Örn: Siyah, Uzay Grisi"
-                      className={inputCls}
-                      onChange={(e) => {
-                        const val = e.target.value.toLowerCase();
-                        setValue("color", e.target.value);
-                      }}
-                    />
+                    <div className="relative">
+                      <Input
+                        {...register("color")}
+                        placeholder="Örn: Yeşil, Beyaz, Mavi"
+                        className={`${inputCls} pr-10`}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[0-9]/g, '');
+                          setValue("color", val);
+                        }}
+                      />
+                      {getColorHex(selectedBrand, selectedColor) && (
+                        <div
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all animate-in fade-in zoom-in duration-300"
+                          style={{ backgroundColor: getColorHex(selectedBrand, selectedColor) ?? undefined }}
+                        />
+                      )}
+                    </div>
                     {selectedBrand?.toLowerCase() === "apple" && (
                       <div className="flex flex-wrap gap-2.5 p-3 bg-slate-950/50 rounded-2xl border border-slate-800">
                         {APPLE_COLORS.map((c) => (
@@ -417,16 +438,19 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
                       Ay Seç
                     </button>
-                    <button type="button" onClick={() => setWarrantyMode("date")}
-                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                    <button
+                      type="button"
+                      disabled={isNew}
+                      onClick={() => setWarrantyMode("date")}
+                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
                       Tarih Gir
                     </button>
                   </div>
 
-                  {warrantyMode === "months" ? (
+                  {warrantyMode === "months" || isNew ? (
                     <div className="space-y-1.5">
                       <Label className={labelCls}>
-                        {isNew ? "Garanti Süresi (Sıfır = 24 Ay)" : "Kalan Garanti Süresi"}
+                        {isNew ? "Garanti Süresi (24 Ay)" : "Kalan Garanti Süresi"}
                       </Label>
                       <Select
                         defaultValue={isNew ? "24" : undefined}

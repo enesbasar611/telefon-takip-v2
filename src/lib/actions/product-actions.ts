@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma, toTitleCase } from "@/lib/utils";
+import { serializePrisma } from "@/lib/utils";
+import { formatTitleCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
@@ -162,13 +163,14 @@ export async function createProduct(data: {
     const userId = await getUserId();
 
     // Check for duplicate product WITHIN the shop
+    const formattedName = formatTitleCase(data.name);
     const existingProduct = await prisma.product.findFirst({
       where: {
         shopId,
         OR: [
-          { name: { equals: toTitleCase(data.name), mode: 'insensitive' } },
-          ...(data.barcode ? [{ barcode: data.barcode }] : []),
-          ...(data.sku ? [{ sku: data.sku }] : [])
+          { name: { equals: formattedName, mode: 'insensitive' } },
+          ...(data.barcode ? [{ barcode: formatUppercase(data.barcode) }] : []),
+          ...(data.sku ? [{ sku: formatUppercase(data.sku) }] : [])
         ]
       }
     });
@@ -184,23 +186,23 @@ export async function createProduct(data: {
 
     const product = await prisma.product.create({
       data: {
-        name: toTitleCase(data.name),
+        name: formatTitleCase(data.name),
         categoryId: data.categoryId,
         buyPrice: data.buyPrice,
         buyPriceUsd: data.buyPriceUsd ?? null,
         sellPrice: data.sellPrice,
         stock: data.stock,
         criticalStock: data.criticalStock,
-        barcode: data.barcode,
-        sku: data.sku,
+        barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
+        sku: data.sku ? formatUppercase(data.sku) : undefined,
         location: data.location,
         supplierId: data.supplierId,
         shopId,
         isSecondHand: data.isSecondHand || false,
         deviceInfo: data.isSecondHand ? {
           create: {
-            imei: data.imei || `GEN-${Date.now()}`,
-            color: data.color,
+            imei: data.imei ? formatUppercase(data.imei) : `GEN-${Date.now()}`,
+            color: data.color ? formatTitleCase(data.color) : undefined,
             capacity: data.capacity,
             shopId
           }
@@ -249,7 +251,9 @@ export async function updateProduct(id: string, data: any) {
       where: { id, shopId },
       data: {
         ...data,
-        name: data.name ? toTitleCase(data.name) : undefined,
+        name: data.name ? formatTitleCase(data.name) : undefined,
+        barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
+        sku: data.sku ? formatUppercase(data.sku) : undefined,
         buyPrice,
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
         stock: newStock,
@@ -325,7 +329,7 @@ export async function applyBulkAIUpdates(updates: any[]) {
         return prisma.product.update({
           where: { id, shopId },
           data: {
-            name: newName ? toTitleCase(newName) : undefined,
+            name: newName ? formatTitleCase(newName) : undefined,
             sellPrice: sellPrice ? Number(sellPrice) : undefined,
             buyPriceUsd: buyPriceUsd ? Number(buyPriceUsd) : undefined,
             buyPrice: buyPrice || undefined,
@@ -616,7 +620,7 @@ export async function getInventoryStats() {
 export async function createCategory(name: string) {
   try {
     const shopId = await getShopId();
-    const category = await prisma.category.create({ data: { name: toTitleCase(name), shopId } });
+    const category = await prisma.category.create({ data: { name: formatTitleCase(name), shopId } });
     revalidatePath("/stok");
     return { success: true, category: serializePrisma(category) };
   } catch (error) {

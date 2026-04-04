@@ -15,19 +15,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRef } from "react";
 import {
   PenLine, BadgeCheck, RotateCcw, Globe, X, Save, Loader2,
+  Camera, Upload, FileText, CheckCircle2, Plus, Trash2, Paperclip
 } from "lucide-react";
 import { updateDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
+import { cleanFormData } from "@/lib/formatters";
 
 type Condition = "NEW" | "USED" | "INTERNATIONAL";
-
-function toTitleCase(str: string): string {
-  if (!str) return str;
-  return str.toLowerCase().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-}
 
 function formatCurrencyInput(val: string): string {
   const numeric = val.replace(/\D/g, "");
@@ -72,6 +70,19 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
   const [isPending, startTransition] = useTransition();
   const [warrantyMode, setWarrantyMode] = useState<"date" | "months">("months");
 
+  // File States
+  const [existingPhotos, setExistingPhotos] = useState<string[]>(device.deviceInfo?.photoUrls || []);
+  const [existingSellerIdPhoto, setExistingSellerIdPhoto] = useState<string | null>(device.deviceInfo?.sellerIdPhotoUrl || null);
+  const [existingInvoice, setExistingInvoice] = useState<string | null>(device.deviceInfo?.invoiceUrl || null);
+
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [newSellerId, setNewSellerId] = useState<File | null>(null);
+  const [newInvoice, setNewInvoice] = useState<File | null>(null);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const sellerIdInputRef = useRef<HTMLInputElement>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register, handleSubmit, watch, setValue, reset, formState: { errors },
   } = useForm({
@@ -104,20 +115,67 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
   const isNew = condition === "NEW";
   const isIntl = condition === "INTERNATIONAL";
 
+  const uploadFile = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.url;
+  };
+
   const onSubmit = async (data: any) => {
     startTransition(async () => {
-      const result = await updateDeviceEntry(device.id, {
-        ...data,
-        brand: toTitleCase(data.brand),
-        model: toTitleCase(data.model),
-        expertChecklist: data.replacedParts ? { notes: data.replacedParts } : {},
-      });
+      try {
+        // Upload new files
+        const newlyUploadedPhotos = [];
+        for (const f of newPhotos) {
+          const url = await uploadFile(f);
+          newlyUploadedPhotos.push(url);
+        }
 
-      if (result.success) {
-        toast.success("Cihaz güncellendi.");
-        setOpen(false);
-      } else {
-        toast.error(result.error || "Hata oluştu.");
+        let finalSellerId = existingSellerIdPhoto;
+        if (newSellerId) {
+          finalSellerId = await uploadFile(newSellerId);
+        }
+
+        let finalInvoice = existingInvoice;
+        if (newInvoice) {
+          finalInvoice = await uploadFile(newInvoice);
+        }
+
+        // Data Standardization (The Constitution)
+        const cleaned = cleanFormData(data, {
+          brand: "title",
+          model: "title",
+          color: "title",
+          imei: "upper",
+          sellerName: "proper",
+          replacedParts: "sentence"
+        });
+
+        const result = await updateDeviceEntry(device.id, {
+          ...cleaned,
+          brand: cleaned.brand,
+          model: cleaned.model,
+          imei: cleaned.imei,
+          expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
+          photoUrls: [...existingPhotos, ...newlyUploadedPhotos],
+          sellerIdPhotoUrl: finalSellerId,
+          invoiceUrl: finalInvoice,
+        });
+
+        if (result.success) {
+          toast.success("Cihaz güncellendi.");
+          setOpen(false);
+          setNewPhotos([]);
+          setNewSellerId(null);
+          setNewInvoice(null);
+        } else {
+          toast.error(result.error || "Hata oluştu.");
+        }
+      } catch (err) {
+        toast.error("Dosyalar yüklenirken hata oluştu.");
       }
     });
   };
@@ -204,7 +262,23 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[11px] font-bold text-slate-400 ml-1 uppercase tracking-tighter">Renk Seçimi</Label>
-                  <Input {...register("color")} placeholder="Renk giriniz..." className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold uppercase" />
+                  <div className="relative">
+                    <Input
+                      {...register("color")}
+                      placeholder="Renk giriniz..."
+                      className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold uppercase pr-10"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[0-9]/g, '');
+                        setValue("color", val);
+                      }}
+                    />
+                    {getColorHex(selectedBrand, selectedColor) && (
+                      <div
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all animate-in fade-in zoom-in duration-300"
+                        style={{ backgroundColor: getColorHex(selectedBrand, selectedColor) ?? undefined }}
+                      />
+                    )}
+                  </div>
                   {selectedBrand?.toLowerCase() === "apple" && (
                     <div className="grid grid-cols-6 gap-2 mt-2">
                       {APPLE_COLORS.slice(0, 12).map((c) => (
@@ -249,6 +323,77 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
               </div>
 
               <div className="space-y-4 pt-2">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">{isIntl ? "IMEI Aktiflik Durumu" : "Garanti Takibi"}</h4>
+                {!isIntl && (
+                  <div className="space-y-4">
+                    <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800 w-fit gap-1">
+                      <button type="button" onClick={() => setWarrantyMode("months")}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                        Ay Seç
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isNew}
+                        onClick={() => setWarrantyMode("date")}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                        Tarih Gir
+                      </button>
+                    </div>
+
+                    {warrantyMode === "months" || isNew ? (
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-slate-400 ml-1">
+                          {isNew ? "Garanti Süresi (24 Ay)" : "Kalan Garanti Süresi"}
+                        </Label>
+                        <Select
+                          defaultValue={isNew ? "24" : undefined}
+                          onValueChange={(v) => setValue("warrantyMonths", v)}
+                          disabled={isNew}
+                        >
+                          <SelectTrigger className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold">
+                            <SelectValue placeholder={isNew ? "24 Ay (Sabit)" : "Kaç ay kaldı?"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-800">
+                            {[24, 18, 12, 6, 3, 0].map((m) => (
+                              <SelectItem key={m} value={String(m)} className="font-bold">
+                                {m} Ay {isNew && m === 24 ? "✓" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-slate-400 ml-1">Garanti Bitiş Tarihi</Label>
+                        <Input type="date" {...register("warrantyEndDate")} className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isIntl && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-bold text-slate-400 ml-1">SIM 1 Kapanış Tarihi</Label>
+                      <Input type="date" {...register("sim1ExpirationDate")} className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold" />
+                      <div className="flex items-center gap-2 mt-2 ml-1">
+                        <Checkbox id="sim1NotUsed" checked={watch("sim1NotUsed")} onCheckedChange={(v) => setValue("sim1NotUsed", !!v)} />
+                        <Label htmlFor="sim1NotUsed" className="text-[10px] font-bold text-slate-500">Kullanılmadı</Label>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[11px] font-bold text-slate-400 ml-1">SIM 2 Kapanış Tarihi</Label>
+                      <Input type="date" {...register("sim2ExpirationDate")} className="h-12 bg-slate-900 border-slate-800 rounded-xl font-bold" />
+                      <div className="flex items-center gap-2 mt-2 ml-1">
+                        <Checkbox id="sim2NotUsed" checked={watch("sim2NotUsed")} onCheckedChange={(v) => setValue("sim2NotUsed", !!v)} />
+                        <Label htmlFor="sim2NotUsed" className="text-[10px] font-bold text-slate-500">Kullanılmadı</Label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-2">
                 <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-1">Sağlık & Ekspertiz</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -272,6 +417,93 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
                 <div className="space-y-2">
                   <Label className="text-[11px] font-bold text-slate-400 ml-1">Değişen Parçalar / Notlar</Label>
                   <Textarea {...register("replacedParts")} className="bg-slate-900 border-slate-800 rounded-xl font-medium min-h-[100px]" placeholder="Örn: Ekran değişti, Orijinal parça takıldı..." />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Yeni Eklenen Alanlar: Satıcı Bilgileri ve Belge Yönetimi */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-800/20 mt-4">
+            {/* Satıcı (Müşteri) Bilgileri */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                  <Plus className="h-3 w-3 text-emerald-400" />
+                </div>
+                <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest pl-1">Satıcı (Müşteri) Bilgileri</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4 border border-emerald-500/10 p-5 rounded-2xl bg-emerald-500/5">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold text-slate-400 ml-1">Ad Soyad</Label>
+                  <Input {...register("sellerName")} className="h-11 bg-slate-900 border-slate-800 rounded-xl font-bold" placeholder="Müşteri Adı" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold text-slate-400 ml-1">TC Kimlik No</Label>
+                  <Input {...register("sellerTC")} maxLength={11} className="h-11 bg-slate-900 border-slate-800 rounded-xl font-bold" placeholder="11 Haneli" />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-[11px] font-bold text-slate-400 ml-1">Telefon</Label>
+                  <Input {...register("sellerPhone")} className="h-11 bg-slate-900 border-slate-800 rounded-xl font-bold font-mono" placeholder="05xx..." />
+                </div>
+              </div>
+            </div>
+
+            {/* Dosya & Belge Yönetimi */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                  <Upload className="h-3 w-3 text-blue-400" />
+                </div>
+                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest pl-1">Belge & Dosya Yönetimi</h4>
+              </div>
+
+              <div className="space-y-4 border border-blue-500/10 p-5 rounded-2xl bg-blue-500/5">
+                {/* Mevcut Dosyalar */}
+                {(existingPhotos.length > 0 || existingSellerIdPhoto || existingInvoice) && (
+                  <div className="space-y-3">
+                    <Label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">YÜKLÜ DOSYALAR (SİLMEK İÇİN TIKLAYIN)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {existingPhotos.map((url, i) => (
+                        <div key={i} className="group relative h-14 w-14 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+                          <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                          <button type="button" onClick={() => setExistingPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Trash2 className="h-4 w-4 text-white" /></button>
+                        </div>
+                      ))}
+                      {existingSellerIdPhoto && (
+                        <div className="group relative h-14 w-14 rounded-xl border border-blue-500/30 overflow-hidden shadow-lg flex items-center justify-center bg-slate-900">
+                          {existingSellerIdPhoto.toLowerCase().includes('.pdf') ? <FileText className="h-6 w-6 text-blue-500" /> : <img src={existingSellerIdPhoto} className="w-full h-full object-cover" />}
+                          <div className="absolute top-0 right-0 p-0.5 bg-blue-600 text-[7px] font-black text-white px-1">TC</div>
+                          <button type="button" onClick={() => setExistingSellerIdPhoto(null)} className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Trash2 className="h-4 w-4 text-white" /></button>
+                        </div>
+                      )}
+                      {existingInvoice && (
+                        <div className="group relative h-14 w-14 rounded-xl border border-purple-500/30 overflow-hidden shadow-lg flex items-center justify-center bg-slate-900">
+                          {existingInvoice.toLowerCase().includes('.pdf') ? <FileText className="h-6 w-6 text-red-500" /> : <img src={existingInvoice} className="w-full h-full object-cover" />}
+                          <div className="absolute top-0 right-0 p-0.5 bg-purple-600 text-[7px] font-black text-white px-1">FATURA</div>
+                          <button type="button" onClick={() => setExistingInvoice(null)} className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Trash2 className="h-4 w-4 text-white" /></button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Yeni Dosya Ekleme */}
+                <div className="grid grid-cols-3 gap-2">
+                  <input ref={photoInputRef} type="file" multiple accept="image/*" className="hidden" onChange={e => setNewPhotos(prev => [...prev, ...Array.from(e.target.files || [])])} />
+                  <button type="button" onClick={() => photoInputRef.current?.click()} className="h-14 border border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center gap-0.5 hover:border-blue-500/40 hover:bg-slate-900 transition-all text-slate-500 hover:text-blue-400">
+                    <Camera className="h-4 w-4" />
+                    <span className="text-[8px] font-black uppercase">Fotoğraf</span>
+                  </button>
+                  <input ref={sellerIdInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={e => setNewSellerId(e.target.files?.[0] || null)} />
+                  <button type="button" onClick={() => sellerIdInputRef.current?.click()} className={`h-14 border border-dashed rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all ${newSellerId ? "bg-blue-600/20 border-blue-600 text-blue-400" : "border-slate-700 text-slate-500"}`}>
+                    {newSellerId ? <CheckCircle2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                    <span className="text-[8px] font-black uppercase">Kimlik</span>
+                  </button>
+                  <input ref={invoiceInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={e => setNewInvoice(e.target.files?.[0] || null)} />
+                  <button type="button" onClick={() => invoiceInputRef.current?.click()} className={`h-14 border border-dashed rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all ${newInvoice ? "bg-purple-600/20 border-purple-600 text-purple-400" : "border-slate-700 text-slate-500"}`}>
+                    {newInvoice ? <CheckCircle2 className="h-4 w-4" /> : <Paperclip className="h-4 w-4" />}
+                    <span className="text-[8px] font-black uppercase">Fatura</span>
+                  </button>
                 </div>
               </div>
             </div>

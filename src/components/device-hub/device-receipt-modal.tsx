@@ -7,7 +7,15 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, X, ShoppingCart, Package } from "lucide-react";
+import { FileText, Printer, X, ShoppingCart, Package, Image as ImageIcon, Upload, Eye, Plus, Paperclip, Loader2, Download, Trash2, User } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { updateDeviceEntry } from "@/lib/actions/device-hub-actions";
+import { toast } from "sonner";
+import { useEffect, useTransition } from "react";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatProperCase, formatUppercase } from "@/lib/formatters";
+import { useRouter } from "next/navigation";
+import { getShopInfo } from "@/lib/actions/receipt-settings";
 
 interface DeviceReceiptModalProps {
     device: any;
@@ -17,10 +25,10 @@ interface DeviceReceiptModalProps {
 type FormType = "purchase" | "sale";
 type PrintFormat = "a4" | "thermal";
 
-const SHOP_INFO = {
+let SHOP_INFO = {
     name: "Başar Teknik (Enes Başar)",
     address: "İstiklal Cad. No:10, 34000 (Örnek Adres)",
-    taxInfo: "Vergi Dairesi: Beşiktaş / No: 1234567890",
+    taxInfo: "Vergi Dairesi: - / No: -",
     phone: "0532 000 00 00",
 };
 
@@ -42,13 +50,16 @@ function A4Receipt({
     date,
     customer,
     expert,
+    shopInfo,
 }: {
     device: DeviceReceiptModalProps["device"];
     formType: FormType;
     date: string;
     customer: CustomerInfo;
     expert: DeviceExpertInfo;
+    shopInfo?: any;
 }) {
+    const info = shopInfo || SHOP_INFO;
     const isPurchase = formType === "purchase";
     const price = isPurchase ? device.buyPrice : device.sellPrice;
     const imeiLast4 = device.deviceInfo?.imei?.slice(-4) || "0000";
@@ -71,7 +82,7 @@ function A4Receipt({
             {/* Header / Title */}
             <div style={{ textAlign: "center", marginBottom: "20px" }}>
                 <h1 style={{ fontSize: "16pt", fontWeight: 900, marginBottom: "8px", textDecoration: "underline" }}>
-                    2. EL CİHAZ ALIM-SATIM VE DEVİR SÖZLEŞMESİ
+                    SIFIR / 2. EL CİHAZ ALIM-SATIM VE DEVİR SÖZLEŞMESİ
                 </h1>
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "10pt" }}>
                     <span>Tarih: {date.split(" ")[0]}</span>
@@ -85,15 +96,37 @@ function A4Receipt({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                     <div style={{ fontSize: "9pt" }}>
                         <strong style={{ display: "block", marginBottom: "2px" }}>ALICI:</strong>
-                        {SHOP_INFO.name} <br />
-                        {SHOP_INFO.taxInfo} <br />
-                        {SHOP_INFO.address}
+                        {isPurchase ? (
+                            <>
+                                {info.name} <br />
+                                {info.taxInfo} <br />
+                                {info.address} <br />
+                                Tel: {info.phone}
+                            </>
+                        ) : (
+                            <>
+                                {customer.name || "{Müşteri Ad Soyad}"} <br />
+                                TC: {customer.tc || "{TC Kimlik No}"} <br />
+                                Tel: {customer.phone || "{Telefon No}"}
+                            </>
+                        )}
                     </div>
                     <div style={{ fontSize: "9pt" }}>
                         <strong style={{ display: "block", marginBottom: "2px" }}>SATICI:</strong>
-                        {customer.name || "{Müşteri Ad Soyad}"} <br />
-                        TC: {customer.tc || "{TC Kimlik No}"} <br />
-                        Tel: {customer.phone || "{Telefon No}"}
+                        {!isPurchase ? (
+                            <>
+                                {info.name} <br />
+                                {info.taxInfo} <br />
+                                {info.address} <br />
+                                Tel: {info.phone}
+                            </>
+                        ) : (
+                            <>
+                                {customer.name || "{Müşteri Ad Soyad}"} <br />
+                                TC: {customer.tc || "{TC Kimlik No}"} <br />
+                                Tel: {customer.phone || "{Telefon No}"}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -155,11 +188,11 @@ function A4Receipt({
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px" }}>
                     <div style={{ textAlign: "center", width: "200px" }}>
                         <span style={{ fontWeight: 800, fontSize: "10pt" }}>ALICI (Kaşe/İmza)</span>
-                        <div style={{ marginTop: "5px", fontSize: "9pt" }}>Başar Teknik</div>
+                        <div style={{ marginTop: "5px", fontSize: "9pt" }}>{isPurchase ? info.name : customer.name}</div>
                     </div>
                     <div style={{ textAlign: "center", width: "200px" }}>
                         <span style={{ fontWeight: 800, fontSize: "10pt" }}>SATICI (Ad Soyad/İmza)</span>
-                        <div style={{ marginTop: "5px", fontSize: "9pt" }}>{customer.name}</div>
+                        <div style={{ marginTop: "5px", fontSize: "9pt" }}>{!isPurchase ? info.name : customer.name}</div>
                     </div>
                 </div>
             </div>
@@ -172,12 +205,15 @@ function ThermalReceipt({
     formType,
     date,
     customer,
+    shopInfo,
 }: {
     device: DeviceReceiptModalProps["device"];
     formType: FormType;
     date: string;
     customer: CustomerInfo;
+    shopInfo?: any;
 }) {
+    const info = shopInfo || SHOP_INFO;
     const isPurchase = formType === "purchase";
     const price = isPurchase ? device.buyPrice : device.sellPrice;
 
@@ -195,7 +231,7 @@ function ThermalReceipt({
             }}
         >
             <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "6px", marginBottom: "8px" }}>
-                <div style={{ fontWeight: 900, fontSize: "10pt" }}>BAŞAR TEKNİK</div>
+                <div style={{ fontWeight: 900, fontSize: "10pt" }}>{info.name}</div>
                 <div style={{ fontSize: "7pt" }}>SLZ: BTK-{device.deviceInfo?.imei?.slice(-4)}</div>
                 <div style={{ marginTop: "4px", fontWeight: 700 }}>{isPurchase ? "ALIŞ SÖZLEŞMESİ" : "SATIŞ BELGESİ"}</div>
             </div>
@@ -206,6 +242,8 @@ function ThermalReceipt({
                 <div>IMEI: {device.deviceInfo?.imei ?? "—"}</div>
                 <div>Fiyat: {price.toLocaleString("tr-TR")} ₺</div>
             </div>
+            {info.address && <div style={{ fontSize: "7pt", marginTop: "4px", opacity: 0.8 }}>{info.address}</div>}
+            <div style={{ fontSize: "7pt", fontWeight: "bold" }}>Tel: {info.phone}</div>
             <div style={{ borderTop: "1px dashed #000", marginTop: "12px", paddingTop: "4px", fontSize: "7pt", textAlign: "center" }}>
                 Sözleşme şartları A4 nüshasındadır.
             </div>
@@ -217,14 +255,93 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
     const [open, setOpen] = useState(false);
     const [formType, setFormType] = useState<FormType>("purchase");
     const [printFormat, setPrintFormat] = useState<PrintFormat>("a4");
+    const [shopInfo, setShopInfo] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchShop = async () => {
+            const data = await getShopInfo();
+            if (data) {
+                setShopInfo({
+                    name: data.name,
+                    address: data.address || "",
+                    phone: data.phone || "",
+                    taxInfo: "Vergi Dairesi: - / No: -",
+                });
+            }
+        };
+        fetchShop();
+    }, []);
+    const [isPending, startTransition] = useTransition();
+    const router = useRouter();
 
     const [customer, setCustomer] = useState<CustomerInfo>({ name: "", tc: "", phone: "" });
     const [expert, setExpert] = useState<DeviceExpertInfo>({ screen: "Orijinal", liquid: "Yok", repair: "" });
+
+    // Auto-fill from device data if available
+    useEffect(() => {
+        if (open) {
+            setCustomer(prev => ({
+                name: prev.name || device.deviceInfo?.sellerName || "",
+                tc: prev.tc || device.deviceInfo?.sellerTC || "",
+                phone: prev.phone || device.deviceInfo?.sellerPhone || ""
+            }));
+
+            if (device.deviceInfo?.expertChecklist?.notes) {
+                setExpert(prev => ({ ...prev, repair: device.deviceInfo.expertChecklist.notes }));
+            }
+        }
+    }, [open, device.deviceInfo]);
 
     const now = new Date().toLocaleDateString("tr-TR", {
         day: "2-digit", month: "2-digit", year: "numeric",
         hour: "2-digit", minute: "2-digit"
     });
+
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        setIsUploading(true);
+        startTransition(async () => {
+            try {
+                const formData = new FormData();
+                Array.from(files).forEach(f => formData.append("files", f));
+
+                const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
+                const json = await res.json();
+
+                if (json.success) {
+                    const newUrls = json.attachments.map((a: any) => a.url);
+                    const currentUrls = device.deviceInfo?.photoUrls || [];
+
+                    const result = await updateDeviceEntry(device.id, {
+                        ...device,
+                        brand: device.deviceInfo?.brand || device.name.split(" ")[0],
+                        model: device.deviceInfo?.model || device.name.split(" ").slice(1).join(" "),
+                        condition: device.deviceInfo?.condition || "USED",
+                        buyPrice: device.buyPrice.toString(),
+                        sellPrice: device.sellPrice.toString(),
+                        photoUrls: [...currentUrls, ...newUrls]
+                    });
+
+                    if (result.success) {
+                        toast.success("Belge başarıyla eklendi.");
+                    } else {
+                        toast.error("Veritabanı güncellenemedi.");
+                    }
+                } else {
+                    toast.error("Dosya yüklenemedi.");
+                }
+            } catch (err) {
+                toast.error("Bir hata oluştu.");
+            } finally {
+                setIsUploading(false);
+            }
+        });
+    };
 
     const handlePrint = () => {
         const contentId = printFormat === "a4" ? "receipt-content-a4" : "receipt-content-thermal";
@@ -263,9 +380,11 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {children || (
-                    <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-bold transition-colors border border-slate-700/60">
-                        <FileText className="h-3.5 w-3.5" />
-                        Belge
+                    <button
+                        className="h-9 w-9 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 hover:text-orange-400 transition-all border border-orange-500/20 hover:border-orange-500/40"
+                        title="Belgeler & Sözleşme"
+                    >
+                        <Paperclip className="h-4 w-4" />
                     </button>
                 )}
             </DialogTrigger>
@@ -282,24 +401,29 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                     <div className="p-5 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
                         {/* Customer Info */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Müşteri Bilgileri</label>
-                            <input
-                                placeholder="Adı Soyadı"
-                                value={customer.name}
-                                onChange={e => setCustomer(prev => ({ ...prev, name: e.target.value }))}
-                                className="w-full h-10 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors"
-                            />
+                            <div className="flex justify-between items-center group">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 leading-none">Müşteri Bilgileri</label>
+                            </div>
+                            <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                                <input
+                                    placeholder="Adı Soyadı"
+                                    value={customer.name}
+                                    onChange={e => setCustomer(prev => ({ ...prev, name: formatProperCase(e.target.value) }))}
+                                    className="w-full h-11 pl-9 pr-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors"
+                                />
+                            </div>
                             <input
                                 placeholder="TC Kimlik No"
                                 value={customer.tc}
-                                onChange={e => setCustomer(prev => ({ ...prev, tc: e.target.value }))}
-                                className="w-full h-10 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors"
+                                maxLength={11}
+                                onChange={e => setCustomer(prev => ({ ...prev, tc: e.target.value.replace(/\D/g, "") }))}
+                                className="w-full h-11 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors"
                             />
-                            <input
-                                placeholder="Telefon No"
+                            <PhoneInput
                                 value={customer.phone}
-                                onChange={e => setCustomer(prev => ({ ...prev, phone: e.target.value }))}
-                                className="w-full h-10 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors"
+                                onChange={val => setCustomer(prev => ({ ...prev, phone: val }))}
+                                className="!bg-slate-900 !border-slate-800 !h-11 !rounded-xl"
                             />
                         </div>
 
@@ -328,64 +452,275 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                 placeholder="Tamir Geçmişi / Notlar"
                                 value={expert.repair}
                                 onChange={e => setExpert(prev => ({ ...prev, repair: e.target.value }))}
-                                className="w-full h-20 p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors resize-none"
+                                className="w-full h-24 p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold focus:border-blue-500 transition-colors resize-none custom-scrollbar"
                             />
                         </div>
                     </div>
-                </div>
 
-                {/* Right Side: Preview & Settings */}
-                <div className="flex-1 flex flex-col min-w-0">
-                    {/* Header */}
-                    <div className="px-6 py-4 flex justify-between items-center border-b border-slate-800/60 bg-slate-950/40">
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                <FileText className="h-4 w-4 text-blue-500" />
-                            </div>
-                            <div>
-                                <h2 className="text-sm font-black text-white">{device.name}</h2>
-                                <p className="text-[10px] text-slate-500 font-medium tracking-tight">Sözleşme Önizleme</p>
-                            </div>
+                    {/* Print Section at the bottom of Sidebar */}
+                    <div className="p-5 border-t border-slate-800/60 bg-slate-950/40 space-y-4 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-start gap-2 text-[10px] text-slate-400 font-bold leading-relaxed">
+                            <span className="text-amber-500 text-sm shrink-0">⚠️</span>
+                            <span>Baskı öncesi girilen tüm bilgiler gerçek zamanlı olarak yan taraftaki önizlemeye yansır.</span>
                         </div>
-
-                        <div className="flex gap-2">
-                            <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
-                                <button onClick={() => setFormType("purchase")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'purchase' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>ALIŞ</button>
-                                <button onClick={() => setFormType("sale")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'sale' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>SATIŞ</button>
-                            </div>
-                            <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
-                                <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>A4</button>
-                                <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>FİŞ</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Preview Area */}
-                    <div className="flex-1 bg-[#05070A] overflow-auto p-10 flex justify-center items-start custom-scrollbar">
-                        <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : 'w-[80mm]'}`}>
-                            {printFormat === "a4" ? (
-                                <A4Receipt device={device} formType={formType} date={now} customer={customer} expert={expert} />
-                            ) : (
-                                <ThermalReceipt device={device} formType={formType} date={now} customer={customer} />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="p-4 border-t border-slate-800/60 bg-slate-950/40 flex justify-between items-center">
-                        <p className="text-[10px] text-slate-500 font-bold max-w-sm">
-                            ⚠️ Sözleşme resmi evrak niteliğindedir. Bilgilerin doğruluğunu kontrol ediniz.
-                        </p>
                         <Button
                             onClick={handlePrint}
-                            className="bg-blue-600 hover:bg-blue-500 text-white font-black gap-2 h-11 px-8 rounded-xl shadow-lg shadow-blue-600/20"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black gap-2 h-12 rounded-xl shadow-lg shadow-blue-600/20 text-[11px] uppercase tracking-widest"
                         >
                             <Printer className="h-4 w-4" />
                             SÖZLEŞMEYİ YAZDIR
                         </Button>
                     </div>
                 </div>
+
+                {/* Right Side: Tabbed Content */}
+                <Tabs defaultValue="contract" className="flex-1 flex flex-col min-w-0">
+                    <div className="px-6 py-4 pr-14 flex justify-between items-center border-b border-slate-800/60 bg-slate-950/40">
+                        <TabsList className="bg-slate-900 border-slate-800 p-1 rounded-2xl h-11 shrink-0">
+                            <TabsTrigger value="contract" className="rounded-xl px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-600/20 gap-2 h-9 text-[11px] font-black tracking-widest uppercase">
+                                <FileText className="h-3.5 w-3.5" />
+                                SÖZLEŞME
+                            </TabsTrigger>
+                            <TabsTrigger value="gallery" className="rounded-xl px-6 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-600/20 gap-2 h-9 text-[11px] font-black tracking-widest uppercase">
+                                <Paperclip className="h-3.5 w-3.5" />
+                                EKLER & GALERİ
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <div className="flex items-center gap-3">
+                            <Eye className="h-4 w-4 text-slate-600" />
+                            <div className="flex flex-col items-end shrink-0">
+                                <h2 className="text-[12px] font-black text-white leading-none uppercase">{device.name}</h2>
+                                <p className="text-[10px] text-slate-500 font-bold tracking-tight mt-1 truncate max-w-[150px]">IMEI: {device.deviceInfo?.imei || "—"}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tab 1: Contract Content */}
+                    <TabsContent value="contract" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden overflow-hidden">
+                        <div className="px-6 py-4 flex justify-between items-center border-b border-slate-800/20 bg-slate-900/10">
+                            <div className="flex gap-2">
+                                <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
+                                    <button onClick={() => setFormType("purchase")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'purchase' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>ALIŞ</button>
+                                    <button onClick={() => setFormType("sale")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'sale' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>SATIŞ</button>
+                                </div>
+                                <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
+                                    <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>A4 Standart</button>
+                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>80mm Termal</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 bg-[#05070A] overflow-auto p-10 flex justify-center items-start custom-scrollbar">
+                            <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : 'w-[80mm]'}`}>
+                                {printFormat === "a4" ? (
+                                    <A4Receipt device={device} formType={formType} date={now} customer={customer} expert={expert} shopInfo={shopInfo} />
+                                ) : (
+                                    <ThermalReceipt device={device} formType={formType} date={now} customer={customer} shopInfo={shopInfo} />
+                                )}
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* Tab 2: Gallery Content */}
+                    <TabsContent value="gallery" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden overflow-hidden overflow-y-auto custom-scrollbar bg-[#05070A]">
+                        <div className="p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Yüklenilen Belgeler</h3>
+                                    <p className="text-xs text-slate-500 font-bold">Cihaza ait fotoğraflar, faturalar ve kimlik görselleri.</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="file"
+                                        multiple
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                        accept="image/*,application/pdf"
+                                    />
+                                    <Button
+                                        disabled={isUploading}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl gap-2 shadow-lg shadow-emerald-600/20"
+                                    >
+                                        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                        YENİ EKLE
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {/* Photos Array */}
+                                {device.deviceInfo?.photoUrls?.map((url: string, i: number) => {
+                                    const isPdf = url.toLowerCase().includes('.pdf');
+
+                                    const handleDelete = async () => {
+                                        if (!confirm("Bu fotoğrafı silmek istediğinize emin misiniz?")) return;
+                                        startTransition(async () => {
+                                            const newPhotos = device.deviceInfo.photoUrls.filter((_: any, idx: number) => idx !== i);
+                                            const res = await updateDeviceEntry(device.id, { photoUrls: newPhotos });
+                                            if (res.success) toast.success("Fotoğraf silindi.");
+                                            else toast.error("Hata oluştu.");
+                                        });
+                                    };
+
+                                    const handleDownload = () => {
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = `cihaz_foto_${i + 1}${isPdf ? '.pdf' : '.jpg'}`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                    };
+
+                                    return (
+                                        <div key={`photo-${i}`} className="flex flex-col gap-2">
+                                            <div className="group relative aspect-square rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden hover:border-emerald-500/50 transition-all cursor-pointer shadow-lg shadow-black/40" onClick={() => window.open(url, '_blank')}>
+                                                {isPdf ? (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
+                                                        <FileText className="h-10 w-10 text-red-400" />
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">PDF Dosyası</span>
+                                                    </div>
+                                                ) : (
+                                                    <img src={url} alt={`Photo ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                )}
+                                                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
+                                                    <span className="text-[9px] font-black text-white uppercase">Cihaz Görseli</span>
+                                                    <div className="h-6 w-6 rounded-lg bg-emerald-500/20 backdrop-blur-md flex items-center justify-center border border-emerald-500/20">
+                                                        {isPdf ? <FileText className="h-3 w-3 text-red-400" /> : <ImageIcon className="h-3 w-3 text-emerald-400" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                    <Download className="h-3 w-3 text-blue-400" /> İndir
+                                                </button>
+                                                <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Seller ID Photo */}
+                                {device.deviceInfo?.sellerIdPhotoUrl && (() => {
+                                    const url = device.deviceInfo.sellerIdPhotoUrl;
+                                    const isPdf = url.toLowerCase().includes('.pdf');
+                                    const handleDelete = async () => {
+                                        if (!confirm("Kimlik görselini silmek istediğinize emin misiniz?")) return;
+                                        startTransition(async () => {
+                                            const res = await updateDeviceEntry(device.id, { sellerIdPhotoUrl: null });
+                                            if (res.success) toast.success("Kimlik görseli silindi.");
+                                            else toast.error("Hata oluştu.");
+                                        });
+                                    };
+                                    const handleDownload = () => {
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = `satıcı_kimlik${isPdf ? '.pdf' : '.jpg'}`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                    };
+                                    return (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="group relative aspect-square rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden hover:border-blue-500/50 transition-all cursor-pointer shadow-lg shadow-black/40" onClick={() => window.open(url, '_blank')}>
+                                                {isPdf ? (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
+                                                        <FileText className="h-10 w-10 text-blue-400" />
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">Kimlik PDF</span>
+                                                    </div>
+                                                ) : (
+                                                    <img src={url} alt="Kimlik" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                )}
+                                                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
+                                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">KİMLİK BELGESİ</span>
+                                                    <div className="h-6 w-6 rounded-lg bg-blue-500/20 backdrop-blur-md flex items-center justify-center border border-blue-500/20">
+                                                        <FileText className="h-3 w-3 text-blue-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                    <Download className="h-3 w-3 text-blue-400" /> İndir
+                                                </button>
+                                                <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Invoice Photo / PDF */}
+                                {device.deviceInfo?.invoiceUrl && (() => {
+                                    const url = device.deviceInfo.invoiceUrl;
+                                    const isPdf = url.toLowerCase().includes('.pdf');
+                                    const handleDelete = async () => {
+                                        if (!confirm("Fatura belgesini silmek istediğinize emin misiniz?")) return;
+                                        startTransition(async () => {
+                                            const res = await updateDeviceEntry(device.id, { invoiceUrl: null });
+                                            if (res.success) toast.success("Fatura silindi.");
+                                            else toast.error("Hata oluştu.");
+                                        });
+                                    };
+                                    const handleDownload = () => {
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = `cihaz_faturası${isPdf ? '.pdf' : '.jpg'}`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                    };
+                                    return (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="group relative aspect-square rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden hover:border-purple-500/50 transition-all cursor-pointer shadow-lg shadow-black/40" onClick={() => window.open(url, '_blank')}>
+                                                {isPdf ? (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
+                                                        <FileText className="h-10 w-10 text-red-400" />
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">Fatura PDF</span>
+                                                    </div>
+                                                ) : (
+                                                    <img src={url} alt="Fatura" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                )}
+                                                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
+                                                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">SATIN ALMA FATURASI</span>
+                                                    <div className="h-6 w-6 rounded-lg bg-purple-500/20 backdrop-blur-md flex items-center justify-center border border-purple-500/20">
+                                                        <Paperclip className="h-3 w-3 text-purple-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                    <Download className="h-3 w-3 text-blue-400" /> İndir
+                                                </button>
+                                                <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Empty State */}
+                                {!device.deviceInfo?.photoUrls?.length &&
+                                    !device.deviceInfo?.sellerIdPhotoUrl &&
+                                    !device.deviceInfo?.invoiceUrl && (
+                                        <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-3xl opacity-30">
+                                            <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                                                <Package className="h-8 w-8 text-slate-500" />
+                                            </div>
+                                            <h4 className="text-sm font-black text-white uppercase tracking-widest">HENÜZ BELGE YOK</h4>
+                                            <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase">YUKARIDAKİ BUTONDAN EKLEME YAPABİLİRSİNİZ</p>
+                                        </div>
+                                    )}
+                            </div>
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

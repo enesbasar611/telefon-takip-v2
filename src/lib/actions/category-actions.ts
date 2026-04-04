@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { formatTitleCase } from "@/lib/formatters";
 import { getShopId } from "@/lib/auth";
 
 // Form datası tipleri
@@ -24,11 +25,13 @@ export interface UpdateCategoryData {
 export async function createCategory(data: CreateCategoryData) {
     try {
         const shopId = await getShopId();
+        const formattedName = formatTitleCase(data.name);
+
         const existing = await prisma.category.findUnique({
             where: {
                 shopId_name: {
                     shopId,
-                    name: data.name
+                    name: formattedName
                 }
             },
         });
@@ -41,7 +44,7 @@ export async function createCategory(data: CreateCategoryData) {
 
         const category = await prisma.category.create({
             data: {
-                name: data.name,
+                name: formattedName,
                 parentId: data.parentId || null,
                 order: (maxOrder._max.order || 0) + 1,
                 shopId
@@ -71,7 +74,7 @@ export async function updateCategory(data: UpdateCategoryData) {
         const category = await prisma.category.update({
             where: { id: data.id },
             data: {
-                name: data.name,
+                name: data.name ? formatTitleCase(data.name) : undefined,
                 parentId: data.parentId === "null" ? null : data.parentId || undefined,
                 order: data.order !== undefined ? data.order : undefined
             },

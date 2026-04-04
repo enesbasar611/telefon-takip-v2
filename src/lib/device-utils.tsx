@@ -19,14 +19,40 @@ export const APPLE_COLORS = [
 ];
 
 export const getColorHex = (brand?: string, colorName?: string) => {
-    if (!brand || !colorName) return null;
-    const b = brand.toLowerCase();
-    const c = colorName.toLowerCase();
+    if (!colorName) return null;
+    const c = colorName.toLowerCase().trim();
 
-    if (b === "apple") {
-        const found = APPLE_COLORS.find(col => col.name.toLowerCase() === c);
+    // Basic Color Mappings (Turkish & English)
+    const basicColors: Record<string, string> = {
+        "yeşil": "#22c55e",
+        "mavi": "#3b82f6",
+        "beyaz": "#ffffff",
+        "siyah": "#111111",
+        "kırmızı": "#ef4444",
+        "sarı": "#eab308",
+        "mor": "#a855f7",
+        "turuncu": "#f97316",
+        "gri": "#6b7280",
+        "pembe": "#ec4899",
+        "altın": "#facc15",
+        "gümüş": "#d1d5db",
+        "lacivert": "#1e3a8a",
+        "green": "#22c55e",
+        "blue": "#3b82f6",
+        "white": "#ffffff",
+        "black": "#111111",
+        "red": "#ef4444",
+        "yellow": "#eab308",
+    };
+
+    if (basicColors[c]) return basicColors[c];
+
+    // Brand Specific Detail (e.g. Apple Titanium)
+    if (brand && brand.toLowerCase() === "apple") {
+        const found = APPLE_COLORS.find(col => col.name.toLowerCase().includes(c));
         if (found) return found.hex;
     }
+
     return null;
 };
 

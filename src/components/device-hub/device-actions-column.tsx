@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, FileText, Loader2, PenLine } from "lucide-react";
+import { Trash2, Paperclip, Loader2, PenLine } from "lucide-react";
 import { deleteDevice } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
 import { DeviceReceiptModal } from "./device-receipt-modal";
@@ -48,10 +48,21 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
             {/* Belge Button (Emerald) */}
             <DeviceReceiptModal device={device}>
                 <button
-                    className="h-9 w-9 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all border border-emerald-500/20 hover:border-emerald-500/40"
+                    className="group relative h-9 w-9 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all border border-emerald-500/20 hover:border-emerald-500/40"
                     title="Alım/Satış Belgesi"
                 >
-                    <FileText className="h-4 w-4" />
+                    <Paperclip className="h-4 w-4" />
+                    {(() => {
+                        const count = (device.deviceInfo?.photoUrls?.length || 0) +
+                            (device.deviceInfo?.sellerIdPhotoUrl ? 1 : 0) +
+                            (device.deviceInfo?.invoiceUrl ? 1 : 0);
+                        if (count === 0) return null;
+                        return (
+                            <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center bg-emerald-500 text-white text-[9px] font-black rounded-full border-2 border-[#0B0F19] shadow-lg animate-in zoom-in duration-300">
+                                {count}
+                            </span>
+                        );
+                    })()}
                 </button>
             </DeviceReceiptModal>
 

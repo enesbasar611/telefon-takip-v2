@@ -192,12 +192,14 @@ export function DeviceListClient({ initialDevices }: DeviceListClientProps) {
                                         {device.name.slice(0, 2).toUpperCase()}
                                         <div
                                             className="absolute inset-0 opacity-20"
-                                            style={{ backgroundColor: getColorHex("apple", device.deviceInfo?.color) || "transparent" }}
+                                            style={{ backgroundColor: getColorHex(device.brand, device.deviceInfo?.color) || "transparent" }}
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1">
                                         <span className="text-[13px] font-black text-white group-hover:text-blue-400 transition-colors uppercase truncate max-w-[180px]">{device.name}</span>
-                                        <span className="text-[10px] text-slate-600 font-bold leading-none tracking-tighter truncate">{device.deviceInfo?.capacity} / {device.deviceInfo?.RAM} / {device.deviceInfo?.storage}</span>
+                                        <span className="text-[10px] text-slate-600 font-bold leading-none tracking-tighter truncate">
+                                            {device.deviceInfo?.ram ? `${device.deviceInfo.ram} RAM / ` : ""}{device.deviceInfo?.capacity} / {device.deviceInfo?.storage}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -206,7 +208,7 @@ export function DeviceListClient({ initialDevices }: DeviceListClientProps) {
                                     <div className="flex items-center gap-2">
                                         <div
                                             className="h-3 w-3 rounded-full border border-slate-700 shadow-sm shrink-0"
-                                            style={{ backgroundColor: getColorHex("apple", device.deviceInfo?.color) || "#334155" }}
+                                            style={{ backgroundColor: getColorHex(device.brand, device.deviceInfo?.color) || "#334155" }}
                                         />
                                         <span className="text-[10px] font-bold text-slate-400 capitalize truncate">{device.deviceInfo?.color || "-"}</span>
                                     </div>

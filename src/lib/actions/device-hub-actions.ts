@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
+import { formatTitleCase, formatProperCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
@@ -77,9 +78,15 @@ export async function createDeviceEntry(data: any) {
       warrantyEndDate = d;
     }
 
+    const brand = formatTitleCase(data.brand);
+    const model = formatTitleCase(data.model);
+    const name = `${brand} ${model}`;
+    const imei = formatUppercase(data.imei);
+    const sellerName = data.sellerName ? formatProperCase(data.sellerName) : undefined;
+
     const product = await prisma.product.create({
       data: {
-        name: `${data.brand} ${data.model}`,
+        name,
         shopId,
         categoryId,
         buyPrice: data.buyPrice,
@@ -90,9 +97,9 @@ export async function createDeviceEntry(data: any) {
         deviceInfo: {
           create: {
             shopId,
-            imei: data.imei,
-            serialNumber: data.serialNumber,
-            color: data.color,
+            imei,
+            serialNumber: data.serialNumber ? formatUppercase(data.serialNumber) : null,
+            color: data.color ? formatTitleCase(data.color) : null,
             capacity: data.capacity,
             batteryHealth: data.batteryHealth,
             cosmeticScore: data.cosmeticScore ?? 10,
@@ -111,7 +118,7 @@ export async function createDeviceEntry(data: any) {
               sim1NotUsed: data.sim1NotUsed === true,
               sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
               sim2NotUsed: data.sim2NotUsed === true,
-              sellerName: data.sellerName,
+              sellerName,
               sellerTC: data.sellerTC,
               sellerPhone: data.sellerPhone,
               sellerIdPhotoUrl: data.sellerIdPhotoUrl,
@@ -128,7 +135,7 @@ export async function createDeviceEntry(data: any) {
       data: {
         type: "EXPENSE",
         amount: data.buyPrice,
-        description: `Cihaz Alımı: ${data.brand} ${data.model} (IMEI: ${data.imei})`,
+        description: `Cihaz Alımı: ${name} (IMEI: ${imei})`,
         paymentMethod: "CASH",
         userId: user.id,
         shopId,
@@ -278,25 +285,29 @@ export async function updateDeviceEntry(productId: string, data: any) {
       warrantyEndDate = d;
     }
 
-    const expertChecklist = data.expertChecklist ?? {};
+    const brand = formatTitleCase(data.brand);
+    const model = formatTitleCase(data.model);
+    const name = `${brand} ${model}`;
+    const imei = data.imei ? formatUppercase(data.imei) : undefined;
+    const sellerName = data.sellerName ? formatProperCase(data.sellerName) : undefined;
 
     await prisma.product.update({
       where: { id: productId },
       data: {
-        name: `${data.brand} ${data.model}`,
+        name,
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
         isSecondHand: data.condition !== "NEW",
         deviceInfo: {
           update: {
-            imei: data.imei,
-            serialNumber: data.serialNumber,
-            color: data.color,
+            imei,
+            serialNumber: data.serialNumber ? formatUppercase(data.serialNumber) : undefined,
+            color: data.color ? formatTitleCase(data.color) : undefined,
             capacity: data.capacity,
             batteryHealth: data.batteryHealth,
             cosmeticScore: data.cosmeticScore ?? 10,
             condition: data.condition,
-            expertChecklist,
+            expertChecklist: data.expertChecklist ?? {},
             // Update fields — cast to any
             ...({
               ram: data.ram,
@@ -306,10 +317,12 @@ export async function updateDeviceEntry(productId: string, data: any) {
               sim1NotUsed: data.sim1NotUsed === true,
               sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
               sim2NotUsed: data.sim2NotUsed === true,
-              sellerName: data.sellerName,
+              sellerName,
               sellerTC: data.sellerTC,
               sellerPhone: data.sellerPhone,
               sellerIdPhotoUrl: data.sellerIdPhotoUrl,
+              photoUrls: data.photoUrls,
+              invoiceUrl: data.invoiceUrl,
             } as any),
           }
         }

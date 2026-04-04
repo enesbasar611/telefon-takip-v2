@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { serializePrisma, formatName } from "@/lib/utils";
+import { serializePrisma } from "@/lib/utils";
+import { formatProperCase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
@@ -89,7 +90,7 @@ export async function createCustomer(data: {
     const customer = await prisma.customer.create({
       data: {
         ...data,
-        name: formatName(data.name),
+        name: formatProperCase(data.name),
         shopId,
         phone: data.phone || "" // Safety fallback
       }
@@ -119,7 +120,7 @@ export async function updateCustomer(id: string, data: {
       where: { id, shopId },
       data: {
         ...data,
-        ...(data.name ? { name: formatName(data.name) } : {})
+        ...(data.name ? { name: formatProperCase(data.name) } : {})
       }
     });
     revalidatePath("/musteriler");

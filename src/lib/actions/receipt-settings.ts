@@ -62,3 +62,15 @@ export async function updateReceiptSettings(type: string, data: any) {
         return { success: false, error: "Ayarlar kaydedilirken hata oluştu." };
     }
 }
+export async function getShopInfo() {
+    try {
+        const shopId = await getShopId();
+        const shop = await prisma.shop.findUnique({
+            where: { id: shopId },
+        });
+        return serializePrisma(shop);
+    } catch (error) {
+        console.error("Error fetching shop info:", error);
+        return null;
+    }
+}
