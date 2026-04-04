@@ -1,203 +1,222 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getDeviceList } from "@/lib/actions/device-hub-actions";
+import { getDeviceList, getExpiringDevices } from "@/lib/actions/device-hub-actions";
 import { getCategories } from "@/lib/actions/product-actions";
-import { Smartphone, CheckCircle2, ShieldCheck, Zap, Activity } from "lucide-react";
-import { DeviceInspectionModal } from "@/components/device-hub/device-inspection-modal";
 import { CreateDeviceModal } from "@/components/device-hub/create-device-modal";
+import { ExpiringWarrantiesModal } from "@/components/device-hub/expiring-warranties-modal";
+import { DeviceMonthlySalesModal } from "@/components/device-hub/device-monthly-sales-modal";
+import { DeviceAiStockAdviceModal } from "@/components/device-hub/device-ai-stock-advice-modal";
+import prisma from "@/lib/prisma";
+import { getShopId } from "@/lib/auth";
+import {
+  Globe, MonitorSmartphone, BadgeCheck, RotateCcw, TrendingUp, Smartphone, Coins, Wallet, CreditCard, Zap,
+} from "lucide-react";
+import { DeviceListClient } from "@/components/device-hub/device-list-client";
+import { getMonthlySalesComparisonHtml } from "@/lib/device-utils";
+import { DeviceExportButton } from "@/components/device-hub/device-export-button";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function DeviceHubPage() {
-  const devices = await getDeviceList();
-  const categories = await getCategories();
+  const shopId = await getShopId();
+  const [devices, categories, expiringDevices] = await Promise.all([
+    getDeviceList(),
+    getCategories(),
+    getExpiringDevices(),
+  ]);
+
+  // Metrics
+  const newDevices = devices.filter((d: any) => d.deviceInfo?.condition === "NEW");
+  const usedDevices = devices.filter((d: any) => d.deviceInfo?.condition === "USED");
+  const intlDevices = devices.filter((d: any) => d.deviceInfo?.condition === "INTERNATIONAL");
+
+  // Today's Sales
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todaySalesItems = await prisma.saleItem.findMany({
+    where: {
+      shopId,
+      sale: { createdAt: { gte: startOfToday } },
+      product: { deviceInfo: { isNot: null } }
+    }
+  });
+  const todaySalesTotal = todaySalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+  const todayCount = todaySalesItems.length;
+
+  // Monthly Sales Detail for Modal
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const monthlySalesItems = await prisma.saleItem.findMany({
+    where: {
+      shopId,
+      sale: { createdAt: { gte: startOfMonth } },
+      product: { deviceInfo: { isNot: null } }
+    },
+    include: { product: { include: { deviceInfo: true } }, sale: true },
+    orderBy: { sale: { createdAt: "desc" } }
+  });
+
+  const monthlyTotal = monthlySalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+  const monthlyCount = monthlySalesItems.length;
+
+  // Last Month Comparison
+  const lastMonthStart = new Date(startOfMonth);
+  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+  const lastMonthEnd = new Date(startOfMonth);
+  const lastMonthSalesItems = await prisma.saleItem.findMany({
+    where: {
+      shopId,
+      sale: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } },
+      product: { deviceInfo: { isNot: null } }
+    }
+  });
+  const lastMonthTotal = lastMonthSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+  const comparisonHtml = getMonthlySalesComparisonHtml(monthlyTotal, lastMonthTotal);
+
+  // Financial Stock Metrics
+  const totalStokMaliyeti = devices.reduce((acc: number, d: any) => acc + (d.stock > 0 ? Number(d.buyPrice) * d.stock : 0), 0);
+  const beklenenKar = devices.reduce((acc: number, d: any) => acc + (d.stock > 0 ? (Number(d.sellPrice) - Number(d.buyPrice)) * d.stock : 0), 0);
+
+  // Sales Graph Data (Last 7 Days)
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const salesGraphData = await Promise.all(last7Days.map(async (date) => {
+    const nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const dailyTotal = monthlySalesItems
+      .filter(item => new Date(item.sale.createdAt) >= date && new Date(item.sale.createdAt) < nextDay)
+      .reduce((acc, curr) => acc + Number(curr.totalPrice), 0);
+
+    return {
+      date: date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
+      total: dailyTotal,
+    };
+  }));
+
+  // Missing Items Analysis
+  const soldRecentLimit = new Date();
+  soldRecentLimit.setDate(soldRecentLimit.getDate() - 30);
+  const soldRecently = await prisma.saleItem.findMany({
+    where: {
+      shopId,
+      sale: { createdAt: { gte: soldRecentLimit } },
+      product: { deviceInfo: { isNot: null } }
+    },
+    include: { product: { include: { deviceInfo: true } } }
+  });
+
+  const missingItemsMap = new Map();
+  soldRecently.forEach((item: any) => {
+    const key = `${item.product.name}-${item.product.deviceInfo?.color}-${item.product.deviceInfo?.storage}`;
+    if (!missingItemsMap.has(key)) {
+      const stockAvailable = devices.some((d: any) =>
+        d.name === item.product.name &&
+        d.deviceInfo?.color === item.product.deviceInfo?.color &&
+        d.deviceInfo?.storage === item.product.deviceInfo?.storage &&
+        d.stock > 0
+      );
+      if (!stockAvailable) {
+        missingItemsMap.set(key, {
+          productName: item.product.name,
+          color: item.product.deviceInfo?.color,
+          storage: item.product.deviceInfo?.storage,
+          condition: item.product.deviceInfo?.condition
+        });
+      }
+    }
+  });
+  const missingItems = Array.from(missingItemsMap.values());
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-[10px] font-bold text-slate-500">Orgelux Hub 2026</span>
+    <div className="flex flex-col gap-8 max-w-7xl mx-auto p-4 lg:p-8">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] mb-1 uppercase tracking-[0.2em] pl-1">
+            <MonitorSmartphone className="h-3.5 w-3.5 text-blue-500" />
+            <span>Mağaza Terminali</span>
+            <span className="mx-2 text-slate-800">/</span>
+            <span className="text-white">Cihaz HUB</span>
           </div>
-          <h1 className="text-4xl font-bold text-white">CİHAZ <span className="text-blue-500">MERKEZİ</span></h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">Sıfır ve İkinci El Cihaz Envanter Yönetimi & Ekspertiz.</p>
+          <h1 className="text-[34px] font-black text-white tracking-tight leading-none">Cihaz <span className="text-blue-500">HUB</span></h1>
+          <p className="text-[13px] text-slate-500 font-bold tracking-normal pl-1">Envanter yönetimi ve finansal takip merkezi.</p>
         </div>
-        <CreateDeviceModal categories={categories} />
-      </div>
-
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-        <div className="matte-card p-6 lg:p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-blue-600/5 rounded-full" />
-            <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform">
-                <Smartphone className="h-6 w-6" />
-            </div>
-            <div>
-                <p className="text-[10px] font-bold text-slate-500 mb-1">STOKTAKİ CİHAZLAR</p>
-                <h3 className="text-4xl font-bold text-white">{devices.length} <span className="text-sm text-slate-600 font-bold ml-1">Ünite</span></h3>
-            </div>
-        </div>
-
-        <div className="matte-card p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-emerald-600/5 rounded-full" />
-            <div className="h-12 w-12 rounded-2xl bg-emerald-600/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <div>
-                <p className="text-[10px] font-bold text-slate-500 mb-1">BU AY SATILAN</p>
-                <h3 className="text-4xl font-bold text-white">0 <span className="text-sm text-slate-600 font-bold ml-1">Ünite</span></h3>
-            </div>
-        </div>
-
-        <div className="matte-card p-8 rounded-xl flex flex-col gap-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 h-32 w-32 -translate-x-4 -translate-y-8 bg-purple-600/5 rounded-full" />
-            <div className="h-12 w-12 rounded-2xl bg-purple-600/10 flex items-center justify-center text-purple-500 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-                <p className="text-[10px] font-bold text-slate-500 mb-1">GÜNCEL VARLIK DEĞERİ</p>
-                <h3 className="text-4xl font-bold text-white">₺{devices.reduce((acc: number, d: any) => acc + Number(d.buyPrice), 0).toLocaleString('tr-TR')}</h3>
-            </div>
+        <div className="flex gap-3">
+          <DeviceExportButton devices={devices} />
+          <CreateDeviceModal categories={categories} />
         </div>
       </div>
 
-      <div className="matte-card rounded-xl overflow-hidden">
-        <div className="p-6 lg:p-8 border-b border-border/10/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/20">
-            <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
-                    <Activity className="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                    <h2 className="text-sm font-bold text-white">Envanter Arşivi</h2>
-                    <p className="text-[10px] text-slate-500 font-bold mt-0.5">Gerçek zamanlı cihaz analizi</p>
-                </div>
-            </div>
+      {/* Stock Cards Row */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <MonitorSmartphone className="h-4 w-4 text-slate-500" />
+          <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
-
-        <div className="lg:hidden space-y-4 p-4">
-            {devices.length === 0 ? (
-                <p className="text-center py-10 text-slate-500 font-bold text-xs">Cihaz bulunamadı.</p>
-            ) : (
-                devices.map((device: any) => (
-                    <div key={device.id} className="matte-card p-5 rounded-2xl border-border/10/50 space-y-4">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-xl bg-slate-900 border border-border/10 flex items-center justify-center relative">
-                                    <Smartphone className="h-6 w-6 text-slate-500" />
-                                    {device.deviceInfo?.condition === "NEW" && (
-                                        <div className="absolute -top-1 -right-1 h-3 w-3 bg-blue-500 rounded-full" />
-                                    )}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-white text-sm leading-tight">{device.name}</h3>
-                                    <p className="text-[10px] text-slate-500 font-bold mt-1">IMEI: {device.deviceInfo?.imei || '-'}</p>
-                                </div>
-                            </div>
-                            <Badge variant="outline" className="bg-slate-900 border-border/10 text-[8px] font-bold text-slate-500 px-2 py-0.5">
-                                {device.category.name}
-                            </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50">
-                                <p className="text-[8px] font-bold text-slate-600 mb-1 text-center">KONDİSYON</p>
-                                <div className="flex gap-0.5 justify-center">
-                                    {[...Array(10)].map((_, i) => (
-                                        <div key={i} className={`h-1 w-1.5 rounded-full ${i < (device.deviceInfo?.cosmeticScore || 0) ? 'bg-blue-500' : 'bg-slate-800'}`} />
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="bg-slate-900/40 p-3 rounded-xl border border-border/10/50 text-right">
-                                <p className="text-[8px] font-bold text-slate-600 mb-1">SATIŞ FİYATI</p>
-                                <span className="text-sm font-bold text-white">₺{Number(device.sellPrice).toLocaleString('tr-TR')}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t border-border/10/50">
-                            <span className="text-[9px] text-slate-600 font-bold">MALİYET: ₺{Number(device.buyPrice).toLocaleString('tr-TR')}</span>
-                            <DeviceInspectionModal
-                                deviceId={device.deviceInfo?.id}
-                                deviceName={device.name}
-                                initialResults={device.deviceInfo?.expertChecklist}
-                                initialScore={device.deviceInfo?.cosmeticScore}
-                            />
-                        </div>
-                    </div>
-                ))
-            )}
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricCard icon={MonitorSmartphone} label="TOPLAM STOK" value={devices.length.toString()} subLabel="Cihaz Adet" color="blue" />
+          <MetricCard icon={BadgeCheck} label="SIFIR CİHAZ" value={newDevices.length.toString()} subLabel="Sıfır Stok" color="emerald" />
+          <MetricCard icon={RotateCcw} label="2. EL CİHAZ" value={usedDevices.length.toString()} subLabel="İkinci El" color="amber" />
+          <MetricCard icon={Globe} label="YURTDIŞI" value={intlDevices.length.toString()} subLabel="Dual SIM" color="purple" />
+          <ExpiringWarrantiesModal devices={expiringDevices} count={expiringDevices.length} />
+          <DeviceAiStockAdviceModal missingItems={missingItems} />
         </div>
+      </div>
 
-        <Table className="hidden lg:table">
-          <TableHeader className="bg-slate-900/40">
-            <TableRow className="border-border/10/50 hover:bg-transparent">
-              <TableHead className="py-6 pl-8 text-[10px] font-bold text-slate-400">Cihaz Bilgisi</TableHead>
-              <TableHead className="py-6 text-[10px] font-bold text-slate-400">Sınıflandırma</TableHead>
-              <TableHead className="py-6 text-[10px] font-bold text-slate-400 text-center">Durum / Kondisyon</TableHead>
-              <TableHead className="py-6 text-[10px] font-bold text-slate-400 text-right">Maliyet & Satış</TableHead>
-              <TableHead className="py-6 pr-8 text-right w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {devices.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-40 text-center text-slate-600 font-bold text-xs">
-                  Envanterde henüz cihaz bulunmuyor.
-                </TableCell>
-              </TableRow>
-            ) : (
-              devices.map((device: any) => (
-                <TableRow key={device.id} className="border-border/10/50 group hover:bg-slate-900/30 transition-colors">
-                  <TableCell className="py-6 pl-8 font-medium">
-                    <div className="flex items-center gap-5">
-                        <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-border/10 flex items-center justify-center relative shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
-                           <Smartphone className="h-7 w-7 text-slate-500 group-hover:text-blue-500" />
-                           {device.deviceInfo?.condition === "NEW" && (
-                              <div className="absolute top-0 right-0 h-4 w-4 bg-blue-500 flex items-center justify-center rounded-bl-lg">
-                                 <Zap className="h-2 w-2 text-white fill-white" />
-                              </div>
-                           )}
-                        </div>
-                        <div>
-                           <span className="block text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{device.name}</span>
-                           <span className="block text-[9px] text-slate-600 font-bold mt-0.5">IMEI: {device.deviceInfo?.imei || "Bilinmiyor"}</span>
-                        </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                     <Badge variant="outline" className="bg-slate-900 border-border/10 text-[9px] font-bold text-slate-500 py-1.5 px-4 rounded-xl">
-                        {device.category.name}
-                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex flex-col items-center gap-1.5">
-                        <div className="flex gap-1">
-                            {[...Array(10)].map((_, i) => (
-                                <div key={i} className={`h-1 w-2 rounded-full ${i < (device.deviceInfo?.cosmeticScore || 0) ? 'bg-blue-500' : 'bg-slate-800'}`} />
-                            ))}
-                        </div>
-                        <span className="text-[9px] font-bold text-slate-500">Kondisyon: {device.deviceInfo?.cosmeticScore}/10</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-col items-end">
-                       <span className="text-lg font-bold text-white">₺{Number(device.sellPrice).toLocaleString('tr-TR')}</span>
-                       <span className="text-[9px] text-slate-600 font-bold">Maliyet: ₺{Number(device.buyPrice).toLocaleString('tr-TR')}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right pr-8">
-                    <DeviceInspectionModal
-                        deviceId={device.deviceInfo?.id}
-                        deviceName={device.name}
-                        initialResults={device.deviceInfo?.expertChecklist}
-                        initialScore={device.deviceInfo?.cosmeticScore}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* Finance Cards Row */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Coins className="h-4 w-4 text-slate-500" />
+          <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
+        </div>
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel="Toplam Alış" color="rose" />
+          <MetricCard icon={TrendingUp} label="BEKLENEN KAR" value={`${beklenenKar.toLocaleString("tr-TR")} ₺`} subLabel="Satış Potansiyeli" color="emerald" />
+          <MetricCard icon={CreditCard} label="BUGÜNKÜ SATIŞ" value={`${todaySalesTotal.toLocaleString("tr-TR")} ₺`} subLabel={`${todayCount} Cihaz`} color="blue" />
+          <DeviceMonthlySalesModal
+            monthlyTotal={monthlyTotal}
+            monthlyCount={monthlyCount}
+            chartData={salesGraphData}
+            items={monthlySalesItems}
+            comparisonHtml={comparisonHtml}
+          />
+        </div>
+      </div>
+
+      {/* Main Content: Filterable Table Client */}
+      <DeviceListClient initialDevices={devices} />
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
+  const colors: any = {
+    blue: "text-blue-500 bg-blue-500/10 border-blue-500/20 group-hover:border-blue-500/40",
+    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20 group-hover:border-emerald-500/40",
+    amber: "text-amber-500 bg-amber-500/10 border-amber-500/20 group-hover:border-amber-500/40",
+    purple: "text-purple-500 bg-purple-500/10 border-purple-500/20 group-hover:border-purple-500/40",
+    rose: "text-rose-500 bg-rose-500/10 border-rose-500/20 group-hover:border-rose-500/40",
+  };
+
+  return (
+    <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 border border-slate-800/60 shadow-lg group transition-all duration-300">
+      <div className="flex justify-between items-start">
+        <div className={`p-2.5 rounded-xl transition-colors ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
+          {label}
+        </div>
+      </div>
+      <div className="mt-2">
+        <h3 className="text-[26px] font-black text-white leading-none tracking-tight">{value}</h3>
+        <p className="text-[11px] text-slate-500 font-bold tracking-wide mt-2">{subLabel}</p>
       </div>
     </div>
   );

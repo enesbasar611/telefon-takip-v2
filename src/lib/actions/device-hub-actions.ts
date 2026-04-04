@@ -25,22 +25,68 @@ export async function getDeviceList() {
   }
 }
 
+export async function ensureDeviceCategory(condition: "NEW" | "USED" | "INTERNATIONAL"): Promise<string> {
+  const shopId = await getShopId();
+
+  const conditionLabels: Record<string, string> = {
+    NEW: "Sıfır",
+    USED: "2. El",
+    INTERNATIONAL: "Yurtdışı",
+  };
+  const subName = conditionLabels[condition] ?? "Sıfır";
+
+  // Find or create top-level "Telefonlar" category
+  let telefonlar = await prisma.category.findFirst({
+    where: { shopId, name: { equals: "Telefonlar", mode: "insensitive" } },
+  });
+  if (!telefonlar) {
+    telefonlar = await prisma.category.create({
+      data: { name: "Telefonlar", shopId },
+    });
+  }
+
+  // Find or create sub-category (Sıfır / 2. El / Yurtdışı) under Telefonlar
+  let sub = await prisma.category.findFirst({
+    where: { shopId, name: { equals: subName, mode: "insensitive" }, parentId: telefonlar.id },
+  });
+  if (!sub) {
+    sub = await prisma.category.create({
+      data: { name: subName, shopId, parentId: telefonlar.id },
+    });
+  }
+
+  return sub.id;
+}
+
 export async function createDeviceEntry(data: any) {
   try {
     const shopId = await getShopId();
     const user = await prisma.user.findFirst({ where: { role: "ADMIN", shopId } });
     if (!user) throw new Error("Admin user not found");
 
+    // Auto-resolve category based on condition
+    const categoryId = await ensureDeviceCategory(data.condition);
+
+    // Compute warrantyEndDate from months if provided
+    let warrantyEndDate: Date | undefined = undefined;
+    if (data.warrantyEndDate) {
+      warrantyEndDate = new Date(data.warrantyEndDate);
+    } else if (data.warrantyMonths) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + parseInt(data.warrantyMonths));
+      warrantyEndDate = d;
+    }
+
     const product = await prisma.product.create({
       data: {
         name: `${data.brand} ${data.model}`,
         shopId,
-        categoryId: data.categoryId,
+        categoryId,
         buyPrice: data.buyPrice,
         sellPrice: data.sellPrice,
         stock: 1,
         criticalStock: 0,
-        isSecondHand: data.condition === "USED",
+        isSecondHand: data.condition !== "NEW",
         deviceInfo: {
           create: {
             shopId,
@@ -49,13 +95,29 @@ export async function createDeviceEntry(data: any) {
             color: data.color,
             capacity: data.capacity,
             batteryHealth: data.batteryHealth,
-            cosmeticScore: data.cosmeticScore,
+            cosmeticScore: data.cosmeticScore ?? 10,
             condition: data.condition,
-            expertChecklist: data.expertChecklist,
+            expertChecklist: data.expertChecklist ?? {},
             buyBackPrice: data.buyBackPrice,
             buyBackMonths: data.buyBackMonths,
             purchasedFrom: data.purchasedFrom,
             purchaseDate: new Date(),
+            // New fields — cast to any until prisma client regenerated
+            ...({
+              ram: data.ram,
+              storage: data.storage,
+              warrantyEndDate: warrantyEndDate ?? null,
+              sim1ExpirationDate: data.sim1ExpirationDate ? new Date(data.sim1ExpirationDate) : null,
+              sim1NotUsed: data.sim1NotUsed === true,
+              sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
+              sim2NotUsed: data.sim2NotUsed === true,
+              sellerName: data.sellerName,
+              sellerTC: data.sellerTC,
+              sellerPhone: data.sellerPhone,
+              sellerIdPhotoUrl: data.sellerIdPhotoUrl,
+              photoUrls: data.photoUrls ?? [],
+              invoiceUrl: data.invoiceUrl ?? null,
+            } as any),
           }
         }
       }
@@ -94,6 +156,7 @@ export async function createDeviceEntry(data: any) {
   }
 }
 
+
 export async function updateDeviceExpertise(deviceId: string, expertChecklist: any, cosmeticScore: number) {
   try {
     const shopId = await getShopId();
@@ -115,3 +178,149 @@ export async function updateDeviceExpertise(deviceId: string, expertChecklist: a
     return { success: false, error: "Ekspertiz sonuçları güncellenirken hata oluştu." };
   }
 }
+
+export async function deleteDevice(productId: string) {
+  try {
+    const shopId = await getShopId();
+    const product = await prisma.product.findFirst({ where: { id: productId, shopId } });
+    if (!product) return { success: false, error: "Cihaz bulunamadı." };
+
+    // Delete all related records to satisfy foreign key constraints (P2003 Fix)
+    await prisma.$transaction([
+      prisma.deviceHubInfo.deleteMany({ where: { productId } }),
+      prisma.inventoryMovement.deleteMany({ where: { productId } }),
+      prisma.inventoryLog.deleteMany({ where: { productId } }),
+      prisma.saleItem.deleteMany({ where: { productId } }),
+      prisma.serviceUsedPart.deleteMany({ where: { productId } }),
+      prisma.returnTicket.deleteMany({ where: { productId } }),
+      prisma.stockAIAlert.deleteMany({ where: { productId } }),
+      prisma.shortageItem.deleteMany({ where: { productId } }),
+      prisma.purchaseOrderItem.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
+
+    revalidatePath("/cihaz-listesi");
+    revalidatePath("/satis/kasa");
+    revalidatePath("/stok");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Delete device error:", error);
+    return { success: false, error: "Cihaz silinemedi. Bağlı kayıtlar olabilir." };
+  }
+}
+
+export async function getExpiringDevices() {
+  try {
+    const shopId = await getShopId();
+    const now = new Date();
+    const in30days = new Date(now);
+    in30days.setDate(in30days.getDate() + 30);
+
+    // Find devices where warrantyEndDate is within 30 days OR imei activation is running out
+    const devices = await prisma.product.findMany({
+      where: {
+        shopId,
+        deviceInfo: {
+          warrantyEndDate: { gte: now, lte: in30days }
+        }
+      },
+      include: { deviceInfo: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Also include INTERNATIONAL devices where activation is nearly exhausted
+    const intlDevices = await prisma.product.findMany({
+      where: {
+        shopId,
+        deviceInfo: { condition: "INTERNATIONAL" }
+      },
+      include: { deviceInfo: true },
+    });
+
+    const expiringIntl = intlDevices.filter((d) => {
+      const info = d.deviceInfo as any;
+      if (!info) return false;
+
+      const s1End = info.sim1ExpirationDate ? new Date(info.sim1ExpirationDate) : null;
+      const s2End = (info.sim2ExpirationDate && !info.sim2NotUsed) ? new Date(info.sim2ExpirationDate) : null;
+
+      const isS1Expiring = s1End && s1End >= now && s1End <= in30days;
+      const isS2Expiring = s2End && s2End >= now && s2End <= in30days;
+
+      return isS1Expiring || isS2Expiring;
+    });
+
+    const all = [...devices, ...expiringIntl.filter(d => !devices.find(x => x.id === d.id))];
+    return serializePrisma(all);
+  } catch (error) {
+    console.error("getExpiringDevices error:", error);
+    return [];
+  }
+}
+
+export async function updateDeviceEntry(productId: string, data: any) {
+  try {
+    const shopId = await getShopId();
+    const product = await prisma.product.findFirst({
+      where: { id: productId, shopId },
+      include: { deviceInfo: true }
+    });
+    if (!product) throw new Error("Cihaz bulunamadı");
+
+    // Compute warrantyEndDate
+    let warrantyEndDate: Date | undefined = undefined;
+    if (data.warrantyEndDate) {
+      warrantyEndDate = new Date(data.warrantyEndDate);
+    } else if (data.warrantyMonths) {
+      const d = product.createdAt || new Date();
+      d.setMonth(d.getMonth() + parseInt(data.warrantyMonths));
+      warrantyEndDate = d;
+    }
+
+    const expertChecklist = data.expertChecklist ?? {};
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name: `${data.brand} ${data.model}`,
+        buyPrice: data.buyPrice,
+        sellPrice: data.sellPrice,
+        isSecondHand: data.condition !== "NEW",
+        deviceInfo: {
+          update: {
+            imei: data.imei,
+            serialNumber: data.serialNumber,
+            color: data.color,
+            capacity: data.capacity,
+            batteryHealth: data.batteryHealth,
+            cosmeticScore: data.cosmeticScore ?? 10,
+            condition: data.condition,
+            expertChecklist,
+            // Update fields — cast to any
+            ...({
+              ram: data.ram,
+              storage: data.storage,
+              warrantyEndDate: warrantyEndDate ?? null,
+              sim1ExpirationDate: data.sim1ExpirationDate ? new Date(data.sim1ExpirationDate) : null,
+              sim1NotUsed: data.sim1NotUsed === true,
+              sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
+              sim2NotUsed: data.sim2NotUsed === true,
+              sellerName: data.sellerName,
+              sellerTC: data.sellerTC,
+              sellerPhone: data.sellerPhone,
+              sellerIdPhotoUrl: data.sellerIdPhotoUrl,
+            } as any),
+          }
+        }
+      }
+    });
+
+    revalidatePath("/cihaz-listesi");
+    return { success: true };
+  } catch (error) {
+    console.error("Update device error:", error);
+    return { success: false, error: "Cihaz güncellenemedi." };
+  }
+}
+

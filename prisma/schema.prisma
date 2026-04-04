@@ -327,27 +327,45 @@ model InventoryLog {
 }
 
 model DeviceHubInfo {
-  id              String    @id @default(cuid())
-  productId       String    @unique
-  imei            String
-  serialNumber    String?
-  color           String?
-  capacity        String?
-  batteryHealth   Int?
-  cosmeticScore   Int       @default(10)
-  condition       String    @default("NEW")
-  expertChecklist Json?
-  purchaseDate    DateTime?
-  purchasedFrom   String?
-  buyBackPrice    Decimal?  @db.Decimal(10, 2)
-  buyBackMonths   Int?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  productId             String    @unique
+  imei                  String
+  serialNumber          String?
+  color                 String?
+  capacity              String?   // legacy combined field
+  ram                   String?   // e.g. "8 GB"
+  storage               String?   // e.g. "256 GB"
+  batteryHealth         Int?
+  cosmeticScore         Int       @default(10)
+  condition             String    @default("NEW")  // NEW | USED | INTERNATIONAL
+  expertChecklist       Json?
+  purchaseDate          DateTime?
+  purchasedFrom         String?
+  buyBackPrice          Decimal?  @db.Decimal(10, 2)
+  buyBackMonths         Int?
+  warrantyEndDate       DateTime? // for NEW & USED
+  sim1ExpirationDate    DateTime? // INTERNATIONAL: SIM 1 BTK expiration date
+  sim1NotUsed           Boolean   @default(false)
+  sim2ExpirationDate    DateTime? // INTERNATIONAL: SIM 2 BTK expiration date
+  sim2NotUsed           Boolean   @default(false)
   
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id])
+  // Optional Seller Info (Müşteri Bilgileri)
+  sellerName            String?
+  sellerTC              String?
+  sellerPhone           String?
+  sellerIdPhotoUrl      String?   // Identity card photo
 
-  product         Product   @relation(fields: [productId], references: [id])
+  imeiActivationMonths  Int?      // legacy
+  imeiUsedMonths        Int?      // legacy
+  photoUrls             String[]  // device photos
+  invoiceUrl            String?   // invoice/pdf url
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  shopId                String
+  shop                  Shop      @relation(fields: [shopId], references: [id])
+
+  product               Product   @relation(fields: [productId], references: [id])
 
   @@unique([shopId, imei])
 }

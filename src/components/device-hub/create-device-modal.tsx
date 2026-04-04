@@ -1,209 +1,675 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, Smartphone, Zap, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2,
+} from "lucide-react";
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
+import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 
+type Condition = "NEW" | "USED" | "INTERNATIONAL";
+
+/* ─── Utility helpers ─── */
+function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatCurrencyInput(val: string): string {
+  const numeric = val.replace(/\D/g, "");
+  if (!numeric) return "";
+  return new Intl.NumberFormat("tr-TR").format(parseInt(numeric));
+}
+
+function parseCurrencyInput(val: string): string {
+  return val.replace(/\D/g, "");
+}
+
+const POPULAR_BRANDS = [
+  "Apple", "Samsung", "Xiaomi", "Huawei", "Google",
+  "OnePlus", "Oppo", "Realme",
+];
+
+const WARRANTY_MONTHS_OPTIONS = [1, 2, 3, 6, 9, 12, 15, 18, 24];
+
+/* ─── Zod schema ─── */
 const deviceSchema = z.object({
   brand: z.string().min(1, "Marka gereklidir"),
   model: z.string().min(1, "Model gereklidir"),
-  categoryId: z.string().min(1, "Kategori seçiniz"),
   imei: z.string().length(15, "IMEI 15 haneli olmalıdır"),
-  serialNumber: z.string().optional().or(z.literal("")),
   color: z.string().optional().or(z.literal("")),
-  capacity: z.string().optional().or(z.literal("")),
+  ram: z.string().optional().or(z.literal("")),
+  storage: z.string().optional().or(z.literal("")),
+  warrantyEndDate: z.string().optional().or(z.literal("")),
+  warrantyMonths: z.string().optional().or(z.literal("")),
+  sim1ExpirationDate: z.string().optional().or(z.literal("")),
+  sim1NotUsed: z.boolean().default(false),
+  sim2ExpirationDate: z.string().optional().or(z.literal("")),
+  sim2NotUsed: z.boolean().default(false),
   batteryHealth: z.string().optional().or(z.literal("")),
-  condition: z.enum(["NEW", "USED"]),
-  buyPrice: z.string().min(1, "Alış fiyatı gereklidir"),
-  sellPrice: z.string().min(1, "Satış fiyatı gereklidir"),
-  purchasedFrom: z.string().optional().or(z.literal("")),
+  cosmeticScore: z.string().optional().or(z.literal("")),
+  replacedParts: z.string().optional().or(z.literal("")),
+  condition: z.enum(["NEW", "USED", "INTERNATIONAL"]),
+  buyPrice: z
+    .string()
+    .min(1, "Alış fiyatı gereklidir")
+    .transform((v) => parseCurrencyInput(v))
+    .refine((v) => parseFloat(v) > 0, "Alış fiyatı 0'dan büyük olmalıdır"),
+  sellPrice: z
+    .string()
+    .min(1, "Satış fiyatı gereklidir")
+    .transform((v) => parseCurrencyInput(v))
+    .refine((v) => parseFloat(v) > 0, "Satış fiyatı 0'dan büyük olmalıdır"),
+  // Seller Info
+  sellerName: z.string().optional().or(z.literal("")),
+  sellerTC: z.string().optional().or(z.literal("")),
+  sellerPhone: z.string().optional().or(z.literal("")),
+  sellerIdPhotoUrl: z.string().optional().or(z.literal("")),
+}).refine((data) => parseFloat(data.sellPrice) >= parseFloat(data.buyPrice), {
+  message: "Satış fiyatı alış fiyatından düşük olamaz",
+  path: ["sellPrice"],
 });
 
-type DeviceFormValues = z.infer<typeof deviceSchema>;
+interface DeviceFormValues {
+  brand: string;
+  model: string;
+  imei: string;
+  color?: string;
+  ram?: string;
+  storage?: string;
+  warrantyEndDate?: string;
+  warrantyMonths?: string;
+  sim1ExpirationDate?: string;
+  sim1NotUsed: boolean;
+  sim2ExpirationDate?: string;
+  sim2NotUsed: boolean;
+  batteryHealth?: string;
+  cosmeticScore?: string;
+  replacedParts?: string;
+  condition: Condition;
+  buyPrice: string;
+  sellPrice: string;
+  sellerName?: string;
+  sellerTC?: string;
+  sellerPhone?: string;
+  sellerIdFrontUrl?: string;
+  sellerIdBackUrl?: string;
+}
 
+/* ─── Component ─── */
 export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [sellerIdFront, setSellerIdFront] = useState<File | null>(null);
+  const [sellerIdBack, setSellerIdBack] = useState<File | null>(null);
+  const [warrantyMode, setWarrantyMode] = useState<"date" | "months">("months");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  const sellerIdFrontInputRef = useRef<HTMLInputElement>(null);
+  const sellerIdBackInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: { errors },
     reset,
+    formState: { errors },
   } = useForm<DeviceFormValues>({
-    resolver: zodResolver(deviceSchema),
+    resolver: zodResolver(deviceSchema) as any,
     defaultValues: {
-      condition: "USED",
-      buyPrice: "0",
-      sellPrice: "0",
-    }
+      condition: "NEW",
+      brand: "",
+      model: "",
+      imei: "",
+      buyPrice: "",
+      sellPrice: "",
+      cosmeticScore: "10",
+      batteryHealth: "100",
+      warrantyMonths: "24",
+      sim1NotUsed: false,
+      sim2NotUsed: false,
+    },
   });
 
   const condition = watch("condition");
+  const buyPrice = watch("buyPrice");
+  const selectedBrand = watch("brand");
+  const sim1NotUsed = watch("sim1NotUsed");
+  const sim2NotUsed = watch("sim2NotUsed");
+  const selectedColor = watch("color");
+
+  const isNew = condition === "NEW";
+  const isIntl = condition === "INTERNATIONAL";
+
+  // When condition changes to NEW → auto-set 24 months warranty
+  useEffect(() => {
+    if (condition === "NEW") {
+      setWarrantyMode("months");
+      setValue("warrantyMonths", "24");
+    }
+  }, [condition, setValue]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    setPhotoFiles((prev) => [...prev, ...files].slice(0, 5));
+  };
+  const handleInvoiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInvoiceFile(e.target.files?.[0] ?? null);
+  };
+  const removePhoto = (idx: number) => setPhotoFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const onSubmit = async (data: DeviceFormValues) => {
     startTransition(async () => {
-      const result = await createDeviceEntry({
-        ...data,
-        batteryHealth: data.batteryHealth ? parseInt(data.batteryHealth) : undefined,
-        buyPrice: parseFloat(data.buyPrice),
-        sellPrice: parseFloat(data.sellPrice),
-        cosmeticScore: data.condition === "NEW" ? 10 : 8,
-        expertChecklist: {},
-      });
+      try {
+        const expertChecklist = data.replacedParts ? { notes: data.replacedParts } : {};
 
-      if (result.success) {
-        toast.success("Cihaz başarıyla envantere eklendi.");
-        setOpen(false);
-        reset();
-      } else {
-        toast.error("İşlem başarısız.");
+        let sellerIdFrontUrl = "";
+        let sellerIdBackUrl = "";
+
+        if (sellerIdFront) {
+          const formData = new FormData();
+          formData.append("file", sellerIdFront);
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          const json = await res.json();
+          sellerIdFrontUrl = json.url;
+        }
+
+        if (sellerIdBack) {
+          const formData = new FormData();
+          formData.append("file", sellerIdBack);
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          const json = await res.json();
+          sellerIdBackUrl = json.url;
+        }
+
+        const result = await createDeviceEntry({
+          brand: toTitleCase(data.brand),
+          model: toTitleCase(data.model),
+          imei: data.imei.trim(),
+          color: data.color ? toTitleCase(data.color) : undefined,
+          ram: data.ram || undefined,
+          storage: data.storage || undefined,
+          condition: data.condition,
+          warrantyEndDate: warrantyMode === "date" && !isNew ? data.warrantyEndDate || undefined : undefined,
+          warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? data.warrantyMonths || undefined : undefined),
+          sim1ExpirationDate: data.sim1ExpirationDate || undefined,
+          sim1NotUsed: data.sim1NotUsed,
+          sim2ExpirationDate: data.sim2ExpirationDate || undefined,
+          sim2NotUsed: data.sim2NotUsed,
+          batteryHealth: data.batteryHealth ? parseInt(data.batteryHealth) : undefined,
+          cosmeticScore: parseInt(data.cosmeticScore || "10"),
+          expertChecklist,
+          buyPrice: parseFloat(data.buyPrice),
+          sellPrice: parseFloat(data.sellPrice),
+          sellerName: data.sellerName || undefined,
+          sellerTC: data.sellerTC || undefined,
+          sellerPhone: data.sellerPhone || undefined,
+          sellerIdPhotoUrl: sellerIdFrontUrl || undefined,
+          photoUrls: [],
+          invoiceUrl: null,
+        });
+
+        if (result.success) {
+          toast.success("Cihaz başarıyla envantere eklendi.");
+          setOpen(false);
+          reset();
+          setPhotoFiles([]);
+          setInvoiceFile(null);
+          setSellerIdFront(null);
+          setSellerIdBack(null);
+          setWarrantyMode("months");
+        } else {
+          toast.error(result.error ?? "İşlem başarısız.");
+        }
+      } catch (err) {
+        toast.error("Bir hata oluştu.");
       }
     });
   };
 
+  /* ─── Subcomponent: Condition Card ─── */
+  const ConditionCard = ({
+    type, icon: Icon, title, desc, color,
+  }: { type: Condition; icon: any; title: string; desc: string; color: string }) => {
+    const active = condition === type;
+    const colorMap: Record<string, string> = {
+      emerald: active ? "border-emerald-500 bg-emerald-500/5" : "border-slate-800 bg-slate-900 hover:border-emerald-500/40",
+      amber: active ? "border-amber-500 bg-amber-500/5" : "border-slate-800 bg-slate-900 hover:border-amber-500/40",
+      purple: active ? "border-purple-500 bg-purple-500/5" : "border-slate-800 bg-slate-900 hover:border-purple-500/40",
+    };
+    const iconBg: Record<string, string> = {
+      emerald: active ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-500",
+      amber: active ? "bg-amber-500 text-white" : "bg-slate-800 text-slate-500",
+      purple: active ? "bg-purple-500 text-white" : "bg-slate-800 text-slate-500",
+    };
+    const dotBg: Record<string, string> = {
+      emerald: "bg-emerald-500", amber: "bg-amber-500", purple: "bg-purple-500",
+    };
+    return (
+      <button
+        type="button"
+        onClick={() => setValue("condition", type)}
+        className={`flex items-start gap-3 p-4 rounded-2xl transition-all border-2 text-left relative overflow-hidden ${colorMap[color]}`}
+      >
+        <div className={`h-9 w-9 shrink-0 rounded-full flex items-center justify-center mt-0.5 ${iconBg[color]}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <h4 className={`text-[14px] font-black leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
+          <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">{desc}</p>
+        </div>
+        {active && <div className={`absolute top-3 right-3 h-2 w-2 rounded-full ${dotBg[color]}`} />}
+      </button>
+    );
+  };
+
+  const inputCls = "bg-slate-950 border-slate-800 rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
+  const labelCls = "text-[9px] font-black text-slate-500 uppercase tracking-widest pl-0.5";
+  const sectionCls = "p-5 rounded-2xl bg-slate-900 border border-slate-800/60 space-y-4";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 h-12 px-8 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-500 transition-all">
-          <PlusCircle className="h-5 w-5" />
-          <span>YENİ CİHAZ GİRİŞİ</span>
+        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2 font-bold h-10 px-6 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+          <Plus className="h-4 w-4" /> Cihaz Ekle
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] bg-background border-border/10 text-white p-0 overflow-hidden rounded-2xl">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="p-10 space-y-8">
-            <DialogHeader>
-              <div className="flex items-center gap-4 mb-2">
-                 <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
-                    <Smartphone className="h-6 w-6 text-blue-500" />
-                 </div>
-                 <DialogTitle className="text-2xl font-bold">Envanter Tanımlama</DialogTitle>
-              </div>
-              <DialogDescription className="text-xs font-medium text-slate-500">
-                Sıfır veya İkinci el cihazları 2026 Orgelux standartlarında kaydedin.
-              </DialogDescription>
-            </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold text-slate-500">Cihaz Durumu</Label>
-                  <div className="flex gap-2 p-1.5 bg-slate-900/40 border border-border/10 rounded-2xl">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className={`flex-1 h-10 rounded-xl text-[10px] font-bold transition-all ${condition === "NEW" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
-                      onClick={() => setValue("condition", "NEW")}
-                    >
-                      <Zap className="h-3.5 w-3.5 mr-2" /> SIFIR
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className={`flex-1 h-10 rounded-xl text-[10px] font-bold transition-all ${condition === "USED" ? 'bg-blue-600 text-white ' : 'text-slate-500'}`}
-                      onClick={() => setValue("condition", "USED")}
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5 mr-2" /> 2. EL
-                    </Button>
+      <DialogContent className="max-w-[820px] p-0 bg-[#0B0F19] text-slate-200 border border-slate-800/60 shadow-2xl rounded-2xl overflow-hidden">
+        {/* Header */}
+        <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-slate-800/60">
+          <div>
+            <DialogTitle className="text-[21px] font-black text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
+            <p className="text-[12px] text-slate-500 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col" style={{ maxHeight: "84vh" }}>
+          <div className="overflow-y-auto flex-1 px-7 py-5 space-y-5">
+
+            {/* Condition Toggle */}
+            <div className="grid grid-cols-3 gap-3">
+              <ConditionCard type="NEW" icon={BadgeCheck} title="Sıfır Ürün" desc="Distribütör garantili, kutusunda" color="emerald" />
+              <ConditionCard type="USED" icon={RotateCcw} title="İkinci El" desc="Kullanılmış, ekspertiz gerektiren" color="amber" />
+              <ConditionCard type="INTERNATIONAL" icon={Globe} title="Yurtdışı" desc="IMEI aktiflik kısıtlı ithal cihaz" color="purple" />
+            </div>
+
+            {/* Temel Bilgiler */}
+            <div className={sectionCls}>
+              <p className={labelCls}>Cihaz Bilgileri</p>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Brand Dropdown */}
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Marka</Label>
+                  <Select onValueChange={(v) => setValue("brand", v)}>
+                    <SelectTrigger className={inputCls}>
+                      <SelectValue placeholder="Marka Seçin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800">
+                      {POPULAR_BRANDS.map((b) => (
+                        <SelectItem key={b} value={b} className="font-bold">{b}</SelectItem>
+                      ))}
+                      <SelectItem value="Diğer" className="font-bold text-slate-400">Diğer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Tam Model Adı</Label>
+                  <Input {...register("model")} placeholder="iPhone 15 Pro Max" className={inputCls} />
+                  {errors.model && <p className="text-[10px] text-rose-500">{errors.model.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>IMEI (15 Hane)</Label>
+                  <Input {...register("imei")} maxLength={15} placeholder="352000000000000" className={`${inputCls} font-mono tracking-widest`} />
+                  {errors.imei && <p className="text-[10px] text-rose-500">{errors.imei.message}</p>}
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className={labelCls}>Renk Seçimi</Label>
+                  <div className="space-y-3">
+                    <Input
+                      {...register("color")}
+                      placeholder="Örn: Siyah, Uzay Grisi"
+                      className={inputCls}
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase();
+                        setValue("color", e.target.value);
+                      }}
+                    />
+                    {selectedBrand?.toLowerCase() === "apple" && (
+                      <div className="flex flex-wrap gap-2.5 p-3 bg-slate-950/50 rounded-2xl border border-slate-800">
+                        {APPLE_COLORS.map((c) => (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => setValue("color", c.name)}
+                            className={`group relative flex flex-col items-center gap-1.5 transition-all outline-none`}
+                          >
+                            <div
+                              className={`h-8 w-8 rounded-full border-2 transition-all shadow-lg ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "border-blue-500 scale-110 shadow-blue-500/30" : "border-slate-800 hover:border-slate-600 scale-100 shadow-black/40"}`}
+                              style={{ backgroundColor: c.hex }}
+                            />
+                            <span className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
+                              {c.name.split(" ")[0]}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {selectedColor && <p className="text-[10px] font-bold text-blue-400/80 mt-1 pl-1 capitalize">Seçilen Renk: {selectedColor}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>RAM</Label>
+                  <Select onValueChange={(v) => setValue("ram", v)}>
+                    <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 8 GB" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800">
+                      {["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB"].map((v) => (
+                        <SelectItem key={v} value={v} className="font-bold">{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Dahili Depolama</Label>
+                  <Select onValueChange={(v) => setValue("storage", v)}>
+                    <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 256 GB" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800">
+                      {["64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].map((v) => (
+                        <SelectItem key={v} value={v} className="font-bold">{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Garanti / Aktiflik */}
+            <div className={sectionCls}>
+              <p className={labelCls}>{isIntl ? "IMEI Aktiflik Durumu" : "Garanti Takibi"}</p>
+
+              {!isIntl && (
+                <>
+                  <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800 w-fit gap-1">
+                    <button type="button" onClick={() => setWarrantyMode("months")}
+                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      Ay Seç
+                    </button>
+                    <button type="button" onClick={() => setWarrantyMode("date")}
+                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      Tarih Gir
+                    </button>
+                  </div>
+
+                  {warrantyMode === "months" ? (
+                    <div className="space-y-1.5">
+                      <Label className={labelCls}>
+                        {isNew ? "Garanti Süresi (Sıfır = 24 Ay)" : "Kalan Garanti Süresi"}
+                      </Label>
+                      <Select
+                        defaultValue={isNew ? "24" : undefined}
+                        onValueChange={(v) => setValue("warrantyMonths", v)}
+                        disabled={isNew}
+                      >
+                        <SelectTrigger className={inputCls}>
+                          <SelectValue placeholder={isNew ? "24 Ay (Sabit)" : "Kaç ay kaldı?"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-slate-800">
+                          {WARRANTY_MONTHS_OPTIONS.map((m) => (
+                            <SelectItem key={m} value={String(m)} className="font-bold">
+                              {m} Ay {isNew && m === 24 ? "✓ (Sabit)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isNew && (
+                        <p className="text-[10px] text-emerald-400 font-medium pl-0.5 animate-pulse">
+                          ✨ Sıfır cihazlarda 24 ay garanti otomatik atanmıştır. Satış yapıldığında takibe başlar.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label className={labelCls}>Garanti Bitiş Tarihi</Label>
+                      <Input {...register("warrantyEndDate")} type="date" className={inputCls} />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {isIntl && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className={labelCls}>Sim 1 Bitiş Tarihi</Label>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="sim1NotUsed"
+                          checked={sim1NotUsed}
+                          onCheckedChange={(checked) => setValue("sim1NotUsed", checked === true)}
+                        />
+                        <Label htmlFor="sim1NotUsed" className="text-[10px] font-bold text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                      </div>
+                    </div>
+                    <Input {...register("sim1ExpirationDate")} type="date" className={inputCls} disabled={sim1NotUsed} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className={labelCls}>Sim 2 / E-Sim Bitiş Tarihi</Label>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="sim2NotUsed"
+                          checked={sim2NotUsed}
+                          onCheckedChange={(checked) => setValue("sim2NotUsed", checked === true)}
+                        />
+                        <Label htmlFor="sim2NotUsed" className="text-[10px] font-bold text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                      </div>
+                    </div>
+                    <Input
+                      {...register("sim2ExpirationDate")}
+                      type="date"
+                      className={inputCls}
+                      disabled={sim2NotUsed}
+                    />
+                  </div>
+                  <div className="col-span-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] text-purple-300 font-medium font-bold">
+                    💡 Yurtdışı cihazlarda her SIM için yıllık 120 gün kullanım hakkı verilir. BTK'dan kalan süreleri öğrenip manuel tarih olarak giriniz.
                   </div>
                 </div>
+              )}
+            </div>
 
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-[10px] font-bold text-slate-500">Marka</Label>
-                            <Input {...register("brand")} placeholder="Apple" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-[10px] font-bold text-slate-500">Model</Label>
-                            <Input {...register("model")} placeholder="iPhone 15 Pro" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">IMEI Numarası</Label>
-                        <Input {...register("imei")} maxLength={15} placeholder="352..." className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                    </div>
+            {/* Ekspertiz */}
+            <div className={`${sectionCls} transition-opacity ${isNew ? "opacity-40 pointer-events-none" : ""}`}>
+              <p className={labelCls}>Ekspertiz &amp; Kondisyon</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Pil Sağlığı</Label>
+                  <div className="relative">
+                    <Input {...register("batteryHealth")} type="number" min={1} max={100} placeholder="100" className={inputCls} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-black text-slate-500">%</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Kozmetik Durum</Label>
+                  <Select onValueChange={(v) => setValue("cosmeticScore", v)} defaultValue="10">
+                    <SelectTrigger className={inputCls}><SelectValue placeholder="Seç" /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800 font-bold">
+                      <SelectItem value="10">Kusursuz (10/10)</SelectItem>
+                      <SelectItem value="9">Çok İyi (9/10)</SelectItem>
+                      <SelectItem value="8">İyi – Ufak Çizikler (8/10)</SelectItem>
+                      <SelectItem value="7">Orta – Görünür Hasar (7/10)</SelectItem>
+                      <SelectItem value="6">Kötü Kozmetik (6/10)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className={labelCls}>Değiştirilen / Onarılan Parçalar</Label>
+                  <Textarea {...register("replacedParts")} placeholder="Örn: Ön cam, batarya değişimi" className="bg-slate-950 border-slate-800 rounded-xl min-h-[70px] text-[13px] font-medium placeholder:text-slate-600 resize-none p-3" />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-6">
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">Renk</Label>
-                        <Input {...register("color")} placeholder="Natural Titanium" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">Kapasite</Label>
-                        <Input {...register("capacity")} placeholder="256 GB" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                    </div>
-                 </div>
+            {/* Seller Info (Müşteri Bilgileri) - NEW Section */}
+            <div className={`${sectionCls} border-emerald-500/20 bg-emerald-500/5`}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                  <Plus className="h-3 w-3 text-emerald-400" />
+                </div>
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Ad Soyad</Label>
+                  <Input {...register("sellerName")} placeholder="Örn: Enes Başar" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>TC Kimlik No</Label>
+                  <Input {...register("sellerTC")} maxLength={11} placeholder="11 Haneli" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Telefon</Label>
+                  <Input {...register("sellerPhone")} placeholder="05xx..." className={inputCls} />
+                </div>
+                <div className="col-span-3 space-y-3">
+                  <Label className={labelCls}>Kimlik Fotoğrafları (Ön & Arka)</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input ref={sellerIdFrontInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setSellerIdFront(e.target.files?.[0] ?? null)} />
+                    <input ref={sellerIdBackInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setSellerIdBack(e.target.files?.[0] ?? null)} />
 
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">Batarya Sağlığı (%)</Label>
-                        <Input {...register("batteryHealth")} type="number" placeholder="100" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">Kategori</Label>
-                        <Select onValueChange={(v) => setValue("categoryId", v)}>
-                            <SelectTrigger className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold">
-                                <SelectValue placeholder="Seç" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-border/10 text-white">
-                                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                 </div>
+                    <button
+                      type="button"
+                      onClick={() => sellerIdFrontInputRef.current?.click()}
+                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
+                    >
+                      {sellerIdFront ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                      <span className="text-[9px] font-black uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
+                    </button>
 
-                 <Separator className="bg-slate-800/50" />
+                    <button
+                      type="button"
+                      onClick={() => sellerIdBackInputRef.current?.click()}
+                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
+                    >
+                      {sellerIdBack ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                      <span className="text-[9px] font-black uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500">ALIŞ FİYATI (₺)</Label>
-                        <Input {...register("buyPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold text-rose-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-slate-500 text-blue-400">SATIŞ FİYATI (₺)</Label>
-                        <Input {...register("sellPrice")} type="number" className="bg-slate-900 border-border/10 rounded-xl h-11 text-xs font-bold text-blue-400" />
-                    </div>
-                 </div>
+            {/* Fiyat */}
+            <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-black text-blue-500">₺</span>
+                  <Input
+                    {...register("buyPrice")}
+                    placeholder="0"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-black pl-8 dark:text-white"
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      setValue("buyPrice", formatted, { shouldValidate: true });
+                    }}
+                  />
+                </div>
+                {errors.buyPrice && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.buyPrice.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-black text-emerald-500">₺</span>
+                  <Input
+                    {...register("sellPrice")}
+                    placeholder="0"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-black pl-8 text-emerald-400"
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value);
+                      setValue("sellPrice", formatted, { shouldValidate: true });
+                    }}
+                  />
+                </div>
+                {errors.sellPrice && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.sellPrice.message}</p>}
+              </div>
+            </div>
+
+            {/* Dosya Yükleme */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className={labelCls}>Cihaz Fotoğrafları (maks 5)</Label>
+                <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
+                <button type="button" onClick={() => photoInputRef.current?.click()}
+                  className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
+                  <Camera className="h-5 w-5 text-slate-500" />
+                  <span className="text-[11px] font-bold text-slate-500">Fotoğraf Seç</span>
+                </button>
+                {photoFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {photoFiles.map((f, i) => (
+                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-[10px] font-bold text-slate-300">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        {f.name.slice(0, 12)}...
+                        <button type="button" onClick={() => removePhoto(i)} className="ml-1 text-slate-500 hover:text-rose-400"><X className="h-3 w-3" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className={labelCls}>Fatura / PDF Belgesi</Label>
+                <input ref={invoiceInputRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={handleInvoiceChange} />
+                <button type="button" onClick={() => invoiceInputRef.current?.click()}
+                  className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
+                  <FileText className="h-5 w-5 text-slate-500" />
+                  <span className="text-[11px] font-bold text-slate-500">Fatura Seç</span>
+                </button>
+                {invoiceFile && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 text-[11px] font-bold text-slate-300">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    {invoiceFile.name.slice(0, 20)}
+                    <button type="button" onClick={() => setInvoiceFile(null)} className="ml-auto text-slate-500 hover:text-rose-400"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="p-10 border-t border-border/10/50 bg-slate-900/20 flex items-center justify-end gap-4">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-[10px] font-bold text-slate-500 hover:text-white">Vazgeç</Button>
-            <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-12 h-14 rounded-2xl transition-all">
-              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-5 w-5 mr-3" />}
-              KAYDI TAMAMLA
+          {/* Footer */}
+          <div className="px-7 py-5 border-t border-slate-800/60 bg-[#0B0F19] flex justify-between items-center">
+            <p className="text-[11px] text-slate-600 font-medium">
+              Otomatik kategori:{" "}
+              <span className="text-slate-400 font-bold">
+                Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
+              </span>
+            </p>
+            <Button type="submit" disabled={isPending}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-black text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Kaydı Tamamla
             </Button>
           </div>
         </form>
