@@ -1,8 +1,10 @@
 "use server";
+import { Role } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { serializePrisma, formatName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-import { getShopId } from "@/lib/auth";
+import { getShopId, getUserId } from "@/lib/auth";
+import bcrypt from "bcryptjs";
 
 export async function getStaff() {
   try {
@@ -31,7 +33,7 @@ export async function createStaff(data: {
   surname?: string;
   email: string;
   phone?: string;
-  role: "ADMIN" | "TECHNICIAN" | "STAFF";
+  role: Role;
   commissionRate: number;
   password?: string;
   canSell?: boolean;
@@ -41,11 +43,20 @@ export async function createStaff(data: {
 }) {
   try {
     const shopId = await getShopId();
+
+    // Check if email already exists
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      return { success: false, error: "Bu e-posta adresi zaten kullanımda." };
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password || "password123", 10);
+
     const user = await prisma.user.create({
       data: {
         ...data,
         name: formatName(data.name),
-        password: data.password || "password123",
+        password: hashedPassword,
         shopId
       }
     });
@@ -54,6 +65,33 @@ export async function createStaff(data: {
   } catch (error) {
     console.error("Error creating staff:", error);
     return { success: false, error: "Personel eklenemedi." };
+  }
+}
+
+export async function updateStaff(userId: string, data: any) {
+  try {
+    const shopId = await getShopId();
+
+    const updateData: any = { ...data };
+    if (data.name) updateData.name = formatName(data.name);
+
+    // Hash password if it's being updated
+    if (data.password && data.password.length > 0) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    } else {
+      delete updateData.password;
+    }
+
+    await prisma.user.update({
+      where: { id: userId, shopId },
+      data: updateData
+    });
+
+    revalidatePath("/personel");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating staff:", error);
+    return { success: false, error: "Personel bilgileri güncellenemedi." };
   }
 }
 

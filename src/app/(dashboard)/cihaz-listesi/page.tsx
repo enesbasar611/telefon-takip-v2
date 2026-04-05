@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { getDeviceList, getExpiringDevices } from "@/lib/actions/device-hub-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { CreateDeviceModal } from "@/components/device-hub/create-device-modal";
@@ -135,23 +136,19 @@ export default async function DeviceHubPage() {
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto p-4 lg:p-8">
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] mb-1 uppercase tracking-[0.2em] pl-1">
-            <MonitorSmartphone className="h-3.5 w-3.5 text-blue-500" />
-            <span>Mağaza Terminali</span>
-            <span className="mx-2 text-slate-800">/</span>
-            <span className="text-white">Cihaz HUB</span>
-          </div>
-          <h1 className="text-[34px] font-black text-white tracking-tight leading-none">Cihaz <span className="text-blue-500">HUB</span></h1>
-          <p className="text-[13px] text-slate-500 font-bold tracking-normal pl-1">Envanter yönetimi ve finansal takip merkezi.</p>
-        </div>
-        <div className="flex gap-3">
-          <DeviceExportButton devices={devices} />
-          <CreateDeviceModal categories={categories} />
-        </div>
-      </div>
+      {/* Standardized Page Header */}
+      <PageHeader
+        title="Cihaz Listesi"
+        description="Envanter yönetimi, finansal takip ve alım-satım süreçlerinin merkezi."
+        icon={MonitorSmartphone}
+        iconColor="text-blue-500"
+        actions={
+          <>
+            <DeviceExportButton devices={devices} />
+            <CreateDeviceModal categories={categories} />
+          </>
+        }
+      />
 
       {/* Stock Cards Row */}
       <div className="space-y-4">

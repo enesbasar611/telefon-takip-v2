@@ -7,6 +7,7 @@ import * as z from "zod";
 import {
   Dialog, DialogContent, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -69,6 +70,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [warrantyMode, setWarrantyMode] = useState<"date" | "months">("months");
+  const router = useRouter();
 
   // File States
   const [existingPhotos, setExistingPhotos] = useState<string[]>(device.deviceInfo?.photoUrls || []);
@@ -88,7 +90,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
   } = useForm({
     resolver: zodResolver(deviceSchema),
     defaultValues: {
-      brand: device.brand || "",
+      brand: device.brand || device.name.split(" ")[0] || "",
       model: device.name.split(" ").slice(1).join(" ") || "",
       imei: device.deviceInfo?.imei || "",
       color: device.deviceInfo?.color || "",
@@ -108,6 +110,34 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
       warrantyMonths: "24",
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        brand: device.brand || device.name.split(" ")[0] || "",
+        model: device.name.split(" ").slice(1).join(" ") || "",
+        imei: device.deviceInfo?.imei || "",
+        color: device.deviceInfo?.color || "",
+        ram: device.deviceInfo?.ram || "",
+        storage: device.deviceInfo?.storage || "",
+        condition: device.deviceInfo?.condition || "USED",
+        buyPrice: formatCurrencyInput(device.buyPrice.toString()),
+        sellPrice: formatCurrencyInput(device.sellPrice.toString()),
+        batteryHealth: device.deviceInfo?.batteryHealth?.toString() || "",
+        cosmeticScore: device.deviceInfo?.cosmeticScore?.toString() || "10",
+        replacedParts: device.deviceInfo?.expertChecklist?.notes || "",
+        sellerName: device.deviceInfo?.sellerName || "",
+        sellerTC: device.deviceInfo?.sellerTC || "",
+        sellerPhone: device.deviceInfo?.sellerPhone || "",
+        sim1NotUsed: device.deviceInfo?.sim1NotUsed || false,
+        sim2NotUsed: device.deviceInfo?.sim2NotUsed || false,
+        warrantyMonths: "24",
+      });
+      setExistingPhotos(device.deviceInfo?.photoUrls || []);
+      setExistingSellerIdPhoto(device.deviceInfo?.sellerIdPhotoUrl || null);
+      setExistingInvoice(device.deviceInfo?.invoiceUrl || null);
+    }
+  }, [open, device, reset]);
 
   const condition = watch("condition");
   const selectedBrand = watch("brand");
@@ -167,6 +197,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
 
         if (result.success) {
           toast.success("Cihaz güncellendi.");
+          router.refresh();
           setOpen(false);
           setNewPhotos([]);
           setNewSellerId(null);

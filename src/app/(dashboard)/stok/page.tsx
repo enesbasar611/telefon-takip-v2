@@ -7,6 +7,7 @@ import { CategorySummaryStream } from "@/components/product/streamed/category-su
 import { StockTableStream } from "@/components/product/streamed/stock-table-stream";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -38,21 +39,19 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
 
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-4">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-            <Package className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-5xl font-extrabold text-foreground font-sans">Envanter yönetimi</h1>
-            <p className="text-sm text-slate-500 font-bold mt-1 uppercase tracking-widest">DÜKKANIN ENERJİSİ VE SERMAYESİ</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <BulkAddProductModal categories={categories} />
-          <CreateProductModal categories={categories} />
-        </div>
-      </div>
+      <PageHeader
+        title="Envanter Yönetimi"
+        description="Mağaza içerisindeki tüm ürün stoklarının, değerlerinin ve hareketlerinin stratejik merkezi."
+        icon={Package}
+        iconColor="text-primary"
+        iconBgColor="bg-primary/10"
+        actions={
+          <>
+            <BulkAddProductModal categories={categories} />
+            <CreateProductModal categories={categories} />
+          </>
+        }
+      />
 
       <div className="space-y-8">
         <Suspense fallback={<CardSkeleton />}>

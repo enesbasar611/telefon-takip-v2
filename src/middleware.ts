@@ -9,12 +9,39 @@ export default withAuth(
 
         if (isAuth) {
             const hasShop = !!token.shopId;
+            const role = token.role as string;
+            const pathname = req.nextUrl.pathname;
 
             if (!hasShop && !isOnboardingPage) {
                 return NextResponse.redirect(new URL("/onboarding", req.url));
             }
 
             if (hasShop && isOnboardingPage) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            // --- Role & Permission Protection ---
+            const isAdmin = role === "ADMIN";
+            const isManager = role === "MANAGER" || isAdmin;
+
+            // Restricted sections
+            if ((pathname.startsWith("/personel") || pathname.startsWith("/ayarlar")) && !isManager) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            if (pathname.startsWith("/finans") && !token.canFinance && !isAdmin) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            if ((pathname.startsWith("/satis") || pathname.startsWith("/kasa")) && !token.canSell && !isAdmin) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            if ((pathname.startsWith("/servis") || pathname.startsWith("/teknik")) && !token.canService && !isAdmin) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            if ((pathname.startsWith("/stok") || pathname.startsWith("/cihaz-listesi") || pathname.startsWith("/urunler")) && !token.canStock && !isAdmin) {
                 return NextResponse.redirect(new URL("/", req.url));
             }
         }

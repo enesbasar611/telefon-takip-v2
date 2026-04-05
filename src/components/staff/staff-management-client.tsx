@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { Role } from "@prisma/client";
+import { useRouter } from "next/navigation";
 import {
     Users,
     UserCheck,
@@ -50,22 +52,31 @@ import {
     DialogTitle,
     DialogFooter
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { updateStaff } from "@/lib/actions/staff-actions";
 
 interface StaffMember {
     id: string;
     name: string | null;
     email: string;
-    role: string;
+    role: Role;
     image: string | null;
     createdAt: string;
     updatedAt: string;
     commissionRate: number;
     assignedTickets: any[];
     sales: any[];
-    canSell?: boolean;
-    canService?: boolean;
-    canStock?: boolean;
-    canFinance?: boolean;
+    canSell: boolean;
+    canService: boolean;
+    canStock: boolean;
+    canFinance: boolean;
 }
 
 interface StaffManagementClientProps {
@@ -73,20 +84,62 @@ interface StaffManagementClientProps {
     logs: any[];
 }
 
-function EditNameModal({ isOpen, onClose, member, onUpdate }: { isOpen: boolean, onClose: () => void, member: StaffMember | null, onUpdate: (id: string, name: string) => void }) {
-    const [name, setName] = useState(member?.name || "");
+function RoleBadge({ role }: { role: string }) {
+    const configs: Record<string, { label: string, className: string }> = {
+        ADMIN: { label: "YÖNETİCİ", className: "bg-indigo-500/10 text-indigo-500" },
+        MANAGER: { label: "MÜDÜR", className: "bg-purple-500/10 text-purple-500" },
+        CASHIER: { label: "KASİYER", className: "bg-emerald-500/10 text-emerald-500" },
+        TECHNICIAN: { label: "TEKNİSYEN", className: "bg-blue-500/10 text-blue-500" },
+        STAFF: { label: "PERSONEL", className: "bg-slate-500/10 text-slate-500" },
+    };
+
+    const config = configs[role] || configs.STAFF;
+
+    return (
+        <Badge className={cn("w-fit text-[9px] font-black border-none px-2 py-0.5", config.className)}>
+            {config.label}
+        </Badge>
+    );
+}
+
+function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
+    isOpen: boolean,
+    onClose: () => void,
+    member: StaffMember | null,
+    onUpdate: () => void
+}) {
     const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        name: member?.name || "",
+        role: member?.role || "STAFF",
+        canSell: member?.canSell || false,
+        canService: member?.canService || false,
+        canStock: member?.canStock || false,
+        canFinance: member?.canFinance || false,
+    });
 
     useEffect(() => {
-        if (member) setName(member.name || "");
+        if (member) {
+            setFormData({
+                name: member.name || "",
+                role: member.role,
+                canSell: member.canSell || false,
+                canService: member.canService || false,
+                canStock: member.canStock || false,
+                canFinance: member.canFinance || false,
+            });
+        }
     }, [member]);
 
     const handleSave = async () => {
         if (!member) return;
         setLoading(true);
-        const res = await updateStaffName(member.id, name);
+        const res = await updateStaff(member.id, {
+            ...formData,
+            role: formData.role as Role
+        });
         if (res.success) {
-            onUpdate(member.id, name);
+            onUpdate();
             onClose();
         }
         setLoading(false);
@@ -94,24 +147,66 @@ function EditNameModal({ isOpen, onClose, member, onUpdate }: { isOpen: boolean,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-slate-900 border-white/5 text-white rounded-[2.5rem]">
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-black">İsim Düzenle</DialogTitle>
+            <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
+                <DialogHeader className="p-4">
+                    <DialogTitle className="text-xl font-black">Personel Düzenle</DialogTitle>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
+                <div className="p-4 space-y-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">YENİ İSİM</Label>
+                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">AD SOYAD</Label>
                         <Input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl font-bold"
                         />
                     </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ROL</Label>
+                        <Select
+                            value={formData.role}
+                            onValueChange={(v: any) => setFormData({ ...formData, role: v })}
+                        >
+                            <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl font-bold">
+                                <SelectValue placeholder="Rol seçin" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 rounded-xl">
+                                <SelectItem value="ADMIN" className="font-bold">Yönetici</SelectItem>
+                                <SelectItem value="MANAGER" className="font-bold">Müdür</SelectItem>
+                                <SelectItem value="CASHIER" className="font-bold">Kasiyer</SelectItem>
+                                <SelectItem value="TECHNICIAN" className="font-bold">Teknisyen</SelectItem>
+                                <SelectItem value="STAFF" className="font-bold">Personel</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { id: 'canSell', label: 'Satış Yetkisi' },
+                            { id: 'canService', label: 'Servis Yetkisi' },
+                            { id: 'canStock', label: 'Stok Yetkisi' },
+                            { id: 'canFinance', label: 'Finans Yetkisi' },
+                        ].map((perm) => (
+                            <div
+                                key={perm.id}
+                                onClick={() => setFormData({ ...formData, [perm.id]: !formData[perm.id as keyof typeof formData] })}
+                                className={cn(
+                                    "p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3",
+                                    formData[perm.id as keyof typeof formData]
+                                        ? "bg-blue-500/5 border-blue-500/20"
+                                        : "bg-slate-50 dark:bg-white/5 border-transparent"
+                                )}
+                            >
+                                <Checkbox checked={!!formData[perm.id as keyof typeof formData]} />
+                                <span className="text-[10px] font-black uppercase tracking-tight">{perm.label}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <DialogFooter className="gap-2">
-                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-slate-400 font-bold">İptal</Button>
-                    <Button onClick={handleSave} disabled={loading} className="rounded-xl bg-blue-600 hover:bg-blue-500 font-black px-8">
-                        {loading ? "Kaydediliyor..." : "Kaydet"}
+                <DialogFooter className="p-4 gap-2">
+                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-slate-400 font-bold uppercase text-[10px] tracking-widest">İptal</Button>
+                    <Button onClick={handleSave} disabled={loading} className="rounded-xl bg-blue-600 hover:bg-blue-500 font-black px-8 h-12 shadow-lg shadow-blue-500/20">
+                        {loading ? "GÜNCELLENİYOR..." : "GÜNCELLE"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -120,8 +215,9 @@ function EditNameModal({ isOpen, onClose, member, onUpdate }: { isOpen: boolean,
 }
 
 export function StaffManagementClient({ staff: initialStaff, logs }: StaffManagementClientProps) {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"all" | "TECHNICIAN">("all");
+    const [activeTab, setActiveTab] = useState<"all" | "TECHNICIAN" | "MANAGER" | "CASHIER">("all");
     const [localStaff, setLocalStaff] = useState(initialStaff);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
@@ -130,50 +226,55 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
         return localStaff.filter(member => {
             const matchesSearch = (member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.email.toLowerCase().includes(searchTerm.toLowerCase()));
-            const matchesTab = activeTab === "all" || member.role === activeTab;
+            const matchesTab = activeTab === "all" || (member.role as string) === activeTab;
             return matchesSearch && matchesTab;
         });
-    }, [initialStaff, searchTerm, activeTab]);
+    }, [localStaff, searchTerm, activeTab]);
 
     const stats = useMemo(() => {
-        const total = initialStaff.length;
-        const active = initialStaff.filter(s => s.role !== 'STAFF').length; // Logic for active
-        const onLeave = 0; // Placeholder
+        const total = localStaff.length;
+        const active = localStaff.filter(s => s.role !== 'STAFF').length;
+        const onLeave = 0;
         return { total, active, onLeave };
-    }, [initialStaff]);
+    }, [localStaff]);
 
     const rolePermissions = useMemo(() => {
-        const adminUser = initialStaff.find(s => s.role === 'ADMIN');
-        const techUser = initialStaff.find(s => s.role === 'TECHNICIAN');
-        const staffUser = initialStaff.find(s => s.role === 'STAFF');
+        const adminUser = localStaff.find(s => (s.role as string) === 'ADMIN');
+        const managerUser = localStaff.find(s => (s.role as string) === 'MANAGER');
+        const cashierUser = localStaff.find(s => (s.role as string) === 'CASHIER');
+        const techUser = localStaff.find(s => (s.role as string) === 'TECHNICIAN');
 
         return [
             {
                 name: "Satış İşlemleri",
-                y: adminUser?.canSell ?? true,
-                t: techUser?.canSell ?? true,
-                k: staffUser?.canSell ?? true
+                admin: adminUser?.canSell ?? true,
+                manager: managerUser?.canSell ?? true,
+                cashier: cashierUser?.canSell ?? true,
+                tech: techUser?.canSell ?? true
             },
             {
                 name: "Servis Kayıtları",
-                y: adminUser?.canService ?? true,
-                t: techUser?.canService ?? true,
-                k: staffUser?.canService ?? false
+                admin: adminUser?.canService ?? true,
+                manager: managerUser?.canService ?? true,
+                cashier: cashierUser?.canService ?? false,
+                tech: techUser?.canService ?? true
             },
             {
                 name: "Stok Yönetimi",
-                y: adminUser?.canStock ?? true,
-                t: techUser?.canStock ?? true,
-                k: staffUser?.canStock ?? false
+                admin: adminUser?.canStock ?? true,
+                manager: managerUser?.canStock ?? true,
+                cashier: cashierUser?.canStock ?? false,
+                tech: techUser?.canStock ?? true
             },
             {
                 name: "Finans & Raporlar",
-                y: adminUser?.canFinance ?? true,
-                t: techUser?.canFinance ?? false,
-                k: staffUser?.canFinance ?? false
+                admin: adminUser?.canFinance ?? true,
+                manager: managerUser?.canFinance ?? true,
+                cashier: cashierUser?.canFinance ?? false,
+                tech: techUser?.canFinance ?? false
             },
         ];
-    }, [initialStaff]);
+    }, [localStaff]);
 
     return (
         <div className="space-y-8 pb-20">
@@ -263,6 +364,22 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                             >
                                 TEKNİSYENLER
                             </Button>
+                            <Button
+                                onClick={() => setActiveTab("MANAGER")}
+                                variant="ghost"
+                                size="sm"
+                                className={cn("h-8 rounded-xl text-[10px] font-black", activeTab === "MANAGER" ? "bg-white dark:bg-slate-800 shadow-sm" : "text-slate-500")}
+                            >
+                                MÜDÜRLER
+                            </Button>
+                            <Button
+                                onClick={() => setActiveTab("CASHIER")}
+                                variant="ghost"
+                                size="sm"
+                                className={cn("h-8 rounded-xl text-[10px] font-black", activeTab === "CASHIER" ? "bg-white dark:bg-slate-800 shadow-sm" : "text-slate-500")}
+                            >
+                                KASİYERLER
+                            </Button>
                         </div>
                     </div>
 
@@ -299,14 +416,7 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                                                         <span className="font-black text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                                                             {member.name || "İsimsiz Kullanıcı"}
                                                         </span>
-                                                        <Badge className={cn(
-                                                            "w-fit text-[9px] font-black border-none px-2 py-0.5",
-                                                            member.role === 'ADMIN' ? "bg-indigo-500/10 text-indigo-500" :
-                                                                member.role === 'TECHNICIAN' ? "bg-blue-500/10 text-blue-500" :
-                                                                    "bg-slate-500/10 text-slate-500"
-                                                        )}>
-                                                            {member.role === 'ADMIN' ? 'YÖNETİCİ' : member.role === 'TECHNICIAN' ? 'TEKNİSYEN' : 'PERSONEL'}
-                                                        </Badge>
+                                                        <RoleBadge role={member.role} />
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -340,13 +450,7 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                                                             }}
                                                             className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs"
                                                         >
-                                                            <ChevronDown className="w-4 h-4" /> İsim Düzenle
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs">
-                                                            <TrendingUp className="w-4 h-4" /> Performans Analizi
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs">
-                                                            <Shield className="w-4 h-4" /> Yetkileri Düzenle
+                                                            <Shield className="w-4 h-4" /> Düzenle & Yetkilendir
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="bg-white/5" />
                                                         <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs text-rose-500">
@@ -372,31 +476,35 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                         </CardHeader>
                         <CardContent className="p-8 pt-4">
                             <div className="space-y-6">
-                                <div className="grid grid-cols-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-white/5 pb-4">
-                                    <div className="col-span-2">MODÜL ERİŞİMİ</div>
-                                    <div className="text-center">Y</div>
-                                    <div className="text-center">T</div>
-                                    <div className="text-center">K</div>
+                                <div className="grid grid-cols-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-white/5 pb-4">
+                                    <div className="col-span-1">MODÜL</div>
+                                    <div className="text-center">ADM</div>
+                                    <div className="text-center">MÜD</div>
+                                    <div className="text-center">KAS</div>
+                                    <div className="text-center">TEK</div>
                                 </div>
 
                                 {rolePermissions.map((mod, i) => (
-                                    <div key={i} className="grid grid-cols-4 items-center">
-                                        <div className="col-span-2 text-sm font-bold text-slate-700 dark:text-slate-300">{mod.name}</div>
+                                    <div key={i} className="grid grid-cols-5 items-center">
+                                        <div className="col-span-1 text-[10px] font-bold text-slate-700 dark:text-slate-300">{mod.name}</div>
                                         <div className="flex justify-center">
-                                            {mod.y ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-700" />}
+                                            {mod.admin ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-slate-200 dark:text-slate-800" />}
                                         </div>
                                         <div className="flex justify-center">
-                                            {mod.t ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-700" />}
+                                            {mod.manager ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-slate-200 dark:text-slate-800" />}
                                         </div>
                                         <div className="flex justify-center">
-                                            {mod.k ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-700" />}
+                                            {mod.cashier ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-slate-200 dark:text-slate-800" />}
+                                        </div>
+                                        <div className="flex justify-center">
+                                            {mod.tech ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-slate-200 dark:text-slate-800" />}
                                         </div>
                                     </div>
                                 ))}
 
                                 <div className="pt-4 border-t border-slate-50 dark:border-white/5">
-                                    <p className="text-[10px] text-slate-400 font-medium italic">
-                                        * Y: Yönetici, T: Teknisyen, K: Kasiyer/Personel rollerini temsil eder.
+                                    <p className="text-[9px] text-slate-400 font-medium italic">
+                                        * ADM: Yönetici, MÜD: Müdür, KAS: Kasiyer, TEK: Teknisyen rollerini temsil eder.
                                     </p>
                                 </div>
 
@@ -464,6 +572,12 @@ export function StaffManagementClient({ staff: initialStaff, logs }: StaffManage
                     )}
                 </div>
             </div>
+            <StaffEditModal
+                isOpen={editModalOpen}
+                onClose={() => setEditModalOpen(false)}
+                member={selectedMember}
+                onUpdate={() => router.refresh()}
+            />
         </div>
     );
 }

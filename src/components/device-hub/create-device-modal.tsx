@@ -16,9 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2,
+  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle,
 } from "lucide-react";
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
@@ -61,6 +62,7 @@ const deviceSchema = z.object({
   cosmeticScore: z.string().optional().or(z.literal("")),
   replacedParts: z.string().optional().or(z.literal("")),
   condition: z.enum(["NEW", "USED", "INTERNATIONAL"]),
+  financeAccountId: z.string().min(1, "Ödeme hesabı seçilmelidir"),
   buyPrice: z
     .string()
     .min(1, "Alış fiyatı gereklidir")
@@ -98,6 +100,7 @@ interface DeviceFormValues {
   cosmeticScore?: string;
   replacedParts?: string;
   condition: Condition;
+  financeAccountId: string;
   buyPrice: string;
   sellPrice: string;
   sellerName?: string;
@@ -115,7 +118,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [sellerIdFront, setSellerIdFront] = useState<File | null>(null);
   const [sellerIdBack, setSellerIdBack] = useState<File | null>(null);
-  const [warrantyMode, setWarrantyMode] = useState<"date" | "months">("months");
+  const [warrantyMode, setWarrantyMode] = useState<"date" | "months" | "intl">("months");
+  const [accounts, setAccounts] = useState<any[]>([]);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const sellerIdFrontInputRef = useRef<HTMLInputElement>(null);
@@ -142,8 +147,21 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       warrantyMonths: "24",
       sim1NotUsed: false,
       sim2NotUsed: false,
+      financeAccountId: "",
     },
   });
+
+  // Fetch accounts on mount or when open
+  useEffect(() => {
+    if (open) {
+      getAccounts().then((res) => {
+        setAccounts(res);
+        // Set default primary account if available
+        const primary = res.find((a: any) => a.isDefault) || res[0];
+        if (primary) setValue("financeAccountId", primary.id);
+      });
+    }
+  }, [open, setValue]);
 
   const condition = watch("condition");
   const buyPrice = watch("buyPrice");
@@ -236,6 +254,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
           buyPrice: parseFloat(cleaned.buyPrice),
           sellPrice: parseFloat(cleaned.sellPrice),
+          financeAccountId: cleaned.financeAccountId,
           sellerName: cleaned.sellerName || undefined,
           sellerTC: cleaned.sellerTC || undefined,
           sellerPhone: cleaned.sellerPhone || undefined,
@@ -359,6 +378,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input {...register("imei")} maxLength={15} placeholder="352000000000000" className={`${inputCls} font-mono tracking-widest`} />
                   {errors.imei && <p className="text-[10px] text-rose-500">{errors.imei.message}</p>}
                 </div>
+
+
                 <div className="col-span-2 space-y-1.5">
                   <Label className={labelCls}>Renk Seçimi</Label>
                   <div className="space-y-3">
@@ -605,8 +626,28 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               </div>
             </div>
 
-            {/* Fiyat */}
+            {/* Fiyat & Ödeme Hesabı */}
             <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
+              <div className="col-span-2 space-y-1.5 pb-2">
+                <Label className="text-[9px] font-black text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
+                <Select
+                  value={watch("financeAccountId")}
+                  onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className="bg-slate-950 border-slate-800 h-11 text-[13px] font-bold">
+                    <SelectValue placeholder="Ödeme Hesabı Seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-800">
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                        {acc.name} - <span className="text-blue-400">{acc.balance.toLocaleString("tr-TR")} ₺</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.financeAccountId && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.financeAccountId.message}</p>}
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-[9px] font-black text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
                 <div className="relative">

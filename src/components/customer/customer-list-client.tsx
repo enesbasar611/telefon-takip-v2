@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye, MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -68,24 +69,19 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
 
     return (
         <div className="p-8 bg-background text-foreground min-h-screen space-y-8">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div className="flex items-center gap-6">
-                    <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                        <Users className="h-7 w-7 text-blue-500" />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold">Müşteri <span className="text-blue-500">Portföyü</span></h1>
-                        <p className="text-[10px] text-muted-foreground font-bold mt-1">STRATEJİK CRM & SADAKAT YÖNETİMİ • {customers.length} KAYIT</p>
-                    </div>
-                </div>
-                <Link href="/musteriler/yeni">
-                    <Button className="bg-blue-500 hover:bg-blue-400 text-black font-bold px-8 h-12 rounded-2xl transition-all hover:-translate-y-1 flex gap-3">
-                        <Plus className="h-5 w-5 stroke-[3px]" />
-                        YENİ MÜŞTERİ TANIMLA
-                    </Button>
-                </Link>
-            </div>
+            <PageHeader
+                title="Müşteri Portföyü"
+                description="Müşteri tabanını yönetin, sadakat puanlarını takip edin ve kurumsal ilişkileri güçlendirin."
+                icon={Users}
+                actions={
+                    <Link href="/musteriler/yeni">
+                        <Button className="bg-blue-500 hover:bg-blue-400 text-black font-bold px-8 h-12 rounded-2xl transition-all hover:-translate-y-1 flex gap-3">
+                            <Plus className="h-5 w-5 stroke-[3px]" />
+                            YENİ MÜŞTERİ TANIMLA
+                        </Button>
+                    </Link>
+                }
+            />
 
             {/* Search & Filter */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

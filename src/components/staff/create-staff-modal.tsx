@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Role } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,7 +33,8 @@ const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
   surname: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
   email: z.string().email("Geçerli bir e-posta giriniz"),
-  role: z.enum(["ADMIN", "TECHNICIAN", "STAFF"]),
+  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"]),
   branch: z.string().min(1, "Şube seçiniz"),
   canSell: z.boolean(),
   canService: z.boolean(),
@@ -60,6 +62,7 @@ export function CreateStaffModal() {
       name: "",
       surname: "",
       email: "",
+      password: "",
       role: "STAFF",
       branch: "Ana Şube",
       canSell: false,
@@ -74,8 +77,9 @@ export function CreateStaffModal() {
     startTransition(async () => {
       const result = await createStaff({
         ...data,
+        role: data.role as Role,
         name: `${data.name} ${data.surname}`,
-        commissionRate: 0, // Default to 0
+        commissionRate: 0,
       });
       if (result.success) {
         toast.success("Personel başarıyla tanımlandı.");
@@ -148,6 +152,15 @@ export function CreateStaffModal() {
                   className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
+                <Input
+                  {...register("password")}
+                  type="password"
+                  placeholder="******"
+                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-rose-500/20"
+                />
+              </div>
               <PhoneInput
                 label="TELEFON"
                 value={watch("phone") || ""}
@@ -166,10 +179,12 @@ export function CreateStaffModal() {
                 <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs">
                   <SelectValue placeholder="Bir rol seçin..." />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/5 text-white rounded-xl">
-                  <SelectItem value="ADMIN">Yönetici</SelectItem>
-                  <SelectItem value="TECHNICIAN">Teknisyen</SelectItem>
-                  <SelectItem value="STAFF">Kasiyer / Personel</SelectItem>
+                <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 rounded-xl">
+                  <SelectItem value="ADMIN" className="font-bold">Yönetici (Full)</SelectItem>
+                  <SelectItem value="MANAGER" className="font-bold">Mağaza Müdürü</SelectItem>
+                  <SelectItem value="CASHIER" className="font-bold">Kasiyer</SelectItem>
+                  <SelectItem value="TECHNICIAN" className="font-bold">Teknisyen</SelectItem>
+                  <SelectItem value="STAFF" className="font-bold">Satış Danışmanı / Personel</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -34,6 +34,7 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
             const result = await deleteDevice(productId);
             if (result.success) {
                 toast.success(`${deviceName} başarıyla silindi.`);
+                router.refresh();
             } else {
                 toast.error(result.error ?? "Cihaz silinirken bir hata oluştu.");
             }

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { formatTitleCase, formatProperCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
-import { getShopId } from "@/lib/auth";
+import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getDeviceList() {
   try {
@@ -19,7 +19,12 @@ export async function getDeviceList() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return serializePrisma(devices);
+
+    const mapped = devices.map((d: any) => ({
+      ...d,
+      brand: d.name.split(" ")[0]
+    }));
+    return serializePrisma(mapped);
   } catch (error) {
     console.error("Error fetching devices:", error);
     return [];
@@ -62,101 +67,123 @@ export async function ensureDeviceCategory(condition: "NEW" | "USED" | "INTERNAT
 export async function createDeviceEntry(data: any) {
   try {
     const shopId = await getShopId();
-    const user = await prisma.user.findFirst({ where: { role: "ADMIN", shopId } });
-    if (!user) throw new Error("Admin user not found");
+    const userId = await getUserId();
 
-    // Auto-resolve category based on condition
-    const categoryId = await ensureDeviceCategory(data.condition);
+    const result = await prisma.$transaction(async (tx) => {
+      // Auto-resolve category based on condition
+      const categoryId = await ensureDeviceCategory(data.condition);
 
-    // Compute warrantyEndDate from months if provided
-    let warrantyEndDate: Date | undefined = undefined;
-    if (data.warrantyEndDate) {
-      warrantyEndDate = new Date(data.warrantyEndDate);
-    } else if (data.warrantyMonths) {
-      const d = new Date();
-      d.setMonth(d.getMonth() + parseInt(data.warrantyMonths));
-      warrantyEndDate = d;
-    }
+      // Compute warrantyEndDate from months if provided
+      let warrantyEndDate: Date | undefined = undefined;
+      if (data.warrantyEndDate) {
+        warrantyEndDate = new Date(data.warrantyEndDate);
+      } else if (data.warrantyMonths) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + parseInt(data.warrantyMonths));
+        warrantyEndDate = d;
+      }
 
-    const brand = formatTitleCase(data.brand);
-    const model = formatTitleCase(data.model);
-    const name = `${brand} ${model}`;
-    const imei = formatUppercase(data.imei);
-    const sellerName = data.sellerName ? formatProperCase(data.sellerName) : undefined;
+      const brand = formatTitleCase(data.brand);
+      const model = formatTitleCase(data.model);
+      const name = `${brand} ${model}`;
+      const imei = formatUppercase(data.imei);
+      const sellerName = data.sellerName ? formatProperCase(data.sellerName) : undefined;
 
-    const product = await prisma.product.create({
-      data: {
-        name,
-        shopId,
-        categoryId,
-        buyPrice: data.buyPrice,
-        sellPrice: data.sellPrice,
-        stock: 1,
-        criticalStock: 0,
-        isSecondHand: data.condition !== "NEW",
-        deviceInfo: {
-          create: {
-            shopId,
-            imei,
-            serialNumber: data.serialNumber ? formatUppercase(data.serialNumber) : null,
-            color: data.color ? formatTitleCase(data.color) : null,
-            capacity: data.capacity,
-            batteryHealth: data.batteryHealth,
-            cosmeticScore: data.cosmeticScore ?? 10,
-            condition: data.condition,
-            expertChecklist: data.expertChecklist ?? {},
-            buyBackPrice: data.buyBackPrice,
-            buyBackMonths: data.buyBackMonths,
-            purchasedFrom: data.purchasedFrom,
-            purchaseDate: new Date(),
-            // New fields — cast to any until prisma client regenerated
-            ...({
-              ram: data.ram,
-              storage: data.storage,
-              warrantyEndDate: warrantyEndDate ?? null,
-              sim1ExpirationDate: data.sim1ExpirationDate ? new Date(data.sim1ExpirationDate) : null,
-              sim1NotUsed: data.sim1NotUsed === true,
-              sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
-              sim2NotUsed: data.sim2NotUsed === true,
-              sellerName,
-              sellerTC: data.sellerTC,
-              sellerPhone: data.sellerPhone,
-              sellerIdPhotoUrl: data.sellerIdPhotoUrl,
-              photoUrls: data.photoUrls ?? [],
-              invoiceUrl: data.invoiceUrl ?? null,
-            } as any),
+      const product = await tx.product.create({
+        data: {
+          name,
+          shopId,
+          categoryId,
+          buyPrice: data.buyPrice,
+          sellPrice: data.sellPrice,
+          stock: 1,
+          criticalStock: 0,
+          isSecondHand: data.condition !== "NEW",
+          deviceInfo: {
+            create: {
+              shopId,
+              imei,
+              serialNumber: data.serialNumber ? formatUppercase(data.serialNumber) : null,
+              color: data.color ? formatTitleCase(data.color) : null,
+              capacity: data.capacity,
+              batteryHealth: data.batteryHealth,
+              cosmeticScore: data.cosmeticScore ?? 10,
+              condition: data.condition,
+              expertChecklist: data.expertChecklist ?? {},
+              buyBackPrice: data.buyBackPrice,
+              buyBackMonths: data.buyBackMonths,
+              purchasedFrom: data.purchasedFrom,
+              purchaseDate: new Date(),
+              ...({
+                ram: data.ram,
+                storage: data.storage,
+                warrantyEndDate: warrantyEndDate ?? null,
+                sim1ExpirationDate: data.sim1ExpirationDate ? new Date(data.sim1ExpirationDate) : null,
+                sim1NotUsed: data.sim1NotUsed === true,
+                sim2ExpirationDate: data.sim2ExpirationDate ? new Date(data.sim2ExpirationDate) : null,
+                sim2NotUsed: data.sim2NotUsed === true,
+                sellerName,
+                sellerTC: data.sellerTC,
+                sellerPhone: data.sellerPhone,
+                sellerIdPhotoUrl: data.sellerIdPhotoUrl,
+                photoUrls: data.photoUrls ?? [],
+                invoiceUrl: data.invoiceUrl ?? null,
+              } as any),
+            }
           }
         }
-      }
-    });
+      });
 
-    // Financial Sync: Record the purchase as an EXPENSE
-    await prisma.transaction.create({
-      data: {
-        type: "EXPENSE",
-        amount: data.buyPrice,
-        description: `Cihaz Alımı: ${name} (IMEI: ${imei})`,
-        paymentMethod: "CASH",
-        userId: user.id,
-        shopId,
+      // 1. Record the purchase as an EXPENSE transaction
+      let paymentMethod: any = "CASH";
+      if (data.financeAccountId) {
+        const account = await tx.financeAccount.findUnique({ where: { id: data.financeAccountId } });
+        if (account) {
+          paymentMethod = account.type === "CASH" ? "CASH" : "TRANSFER";
+        }
       }
-    });
 
-    // Inventory Movement
-    await prisma.inventoryMovement.create({
-      data: {
-        productId: product.id,
-        shopId,
-        quantity: 1,
-        type: "PURCHASE",
-        notes: `Cihaz Alımı: ${data.condition}`
+      await tx.transaction.create({
+        data: {
+          type: "EXPENSE",
+          amount: data.buyPrice,
+          description: `Cihaz Alımı: ${name} (IMEI: ${imei})`,
+          paymentMethod,
+          financeAccountId: data.financeAccountId || null,
+          userId,
+          shopId,
+          category: "CİHAZ ALIMI"
+        }
+      });
+
+      // 2. Update Finance Account Balance
+      if (data.financeAccountId) {
+        await tx.financeAccount.update({
+          where: { id: data.financeAccountId },
+          data: { balance: { decrement: data.buyPrice } }
+        });
       }
+
+      // 3. Inventory Movement
+      await tx.inventoryMovement.create({
+        data: {
+          productId: product.id,
+          shopId,
+          quantity: 1,
+          type: "PURCHASE",
+          notes: `Cihaz Alımı: ${data.condition}`
+        }
+      });
+
+      return product;
     });
 
     revalidatePath("/cihaz-listesi");
     revalidatePath("/satis/kasa");
     revalidatePath("/stok");
-    return { success: true, device: serializePrisma(product) };
+    revalidatePath("/dashboard");
+
+    return { success: true, device: serializePrisma(result) };
   } catch (error) {
     console.error("Create device error:", error);
     return { success: false, error: "Cihaz kaydı oluşturulamadı." };
@@ -330,6 +357,8 @@ export async function updateDeviceEntry(productId: string, data: any) {
     });
 
     revalidatePath("/cihaz-listesi");
+    revalidatePath("/satis/kasa");
+    revalidatePath("/stok");
     return { success: true };
   } catch (error) {
     console.error("Update device error:", error);
