@@ -132,10 +132,10 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             <Zap className="h-4 w-4 text-white fill-white" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="font-semibold text-sm text-foreground leading-tight truncate max-w-[160px]">
+            <span className="font-bold text-sm text-foreground leading-tight truncate max-w-[160px]">
               Başar <span className="text-primary">Teknik</span>
             </span>
-            <span className="text-[10px] font-medium text-muted-foreground leading-tight mt-0.5">Yönetim Paneli v2</span>
+            <span className="text-[11px] font-medium text-muted-foreground leading-tight mt-0.5">Yönetim Paneli v2</span>
           </div>
         </button>
       </div>
@@ -144,7 +144,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-0.5">
           {/* Section Label */}
-          <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest px-3 mb-2">Menü</p>
+          <p className="text-[12px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 mb-3">Menü</p>
 
           {menuItems.filter(item => {
             if (session?.user?.role === "ADMIN") return true;
@@ -168,7 +168,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                   <button
                     onClick={() => toggleMenu(item.label)}
                     className={cn(
-                      "flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 outline-none group",
+                      "flex items-center gap-3 w-full rounded-xl px-3 py-3 text-[15.5px] font-bold transition-all duration-150 outline-none group",
                       isActive
                         ? "text-primary bg-primary/8"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -188,7 +188,7 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                   <button
                     onClick={() => handleNavigation(item.href)}
                     className={cn(
-                      "flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 outline-none group",
+                      "flex items-center gap-3 w-full rounded-xl px-3 py-3 text-[15.5px] font-bold transition-all duration-150 outline-none group",
                       isActive
                         ? "text-primary bg-primary/8"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -210,9 +210,9 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                         key={sub.label}
                         onClick={() => handleNavigation(sub.href)}
                         className={cn(
-                          "px-3 py-2 text-left text-[12.5px] font-medium rounded-lg transition-all duration-150 outline-none leading-none",
+                          "px-3 py-2.5 text-left text-[13.5px] font-bold rounded-lg transition-all duration-150 outline-none leading-none",
                           localActivePath === sub.href
-                            ? "text-primary bg-primary/8 font-semibold"
+                            ? "text-primary bg-primary/8 font-bold"
                             : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
                         )}
                       >
@@ -246,21 +246,21 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                 className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none"
               >
                 <Activity className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
-                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Analiz</span>
+                <span className="text-[10px] font-bold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Analiz</span>
               </button>
               <button
                 onClick={() => setAiUpdateOpen(true)}
                 className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none border-x border-border/50"
               >
                 <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
-                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Güncelle</span>
+                <span className="text-[10px] font-bold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Güncelle</span>
               </button>
               <button
                 onClick={() => setAiSearchOpen(true)}
                 className="flex flex-col items-center justify-center py-3 gap-1.5 hover:bg-violet-500/8 transition-colors group cursor-pointer outline-none"
               >
                 <Search className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-violet-400 transition-colors" strokeWidth={1.5} />
-                <span className="text-[9px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Ara</span>
+                <span className="text-[10px] font-bold text-muted-foreground/40 group-hover:text-muted-foreground uppercase tracking-wide transition-colors">Ara</span>
               </button>
             </div>
           </div>
@@ -278,8 +278,8 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
             {(user?.name || "A").charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col overflow-hidden flex-1 min-w-0">
-            <span className="text-[13px] font-medium text-foreground truncate leading-tight">{user?.name || "Yönetici"}</span>
-            <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+            <span className="text-[14px] font-bold text-foreground truncate leading-tight">{user?.name || "Yönetici"}</span>
+            <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">
               {user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}
             </span>
           </div>

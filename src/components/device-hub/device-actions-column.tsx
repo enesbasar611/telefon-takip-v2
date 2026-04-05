@@ -59,7 +59,7 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
                             (device.deviceInfo?.invoiceUrl ? 1 : 0);
                         if (count === 0) return null;
                         return (
-                            <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center bg-emerald-500 text-white text-[9px] font-black rounded-full border-2 border-[#0B0F19] shadow-lg animate-in zoom-in duration-300">
+                            <span className="absolute -top-1.5 -right-1.5 h-4 min-w-[16px] px-1 flex items-center justify-center bg-emerald-500 text-white text-[9px] font-bold rounded-full border-2 border-[#0B0F19] shadow-lg animate-in zoom-in duration-300">
                                 {count}
                             </span>
                         );
@@ -88,7 +88,7 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
                             <Trash2 className="h-6 w-6 text-rose-500" />
                         </div>
                         <div className="text-center">
-                            <AlertDialogTitle className="text-xl font-black text-white">Emin misiniz?</AlertDialogTitle>
+                            <AlertDialogTitle className="text-xl font-bold text-white">Emin misiniz?</AlertDialogTitle>
                             <AlertDialogDescription className="text-slate-500 font-bold mt-2 leading-relaxed">
                                 <strong className="text-slate-300">{deviceName}</strong> kalıcı olarak silinecek. Bu cihazla ilgili tüm geçmiş (hareketler, satış kalemleri) temizlenecektir. Bu işlem geri alınamaz.
                             </AlertDialogDescription>
@@ -98,7 +98,7 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
                         <AlertDialogCancel className="bg-slate-900 border-slate-800 h-11 px-6 rounded-xl font-bold hover:bg-slate-800">VAZGEÇ</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-rose-600 hover:bg-rose-700 text-white h-11 px-8 rounded-xl font-black shadow-lg shadow-rose-600/20"
+                            className="bg-rose-600 hover:bg-rose-700 text-white h-11 px-8 rounded-xl font-bold shadow-lg shadow-rose-600/20"
                         >
                             EVET, SİL
                         </AlertDialogAction>

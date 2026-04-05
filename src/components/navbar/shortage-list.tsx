@@ -209,7 +209,7 @@ export function ShortageList() {
             <button
               onClick={() => setActiveTab("main")}
               className={cn(
-                "flex-shrink-0 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                "flex-shrink-0 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2",
                 activeTab === "main"
                   ? "text-blue-400 border-blue-400 bg-blue-500/5"
                   : "text-muted-foreground border-transparent hover:text-foreground"
@@ -229,7 +229,7 @@ export function ShortageList() {
                   key={id}
                   onClick={() => setActiveTab(id)}
                   className={cn(
-                    "flex-shrink-0 px-3 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 max-w-[120px] truncate",
+                    "flex-shrink-0 px-3 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 max-w-[120px] truncate",
                     activeTab === id
                       ? "text-emerald-400 border-emerald-400 bg-emerald-500/5"
                       : "text-muted-foreground border-transparent hover:text-foreground"
@@ -284,7 +284,7 @@ export function ShortageList() {
                             <span className="text-[10px] font-bold text-blue-400">{p.name}</span>
                             <span className="text-[8px] text-gray-500 font-bold">{p.sku || 'SKU YOK'}</span>
                           </div>
-                          <span className={cn("text-[10px] font-black bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                          <span className={cn("text-[10px] font-bold bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
                             {p.stock}
                           </span>
                         </button>
@@ -317,7 +317,7 @@ export function ShortageList() {
                           </PopoverTrigger>
                           <PopoverContent side="left" align="start" className="w-48 p-1 bg-slate-900 border-white/10 shadow-2xl">
                             <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                              <p className="text-[8px] font-black text-slate-500 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
+                              <p className="text-[8px] font-bold text-slate-500 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
                               {suppliers.length === 0 ? (
                                 <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
                               ) : (
@@ -352,12 +352,12 @@ export function ShortageList() {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex flex-col gap-1">
                           <span className="text-[8px] font-bold text-slate-500 uppercase">Alınacak</span>
-                          <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-slate-900 border-white/5 text-[10px] px-2 font-black text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
+                          <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-slate-900 border-white/5 text-[10px] px-2 font-bold text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
                         </div>
                         <div className="flex flex-col gap-1 items-end">
                           <span className="text-[8px] font-bold text-slate-500 uppercase">Mevcut</span>
                           <div className="h-8 flex items-center justify-end px-3 bg-slate-900/50 rounded-lg border border-white/5 w-full">
-                            <span className={cn("text-[11px] font-black", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
+                            <span className={cn("text-[11px] font-bold", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
                           </div>
                         </div>
                       </div>
@@ -407,7 +407,7 @@ export function ShortageList() {
                           >
                             <Minus className="h-2.5 w-2.5" />
                           </button>
-                          <span className="text-[11px] font-black text-blue-400 w-5 text-center">{item.quantity}</span>
+                          <span className="text-[11px] font-bold text-blue-400 w-5 text-center">{item.quantity}</span>
                           <button
                             onClick={() => updateSupplierQty(supplierId, item.productId, item.name, item.quantity + 1)}
                             className="h-5 w-5 rounded bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:bg-white/10"

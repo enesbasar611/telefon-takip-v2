@@ -88,10 +88,10 @@ export function CriticalStockDialog({
                         <Table>
                             <TableHeader>
                                 <TableRow className="border-b border-white/5 hover:bg-transparent">
-                                    <TableHead className="text-[10px] font-black uppercase text-slate-500 px-6 tracking-widest">Ürün</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Mevcut</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Kritik</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase text-slate-500 text-right px-6 tracking-widest">İşlem</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase text-slate-500 px-6 tracking-widest">Ürün</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Mevcut</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Kritik</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase text-slate-500 text-right px-6 tracking-widest">İşlem</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -106,7 +106,7 @@ export function CriticalStockDialog({
                                         <TableCell>
                                             <Badge
                                                 variant="outline"
-                                                className="bg-rose-500/10 text-rose-500 border-rose-500/20 font-black text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse px-3 py-1 rounded-full"
+                                                className="bg-rose-500/10 text-rose-500 border-rose-500/20 font-bold text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse px-3 py-1 rounded-full"
                                             >
                                                 {product.stock} Adet
                                             </Badge>

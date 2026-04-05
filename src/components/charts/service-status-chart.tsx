@@ -60,10 +60,10 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-black text-foreground/80 group-hover:text-primary transition-colors truncate uppercase tracking-tight">{entry.name}</span>
+                  <span className="text-xs font-bold text-foreground/80 group-hover:text-primary transition-colors truncate uppercase tracking-tight">{entry.name}</span>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                    <span className="text-[10px] font-black" style={{ color: entry.color }}>{pct}%</span>
-                    <span className="text-[10px] font-black text-muted-foreground/60">{entry.value} CİHAZ</span>
+                    <span className="text-[10px] font-bold" style={{ color: entry.color }}>{pct}%</span>
+                    <span className="text-[10px] font-bold text-muted-foreground/60">{entry.value} CİHAZ</span>
                   </div>
                 </div>
                 <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">

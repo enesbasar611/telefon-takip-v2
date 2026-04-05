@@ -60,8 +60,8 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                     </Badge>
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-2xl font-black tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+                                    <h3 className="text-sm font-bold tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
+                                    <p className="text-2xl font-bold tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
                                 </div>
                                 <div className="mt-5 pt-5 border-t border-border/40 flex items-center gap-3">
                                     <AccountDetailModal account={account} />

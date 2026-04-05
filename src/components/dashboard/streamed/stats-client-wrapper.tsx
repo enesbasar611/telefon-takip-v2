@@ -53,13 +53,13 @@ export function StatsClientWrapper({ stats, statTypes, statsData }: any) {
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
                                         {stat.trend && (
-                                            <span className="text-[10px] font-black bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
+                                            <span className="text-[10px] font-bold bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
                                                 {stat.trend} Δ
                                             </span>
                                         )}
                                         {stat.badge && (
                                             <span className={cn(
-                                                "text-[10px] font-black px-3 py-1.5 rounded-full border border-border/50 tracking-tighter uppercase shadow-sm",
+                                                "text-[10px] font-bold px-3 py-1.5 rounded-full border border-border/50 tracking-tighter uppercase shadow-sm",
                                                 stat.colorClass,
                                                 stat.bgClass
                                             )}>
@@ -70,12 +70,12 @@ export function StatsClientWrapper({ stats, statTypes, statsData }: any) {
                                 </div>
 
                                 <div className="mt-8 relative">
-                                    <p className="text-[10px] font-black mb-2 text-muted-foreground/60 tracking-[0.2em] uppercase">{stat.label}</p>
+                                    <p className="text-[10px] font-bold mb-2 text-muted-foreground/60 tracking-[0.2em] uppercase">{stat.label}</p>
                                     <div className="flex items-baseline gap-2">
                                         {typeof stat.value === 'string' && stat.value.includes('₺') ? (
-                                            <RevealFinancial amount={stat.value} className={cn("text-4xl font-black tracking-tight", stat.colorClass)} />
+                                            <RevealFinancial amount={stat.value} className={cn("text-4xl font-bold tracking-tight", stat.colorClass)} />
                                         ) : (
-                                            <h3 className={cn("text-5xl font-black tracking-tighter", stat.colorClass)}>{stat.value}</h3>
+                                            <h3 className={cn("text-5xl font-bold tracking-tighter", stat.colorClass)}>{stat.value}</h3>
                                         )}
                                     </div>
                                     {stat.subValue && (

@@ -91,7 +91,7 @@ export function ProductDetailDrawer({
                     <SheetHeader className="p-6 pb-2">
                         <div className="flex justify-between items-start gap-4">
                             <div>
-                                <SheetTitle className="text-xl font-black text-white leading-tight">
+                                <SheetTitle className="text-xl font-bold text-white leading-tight">
                                     {product.name}
                                 </SheetTitle>
                                 <SheetDescription className="text-[10px] font-bold text-slate-500 mt-1 uppercase flex items-center gap-1">
@@ -123,7 +123,7 @@ export function ProductDetailDrawer({
                                         <div className="p-4 rounded-2xl bg-slate-900/40 border border-white/5">
                                             <p className="text-[9px] font-bold text-slate-600 mb-1 uppercase">Stok Durumu</p>
                                             <div className="flex items-baseline gap-1">
-                                                <span className={`text-2xl font-black ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>
+                                                <span className={`text-2xl font-bold ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>
                                                     {product.stock}
                                                 </span>
                                                 <span className="text-[10px] text-slate-500 font-bold uppercase">ADET</span>
@@ -132,7 +132,7 @@ export function ProductDetailDrawer({
                                         <div className="p-4 rounded-2xl bg-slate-900/40 border border-white/5">
                                             <p className="text-[9px] font-bold text-slate-600 mb-1 uppercase">Satış Fiyatı</p>
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl font-black text-emerald-500">
+                                                <span className="text-2xl font-bold text-emerald-500">
                                                     ₺{Number(product.sellPrice).toLocaleString("tr-TR")}
                                                 </span>
                                             </div>
@@ -241,18 +241,18 @@ export function ProductDetailDrawer({
                                                             )}
                                                             <div className="flex flex-wrap gap-2 mt-2">
                                                                 {(move.sale?.saleNumber || move.serviceTicket?.ticketNumber) && (
-                                                                    <Badge variant="outline" className="text-[8px] font-black border-slate-800 text-slate-500 uppercase px-1.5 py-0">
+                                                                    <Badge variant="outline" className="text-[8px] font-bold border-slate-800 text-slate-500 uppercase px-1.5 py-0">
                                                                         #{move.sale?.saleNumber || move.serviceTicket?.ticketNumber}
                                                                     </Badge>
                                                                 )}
                                                                 {move.type === "SERVICE_USE" && move.serviceTicket?.customer?.name && (
-                                                                    <Badge variant="outline" className="text-[8px] font-black border-blue-500/10 bg-blue-500/5 text-blue-400 uppercase px-1.5 py-0 flex items-center gap-1">
+                                                                    <Badge variant="outline" className="text-[8px] font-bold border-blue-500/10 bg-blue-500/5 text-blue-400 uppercase px-1.5 py-0 flex items-center gap-1">
                                                                         <Info className="h-2 w-2" /> {move.serviceTicket.customer.name}
                                                                     </Badge>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <div className={`flex items-center gap-1 font-black shadow-sm px-2 py-0.5 rounded-lg text-xs ${move.quantity > 0 ? "text-emerald-500 bg-emerald-500/5" : "text-rose-500 bg-rose-500/5"
+                                                        <div className={`flex items-center gap-1 font-bold shadow-sm px-2 py-0.5 rounded-lg text-xs ${move.quantity > 0 ? "text-emerald-500 bg-emerald-500/5" : "text-rose-500 bg-rose-500/5"
                                                             }`}>
                                                             {move.quantity > 0 ? <Plus className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
                                                             {Math.abs(move.quantity)}

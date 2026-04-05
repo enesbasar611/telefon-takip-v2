@@ -61,7 +61,7 @@ export function getMonthlySalesComparisonHtml(monthlyTotal: number, lastMonthTot
     const isUp = diff >= 0;
 
     return (
-        <div className={`flex items-center gap-1 text-[11px] font-black mt-1 ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+        <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
             {isUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
             {isUp ? "+" : ""}{diff.toFixed(1)}%
             <span className="text-slate-600 font-bold ml-1">geçen aya göre</span>

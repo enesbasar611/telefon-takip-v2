@@ -73,16 +73,16 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                 <Icon className="h-8 w-8" />
                             </div>
                             <div>
-                                <DialogTitle className="text-3xl font-black tracking-tight text-foreground">{account.name}</DialogTitle>
+                                <DialogTitle className="text-3xl font-bold tracking-tight text-foreground">{account.name}</DialogTitle>
                                 <DialogDescription className="text-xs font-bold text-muted-foreground mt-1.5 flex items-center gap-3">
-                                    <Badge variant="outline" className="text-[10px] font-black tracking-widest h-6 px-3 bg-background/50">{account.type}</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-bold tracking-widest h-6 px-3 bg-background/50">{account.type}</Badge>
                                     <span className="opacity-60 font-mono tracking-tighter">ID: {account.id}</span>
                                 </DialogDescription>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">GÜNCEL BAKİYE</p>
-                            <p className={cn("text-4xl font-black tracking-tight", account.balance >= 0 ? "text-foreground" : "text-rose-500")}>
+                            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">GÜNCEL BAKİYE</p>
+                            <p className={cn("text-4xl font-bold tracking-tight", account.balance >= 0 ? "text-foreground" : "text-rose-500")}>
                                 ₺{Number(account.balance).toLocaleString('tr-TR')}
                             </p>
                         </div>
@@ -94,10 +94,10 @@ export function AccountDetailModal({ account }: { account: Account }) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
                             <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.03] rounded-full bg-blue-500 group-hover:scale-125 transition-transform" />
-                            <h4 className="text-[11px] font-black text-muted-foreground uppercase flex items-center gap-2 mb-4 tracking-widest">
+                            <h4 className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-2 mb-4 tracking-widest">
                                 <TrendingUp className="h-4 w-4 text-emerald-500" /> TOPLAM GELİR
                             </h4>
-                            <p className="text-3xl font-black text-emerald-500 tracking-tight">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0).toLocaleString('tr-TR') || "0"}</p>
+                            <p className="text-3xl font-bold text-emerald-500 tracking-tight">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0).toLocaleString('tr-TR') || "0"}</p>
                             <p className="text-[11px] text-muted-foreground font-bold mt-2 opacity-80 uppercase tracking-tighter">Seçili periyottaki toplam giriş</p>
                         </div>
                         <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
@@ -249,7 +249,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <p className={cn("text-[13px] font-black", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
+                                                    <p className={cn("text-[13px] font-bold", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
                                                         {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
                                                     </p>
                                                 </td>

@@ -394,7 +394,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                 {/* Left Side: Form Inputs */}
                 <div className="w-full md:w-80 border-r border-slate-800/60 flex flex-col bg-slate-950/20 shrink-0">
                     <div className="p-5 border-b border-slate-800/60">
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Sözleşme Bilgileri</h3>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Sözleşme Bilgileri</h3>
                         <p className="text-[10px] text-slate-500 font-medium">Baskı öncesi detayları doldurun.</p>
                     </div>
 
@@ -402,7 +402,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                         {/* Customer Info */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center group">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 leading-none">Müşteri Bilgileri</label>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 leading-none">Müşteri Bilgileri</label>
                             </div>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
@@ -429,7 +429,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
 
                         {/* Expert Info */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Ekspertiz Detayları</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Ekspertiz Detayları</label>
                             <div className="grid grid-cols-2 gap-2">
                                 <select
                                     value={expert.screen}
@@ -465,7 +465,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                         </div>
                         <Button
                             onClick={handlePrint}
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black gap-2 h-12 rounded-xl shadow-lg shadow-blue-600/20 text-[11px] uppercase tracking-widest"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold gap-2 h-12 rounded-xl shadow-lg shadow-blue-600/20 text-[11px] uppercase tracking-widest"
                         >
                             <Printer className="h-4 w-4" />
                             SÖZLEŞMEYİ YAZDIR
@@ -477,11 +477,11 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                 <Tabs defaultValue="contract" className="flex-1 flex flex-col min-w-0">
                     <div className="px-6 py-4 pr-14 flex justify-between items-center border-b border-slate-800/60 bg-slate-950/40">
                         <TabsList className="bg-slate-900 border-slate-800 p-1 rounded-2xl h-11 shrink-0">
-                            <TabsTrigger value="contract" className="rounded-xl px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-600/20 gap-2 h-9 text-[11px] font-black tracking-widest uppercase">
+                            <TabsTrigger value="contract" className="rounded-xl px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-600/20 gap-2 h-9 text-[11px] font-bold tracking-widest uppercase">
                                 <FileText className="h-3.5 w-3.5" />
                                 SÖZLEŞME
                             </TabsTrigger>
-                            <TabsTrigger value="gallery" className="rounded-xl px-6 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-600/20 gap-2 h-9 text-[11px] font-black tracking-widest uppercase">
+                            <TabsTrigger value="gallery" className="rounded-xl px-6 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-600/20 gap-2 h-9 text-[11px] font-bold tracking-widest uppercase">
                                 <Paperclip className="h-3.5 w-3.5" />
                                 EKLER & GALERİ
                             </TabsTrigger>
@@ -490,7 +490,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                         <div className="flex items-center gap-3">
                             <Eye className="h-4 w-4 text-slate-600" />
                             <div className="flex flex-col items-end shrink-0">
-                                <h2 className="text-[12px] font-black text-white leading-none uppercase">{device.name}</h2>
+                                <h2 className="text-[12px] font-bold text-white leading-none uppercase">{device.name}</h2>
                                 <p className="text-[10px] text-slate-500 font-bold tracking-tight mt-1 truncate max-w-[150px]">IMEI: {device.deviceInfo?.imei || "—"}</p>
                             </div>
                         </div>
@@ -501,12 +501,12 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                         <div className="px-6 py-4 flex justify-between items-center border-b border-slate-800/20 bg-slate-900/10">
                             <div className="flex gap-2">
                                 <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
-                                    <button onClick={() => setFormType("purchase")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'purchase' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>ALIŞ</button>
-                                    <button onClick={() => setFormType("sale")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${formType === 'sale' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>SATIŞ</button>
+                                    <button onClick={() => setFormType("purchase")} className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${formType === 'purchase' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>ALIŞ</button>
+                                    <button onClick={() => setFormType("sale")} className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${formType === 'sale' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>SATIŞ</button>
                                 </div>
                                 <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-800">
-                                    <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>A4 Standart</button>
-                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px] font-black transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>80mm Termal</button>
+                                    <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>A4 Standart</button>
+                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>80mm Termal</button>
                                 </div>
                             </div>
                         </div>
@@ -527,7 +527,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                         <div className="p-8">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="space-y-1">
-                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Yüklenilen Belgeler</h3>
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-tight">Yüklenilen Belgeler</h3>
                                     <p className="text-xs text-slate-500 font-bold">Cihaza ait fotoğraflar, faturalar ve kimlik görselleri.</p>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -542,7 +542,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                     <Button
                                         disabled={isUploading}
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl gap-2 shadow-lg shadow-emerald-600/20"
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl gap-2 shadow-lg shadow-emerald-600/20"
                                     >
                                         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                                         YENİ EKLE
@@ -580,20 +580,20 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                                 {isPdf ? (
                                                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
                                                         <FileText className="h-10 w-10 text-red-400" />
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">PDF Dosyası</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 text-center">PDF Dosyası</span>
                                                     </div>
                                                 ) : (
                                                     <img src={url} alt={`Photo ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                 )}
                                                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
-                                                    <span className="text-[9px] font-black text-white uppercase">Cihaz Görseli</span>
+                                                    <span className="text-[9px] font-bold text-white uppercase">Cihaz Görseli</span>
                                                     <div className="h-6 w-6 rounded-lg bg-emerald-500/20 backdrop-blur-md flex items-center justify-center border border-emerald-500/20">
                                                         {isPdf ? <FileText className="h-3 w-3 text-red-400" /> : <ImageIcon className="h-3 w-3 text-emerald-400" />}
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-bold uppercase">
                                                     <Download className="h-3 w-3 text-blue-400" /> İndir
                                                 </button>
                                                 <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
@@ -630,20 +630,20 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                                 {isPdf ? (
                                                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
                                                         <FileText className="h-10 w-10 text-blue-400" />
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">Kimlik PDF</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 text-center">Kimlik PDF</span>
                                                     </div>
                                                 ) : (
                                                     <img src={url} alt="Kimlik" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                 )}
                                                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
-                                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">KİMLİK BELGESİ</span>
+                                                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">KİMLİK BELGESİ</span>
                                                     <div className="h-6 w-6 rounded-lg bg-blue-500/20 backdrop-blur-md flex items-center justify-center border border-blue-500/20">
                                                         <FileText className="h-3 w-3 text-blue-400" />
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-bold uppercase">
                                                     <Download className="h-3 w-3 text-blue-400" /> İndir
                                                 </button>
                                                 <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
@@ -680,20 +680,20 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                                 {isPdf ? (
                                                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 gap-2">
                                                         <FileText className="h-10 w-10 text-red-400" />
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-center">Fatura PDF</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 text-center">Fatura PDF</span>
                                                     </div>
                                                 ) : (
                                                     <img src={url} alt="Fatura" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                 )}
                                                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-end">
-                                                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">SATIN ALMA FATURASI</span>
+                                                    <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">SATIN ALMA FATURASI</span>
                                                     <div className="h-6 w-6 rounded-lg bg-purple-500/20 backdrop-blur-md flex items-center justify-center border border-purple-500/20">
                                                         <Paperclip className="h-3 w-3 text-purple-400" />
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-black uppercase">
+                                                <button onClick={handleDownload} className="flex-1 h-8 flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700/60 text-[10px] font-bold uppercase">
                                                     <Download className="h-3 w-3 text-blue-400" /> İndir
                                                 </button>
                                                 <button onClick={handleDelete} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all border border-red-500/20">
@@ -712,7 +712,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                                             <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
                                                 <Package className="h-8 w-8 text-slate-500" />
                                             </div>
-                                            <h4 className="text-sm font-black text-white uppercase tracking-widest">HENÜZ BELGE YOK</h4>
+                                            <h4 className="text-sm font-bold text-white uppercase tracking-widest">HENÜZ BELGE YOK</h4>
                                             <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase">YUKARIDAKİ BUTONDAN EKLEME YAPABİLİRSİNİZ</p>
                                         </div>
                                     )}

@@ -173,8 +173,8 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                     <ShoppingBag className="h-6 w-6 text-blue-500" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-2xl font-black tracking-tight text-white">Yeni Satın Alma Formu</DialogTitle>
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pt-1">CRM & FİNANS › TEDARİKÇİ YÖNETİMİ › YENİ KAYIT</p>
+                                    <DialogTitle className="text-2xl font-bold tracking-tight text-white">Yeni Satın Alma Formu</DialogTitle>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pt-1">CRM & FİNANS › TEDARİKÇİ YÖNETİMİ › YENİ KAYIT</p>
                                 </div>
                             </div>
                         </DialogHeader>
@@ -185,12 +185,12 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
                                     <FileText className="h-4 w-4 text-blue-400" />
                                 </div>
-                                <h3 className="text-sm font-black text-white">Fatura Detayları</h3>
+                                <h3 className="text-sm font-bold text-white">Fatura Detayları</h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Tedarikçi Seçimi</label>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Tedarikçi Seçimi</label>
                                     <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
                                         <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold text-xs">
                                             <SelectValue placeholder="Tedarikçi seçin..." />
@@ -204,7 +204,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Alım Tarihi</label>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Alım Tarihi</label>
                                     <div className="h-12 bg-white/5 border-white/10 rounded-xl flex items-center px-4 gap-3 text-sm font-medium">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                                         {new Date().toLocaleDateString("tr-TR")}
@@ -212,11 +212,11 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Fatura no</label>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Fatura no</label>
                                     <Input
                                         value={orderNo}
                                         onChange={e => setOrderNo(e.target.value)}
-                                        className="h-12 bg-white/5 border-white/10 rounded-xl font-black text-xs"
+                                        className="h-12 bg-white/5 border-white/10 rounded-xl font-bold text-xs"
                                         placeholder="# TR-202"
                                     />
                                 </div>
@@ -230,9 +230,9 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                     <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
                                         <ShoppingBag className="h-4 w-4 text-emerald-400" />
                                     </div>
-                                    <h3 className="text-sm font-black text-white">Ürün / Parça Listesi</h3>
+                                    <h3 className="text-sm font-bold text-white">Ürün / Parça Listesi</h3>
                                 </div>
-                                <Button onClick={addItem} size="sm" variant="outline" className="h-9 px-4 rounded-xl font-black text-[10px] gap-2 border-white/10 hover:bg-white/5">
+                                <Button onClick={addItem} size="sm" variant="outline" className="h-9 px-4 rounded-xl font-bold text-[10px] gap-2 border-white/10 hover:bg-white/5">
                                     <Plus className="h-3.5 w-3.5" />
                                     SATIR EKLE
                                 </Button>
@@ -241,7 +241,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                             <div className="rounded-2xl border border-white/5 overflow-hidden">
                                 <table className="w-full text-left">
                                     <thead className="bg-white/5 border-b border-white/5">
-                                        <tr className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                        <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                             <th className="px-5 py-4">Ürün Adı / Açıklama</th>
                                             <th className="px-5 py-4 text-center">Miktar</th>
                                             <th className="px-5 py-4 text-right">Alış Fiyatı</th>
@@ -277,7 +277,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                                                             <p className="text-[10px] text-muted-foreground">Stok: {p.stock} | {p.category?.name}</p>
                                                                         </div>
                                                                         <div className="text-right">
-                                                                            <p className="text-[10px] font-black text-blue-400">₺{Number(p.sellPrice || 0).toLocaleString("tr-TR")}</p>
+                                                                            <p className="text-[10px] font-bold text-blue-400">₺{Number(p.sellPrice || 0).toLocaleString("tr-TR")}</p>
                                                                         </div>
                                                                     </button>
                                                                 ))}
@@ -290,7 +290,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                                         type="number"
                                                         value={item.quantity}
                                                         onChange={e => updateItem(item.id, "quantity", parseInt(e.target.value) || 0)}
-                                                        className="h-10 bg-white/5 border-none rounded-lg text-center font-black"
+                                                        className="h-10 bg-white/5 border-none rounded-lg text-center font-bold"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 w-32">
@@ -300,7 +300,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                                             type="number"
                                                             value={item.buyPrice}
                                                             onChange={e => updateItem(item.id, "buyPrice", parseFloat(e.target.value) || 0)}
-                                                            className="h-10 bg-white/5 border-none rounded-lg text-right font-black pl-7"
+                                                            className="h-10 bg-white/5 border-none rounded-lg text-right font-bold pl-7"
                                                         />
                                                     </div>
                                                 </td>
@@ -309,10 +309,10 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                                         type="number"
                                                         value={item.vatRate}
                                                         onChange={e => updateItem(item.id, "vatRate", parseInt(e.target.value) || 0)}
-                                                        className="h-10 bg-white/5 border-none rounded-lg text-center font-black"
+                                                        className="h-10 bg-white/5 border-none rounded-lg text-center font-bold"
                                                     />
                                                 </td>
-                                                <td className="px-4 py-3 text-right font-black text-sm text-foreground pr-5">
+                                                <td className="px-4 py-3 text-right font-bold text-sm text-foreground pr-5">
                                                     ₺{(item.quantity * item.buyPrice * (1 + item.vatRate / 100)).toLocaleString("tr-TR")}
                                                 </td>
                                                 <td className="px-4 py-3 w-10">
@@ -325,7 +325,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                     </tbody>
                                 </table>
                                 <div className="p-4 bg-white/5 flex items-center justify-center">
-                                    <button onClick={addItem} className="text-[10px] font-black text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">+ YENİ ÜRÜN SATIRI EKLE</button>
+                                    <button onClick={addItem} className="text-[10px] font-bold text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">+ YENİ ÜRÜN SATIRI EKLE</button>
                                 </div>
                             </div>
                         </div>
@@ -333,7 +333,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                         {/* Ödeme Bilgileri */}
                         <div className="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
                             <div className="space-y-4">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Ödeme Durumu</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Ödeme Durumu</p>
                                 <div className="flex bg-white/5 p-1 rounded-2xl">
                                     <button
                                         onClick={() => setPaymentStatus("PAID")}
@@ -349,7 +349,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                     </button>
                                 </div>
 
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1 mt-6">Ödeme Yöntemi</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mt-6">Ödeme Yöntemi</p>
                                 <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
                                     <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold text-xs text-foreground">
                                         <SelectValue />
@@ -373,13 +373,13 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 </div>
                                 <div className="h-px bg-white/5 my-2" />
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Genel Toplam</span>
-                                    <span className="text-2xl font-black text-white">₺{total.toLocaleString("tr-TR")}</span>
+                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Genel Toplam</span>
+                                    <span className="text-2xl font-bold text-white">₺{total.toLocaleString("tr-TR")}</span>
                                 </div>
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={loading}
-                                    className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 mt-4"
+                                    className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 mt-4"
                                 >
                                     {loading ? "Kaydediliyor..." : "Sipariş Kaydını Tamamla"}
                                 </Button>
@@ -393,19 +393,19 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                             <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
                             <div className="relative z-10 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">GÜNCEL CARİ DURUM</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">GÜNCEL CARİ DURUM</p>
                                     <Banknote className="h-6 w-6 opacity-30" />
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-black leading-tight">{selectedSupplier?.name || "Lütfen Seçin"}</h4>
-                                    <p className="text-3xl font-black mt-2 tracking-tighter">₺{Number(selectedSupplier?.balance || 0).toLocaleString("tr-TR")}</p>
+                                    <h4 className="text-lg font-bold leading-tight">{selectedSupplier?.name || "Lütfen Seçin"}</h4>
+                                    <p className="text-3xl font-bold mt-2 tracking-tighter">₺{Number(selectedSupplier?.balance || 0).toLocaleString("tr-TR")}</p>
                                 </div>
                                 <Badge className="bg-rose-500/20 text-rose-200 border-none font-bold text-[10px] py-0.5 px-2">BORÇ BAKİYESİ</Badge>
 
                                 <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10">
                                     <div>
-                                        <p className="text-[9px] font-black opacity-60">VADESİ GELEN</p>
-                                        <p className="text-sm font-black uppercase tracking-tight">
+                                        <p className="text-[9px] font-bold opacity-60">VADESİ GELEN</p>
+                                        <p className="text-sm font-bold uppercase tracking-tight">
                                             ₺{(() => {
                                                 const unpaid = selectedSupplier?.purchases?.filter((p: any) => p.paymentStatus !== "PAID") || [];
                                                 return Math.round(unpaid.reduce((sum: number, p: any) => sum + Number(p.remainingAmount || p.totalAmount), 0)).toLocaleString("tr-TR");
@@ -413,8 +413,8 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                         </p>
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-black opacity-60">AÇIK SİPARİŞLER</p>
-                                        <p className="text-sm font-black uppercase tracking-tight">
+                                        <p className="text-[9px] font-bold opacity-60">AÇIK SİPARİŞLER</p>
+                                        <p className="text-sm font-bold uppercase tracking-tight">
                                             {selectedSupplier?.purchases?.filter((p: any) => p.status !== "COMPLETED").length || 0} Adet
                                         </p>
                                     </div>
@@ -424,7 +424,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
 
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <h5 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                     <Wallet className="h-3 w-3" /> BEKLEYEN BORÇLAR
                                 </h5>
                             </div>
@@ -459,13 +459,13 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                                 <div className="flex justify-between items-start mb-1">
                                                     <p className="text-[11px] font-bold text-white uppercase">#{order.orderNo}</p>
                                                     <span className={cn(
-                                                        "text-[9px] font-black uppercase",
+                                                        "text-[9px] font-bold uppercase",
                                                         isOverdue ? "text-rose-400" : (order.paymentStatus === "PARTIAL" ? "text-amber-400" : "text-blue-400")
                                                     )}>
                                                         {isOverdue ? "VADESİ GEÇTİ" : (order.paymentStatus === "PARTIAL" ? "KISMİ ÖDEME" : "BEKLEYEN")}
                                                     </span>
                                                 </div>
-                                                <p className="text-lg font-black">₺{Math.round(Number(order.remainingAmount || order.totalAmount)).toLocaleString("tr-TR")}</p>
+                                                <p className="text-lg font-bold">₺{Math.round(Number(order.remainingAmount || order.totalAmount)).toLocaleString("tr-TR")}</p>
                                                 <p className="text-[9px] font-bold text-muted-foreground mt-1">
                                                     {format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}
                                                 </p>
@@ -475,7 +475,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess }: Purchase
                                 })()}
                             </div>
                             {selectedSupplier?.purchases?.filter((p: any) => p.paymentStatus !== "PAID").length > 3 && (
-                                <Button variant="ghost" className="w-full h-10 rounded-xl text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white mt-2">
+                                <Button variant="ghost" className="w-full h-10 rounded-xl text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white mt-2">
                                     TÜM EKSTREYİ GÖRÜNTÜLE
                                 </Button>
                             )}

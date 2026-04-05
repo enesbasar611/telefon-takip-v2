@@ -358,7 +358,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             )}
                         >
                             <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-slate-500")} />
-                            <span className="text-[8px] font-black">{method.label}</span>
+                            <span className="text-[8px] font-bold">{method.label}</span>
                         </button>
                     ))}
                 </div>

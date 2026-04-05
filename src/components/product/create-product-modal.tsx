@@ -249,19 +249,19 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <Wand2 className="h-3.5 w-3.5 text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-violet-400 uppercase tracking-widest">Gemini AI Asistan</p>
+                    <p className="text-[11px] font-bold text-violet-400 uppercase tracking-widest">Gemini AI Asistan</p>
                     <p className="text-[10px] text-slate-500 font-medium">Ürünü serbest metin olarak tarif edin, AI formu otomatik dolduracak</p>
                   </div>
                   {aiStatus === "success" && (
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wide">Dolduruldu</span>
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">Dolduruldu</span>
                     </div>
                   )}
                   {aiStatus === "error" && (
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
                       <XCircle className="h-3.5 w-3.5 text-red-500" />
-                      <span className="text-[10px] font-black text-red-400 uppercase tracking-wide">Hata</span>
+                      <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Hata</span>
                     </div>
                   )}
                 </div>

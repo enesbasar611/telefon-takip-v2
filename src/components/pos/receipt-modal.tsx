@@ -54,7 +54,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             </div>
           </div>
 
-          <DialogTitle className="text-3xl font-black text-white leading-none z-10 tracking-tight">SATIŞ BAŞARILI</DialogTitle>
+          <DialogTitle className="text-3xl font-bold text-white leading-none z-10 tracking-tight">SATIŞ BAŞARILI</DialogTitle>
           <p className="text-[11px] font-bold text-white/80 mt-3 tracking-[0.4em] z-10 uppercase">{sale.saleNumber} KAYDEDİLDİ</p>
         </DialogHeader>
 

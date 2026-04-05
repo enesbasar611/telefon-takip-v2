@@ -54,7 +54,7 @@ export default async function KasaRaporuPage() {
                 <div className="flex items-center gap-4">
                     <CreateTransactionModal
                         trigger={
-                            <Button className="h-16 rounded-[1.5rem] px-8 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white font-black text-xs tracking-widest gap-4 group transition-all">
+                            <Button className="h-16 rounded-[1.5rem] px-8 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white font-bold text-xs tracking-widest gap-4 group transition-all">
                                 <PlusCircle className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />
                                 GELİR / GİDER EKLE
                             </Button>

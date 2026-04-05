@@ -33,13 +33,16 @@ export async function createStaff(data: {
   surname?: string;
   email: string;
   phone?: string;
+  image?: string;
   role: Role;
   commissionRate: number;
   password?: string;
   canSell?: boolean;
-  canService?: boolean;
-  canStock?: boolean;
-  canFinance?: boolean;
+  canService: boolean;
+  canStock: boolean;
+  canFinance: boolean;
+  canDelete: boolean;
+  canEdit: boolean;
 }) {
   try {
     const shopId = await getShopId();
@@ -52,11 +55,37 @@ export async function createStaff(data: {
 
     const hashedPassword = await bcrypt.hash(data.password || "password123", 10);
 
+    // Fetch role permissions from database or use defaults
+    const template = await (prisma as any).rolePermission.findUnique({
+      where: { role: data.role }
+    });
+
+    const roleDefaults: Record<string, { canSell: boolean, canService: boolean, canStock: boolean, canFinance: boolean, canDelete: boolean, canEdit: boolean }> = {
+      ADMIN: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
+      MANAGER: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
+      CASHIER: { canSell: true, canService: false, canStock: false, canFinance: false, canDelete: false, canEdit: false },
+      TECHNICIAN: { canSell: false, canService: true, canStock: false, canFinance: false, canDelete: false, canEdit: false },
+      STAFF: { canSell: true, canService: false, canStock: false, canFinance: false, canDelete: false, canEdit: false },
+    };
+
+    const defaults = template || roleDefaults[data.role] || roleDefaults.STAFF;
+
     const user = await prisma.user.create({
       data: {
-        ...data,
         name: formatName(data.name),
+        surname: data.surname,
+        email: data.email,
+        phone: data.phone,
+        image: data.image,
+        role: data.role,
         password: hashedPassword,
+        commissionRate: data.commissionRate,
+        canSell: data.canSell ?? defaults.canSell,
+        canService: data.canService ?? defaults.canService,
+        canStock: data.canStock ?? defaults.canStock,
+        canFinance: data.canFinance ?? defaults.canFinance,
+        canDelete: data.canDelete ?? defaults.canDelete,
+        canEdit: data.canEdit ?? defaults.canEdit,
         shopId
       }
     });
@@ -157,17 +186,127 @@ export async function getStaffPerformance(userId: string) {
     };
   }
 }
-export async function updateStaffName(userId: string, name: string) {
+export async function getStaffLogs(page = 1, limit = 10, search?: string, date?: string) {
   try {
     const shopId = await getShopId();
-    await prisma.user.update({
-      where: { id: userId, shopId },
-      data: { name: formatName(name) }
+    const skip = (page - 1) * limit;
+
+    const where: any = { shopId };
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    }
+
+    const serviceLogs = await prisma.serviceLog.findMany({
+      where,
+      include: { ticket: { include: { technician: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const sales = await prisma.sale.findMany({
+      where,
+      include: { user: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const combined = [
+      ...serviceLogs.map(log => ({
+        id: log.id,
+        type: 'service',
+        user: log.ticket.technician || { name: 'Sistem' },
+        message: `servis kaydını güncelledi: #${log.ticket.ticketNumber}`,
+        createdAt: log.createdAt
+      })),
+      ...sales.map(sale => ({
+        id: sale.id,
+        type: 'sale',
+        user: sale.user || { name: 'Sistem' },
+        message: `satış işlemi gerçekleştirdi: ${Number(sale.finalAmount).toLocaleString('tr-TR')} ₺`,
+        createdAt: sale.createdAt
+      }))
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Apply search filter on combined logs
+    const filtered = search
+      ? combined.filter(log => log.user?.name?.toLowerCase().includes(search.toLowerCase()))
+      : combined;
+
+    const total = filtered.length;
+    const paginated = filtered.slice(skip, skip + limit);
+
+    return {
+      success: true,
+      logs: serializePrisma(paginated),
+      totalPages: Math.ceil(total / limit),
+      total
+    };
+  } catch (error) {
+    console.error("Error fetching staff logs:", error);
+    return { success: false, logs: [], totalPages: 0, total: 0 };
+  }
+}
+
+export async function updateRoleTemplate(role: Role, permissions: any) {
+  try {
+    const res = await (prisma as any).rolePermission.upsert({
+      where: { role },
+      update: permissions,
+      create: { role, ...permissions }
     });
     revalidatePath("/personel");
-    revalidatePath("/dashboard");
-    return { success: true };
+    return { success: true, template: serializePrisma(res) };
   } catch (error) {
-    return { success: false, error: "İsim güncellenemedi." };
+    return { success: false, error: "Yetki şablonu güncellenemedi." };
+  }
+}
+
+export async function getRoleTemplates() {
+  try {
+    const templates = await (prisma as any).rolePermission.findMany();
+    return serializePrisma(templates);
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getAllLogs() {
+  try {
+    const shopId = await getShopId();
+    const serviceLogs = await prisma.serviceLog.findMany({
+      where: { shopId },
+      include: { ticket: { include: { technician: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const sales = await prisma.sale.findMany({
+      where: { shopId },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const combined = [
+      ...serviceLogs.map(log => ({
+        id: log.id,
+        type: 'service',
+        user: log.ticket.technician || { name: 'Sistem' },
+        message: `servis kaydını güncelledi: #${log.ticket.ticketNumber}`,
+        createdAt: log.createdAt
+      })),
+      ...sales.map(sale => ({
+        id: sale.id,
+        type: 'sale',
+        user: sale.user || { name: 'Sistem' },
+        message: `satış işlemi gerçekleştirdi: ${Number(sale.finalAmount).toLocaleString('tr-TR')} ₺`,
+        createdAt: sale.createdAt
+      }))
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return serializePrisma(combined);
+  } catch (error) {
+    console.error("Error fetching all logs:", error);
+    return [];
   }
 }

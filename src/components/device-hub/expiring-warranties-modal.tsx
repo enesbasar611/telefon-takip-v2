@@ -61,10 +61,10 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
                         <div className="p-2.5 bg-rose-500/10 rounded-xl text-rose-500 group-hover:bg-rose-500/20 transition-colors">
                             <AlertTriangle className="h-5 w-5" />
                         </div>
-                        <div className="text-[9px] font-black tracking-widest text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full uppercase">KRİTİK</div>
+                        <div className="text-[9px] font-bold tracking-widest text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full uppercase">KRİTİK</div>
                     </div>
                     <div className="mt-2">
-                        <h3 className="text-[32px] font-black text-white leading-none">{count}</h3>
+                        <h3 className="text-[32px] font-bold text-white leading-none">{count}</h3>
                         <p className="text-[11px] text-slate-500 font-bold tracking-wide mt-2">Garanti/Aktiflik Bitmek Üzere</p>
                     </div>
                     {count > 0 && (
@@ -77,7 +77,7 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
 
             <DialogContent className="max-w-[540px] p-0 bg-[#0B0F19] text-slate-200 border border-slate-800/60 shadow-2xl rounded-2xl overflow-hidden">
                 <div className="px-6 pt-5 pb-4 border-b border-slate-800/60">
-                    <DialogTitle className="text-[18px] font-black text-white">Kritik Garanti / Aktiflik</DialogTitle>
+                    <DialogTitle className="text-[18px] font-bold text-white">Kritik Garanti / Aktiflik</DialogTitle>
                     <p className="text-[12px] text-slate-500 font-medium mt-0.5">30 gün içinde süresi dolacak cihazlar</p>
                 </div>
 
@@ -101,10 +101,10 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
                                     <p className="text-[13px] font-bold text-white truncate">{device.name}</p>
                                     <p className="text-[11px] font-mono text-slate-500 mt-0.5">{device.deviceInfo?.imei ?? "—"}</p>
                                 </div>
-                                <div className={`text-[9px] font-black tracking-widest border rounded px-2 py-0.5 ${cond.cls}`}>
+                                <div className={`text-[9px] font-bold tracking-widest border rounded px-2 py-0.5 ${cond.cls}`}>
                                     {cond.text}
                                 </div>
-                                <div className={`text-[12px] font-black ${color} whitespace-nowrap`}>{label}</div>
+                                <div className={`text-[12px] font-bold ${color} whitespace-nowrap`}>{label}</div>
                             </div>
                         );
                     })}

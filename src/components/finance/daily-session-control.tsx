@@ -92,9 +92,9 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                 <Lock className="h-7 w-7 text-blue-500" />
                             </div>
                             <div>
-                                <h3 className="text-base font-black flex items-center gap-3 tracking-tight">
+                                <h3 className="text-base font-bold flex items-center gap-3 tracking-tight">
                                     KASA KAPALI
-                                    <Badge variant="outline" className="text-[10px] font-black border-blue-500/30 text-blue-500 uppercase tracking-widest px-2 py-0.5 bg-background">Oturum Gerekli</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-bold border-blue-500/30 text-blue-500 uppercase tracking-widest px-2 py-0.5 bg-background">Oturum Gerekli</Badge>
                                 </h3>
                                 <p className="text-[11px] text-muted-foreground font-bold mt-1.5 opacity-80">İşlem yapmaya başlamak için lütfen günlük kasa oturumunu açın.</p>
                             </div>
@@ -115,7 +115,7 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                                 <TrendingUp className="h-6 w-6 text-blue-500" />
                                             </div>
                                             <div>
-                                                <DialogTitle className="text-2xl font-black tracking-tight">Günlük Oturumu Başlat</DialogTitle>
+                                                <DialogTitle className="text-2xl font-bold tracking-tight">Günlük Oturumu Başlat</DialogTitle>
                                                 <DialogDescription className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
                                                     Güne Başlangıç Sistemi
                                                 </DialogDescription>
@@ -159,8 +159,8 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                         </div>
                         <div>
                             <div className="flex items-center gap-3">
-                                <h3 className="text-base font-black tracking-tight">KASA AÇIK</h3>
-                                <Badge variant="outline" className="text-[10px] font-black border-emerald-500/30 text-emerald-500 uppercase tracking-widest px-2 py-0.5 bg-background">AKTİF OTURUM</Badge>
+                                <h3 className="text-base font-bold tracking-tight">KASA AÇIK</h3>
+                                <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/30 text-emerald-500 uppercase tracking-widest px-2 py-0.5 bg-background">AKTİF OTURUM</Badge>
                             </div>
                             <div className="flex items-center gap-5 mt-2">
                                 <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-2 uppercase tracking-tighter">
@@ -168,11 +168,11 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                 </p>
                                 <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
                                 <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-2 uppercase tracking-tighter">
-                                    Açılış: <span className="text-foreground font-black">₺{Number(session.openingBalance).toLocaleString('tr-TR')}</span>
+                                    Açılış: <span className="text-foreground font-bold">₺{Number(session.openingBalance).toLocaleString('tr-TR')}</span>
                                 </p>
                                 <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
                                 <p className="text-[11px] text-muted-foreground font-bold flex items-center gap-2 uppercase tracking-tighter">
-                                    Sorumlu: <span className="text-foreground font-black">{session.openedBy?.name || 'SİSTEM'}</span>
+                                    Sorumlu: <span className="text-foreground font-bold">{session.openedBy?.name || 'SİSTEM'}</span>
                                 </p>
                             </div>
                         </div>
@@ -201,8 +201,8 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                     {/* Oturum Özeti */}
                                     <div className="grid grid-cols-2 gap-3 mb-2">
                                         <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
-                                            <p className="text-[9px] font-black text-emerald-600/70 uppercase tracking-widest mb-1.5">TOPLAM TAHSİLAT</p>
-                                            <p className="text-xl font-black text-emerald-600">₺{sessionSummary.totalIncome.toLocaleString('tr-TR')}</p>
+                                            <p className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-widest mb-1.5">TOPLAM TAHSİLAT</p>
+                                            <p className="text-xl font-bold text-emerald-600">₺{sessionSummary.totalIncome.toLocaleString('tr-TR')}</p>
                                             <div className="mt-2 flex flex-col gap-1">
                                                 <span className="text-[9px] font-bold text-muted-foreground opacity-60">Nakit: ₺{sessionSummary.cashIn.toLocaleString('tr-TR')}</span>
                                                 <span className="text-[9px] font-bold text-muted-foreground opacity-60">POS: ₺{sessionSummary.posIn.toLocaleString('tr-TR')}</span>
@@ -210,8 +210,8 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                             </div>
                                         </div>
                                         <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10">
-                                            <p className="text-[9px] font-black text-rose-600/70 uppercase tracking-widest mb-1.5">TOPLAM ÇIKIŞ</p>
-                                            <p className="text-xl font-black text-rose-600">₺{sessionSummary.totalExpense.toLocaleString('tr-TR')}</p>
+                                            <p className="text-[9px] font-bold text-rose-600/70 uppercase tracking-widest mb-1.5">TOPLAM ÇIKIŞ</p>
+                                            <p className="text-xl font-bold text-rose-600">₺{sessionSummary.totalExpense.toLocaleString('tr-TR')}</p>
                                             <div className="mt-2 flex flex-col gap-1">
                                                 <span className="text-[9px] font-bold text-muted-foreground opacity-60">Nakit Çıkış: ₺{sessionSummary.cashOut.toLocaleString('tr-TR')}</span>
                                             </div>
@@ -220,7 +220,7 @@ export function DailySessionControl({ session }: { session: DailySession | null 
 
                                     {/* Hareket Listesi */}
                                     <div className="bg-muted/30 p-4 rounded-2xl border border-border/40">
-                                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-3 flex items-center justify-between">
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center justify-between">
                                             OTURUM HAREKETLERİ
                                             <Badge variant="secondary" className="text-[8px] h-4 rounded-md">{session.transactions?.length || 0} İŞLEM</Badge>
                                         </p>
@@ -245,20 +245,20 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                     {/* Beklenen Tutar */}
                                     <div className="bg-muted/80 p-5 rounded-3xl border border-border/40 border-dashed relative overflow-hidden group">
                                         <div className="absolute top-0 right-0 h-20 w-20 translate-x-6 -translate-y-6 bg-slate-500/5 rounded-full" />
-                                        <div className="flex items-center justify-between text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-widest">
+                                        <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-widest">
                                             <span>KASADA OLMASI GEREKEN (NAKİT)</span>
                                             <span className="text-emerald-500 italic">MUTABAKAT ÖNCESİ</span>
                                         </div>
-                                        <div className="text-3xl font-black text-foreground tracking-tighter">₺{expectedCashInHand.toLocaleString('tr-TR')}</div>
+                                        <div className="text-3xl font-bold text-foreground tracking-tighter">₺{expectedCashInHand.toLocaleString('tr-TR')}</div>
                                         <p className="text-[9px] text-muted-foreground font-bold mt-2 opacity-60">Açılış + Nakit Giriş - Nakit Çıkış = Beklenen Tutar</p>
                                     </div>
 
                                     <div className="space-y-2 pt-2">
-                                        <Label htmlFor="actualBalance" className="text-[10px] font-black text-muted-foreground ml-1 uppercase tracking-widest">KASADAKİ FİZİKSEL NAKİT TUTARI (TL)</Label>
-                                        <Input id="actualBalance" name="actualBalance" type="number" step="0.01" required placeholder="Elinizdeki nakiti sayın ve girin" className="h-14 rounded-2xl text-lg font-black bg-muted/20 border-border/40 px-6 shadow-inner focus:ring-2 focus:ring-rose-500/20 transition-all border-2 focus:border-rose-500/30" />
+                                        <Label htmlFor="actualBalance" className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-widest">KASADAKİ FİZİKSEL NAKİT TUTARI (TL)</Label>
+                                        <Input id="actualBalance" name="actualBalance" type="number" step="0.01" required placeholder="Elinizdeki nakiti sayın ve girin" className="h-14 rounded-2xl text-lg font-bold bg-muted/20 border-border/40 px-6 shadow-inner focus:ring-2 focus:ring-rose-500/20 transition-all border-2 focus:border-rose-500/30" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="notes" className="text-[10px] font-black text-muted-foreground ml-1 uppercase tracking-widest">GÜN SONU NOTLARI</Label>
+                                        <Label htmlFor="notes" className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-widest">GÜN SONU NOTLARI</Label>
                                         <Textarea id="notes" name="notes" placeholder="Eksik/Fazla nedenleri, genel dükkan notu vb." className="h-20 rounded-2xl text-xs font-bold bg-muted/20 border-border/40 resize-none p-4" />
                                     </div>
                                 </div>

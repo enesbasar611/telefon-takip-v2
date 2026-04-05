@@ -15,7 +15,7 @@ export function DashboardHeader({
             <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                     <div className="h-8 w-1.5 bg-primary rounded-full" />
-                    <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-foreground font-sans uppercase">
+                    <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground font-sans uppercase">
                         {title}
                     </h1>
                 </div>
@@ -28,14 +28,14 @@ export function DashboardHeader({
                 <div className="flex items-center gap-4 px-5 py-3 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/10">
                     <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-emerald-600/70 tracking-tighter uppercase leading-none mb-1">Sistem Durumu</span>
-                        <span className="text-xs font-black text-emerald-600 tracking-tight">AKTİF & STABİL</span>
+                        <span className="text-[10px] font-bold text-emerald-600/70 tracking-tighter uppercase leading-none mb-1">Sistem Durumu</span>
+                        <span className="text-xs font-bold text-emerald-600 tracking-tight">AKTİF & STABİL</span>
                     </div>
                 </div>
                 <div className="px-5 py-3">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-muted-foreground/60 tracking-tighter uppercase leading-none mb-1">Veri Akışı</span>
-                        <span className="text-xs font-black text-foreground tracking-tight uppercase">Gerçek Zamanlı</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tighter uppercase leading-none mb-1">Veri Akışı</span>
+                        <span className="text-xs font-bold text-foreground tracking-tight uppercase">Gerçek Zamanlı</span>
                     </div>
                 </div>
             </div>

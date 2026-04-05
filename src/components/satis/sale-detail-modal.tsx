@@ -62,9 +62,9 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                             <Receipt className="h-7 w-7 text-primary" />
                         </div>
                         <div>
-                            <DialogTitle className="text-2xl font-black tracking-tight">{sale.saleNumber}</DialogTitle>
+                            <DialogTitle className="text-2xl font-bold tracking-tight">{sale.saleNumber}</DialogTitle>
                             <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="rounded-full px-3 py-0.5 border-primary/20 text-[10px] font-black uppercase text-primary tracking-widest">
+                                <Badge variant="outline" className="rounded-full px-3 py-0.5 border-primary/20 text-[10px] font-bold uppercase text-primary tracking-widest">
                                     TAMAMLANDI
                                 </Badge>
                                 <div className="h-1 w-1 rounded-full bg-slate-300" />
@@ -84,17 +84,17 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                         <div className="bg-muted/30 p-5 rounded-3xl border border-border/20">
                             <div className="flex items-center gap-2 mb-2 opacity-50">
                                 <User className="h-3.5 w-3.5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">MÜŞTERİ</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">MÜŞTERİ</span>
                             </div>
-                            <p className="text-sm font-black">{sale.customer?.name || "Hızlı Satış"}</p>
+                            <p className="text-sm font-bold">{sale.customer?.name || "Hızlı Satış"}</p>
                             <p className="text-[11px] font-bold text-muted-foreground opacity-70 mt-0.5">{sale.customer?.phone || "-"}</p>
                         </div>
                         <div className="bg-muted/30 p-5 rounded-3xl border border-border/20">
                             <div className="flex items-center gap-2 mb-2 opacity-50">
                                 <Calendar className="h-3.5 w-3.5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">TARİH & SAAT</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">TARİH & SAAT</span>
                             </div>
-                            <p className="text-sm font-black">{format(new Date(sale.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
+                            <p className="text-sm font-bold">{format(new Date(sale.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
                             <p className="text-[11px] font-bold text-muted-foreground opacity-70 mt-0.5">{format(new Date(sale.createdAt), "HH:mm")}</p>
                         </div>
                     </div>
@@ -102,10 +102,10 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                     {/* Product List */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Package className="h-3.5 w-3.5" /> SATILAN ÜRÜNLER
                             </h3>
-                            <Badge variant="secondary" className="rounded-lg text-[9px] font-black">{sale.items.length} KALEM</Badge>
+                            <Badge variant="secondary" className="rounded-lg text-[9px] font-bold">{sale.items.length} KALEM</Badge>
                         </div>
                         <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                             {sale.items.map((item: any, idx: number) => (
@@ -115,13 +115,13 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                                             <Package className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all" />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black tracking-tight">{item.product.name}</p>
+                                            <p className="text-xs font-bold tracking-tight">{item.product.name}</p>
                                             <p className="text-[10px] font-bold text-muted-foreground opacity-60">
                                                 ₺{Number(item.unitPrice).toLocaleString('tr-TR')} x {item.quantity}
                                             </p>
                                         </div>
                                     </div>
-                                    <p className="text-xs font-black text-foreground tracking-tight">₺{Number(item.totalPrice).toLocaleString('tr-TR')}</p>
+                                    <p className="text-xs font-bold text-foreground tracking-tight">₺{Number(item.totalPrice).toLocaleString('tr-TR')}</p>
                                 </div>
                             ))}
                         </div>
@@ -130,7 +130,7 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                     {/* Financial & Inventory Movements */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[11px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Activity className="h-3.5 w-3.5" /> FİNANSAL & STOK HAREKETLERİ
                             </h3>
                         </div>
@@ -142,9 +142,9 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                                         <TrendingUp className="h-5 w-5 text-emerald-600" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">KASA GİRİŞİ (SATIŞ)</span>
+                                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">KASA GİRİŞİ (SATIŞ)</span>
                                         <div className="flex items-baseline gap-2">
-                                            <p className="text-sm font-black text-emerald-600">₺{Number(sale.transaction.amount).toLocaleString('tr-TR')}</p>
+                                            <p className="text-sm font-bold text-emerald-600">₺{Number(sale.transaction.amount).toLocaleString('tr-TR')}</p>
                                             <span className="text-[10px] font-bold text-muted-foreground opacity-60 line-clamp-1">{sale.transaction.description}</span>
                                         </div>
                                     </div>
@@ -158,8 +158,8 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                                         <TrendingDown className="h-5 w-5 text-orange-600" />
                                     </div>
                                     <div className="flex flex-col overflow-hidden">
-                                        <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">STOK ÇIKIŞI</span>
-                                        <p className="text-sm font-black text-orange-600">-{move.quantity} Adet</p>
+                                        <span className="text-[10px] font-bold text-orange-700 uppercase tracking-widest">STOK ÇIKIŞI</span>
+                                        <p className="text-sm font-bold text-orange-600">-{move.quantity} Adet</p>
                                         <span className="text-[10px] font-bold text-muted-foreground opacity-60 truncate">{move.product?.name}</span>
                                     </div>
                                 </div>
@@ -180,7 +180,7 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                                     <div className="h-9 w-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
                                         {getPaymentIcon(sale.paymentMethod)}
                                     </div>
-                                    <span className="text-[13px] font-black uppercase tracking-tight">{getPaymentLabel(sale.paymentMethod)}</span>
+                                    <span className="text-[13px] font-bold uppercase tracking-tight">{getPaymentLabel(sale.paymentMethod)}</span>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -194,13 +194,13 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                                 {Number(sale.discount) > 0 && (
                                     <div className="flex flex-col gap-1.5">
                                         <span className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest">İNDİRİM</span>
-                                        <span className="text-lg font-black text-emerald-400">-₺{Number(sale.discount).toLocaleString('tr-TR')}</span>
+                                        <span className="text-lg font-bold text-emerald-400">-₺{Number(sale.discount).toLocaleString('tr-TR')}</span>
                                     </div>
                                 )}
                             </div>
                             <div className="text-right">
                                 <span className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] block mb-2">TOPLAM TUTAR</span>
-                                <p className="text-5xl font-black tracking-tighter text-emerald-400">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</p>
+                                <p className="text-5xl font-bold tracking-tighter text-emerald-400">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</p>
                             </div>
                         </div>
                     </div>

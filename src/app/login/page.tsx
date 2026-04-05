@@ -4,18 +4,49 @@ import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone, Loader2, ShieldCheck, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useTransition } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
+    const [isCredentialsLogin, setIsCredentialsLogin] = useState(true);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [isPending, startTransition] = useTransition();
 
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         try {
             await signIn("google", { callbackUrl: "/dashboard" });
         } catch (error) {
-            console.error("Giriş hatası:", error);
+            toast.error("Google girişi sırasında bir hata oluştu");
+            setIsLoading(false);
+        }
+    };
+
+    const handleCredentialsLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        try {
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+                callbackUrl: "/dashboard",
+            });
+
+            if (result?.error) {
+                toast.error("Giriş bilgileri hatalı");
+            } else {
+                window.location.href = "/dashboard";
+            }
+        } catch (error) {
+            toast.error("Bir hata oluştu");
+        } finally {
             setIsLoading(false);
         }
     };
@@ -55,29 +86,96 @@ export default function LoginPage() {
                     <Card className="border-white/5 bg-[#0A0A0A]/60 backdrop-blur-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] overflow-hidden">
                         <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-violet-600 to-transparent opacity-50" />
                         <CardHeader className="text-center pt-10 pb-6">
-                            <CardTitle className="text-2xl font-black text-white tracking-tight">Giriş Yap</CardTitle>
+                            <CardTitle className="text-2xl font-bold text-white tracking-tight">Giriş Yap</CardTitle>
                             <CardDescription className="text-slate-500 text-sm mt-2">
                                 Dükkan yönetimine başlamak için Google hesabınızı kullanın
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="px-10 pb-10 flex flex-col gap-6">
-                            <Button
-                                className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg group"
-                                onClick={handleGoogleLogin}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
+                            <AnimatePresence mode="wait">
+                                {isCredentialsLogin ? (
+                                    <motion.form
+                                        key="credentials"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        onSubmit={handleCredentialsLogin}
+                                        className="space-y-4"
+                                    >
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-POSTA ADRESİ</Label>
+                                            <Input
+                                                type="email"
+                                                placeholder="ahmet@basarteknik.com"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 font-bold focus:ring-2 focus:ring-violet-500/20"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ŞİFRE</Label>
+                                            <Input
+                                                type="password"
+                                                placeholder="••••••"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 font-bold focus:ring-2 focus:ring-violet-500/20"
+                                                required
+                                            />
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            className="w-full h-14 bg-violet-600 text-white hover:bg-violet-700 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-violet-600/20"
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Giriş Yap"}
+                                        </Button>
+                                    </motion.form>
                                 ) : (
-                                    <>
-                                        <img src="https://www.google.com/favicon.ico" className="h-5 w-5 grayscale group-hover:grayscale-0 transition-all" alt="Google" />
-                                        Google ile Devam Et
-                                    </>
+                                    <motion.div
+                                        key="google"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                    >
+                                        <Button
+                                            className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg group"
+                                            onClick={handleGoogleLogin}
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? (
+                                                <Loader2 className="h-5 w-5 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <img src="https://www.google.com/favicon.ico" className="h-5 w-5 grayscale group-hover:grayscale-0 transition-all" alt="Google" />
+                                                    Google ile Devam Et
+                                                </>
+                                            )}
+                                        </Button>
+                                    </motion.div>
                                 )}
+                            </AnimatePresence>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-white/5" />
+                                </div>
+                                <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+                                    <span className="bg-[#0A0A0A] px-4 text-slate-500 font-bold">Veya</span>
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="ghost"
+                                className="text-xs font-bold text-slate-400 hover:text-white"
+                                onClick={() => setIsCredentialsLogin(!isCredentialsLogin)}
+                            >
+                                {isCredentialsLogin ? "Google ile giriş yap" : "E-posta ile giriş yap"}
                             </Button>
 
                             <div className="flex items-center gap-3 justify-center text-slate-600">
-                                <Sparkles className="h-3 w-3" />
+                                <Sparkles className="h-3 w-3 text-violet-500/50" />
                                 <span className="text-[10px] font-medium uppercase tracking-[0.2em]">BAŞAR AI Entegrasyonu Aktif</span>
                             </div>
                         </CardContent>

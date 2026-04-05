@@ -118,7 +118,7 @@ export function ReplenishStockModal({
                         <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
                             <ShoppingCart className="h-7 w-7 text-blue-500" />
                         </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight">Sipariş Oluştur</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold tracking-tight">Sipariş Oluştur</DialogTitle>
                         <DialogDescription className="text-slate-400 font-medium pt-2">
                             <span className="text-white font-bold">{productName}</span> ürünü için tedarik süreci başlatın.
                         </DialogDescription>
@@ -126,7 +126,7 @@ export function ReplenishStockModal({
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
                                 TEDARİKÇİ SEÇİMİ
                             </label>
                             <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
@@ -157,14 +157,14 @@ export function ReplenishStockModal({
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="flex-1 h-14 rounded-2xl font-black text-xs hover:bg-white/5 border border-white/5"
+                            className="flex-1 h-14 rounded-2xl font-bold text-xs hover:bg-white/5 border border-white/5"
                         >
                             İPTAL
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={isSubmitting || isLoading}
-                            className="flex-[2] h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 font-black text-xs shadow-xl shadow-blue-600/20 gap-2"
+                            className="flex-[2] h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 font-bold text-xs shadow-xl shadow-blue-600/20 gap-2"
                         >
                             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "SİPARİŞİ ONAYLA"}
                         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { Role } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -22,8 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus } from "lucide-react";
+import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus, Image as ImageIcon } from "lucide-react";
 import { createStaff } from "@/lib/actions/staff-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -36,18 +36,24 @@ const staffSchema = z.object({
   password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
   role: z.enum(["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"]),
   branch: z.string().min(1, "Şube seçiniz"),
+  gender: z.enum(["MALE", "FEMALE"]),
+  phone: z.string().optional(),
+  customImage: z.string().optional(),
   canSell: z.boolean(),
   canService: z.boolean(),
   canStock: z.boolean(),
   canFinance: z.boolean(),
-  phone: z.string().optional(),
-}).required();
+  canEdit: z.boolean(),
+  canDelete: z.boolean(),
+});
 
 type StaffFormValues = z.infer<typeof staffSchema>;
 
 export function CreateStaffModal() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -65,28 +71,38 @@ export function CreateStaffModal() {
       password: "",
       role: "STAFF",
       branch: "Ana Şube",
-      canSell: false,
+      gender: "MALE",
+      phone: "",
+      customImage: "",
+      canSell: true,
       canService: false,
       canStock: false,
       canFinance: false,
-      phone: "",
+      canEdit: true,
+      canDelete: false,
     }
   });
+
+  const name = watch("name") || "";
+  const surname = watch("surname") || "";
+  const initials = (name.charAt(0) + surname.charAt(0)).toUpperCase() || "?";
 
   const onSubmit = async (data: StaffFormValues) => {
     startTransition(async () => {
       const result = await createStaff({
         ...data,
+        image: data.customImage || "",
         role: data.role as Role,
-        name: `${data.name} ${data.surname}`,
         commissionRate: 0,
       });
+
       if (result.success) {
         toast.success("Personel başarıyla tanımlandı.");
         setOpen(false);
         reset();
+        setPreviewImage(null);
       } else {
-        toast.error(result.error);
+        toast.error(result.error || "Bir hata oluştu");
       }
     });
   };
@@ -94,7 +110,7 @@ export function CreateStaffModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center">
+        <Button className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center">
           <UserPlus className="h-4 w-4" />
           Yeni Personel Ekle
         </Button>
@@ -106,30 +122,95 @@ export function CreateStaffModal() {
               <UserPlus className="w-6 h-6" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-black text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
-              <p className="text-slate-500 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</p>
+              <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
+              <DialogDescription className="text-slate-500 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-8 pt-4 space-y-8">
-          {/* Top Section: Photo and Basic Info */}
           <div className="flex gap-8 items-start">
-            {/* Photo Upload Area */}
             <div className="flex flex-col items-center gap-3">
-              <div className="h-32 w-32 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center bg-slate-50 dark:bg-black/20 group hover:border-blue-500/50 transition-colors cursor-pointer relative overflow-hidden">
-                <Camera className="w-8 h-8 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                <span className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-tighter">FOTOĞRAF</span>
+              <input type="hidden" {...register("customImage")} />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      const base64 = reader.result as string;
+                      setPreviewImage(base64);
+                      setValue("customImage", base64);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="group relative cursor-pointer"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
+                <div className="relative w-24 h-24 bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white dark:border-white/10 ring-4 ring-blue-500/10">
+                  {previewImage ? (
+                    <img src={previewImage} className="w-full h-full object-cover" alt="Preview" />
+                  ) : initials !== "?" ? (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl font-bold text-slate-400 dark:text-white/20">
+                      {initials}
+                    </div>
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                  )}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                    <ImageIcon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
               </div>
-              <p className="text-[8px] text-slate-400 font-bold uppercase text-center max-w-[100px]">
-                Max 5MB, JPG veya PNG formatında olmalıdır.
-              </p>
+              <div className="flex flex-col gap-2 w-full max-w-[120px]">
+                <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("gender", "MALE");
+                      const url = `https://ui-avatars.com/api/?name=${encodeURIComponent(watch("name") || "E")}&background=4F46E5&color=fff&bold=true`;
+                      setValue("customImage", url);
+                      setPreviewImage(url);
+                    }}
+                    className={cn(
+                      "flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
+                      watch("gender") === "MALE" ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    ERKEK
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("gender", "FEMALE");
+                      const url = `https://ui-avatars.com/api/?name=${encodeURIComponent(watch("name") || "K")}&background=E11D48&color=fff&bold=true`;
+                      setValue("customImage", url);
+                      setPreviewImage(url);
+                    }}
+                    className={cn(
+                      "flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
+                      watch("gender") === "FEMALE" ? "bg-rose-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    KADIN
+                  </button>
+                </div>
+                <p className="text-[9px] font-bold text-center text-slate-400 uppercase tracking-widest">HIZLI AVATAR</p>
+              </div>
             </div>
 
             {/* Form Fields */}
             <div className="flex-1 grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ADI</Label>
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ADI</Label>
                 <Input
                   {...register("name")}
                   placeholder="Örn: Ahmet"
@@ -137,7 +218,7 @@ export function CreateStaffModal() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SOYADI</Label>
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">SOYADI</Label>
                 <Input
                   {...register("surname")}
                   placeholder="Örn: Yılmaz"
@@ -145,7 +226,7 @@ export function CreateStaffModal() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-POSTA</Label>
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-POSTA</Label>
                 <Input
                   {...register("email")}
                   placeholder="ahmet@example.com"
@@ -153,7 +234,7 @@ export function CreateStaffModal() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
+                <Label className="text-[10px] font-bold text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
                 <Input
                   {...register("password")}
                   type="password"
@@ -166,7 +247,7 @@ export function CreateStaffModal() {
                 value={watch("phone") || ""}
                 onChange={(val: string) => setValue("phone", val)}
                 error={errors.phone?.message}
-                className="h-11"
+                className="h-11 border-none bg-slate-50 dark:bg-slate-800/50"
               />
             </div>
           </div>
@@ -174,7 +255,7 @@ export function CreateStaffModal() {
           {/* Role and Branch Selection */}
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("role", v as any)} defaultValue="STAFF">
                 <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs">
                   <SelectValue placeholder="Bir rol seçin..." />
@@ -189,7 +270,7 @@ export function CreateStaffModal() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube">
                 <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs">
                   <div className="flex items-center gap-2">
@@ -205,43 +286,93 @@ export function CreateStaffModal() {
             </div>
           </div>
 
-          {/* Permissions Sections */}
-          <div className="space-y-4 pt-4">
-            <div className="flex items-center gap-4">
-              <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/5" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">YETKİ TANIMLARI</span>
-              <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/5" />
-            </div>
+          {/* Quick Permissions */}
+          <div className="pt-4 border-t border-white/5 mt-4">
+            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setValue("canSell", !watch("canSell"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canSell") ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canSell") ? "border-emerald-500 bg-emerald-500" : "border-slate-700")}>
+                  {watch("canSell") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">SATIŞ</span>
+              </button>
 
-            <div className="grid grid-cols-2 gap-4">
-              <PermissionToggle
-                id="canSell"
-                title="Satış Yapabilir"
-                description="Satış ekranı ve ödeme işlemleri"
-                checked={watch("canSell")}
-                onCheckedChange={(c) => setValue("canSell", !!c)}
-              />
-              <PermissionToggle
-                id="canService"
-                title="Servis Kaydı Açabilir"
-                description="Müşteri cihaz kabulü ve takip"
-                checked={watch("canService")}
-                onCheckedChange={(c) => setValue("canService", !!c)}
-              />
-              <PermissionToggle
-                id="canStock"
-                title="Stok Düzenleyebilir"
-                description="Envanter girişi ve düzenleme"
-                checked={watch("canStock")}
-                onCheckedChange={(c) => setValue("canStock", !!c)}
-              />
-              <PermissionToggle
-                id="canFinance"
-                title="Finansal Verileri Görebilir"
-                description="Ciro, gider ve kar raporları"
-                checked={watch("canFinance")}
-                onCheckedChange={(c) => setValue("canFinance", !!c)}
-              />
+              <button
+                type="button"
+                onClick={() => setValue("canService", !watch("canService"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canService") ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canService") ? "border-blue-500 bg-blue-500" : "border-slate-700")}>
+                  {watch("canService") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">SERVİS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setValue("canStock", !watch("canStock"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canStock") ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canStock") ? "border-orange-500 bg-orange-500" : "border-slate-700")}>
+                  {watch("canStock") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">STOK</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setValue("canFinance", !watch("canFinance"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canFinance") ? "bg-purple-500/10 border-purple-500/20 text-purple-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canFinance") ? "border-purple-500 bg-purple-500" : "border-slate-700")}>
+                  {watch("canFinance") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">FİNANS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setValue("canEdit", !watch("canEdit"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canEdit") ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canEdit") ? "border-indigo-500 bg-indigo-500" : "border-slate-700")}>
+                  {watch("canEdit") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">DÜZENLEME</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setValue("canDelete", !watch("canDelete"))}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
+                  watch("canDelete") ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-white/5 border-white/5 text-slate-500"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canDelete") ? "border-red-500 bg-red-500" : "border-slate-700")}>
+                  {watch("canDelete") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">SİLME</span>
+              </button>
             </div>
           </div>
 
@@ -250,14 +381,14 @@ export function CreateStaffModal() {
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
-              className="font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className="font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >
               İptal
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center"
+              className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center"
             >
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
               Personeli Kaydet
@@ -266,36 +397,5 @@ export function CreateStaffModal() {
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PermissionToggle({ id, title, description, checked, onCheckedChange }: {
-  id: string;
-  title: string;
-  description: string;
-  checked: boolean;
-  onCheckedChange: (c: boolean) => void
-}) {
-  return (
-    <div
-      onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        "p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all border-2",
-        checked
-          ? "bg-blue-500/5 border-blue-500/20 dark:bg-blue-500/10"
-          : "bg-slate-50 dark:bg-slate-800/30 border-transparent hover:border-slate-200 dark:hover:border-white/5"
-      )}
-    >
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={(c) => onCheckedChange(!!c)}
-        className="rounded-md border-slate-300 dark:border-slate-600"
-      />
-      <div className="flex flex-col gap-0.5">
-        <span className={cn("text-xs font-black", checked ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-400")}>{title}</span>
-        <p className="text-[10px] font-bold text-slate-400 leading-none">{description}</p>
-      </div>
-    </div>
   );
 }

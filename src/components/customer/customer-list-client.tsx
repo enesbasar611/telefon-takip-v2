@@ -117,11 +117,11 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                 <Table>
                     <TableHeader className="bg-muted/10">
                         <TableRow className="border-b border-border/40 hover:bg-transparent">
-                            <TableHead className="px-8 py-5 text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Profil Bilgisi</TableHead>
-                            <TableHead className="py-5 text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Sadakat</TableHead>
-                            <TableHead className="py-5 text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">İletişim</TableHead>
-                            <TableHead className="py-5 text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest text-center">İşlem Hacmi</TableHead>
-                            <TableHead className="px-8 py-5 text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest text-right">Aksiyon</TableHead>
+                            <TableHead className="px-8 py-5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Profil Bilgisi</TableHead>
+                            <TableHead className="py-5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Sadakat</TableHead>
+                            <TableHead className="py-5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">İletişim</TableHead>
+                            <TableHead className="py-5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest text-center">İşlem Hacmi</TableHead>
+                            <TableHead className="px-8 py-5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest text-right">Aksiyon</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -177,12 +177,12 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                     <TableCell className="text-center">
                                         <div className="flex items-center justify-center gap-6">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-foreground text-base font-black">{customer.tickets?.length || 0}</span>
-                                                <span className="text-[8px] font-black text-muted-foreground/60 mt-0.5 uppercase">Servis</span>
+                                                <span className="text-foreground text-base font-bold">{customer.tickets?.length || 0}</span>
+                                                <span className="text-[8px] font-bold text-muted-foreground/60 mt-0.5 uppercase">Servis</span>
                                             </div>
                                             <div className="flex flex-col items-center border-l border-border/30 pl-6">
-                                                <span className="text-foreground text-base font-black">{customer.sales?.length || 0}</span>
-                                                <span className="text-[8px] font-black text-muted-foreground/60 mt-0.5 uppercase">Satış</span>
+                                                <span className="text-foreground text-base font-bold">{customer.sales?.length || 0}</span>
+                                                <span className="text-[8px] font-bold text-muted-foreground/60 mt-0.5 uppercase">Satış</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -200,7 +200,7 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="p-2 min-w-[200px]">
-                                                    <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground/60 p-3 text-center uppercase tracking-widest">Profil Yönetimi</DropdownMenuLabel>
+                                                    <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground/60 p-3 text-center uppercase tracking-widest">Profil Yönetimi</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
                                                     <Link href={`/musteriler/duzenle/${customer.id}`}>
                                                         <DropdownMenuItem className="p-3 text-[10px] font-bold rounded-lg cursor-pointer flex gap-3 items-center">

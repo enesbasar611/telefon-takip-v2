@@ -309,7 +309,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <h4 className={`text-[14px] font-black leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
+          <h4 className={`text-[14px] font-bold leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
           <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">{desc}</p>
         </div>
         {active && <div className={`absolute top-3 right-3 h-2 w-2 rounded-full ${dotBg[color]}`} />}
@@ -318,7 +318,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   };
 
   const inputCls = "bg-slate-950 border-slate-800 rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
-  const labelCls = "text-[9px] font-black text-slate-500 uppercase tracking-widest pl-0.5";
+  const labelCls = "text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-0.5";
   const sectionCls = "p-5 rounded-2xl bg-slate-900 border border-slate-800/60 space-y-4";
 
   return (
@@ -333,7 +333,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         {/* Header */}
         <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-slate-800/60">
           <div>
-            <DialogTitle className="text-[21px] font-black text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
+            <DialogTitle className="text-[21px] font-bold text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
             <p className="text-[12px] text-slate-500 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
           </div>
         </div>
@@ -413,7 +413,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                               className={`h-8 w-8 rounded-full border-2 transition-all shadow-lg ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "border-blue-500 scale-110 shadow-blue-500/30" : "border-slate-800 hover:border-slate-600 scale-100 shadow-black/40"}`}
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
+                            <span className={`text-[8px] font-bold uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
                               {c.name.split(" ")[0]}
                             </span>
                           </button>
@@ -554,7 +554,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>Pil Sağlığı</Label>
                   <div className="relative">
                     <Input {...register("batteryHealth")} type="number" min={1} max={100} placeholder="100" className={inputCls} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-black text-slate-500">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-500">%</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -583,7 +583,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
                   <Plus className="h-3 w-3 text-emerald-400" />
                 </div>
-                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
@@ -610,7 +610,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
                     >
                       {sellerIdFront ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px] font-black uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
                     </button>
 
                     <button
@@ -619,7 +619,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
                     >
                       {sellerIdBack ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px] font-black uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
                     </button>
                   </div>
                 </div>
@@ -629,7 +629,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             {/* Fiyat & Ödeme Hesabı */}
             <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
               <div className="col-span-2 space-y-1.5 pb-2">
-                <Label className="text-[9px] font-black text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
+                <Label className="text-[9px] font-bold text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
                 <Select
                   value={watch("financeAccountId")}
                   onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
@@ -649,13 +649,13 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[9px] font-black text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
+                <Label className="text-[9px] font-bold text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-black text-blue-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-blue-500">₺</span>
                   <Input
                     {...register("buyPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-black pl-8 dark:text-white"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-bold pl-8 dark:text-white"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("buyPrice", formatted, { shouldValidate: true });
@@ -665,13 +665,13 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 {errors.buyPrice && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.buyPrice.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
+                <Label className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-black text-emerald-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-emerald-500">₺</span>
                   <Input
                     {...register("sellPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-black pl-8 text-emerald-400"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-bold pl-8 text-emerald-400"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("sellPrice", formatted, { shouldValidate: true });
@@ -732,7 +732,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               </span>
             </p>
             <Button type="submit" disabled={isPending}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-black text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Kaydı Tamamla
             </Button>

@@ -330,11 +330,11 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             <table className="w-full text-left">
                                                 <thead className="bg-muted/30 border-b border-border">
                                                     <tr>
-                                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Parça / Ürün</th>
-                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tedarikçi</th>
-                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">İşlem</th>
-                                                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Maliyet/Fiyat</th>
-                                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Garanti Durumu</th>
+                                                        <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Parça / Ürün</th>
+                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tedarikçi</th>
+                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">İşlem</th>
+                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Maliyet/Fiyat</th>
+                                                        <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Garanti Durumu</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border">
@@ -377,7 +377,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex flex-col gap-1">
                                                                         <div className={cn(
-                                                                            "text-[10px] font-black uppercase tracking-widest",
+                                                                            "text-[10px] font-bold uppercase tracking-widest",
                                                                             p.type === 'SERVICE' ? "text-blue-500" : "text-emerald-500"
                                                                         )}>#{p.referenceNumber}</div>
                                                                         <div className="text-[10px] text-muted-foreground font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</div>
@@ -386,7 +386,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[10px] font-bold text-muted-foreground">M: ₺{formatCurrency(p.cost || 0)}</span>
-                                                                        <span className="text-sm font-black text-foreground">S: ₺{formatCurrency(p.price || 0)}</span>
+                                                                        <span className="text-sm font-bold text-foreground">S: ₺{formatCurrency(p.price || 0)}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-8 py-6">
@@ -394,7 +394,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                         <div className="w-[180px] space-y-2">
                                                                             <div className="flex items-center justify-between">
                                                                                 <span className={cn(
-                                                                                    "text-[9px] font-black uppercase tracking-widest",
+                                                                                    "text-[9px] font-bold uppercase tracking-widest",
                                                                                     isExpired ? "text-rose-500" : "text-emerald-500"
                                                                                 )}>
                                                                                     {isExpired ? "Süre Doldu" : `${daysLeft} Gün Kaldı`}
@@ -460,7 +460,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                         <div className="flex flex-col">
                                                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Kalan Süre</span>
                                                             <span className={cn(
-                                                                "text-lg font-black mt-0.5",
+                                                                "text-lg font-bold mt-0.5",
                                                                 isExpired ? 'text-rose-500/50' : 'text-emerald-500'
                                                             )}>
                                                                 {isExpired ? 'Tamamlandı' : `${daysLeft} GÜN`}
@@ -468,7 +468,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                         </div>
                                                         <div className="text-right">
                                                             <div className="text-[9px] font-bold text-muted-foreground uppercase">Tedarikçi</div>
-                                                            <div className="text-[11px] font-black text-foreground">{p.supplierName || '-'}</div>
+                                                            <div className="text-[11px] font-bold text-foreground">{p.supplierName || '-'}</div>
                                                         </div>
                                                     </div>
                                                     <Progress value={percent} className={cn(

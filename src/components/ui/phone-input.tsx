@@ -54,7 +54,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                     className
                 )}>
                     <div className="pl-4 pr-3 flex items-center justify-center border-r border-border/50 h-full bg-muted/20">
-                        <span className="text-sm font-black text-primary/80 select-none">+90</span>
+                        <span className="text-sm font-bold text-primary/80 select-none">+90</span>
                     </div>
                     <input
                         {...props}

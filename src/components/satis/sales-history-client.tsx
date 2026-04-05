@@ -214,7 +214,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
-                                    <DropdownMenuLabel className="text-[10px] font-black opacity-50 px-3 uppercase tracking-widest">ÖDEME YÖNTEMİ</DropdownMenuLabel>
+                                    <DropdownMenuLabel className="text-[10px] font-bold opacity-50 px-3 uppercase tracking-widest">ÖDEME YÖNTEMİ</DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => setPaymentFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜMÜ</DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
                                     <DropdownMenuItem onClick={() => setPaymentFilter("CASH")} className="rounded-xl font-bold text-[11px] h-10 px-3">NAKİT</DropdownMenuItem>
@@ -232,7 +232,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
-                                    <DropdownMenuLabel className="text-[10px] font-black opacity-50 px-3 uppercase tracking-widest">TARİH ARALIĞI</DropdownMenuLabel>
+                                    <DropdownMenuLabel className="text-[10px] font-bold opacity-50 px-3 uppercase tracking-widest">TARİH ARALIĞI</DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => setDateFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜM ZAMANLAR</DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
                                     <DropdownMenuItem onClick={() => setDateFilter("TODAY")} className="rounded-xl font-bold text-[11px] h-10 px-3">BUGÜN</DropdownMenuItem>
@@ -247,7 +247,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-border/40 bg-muted/5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                <tr className="border-b border-border/40 bg-muted/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                     <th className="px-8 py-5 text-left w-12">
                                         <Checkbox
                                             checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
@@ -287,7 +287,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                             />
                                         </td>
                                         <td className="px-4 py-6">
-                                            <span className="text-xs font-black text-foreground tracking-tight">{sale.saleNumber}</span>
+                                            <span className="text-xs font-bold text-foreground tracking-tight">{sale.saleNumber}</span>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-3">
@@ -295,7 +295,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                                     <User className="h-4 w-4 text-primary" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-black text-foreground">{sale.customer?.name || "Hızlı Satış"}</span>
+                                                    <span className="text-xs font-bold text-foreground">{sale.customer?.name || "Hızlı Satış"}</span>
                                                     <span className="text-[10px] font-bold text-muted-foreground opacity-60">{sale.customer?.phone || "-"}</span>
                                                 </div>
                                             </div>
@@ -306,19 +306,19 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                                     <div key={idx} className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
                                                         <Package className="h-3 w-3 opacity-40" />
                                                         <span className="truncate">{item.product.name}</span>
-                                                        <span className="text-primary font-black">x{item.quantity}</span>
+                                                        <span className="text-primary font-bold">x{item.quantity}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <Badge variant="outline" className="rounded-lg h-7 px-3 bg-muted/30 border-border/40 text-[9px] font-black uppercase tracking-widest gap-1.5">
+                                            <Badge variant="outline" className="rounded-lg h-7 px-3 bg-muted/30 border-border/40 text-[9px] font-bold uppercase tracking-widest gap-1.5">
                                                 {getPaymentIcon(sale.paymentMethod)}
                                                 {getPaymentLabel(sale.paymentMethod)}
                                             </Badge>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <span className="text-sm font-black text-emerald-500 tracking-tight">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</span>
+                                            <span className="text-sm font-bold text-emerald-500 tracking-tight">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</span>
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <span className="text-[11px] font-bold text-muted-foreground">
@@ -370,7 +370,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                 <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-3 text-2xl font-black">
+                        <AlertDialogTitle className="flex items-center gap-3 text-2xl font-bold">
                             <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
                                 <AlertCircle className="h-6 w-6 text-destructive" />
                             </div>

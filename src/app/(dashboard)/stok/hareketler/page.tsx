@@ -33,10 +33,10 @@ export default async function StokHareketleriPage({ searchParams }: { searchPara
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                                 </span>
-                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none">Canlı Stok Takibi</span>
+                                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">Canlı Stok Takibi</span>
                             </div>
                         </div>
-                        <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter shadow-sm">Hareket Analizi</h1>
+                        <h1 className="text-5xl lg:text-7xl font-bold text-white tracking-tighter shadow-sm">Hareket Analizi</h1>
                         <p className="text-base text-slate-500 font-medium mt-3 max-w-xl">Envanterdeki tüm değişimleri izleyin, kritik seviyeleri kontrol edin ve ikmal listesini yönetin.</p>
                     </div>
                 </div>

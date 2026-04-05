@@ -67,7 +67,7 @@ export function DeviceBrandChart({ data }: DeviceBrandChartProps) {
                     <div key={item.name} className="flex items-center gap-2">
                         <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: COLORS[index % COLORS.length] }} />
                         <span className="text-[10px] font-bold text-muted-foreground truncate uppercase tracking-wide">{item.name}</span>
-                        <span className="text-[10px] font-black ml-auto" style={{ color: COLORS[index % COLORS.length] }}>{item.value}</span>
+                        <span className="text-[10px] font-bold ml-auto" style={{ color: COLORS[index % COLORS.length] }}>{item.value}</span>
                     </div>
                 ))}
             </div>

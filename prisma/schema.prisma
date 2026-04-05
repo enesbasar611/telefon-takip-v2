@@ -48,6 +48,18 @@ model Shop {
   receiptSettings     ReceiptSettings[]
 }
 
+model RolePermission {
+  id          String   @id @default(cuid())
+  role        Role     @unique
+  canSell     Boolean  @default(false)
+  canService  Boolean  @default(false)
+  canStock    Boolean  @default(false)
+  canFinance  Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  canEdit     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
 model User {
   id              String          @id @default(cuid())
   name            String?
@@ -65,6 +77,8 @@ model User {
   canService      Boolean         @default(true)
   canStock        Boolean         @default(true)
   canFinance      Boolean         @default(false)
+  canDelete       Boolean         @default(false)
+  canEdit         Boolean         @default(true)
   
   shopId          String?
   shop            Shop?           @relation(fields: [shopId], references: [id])

@@ -179,7 +179,7 @@ export function NotificationDropdown() {
                                     <div className="flex flex-col flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className={cn(
-                                                "text-[13px] font-black truncate pr-4 uppercase tracking-tighter",
+                                                "text-[13px] font-bold truncate pr-4 uppercase tracking-tighter",
                                                 n.isRead ? "text-muted-foreground" : "text-foreground"
                                             )}>
                                                 {n.title}
@@ -203,7 +203,7 @@ export function NotificationDropdown() {
 
                 <DropdownMenuSeparator className="bg-border m-0" />
                 <Link href="/bildirimler" className="w-full">
-                    <div className="p-5 text-center text-[11px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
+                    <div className="p-5 text-center text-[11px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
                         Bildirim Merkezine Git
                     </div>
                 </Link>

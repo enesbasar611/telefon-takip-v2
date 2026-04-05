@@ -66,10 +66,10 @@ export function NotificationSidebar({
                 <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
 
                 <div className="flex items-center justify-between mb-5 relative z-10">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         ONAY BEKLEYENLER
                     </h3>
-                    <div className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-black shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                    <div className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px] font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]">
                         {pendingApprovals.length}
                     </div>
                 </div>
@@ -98,14 +98,14 @@ export function NotificationSidebar({
                                     <div className="flex items-center gap-2">
                                         <Button
                                             onClick={() => openWhatsApp(pending.metadata?.phone || "", "Merhaba, cihazınızın onarım onayı hakkında görüşmek istemiştik.")}
-                                            className="h-8 px-4 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px] font-black transition-all gap-1.5 border border-emerald-500/20"
+                                            className="h-8 px-4 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px] font-bold transition-all gap-1.5 border border-emerald-500/20"
                                         >
                                             <MessageSquare className="h-3 w-3 fill-current" /> WhatsApp
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             onClick={() => router.push(`/servis?highlight=${pending.referenceId}`)}
-                                            className="h-8 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-black gap-1.5 border border-white/5 transition-all"
+                                            className="h-8 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold gap-1.5 border border-white/5 transition-all"
                                         >
                                             <ExternalLink className="h-3 w-3" /> Detay
                                         </Button>
@@ -133,7 +133,7 @@ export function NotificationSidebar({
                                     </p>
                                     <Button
                                         onClick={() => router.push(`/servis?highlight=${delayed.referenceId}`)}
-                                        className="h-7 px-4 mt-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-black self-start transition-all shadow-lg shadow-rose-600/20"
+                                        className="h-7 px-4 mt-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[9px] font-bold self-start transition-all shadow-lg shadow-rose-600/20"
                                     >
                                         HIZLANDIR
                                     </Button>
@@ -151,11 +151,11 @@ export function NotificationSidebar({
             >
                 <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
                 <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">
-                    <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                    <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
                         CİHAZ TAKİBİ
                     </h3>
                     <div className="flex items-end justify-between mb-4">
-                        <span className="text-xl font-black text-white leading-none tracking-tight">
+                        <span className="text-xl font-bold text-white leading-none tracking-tight">
                             {serviceStats?.active || 0} Cihaz Onarımda
                         </span>
                         <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-all group-hover:translate-x-1" />

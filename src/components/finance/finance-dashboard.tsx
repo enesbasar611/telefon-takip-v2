@@ -29,11 +29,11 @@ export function FinanceDashboard({ summary }: { summary: any }) {
                                 <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} border border-current/10`}>
                                     <stat.icon className="h-6 w-6" />
                                 </div>
-                                <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase px-3 py-1 bg-background rounded-full border-border/40">GÜNCEL DURUM</Badge>
+                                <Badge variant="outline" className="text-[9px] font-bold tracking-widest uppercase px-3 py-1 bg-background rounded-full border-border/40">GÜNCEL DURUM</Badge>
                             </div>
-                            <p className="text-[10px] font-black text-muted-foreground tracking-[0.2em] uppercase mb-1 opacity-60">{stat.label}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground tracking-[0.2em] uppercase mb-1 opacity-60">{stat.label}</p>
                             <div className="mt-1 flex items-baseline gap-2">
-                                <RevealFinancial amount={stat.value} className="text-4xl font-black tracking-tighter" />
+                                <RevealFinancial amount={stat.value} className="text-4xl font-bold tracking-tighter" />
                             </div>
                             <p className="text-[11px] text-muted-foreground font-bold mt-4 leading-relaxed opacity-80">{stat.description}</p>
                         </CardContent>

@@ -57,7 +57,7 @@ export function GlobalSearch() {
       />
       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/10 backdrop-blur-md">
-          <span className="text-[8px] font-black text-slate-500">SHIFT + S</span>
+          <span className="text-[8px] font-bold text-slate-500">SHIFT + S</span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export function GlobalSearch() {
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
             <div className="p-3 mb-2 bg-blue-500/5 rounded-xl border border-blue-500/10 flex items-center justify-center gap-2">
               <Sparkles className="h-3 w-3 text-blue-400" />
-              <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest text-center">
+              <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest text-center">
                 Shift + S ile Detaylı Arama Yap
               </p>
             </div>
@@ -82,8 +82,8 @@ export function GlobalSearch() {
                   >
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">{r.breadcrumb}</span>
-                        <Badge className="h-3 text-[7px] font-black px-1 pb-0 border-none bg-white/10 text-slate-300">
+                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">{r.breadcrumb}</span>
+                        <Badge className="h-3 text-[7px] font-bold px-1 pb-0 border-none bg-white/10 text-slate-300">
                           {r.type}
                         </Badge>
                       </div>

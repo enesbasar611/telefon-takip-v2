@@ -15,8 +15,8 @@ export async function TopProductsStream() {
                         <TrendingUp className="h-5 w-5 text-amber-500" />
                     </div>
                     <div>
-                        <CardTitle className="text-lg font-black tracking-tight font-sans uppercase">Trend Ürünler</CardTitle>
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider mt-0.5">En Çok Tercih Edilenler</p>
+                        <CardTitle className="text-lg font-bold tracking-tight font-sans uppercase">Trend Ürünler</CardTitle>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">En Çok Tercih Edilenler</p>
                     </div>
                 </div>
             </CardHeader>
@@ -27,22 +27,22 @@ export async function TopProductsStream() {
                             <div className="aspect-square rounded-[1.5rem] bg-card border border-border/40 flex items-center justify-center mb-5 relative overflow-hidden group-hover:shadow-lg transition-all">
                                 <Package className="h-14 w-14 text-muted-foreground/20 group-hover:scale-110 transition-transform" />
                                 {product.stock <= product.criticalStock && (
-                                    <div className="absolute top-4 left-4 bg-rose-500 text-white text-[8px] font-black px-3 py-1 rounded-lg uppercase tracking-widest shadow-lg">KRİTİK STOK</div>
+                                    <div className="absolute top-4 left-4 bg-rose-500 text-white text-[8px] font-bold px-3 py-1 rounded-lg uppercase tracking-widest shadow-lg">KRİTİK STOK</div>
                                 )}
                             </div>
                             <div className="space-y-4">
                                 <div className="min-h-[44px]">
-                                    <h4 className="font-black text-sm text-foreground tracking-tight line-clamp-2 uppercase font-sans leading-tight">{product.name}</h4>
-                                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mt-1 opacity-70">{product.category}</p>
+                                    <h4 className="font-bold text-sm text-foreground tracking-tight line-clamp-2 uppercase font-sans leading-tight">{product.name}</h4>
+                                    <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 opacity-70">{product.category}</p>
                                 </div>
                                 <div className="flex items-end justify-between pt-2 border-t border-border/20">
                                     <div className="flex flex-col">
-                                        <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest mb-0.5">Birim Fiyat</span>
-                                        <span className="text-xl font-black text-blue-500 tracking-tighter">₺{product.price.toLocaleString('tr-TR')}</span>
+                                        <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-0.5">Birim Fiyat</span>
+                                        <span className="text-xl font-bold text-blue-500 tracking-tighter">₺{product.price.toLocaleString('tr-TR')}</span>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest block mb-1">Satış</span>
-                                        <span className="text-xs font-black text-foreground">{product.sales} ADET</span>
+                                        <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest block mb-1">Satış</span>
+                                        <span className="text-xs font-bold text-foreground">{product.sales} ADET</span>
                                     </div>
                                 </div>
                             </div>

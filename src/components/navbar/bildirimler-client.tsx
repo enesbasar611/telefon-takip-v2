@@ -63,19 +63,19 @@ export function BildirimlerClient({ notifications: initialNotifications }: { not
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Card className="border-l-4 border-l-red-500 p-4">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Kritik Uyarılar</p>
-                    <p className="text-2xl font-black text-red-500 mt-1">
+                    <p className="text-2xl font-bold text-red-500 mt-1">
                         {visible.filter((n) => n.priority === "HIGH").length}
                     </p>
                 </Card>
                 <Card className="border-l-4 border-l-orange-400 p-4">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Normal Uyarılar</p>
-                    <p className="text-2xl font-black text-orange-400 mt-1">
+                    <p className="text-2xl font-bold text-orange-400 mt-1">
                         {visible.filter((n) => n.priority !== "HIGH").length}
                     </p>
                 </Card>
                 <Card className="border-l-4 border-l-emerald-500 p-4">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Okundu / Yok Sayıldı</p>
-                    <p className="text-2xl font-black text-emerald-500 mt-1">{dismissed.size}</p>
+                    <p className="text-2xl font-bold text-emerald-500 mt-1">{dismissed.size}</p>
                 </Card>
             </div>
 
@@ -107,7 +107,7 @@ export function BildirimlerClient({ notifications: initialNotifications }: { not
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <CardTitle className="text-sm font-bold">{n.title}</CardTitle>
                                                 <Badge
-                                                    className={`text-[8px] font-black border-none px-2 py-0.5 ${n.priority === "HIGH"
+                                                    className={`text-[8px] font-bold border-none px-2 py-0.5 ${n.priority === "HIGH"
                                                         ? "bg-red-500/10 text-red-600"
                                                         : "bg-orange-400/10 text-orange-600"
                                                         }`}

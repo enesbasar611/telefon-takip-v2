@@ -40,14 +40,14 @@ export async function ServiceStatusStream() {
         <Card className="shadow-xl overflow-hidden group rounded-[2rem] bg-card border border-border/40 transition-all duration-500 hover:shadow-2xl animate-in fade-in duration-1000">
             <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
                 <div className="flex flex-col gap-1">
-                    <CardTitle className="text-xl font-black tracking-tight font-sans uppercase">Servis Durumu</CardTitle>
+                    <CardTitle className="text-xl font-bold tracking-tight font-sans uppercase">Servis Durumu</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Kapasite Analizi</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Kapasite Analizi</p>
                     </div>
                 </div>
                 <div className="flex flex-col items-end">
-                    <div className="text-2xl font-black text-foreground leading-none">{totalServiceUnits}</div>
+                    <div className="text-2xl font-bold text-foreground leading-none">{totalServiceUnits}</div>
                     <div className="text-[9px] font-bold text-muted-foreground/60 tracking-widest uppercase">Cihaz</div>
                 </div>
             </CardHeader>

@@ -140,7 +140,7 @@ export function SupplierPaymentModal({
                             <CreditCard className="h-6 w-6 text-emerald-400" />
                         </div>
                         <div>
-                            <DialogTitle className="text-xl font-black text-white">Cari İşlem / Ödeme</DialogTitle>
+                            <DialogTitle className="text-xl font-bold text-white">Cari İşlem / Ödeme</DialogTitle>
                             <p className="text-xs font-semibold text-slate-400 mt-1">
                                 {initialSupplierName || "Tedarikçi"} hesabına işlem giriyorsunuz.
                             </p>
@@ -151,7 +151,7 @@ export function SupplierPaymentModal({
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     {!initialSupplierId && (
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black tracking-wider text-slate-500 uppercase">TEDARİKÇİ SEÇİN</Label>
+                            <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">TEDARİKÇİ SEÇİN</Label>
                             <Controller
                                 control={control}
                                 name="supplierId"
@@ -202,7 +202,7 @@ export function SupplierPaymentModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black tracking-wider text-slate-500 uppercase">ÖDEME İLE İLİŞKİLİ SİPARİŞ</Label>
+                        <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">ÖDEME İLE İLİŞKİLİ SİPARİŞ</Label>
                         <Controller
                             control={control}
                             name="purchaseOrderId"
@@ -225,19 +225,19 @@ export function SupplierPaymentModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="amount" className="text-[10px] font-black tracking-wider text-slate-500 uppercase">TUTAR (₺)</Label>
+                        <Label htmlFor="amount" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">TUTAR (₺)</Label>
                         <PriceInput
                             id="amount"
                             value={watch("amount")}
                             onChange={(v) => setValue("amount", v, { shouldValidate: true })}
                             placeholder="0,00"
-                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg font-black text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg font-bold text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
                         />
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="text-[10px] font-black tracking-wider text-slate-500 uppercase">AÇIKLAMA</Label>
+                        <Label htmlFor="description" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">AÇIKLAMA</Label>
                         <Input
                             id="description"
                             {...register("description")}
@@ -252,7 +252,7 @@ export function SupplierPaymentModal({
                             İptal
                         </Button>
                         <Button type="submit" disabled={isPending} className={cn(
-                            "text-white font-black h-11 px-8 rounded-xl shadow-lg gap-2 transition-all",
+                            "text-white font-bold h-11 px-8 rounded-xl shadow-lg gap-2 transition-all",
                             selectedType === "EXPENSE" ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-500 shadow-rose-500/20"
                         )}>
                             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
