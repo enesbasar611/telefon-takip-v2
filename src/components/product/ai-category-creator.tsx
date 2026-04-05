@@ -1,5 +1,6 @@
 "use client";
 
+import { Label } from "@/components/ui/label";
 import { useState, useTransition, useEffect } from "react";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
@@ -215,7 +216,7 @@ export function AICategoryCreator({
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setStep("input"); setRows([]); setDescription(""); } }}>
             <DialogTrigger asChild>
                 <Button
-                    className="gap-2 h-9 px-4 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all font-bold text-[11px] uppercase tracking-wider"
+                    className="gap-2 h-9 px-4 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all  text-[11px] uppercase tracking-wider"
                 >
                     <Sparkles className="h-4 w-4" />
                     BAŞAR AI Çoklu Ekle
@@ -229,7 +230,7 @@ export function AICategoryCreator({
                             <Sparkles className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1">
-                            <DialogTitle className="text-lg font-bold tracking-tight">AI ile Kategori + Ürün Oluştur</DialogTitle>
+                            <DialogTitle className="font-medium text-lg  tracking-tight">AI ile Kategori + Ürün Oluştur</DialogTitle>
                             <p className="text-[11px] text-slate-400 mt-0.5">
                                 BAŞAR AI: Tek cümleyle hiyerarşiyi ve ürünleri tanımlayın, yapay zeka otomatik oluştursun.
                             </p>
@@ -242,19 +243,19 @@ export function AICategoryCreator({
                     {step === "input" && (
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">💡 Örnek Söylemler</p>
+                                <p className="text-[10px]  text-slate-500 uppercase tracking-widest">💡 Örnek Söylemler</p>
                                 {EXAMPLES.map((ex, i) => (
                                     <button key={i} type="button" onClick={() => setDescription(ex)}
                                         className="w-full text-left px-4 py-3 rounded-lg bg-[#18181A] border border-[#222222] text-[12px] text-slate-300 hover:bg-[#222222] hover:border-[#444] hover:text-white transition-all leading-relaxed">
-                                        <span className="text-violet-400 font-bold mr-2">{i + 1}.</span>{ex}
+                                        <span className="text-violet-400  mr-2">{i + 1}.</span>{ex}
                                     </button>
                                 ))}
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Label className="font-medium text-[11px]  text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Komut Verin
-                                </label>
+                                </Label>
                                 <textarea
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
@@ -276,7 +277,7 @@ export function AICategoryCreator({
                             </div>
 
                             <Button onClick={handleAnalyze} disabled={isAIPending || !description.trim()}
-                                className="w-full h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-[13px] uppercase tracking-wider gap-2 disabled:opacity-40">
+                                className="w-full h-12 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white  text-[13px] uppercase tracking-wider gap-2 disabled:opacity-40">
                                 {isAIPending
                                     ? <><Loader2 className="h-5 w-5 animate-spin" /> Gemini Analiz Ediyor...</>
                                     : <><Sparkles className="h-5 w-5" /> Analiz Et & Önizle</>}
@@ -287,11 +288,11 @@ export function AICategoryCreator({
                     {step === "review" && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                <p className="text-[11px]  text-slate-500 uppercase tracking-widest">
                                     Tespit Edilen Plan — {rows.length} kategori, {totalProds} ürün
                                 </p>
                                 <Button variant="ghost" onClick={() => { setStep("input"); setRows([]); }}
-                                    className="gap-1.5 text-slate-500 hover:text-white h-8 px-3 text-[11px] font-bold rounded-lg">
+                                    className="gap-1.5 text-slate-500 hover:text-white h-8 px-3 text-[11px]  rounded-lg">
                                     <RotateCcw className="h-3.5 w-3.5" /> Yeniden Yaz
                                 </Button>
                             </div>
@@ -319,10 +320,10 @@ export function AICategoryCreator({
                                                     className="h-8 bg-[#111111] border-[#333333] rounded-md text-[12px] font-semibold max-w-[200px] disabled:opacity-60" />
                                             </div>
                                             <div>
-                                                {row._catStatus === "pending" && <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 font-bold uppercase">Bekliyor</span>}
+                                                {row._catStatus === "pending" && <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400  uppercase">Bekliyor</span>}
                                                 {row._catStatus === "saving" && <Loader2 className="h-4 w-4 animate-spin text-violet-400" />}
                                                 {row._catStatus === "saved" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                                                {row._catStatus === "skipped" && <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold uppercase">Zaten Var</span>}
+                                                {row._catStatus === "skipped" && <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400  uppercase">Zaten Var</span>}
                                                 {row._catStatus === "error" && <AlertTriangle className="h-4 w-4 text-red-400" />}
                                             </div>
                                         </div>
@@ -341,7 +342,7 @@ export function AICategoryCreator({
                                                             {p.location && <span className="text-[11px] text-slate-500">📍 {p.location}</span>}
                                                         </div>
                                                         <div>
-                                                            {row._prodStatuses[pi] === "pending" && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/50 text-slate-400 font-bold uppercase">—</span>}
+                                                            {row._prodStatuses[pi] === "pending" && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/50 text-slate-400  uppercase">—</span>}
                                                             {row._prodStatuses[pi] === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />}
                                                             {row._prodStatuses[pi] === "saved" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
                                                             {row._prodStatuses[pi] === "error" && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
@@ -356,7 +357,7 @@ export function AICategoryCreator({
 
                             <div className="flex justify-end pt-2">
                                 <Button onClick={handleSaveAll} disabled={isSavePending || (totalPendingCats === 0 && totalPendingProds === 0)}
-                                    className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[13px] uppercase tracking-wider gap-2 disabled:opacity-40 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
+                                    className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white  text-[13px] uppercase tracking-wider gap-2 disabled:opacity-40 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
                                     {isSavePending
                                         ? <><Loader2 className="h-5 w-5 animate-spin" /> Oluşturuluyor...</>
                                         : <><ArrowRight className="h-5 w-5" /> Tümünü Oluştur</>}
@@ -369,3 +370,10 @@ export function AICategoryCreator({
         </Dialog>
     );
 }
+
+
+
+
+
+
+

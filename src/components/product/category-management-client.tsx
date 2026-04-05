@@ -153,7 +153,7 @@ function TreeItem({ node, level, isSelected, isExpanded, hasChildren, stats, onS
 
                     <span className={cn(
                         "text-[13.5px] truncate tracking-tight transition-all",
-                        isSelected ? "font-bold" : "font-medium"
+                        isSelected ? "" : "font-medium"
                     )}>
                         {node.name}
                     </span>
@@ -161,7 +161,7 @@ function TreeItem({ node, level, isSelected, isExpanded, hasChildren, stats, onS
 
                 <div className="flex items-center gap-3 opacity-60 group-hover/item:opacity-100 transition-opacity">
                     <div className={cn(
-                        "px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider border transition-all",
+                        "px-2.5 py-1 rounded-lg text-[10px]  tracking-wider border transition-all",
                         isSelected
                             ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
                             : "bg-white/[0.02] border-white/10 text-slate-500"
@@ -190,7 +190,7 @@ function RootDropZone() {
             )}
         >
             <span className={cn(
-                "text-[11px] font-bold uppercase tracking-[0.2em] transition-colors",
+                "text-[11px]  uppercase tracking-[0.2em] transition-colors",
                 isOver ? "text-emerald-400" : "text-white/20"
             )}>
                 Ana Dizine Taşı
@@ -690,8 +690,8 @@ export function CategoryManagementClient({
                 {/* Sidebar Tree */}
                 <div className="w-[320px] h-full bg-[#0D0D0F] border-r border-white/5 p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar">
                     <div className="flex flex-col gap-1 mb-10 text-left">
-                        <h2 className="text-2xl font-bold text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
-                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-none">Envanter Hiyerarşisi</p>
+                        <h2 className="font-medium text-2xl  text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
+                        <p className="text-[11px] text-slate-500  uppercase tracking-widest leading-none">Envanter Hiyerarşisi</p>
                     </div>
                     {/* Categories Scroll Area Wrapper */}
                     <div className="flex-1 space-y-2 pb-10">
@@ -747,14 +747,14 @@ export function CategoryManagementClient({
                                         <FolderOpen className="h-6 w-6 text-indigo-400" />
                                     </div>
                                     <div>
-                                        <h1 className="text-2xl font-bold text-white tracking-tight">{selectedNode.name}</h1>
+                                        <h1 className="font-medium text-2xl  text-white tracking-tight">{selectedNode.name}</h1>
                                         <p className="text-sm text-slate-500 font-medium mt-0.5">Toplu Özet • {selectedNode.children?.length ?? 0} Bağlı Düğüm</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-3">
                                     <Button
                                         size="sm"
-                                        className="bg-indigo-500 hover:bg-indigo-600 text-[11px] font-bold h-9 px-5 rounded-xl shadow-lg shadow-indigo-500/20 uppercase tracking-wider gap-2 flex items-center"
+                                        className="bg-indigo-500 hover:bg-indigo-600 text-[11px]  h-9 px-5 rounded-xl shadow-lg shadow-indigo-500/20 uppercase tracking-wider gap-2 flex items-center"
                                         onClick={() => {
                                             setModalTitle(`${selectedNode.name} Altına Varyant Ekle`);
                                             setFormData({ name: "", parentId: selectedNode.id });
@@ -766,7 +766,7 @@ export function CategoryManagementClient({
                                     </Button>
                                     <Button
                                         size="sm"
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-[11px] font-bold h-9 px-5 rounded-xl shadow-lg shadow-emerald-500/20 uppercase tracking-wider gap-2 flex items-center text-black"
+                                        className="bg-emerald-500 hover:bg-emerald-600 text-[11px]  h-9 px-5 rounded-xl shadow-lg shadow-emerald-500/20 uppercase tracking-wider gap-2 flex items-center text-black"
                                         onClick={() => setShowQuickAdd(true)}
                                     >
                                         <Plus className="h-4 w-4" />
@@ -807,9 +807,9 @@ export function CategoryManagementClient({
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                         <Package className="h-12 w-12 text-indigo-400" />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">KÜMÜLATİF STOK</p>
+                                    <p className="text-xs  text-slate-500 uppercase tracking-widest mb-1">KÜMÜLATİF STOK</p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-bold text-white">{selectedStats?.totalStock}</span>
+                                        <span className="text-4xl  text-white">{selectedStats?.totalStock}</span>
                                         <span className="text-sm text-slate-400 font-medium">Adet</span>
                                     </div>
                                     <p className="text-[10px] text-slate-600 mt-2">Alt kategorilerdeki ({selectedStats?.familyIds.length}) ürünler dahildir.</p>
@@ -818,9 +818,9 @@ export function CategoryManagementClient({
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                         <Info className="h-12 w-12 text-indigo-400" />
                                     </div>
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">DİREKT ALT VARYANTLAR</p>
+                                    <p className="text-xs  text-slate-500 uppercase tracking-widest mb-1">DİREKT ALT VARYANTLAR</p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-bold text-white">{selectedNode.children?.length ?? 0}</span>
+                                        <span className="text-4xl  text-white">{selectedNode.children?.length ?? 0}</span>
                                     </div>
                                 </div>
                             </div>
@@ -831,7 +831,7 @@ export function CategoryManagementClient({
                                     {/* Products Table Area */}
                                     <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
                                         <div className="flex items-center justify-between mb-6">
-                                            <h3 className="font-bold text-white flex items-center gap-2">
+                                            <h3 className="font-medium  text-white flex items-center gap-2">
                                                 <Package className="h-4 w-4 text-indigo-400" />
                                                 Bu Kategorideki Ürünler
                                             </h3>
@@ -839,7 +839,7 @@ export function CategoryManagementClient({
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-8 rounded-lg text-[10px] font-bold text-slate-500 hover:text-white hover:bg-white/5 uppercase tracking-widest px-3"
+                                                    className="h-8 rounded-lg text-[10px]  text-slate-500 hover:text-white hover:bg-white/5 uppercase tracking-widest px-3"
                                                     onClick={() => {
                                                         const currentCatProducts = allProducts.filter(p => p.categoryId === selectedNode.id);
                                                         const allSelected = currentCatProducts.every(p => selectedProductIds.includes(p.id));
@@ -862,7 +862,7 @@ export function CategoryManagementClient({
                                                     <div className="flex flex-col gap-4">
                                                         <div className="flex items-start justify-between gap-4">
                                                             <div className="flex-1 space-y-1.5">
-                                                                <Label className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest pl-1">Yeni Ürün Adı</Label>
+                                                                <Label className="font-medium text-[9px]  text-emerald-500 uppercase tracking-widest pl-1">Yeni Ürün Adı</Label>
                                                                 <Input
                                                                     autoFocus
                                                                     value={newProductData.name}
@@ -873,7 +873,7 @@ export function CategoryManagementClient({
                                                             </div>
                                                             <div className="flex gap-1 pt-6">
                                                                 <Button
-                                                                    className="h-10 px-4 rounded-xl bg-emerald-500 text-black font-bold text-[10px] hover:bg-emerald-400 gap-2"
+                                                                    className="h-10 px-4 rounded-xl bg-emerald-500 text-black  text-[10px] hover:bg-emerald-400 gap-2"
                                                                     onClick={handleQuickProductAdd}
                                                                     disabled={isCreatingProduct || !newProductData.name}
                                                                 >
@@ -884,43 +884,43 @@ export function CategoryManagementClient({
                                                                     className="h-10 px-4 rounded-xl bg-white/5 text-slate-500 hover:text-white"
                                                                     onClick={() => setShowQuickAdd(false)}
                                                                 >
-                                                                    <div className="font-bold text-[10px]">İPTAL</div>
+                                                                    <div className=" text-[10px]">İPTAL</div>
                                                                 </Button>
                                                             </div>
                                                         </div>
 
                                                         <div className="grid grid-cols-3 gap-4">
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
+                                                                <Label className="font-medium text-[9px]  text-slate-400 uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold ml-1">₺</span>
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500  ml-1">₺</span>
                                                                     <Input
                                                                         type="number"
                                                                         value={newProductData.buyPrice}
                                                                         onChange={e => setNewProductData(prev => ({ ...prev, buyPrice: Number(e.target.value) }))}
-                                                                        className="bg-black/20 border-white/5 h-10 pl-9 text-[13px] font-bold text-slate-300"
+                                                                        className="bg-black/20 border-white/5 h-10 pl-9 text-[13px]  text-slate-300"
                                                                     />
                                                                 </div>
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
+                                                                <Label className="font-medium text-[9px]  text-slate-400 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 font-bold ml-1">₺</span>
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400  ml-1">₺</span>
                                                                     <Input
                                                                         type="number"
                                                                         value={newProductData.sellPrice}
                                                                         onChange={e => setNewProductData(prev => ({ ...prev, sellPrice: Number(e.target.value) }))}
-                                                                        className="bg-black/20 border-white/5 h-10 pl-9 text-[13px] font-bold text-emerald-400"
+                                                                        className="bg-black/20 border-white/5 h-10 pl-9 text-[13px]  text-emerald-400"
                                                                     />
                                                                 </div>
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Başlangıç Stoku</Label>
+                                                                <Label className="font-medium text-[9px]  text-slate-400 uppercase tracking-widest pl-1">Başlangıç Stoku</Label>
                                                                 <Input
                                                                     type="number"
                                                                     value={newProductData.stock}
                                                                     onChange={e => setNewProductData(prev => ({ ...prev, stock: Number(e.target.value) }))}
-                                                                    className="bg-black/20 border-white/5 h-10 text-[13px] font-bold text-white text-center"
+                                                                    className="bg-black/20 border-white/5 h-10 text-[13px]  text-white text-center"
                                                                 />
                                                             </div>
                                                         </div>
@@ -982,7 +982,7 @@ export function CategoryManagementClient({
                                                                         >
                                                                             {isSelected && <div className="w-2 h-2 rounded-full bg-white animate-in zoom-in duration-300" />}
                                                                         </div>
-                                                                        <Label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Ürün Adı</Label>
+                                                                        <Label className="font-medium text-[9px]  text-slate-500 uppercase tracking-widest pl-1">Ürün Adı</Label>
                                                                     </div>
                                                                     <Input
                                                                         value={editData.name}
@@ -991,7 +991,7 @@ export function CategoryManagementClient({
                                                                             ...prev,
                                                                             [product.id]: { ...editData, name: e.target.value }
                                                                         }))}
-                                                                        className="bg-black/20 border-white/5 h-10 text-[13px] font-bold text-white focus:bg-black/60 focus:border-indigo-500/30 transition-all"
+                                                                        className="bg-black/20 border-white/5 h-10 text-[13px]  text-white focus:bg-black/60 focus:border-indigo-500/30 transition-all"
                                                                     />
                                                                 </div>
                                                                 <div className="flex gap-1.5 pt-7">
@@ -1000,7 +1000,7 @@ export function CategoryManagementClient({
                                                                         className={cn(
                                                                             "h-10 px-4 rounded-xl transition-all shadow-lg shadow-black/20",
                                                                             hasChanges
-                                                                                ? "bg-emerald-500 text-black hover:bg-emerald-400 font-bold"
+                                                                                ? "bg-emerald-500 text-black hover:bg-emerald-400 "
                                                                                 : "bg-white/5 text-slate-500 hover:text-white"
                                                                         )}
                                                                         onClick={(e) => {
@@ -1028,9 +1028,9 @@ export function CategoryManagementClient({
                                                             {/* Fiyatlar Edit */}
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="space-y-1.5">
-                                                                    <Label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
+                                                                    <Label className="font-medium text-[9px]  text-slate-500 uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold ml-1">₺</span>
+                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500  ml-1">₺</span>
                                                                         <Input
                                                                             type="number"
                                                                             value={editData.buyPrice}
@@ -1038,14 +1038,14 @@ export function CategoryManagementClient({
                                                                                 ...prev,
                                                                                 [product.id]: { ...editData, buyPrice: Number(e.target.value) }
                                                                             }))}
-                                                                            className="bg-black/20 border-white/5 h-10 pl-9 text-[13px] font-bold text-slate-300"
+                                                                            className="bg-black/20 border-white/5 h-10 pl-9 text-[13px]  text-slate-300"
                                                                         />
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-1.5">
-                                                                    <Label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
+                                                                    <Label className="font-medium text-[9px]  text-slate-500 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 font-bold ml-1">₺</span>
+                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400  ml-1">₺</span>
                                                                         <Input
                                                                             type="number"
                                                                             value={editData.sellPrice}
@@ -1053,7 +1053,7 @@ export function CategoryManagementClient({
                                                                                 ...prev,
                                                                                 [product.id]: { ...editData, sellPrice: Number(e.target.value) }
                                                                             }))}
-                                                                            className="bg-indigo-500/5 border-indigo-500/10 h-10 pl-9 text-[13px] font-bold text-indigo-300"
+                                                                            className="bg-indigo-500/5 border-indigo-500/10 h-10 pl-9 text-[13px]  text-indigo-300"
                                                                         />
                                                                     </div>
                                                                 </div>
@@ -1061,7 +1061,7 @@ export function CategoryManagementClient({
 
                                                             <div className="flex items-center gap-2 pt-1">
                                                                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                                                                <span className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em]">Stok Durumu: {product.stock} ADET</span>
+                                                                <span className="text-[9px]  text-slate-600 uppercase tracking-[0.2em]">Stok Durumu: {product.stock} ADET</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1081,13 +1081,13 @@ export function CategoryManagementClient({
                                 <div className="space-y-6">
                                     <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                            <h3 className="font-medium  text-white text-sm flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center">
                                                     <Package className="h-3.5 w-3.5 text-indigo-400" />
                                                 </div>
                                                 Toplu Stok Kontrolü
                                             </h3>
-                                            <div className="px-2 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-300">
+                                            <div className="px-2 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px]  text-indigo-300">
                                                 {selectedProductIds.length} SEÇİLİ
                                             </div>
                                         </div>
@@ -1096,7 +1096,7 @@ export function CategoryManagementClient({
                                             <button
                                                 onClick={() => setStockMode("plus")}
                                                 className={cn(
-                                                    "flex-1 h-10 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest",
+                                                    "flex-1 h-10 rounded-xl text-[10px]  transition-all uppercase tracking-widest",
                                                     stockMode === "plus" ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "text-slate-500 hover:text-slate-300"
                                                 )}
                                             >
@@ -1105,7 +1105,7 @@ export function CategoryManagementClient({
                                             <button
                                                 onClick={() => setStockMode("minus")}
                                                 className={cn(
-                                                    "flex-1 h-10 rounded-xl text-[10px] font-bold transition-all uppercase tracking-widest",
+                                                    "flex-1 h-10 rounded-xl text-[10px]  transition-all uppercase tracking-widest",
                                                     stockMode === "minus" ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "text-slate-500 hover:text-slate-300"
                                                 )}
                                             >
@@ -1115,17 +1115,17 @@ export function CategoryManagementClient({
 
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">ADET MİKTARI</Label>
+                                                <Label className="font-medium text-[10px] text-slate-500  uppercase tracking-widest pl-1">ADET MİKTARI</Label>
                                                 <Input
                                                     type="number"
                                                     value={stockToAdd}
                                                     onChange={e => setStockToAdd(Number(e.target.value))}
                                                     placeholder="0"
-                                                    className="bg-black/40 border-white/5 h-12 text-lg font-bold text-white focus:bg-black/60"
+                                                    className="bg-black/40 border-white/5 h-12 text-lg  text-white focus:bg-black/60"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest pl-1">İŞLEM NOTU</Label>
+                                                <Label className="font-medium text-[10px] text-slate-500  uppercase tracking-widest pl-1">İŞLEM NOTU</Label>
                                                 <Input
                                                     value={stockNotes}
                                                     onChange={e => setStockNotes(e.target.value)}
@@ -1135,7 +1135,7 @@ export function CategoryManagementClient({
                                             </div>
                                             <Button
                                                 className={cn(
-                                                    "w-full h-12 text-xs font-bold transition-all rounded-2xl shadow-xl uppercase tracking-widest",
+                                                    "w-full h-12 text-xs  transition-all rounded-2xl shadow-xl uppercase tracking-widest",
                                                     stockMode === "plus" ? "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/20" : "bg-red-500 hover:bg-red-600 shadow-red-500/20"
                                                 )}
                                                 disabled={isPending || stockToAdd <= 0 || selectedProductIds.length === 0}
@@ -1156,7 +1156,7 @@ export function CategoryManagementClient({
                             <div className="w-24 h-24 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-6">
                                 <Folder className="h-10 w-10 text-slate-800" />
                             </div>
-                            <h2 className="text-xl font-bold text-white mb-2">Ağaçtan bir kategori seçin</h2>
+                            <h2 className="font-medium text-xl  text-white mb-2">Ağaçtan bir kategori seçin</h2>
                             <p className="text-slate-500 text-sm max-w-xs text-center">
                                 Detayları, özel metrikleri ve alt varyant erişimlerini görmek için sol taraftan bir seçim yapın.
                             </p>
@@ -1180,8 +1180,8 @@ export function CategoryManagementClient({
                             <Folder className="h-4 w-4 text-indigo-400" />
                         </div>
                         <div>
-                            <p className="text-white text-[13px] font-bold">{categories.find(c => c.id === activeId)?.name}</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Taşınıyor...</p>
+                            <p className="text-white text-[13px] ">{categories.find(c => c.id === activeId)?.name}</p>
+                            <p className="text-[10px] text-slate-500  uppercase tracking-widest">Taşınıyor...</p>
                         </div>
                     </div>
                 ) : null}
@@ -1192,14 +1192,14 @@ export function CategoryManagementClient({
                 <DialogContent className="bg-slate-900 border-white/5 text-white max-w-md">
                     <form onSubmit={handleAddSubmit}>
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-bold">{modalTitle}</DialogTitle>
+                            <DialogTitle className="font-medium text-xl ">{modalTitle}</DialogTitle>
                             <DialogDescription className="text-slate-400 text-xs">
                                 Yeni kategori oluştururken hiyerarşi düzeyini belirleyebilirsiniz.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name" className="text-xs text-slate-400">KATEGORİ ADI</Label>
+                                <Label htmlFor="name" className="font-medium text-xs text-slate-400">KATEGORİ ADI</Label>
                                 <Input
                                     id="name"
                                     value={formData.name}
@@ -1209,7 +1209,7 @@ export function CategoryManagementClient({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="parentId" className="text-xs text-slate-400">ÜST KATEGORİ</Label>
+                                <Label htmlFor="parentId" className="font-medium text-xs text-slate-400">ÜST KATEGORİ</Label>
                                 <select
                                     id="parentId"
                                     value={formData.parentId}
@@ -1225,7 +1225,7 @@ export function CategoryManagementClient({
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)} className="text-xs">Vazgeç</Button>
-                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs font-bold" disabled={isPending}>
+                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs " disabled={isPending}>
                                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet ve Oluştur"}
                             </Button>
                         </DialogFooter>
@@ -1238,14 +1238,14 @@ export function CategoryManagementClient({
                 <DialogContent className="bg-slate-900 border-white/5 text-white max-w-md">
                     <form onSubmit={handleEditSubmit}>
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-bold">Kategoriyi Düzenle</DialogTitle>
+                            <DialogTitle className="font-medium text-xl ">Kategoriyi Düzenle</DialogTitle>
                             <DialogDescription className="text-slate-400 text-xs">
                                 Kategori adını ve ağaçtaki yerini değiştirebilirsiniz.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="edit_name" className="text-xs text-slate-400">KATEGORİ ADI</Label>
+                                <Label htmlFor="edit_name" className="font-medium text-xs text-slate-400">KATEGORİ ADI</Label>
                                 <Input
                                     id="edit_name"
                                     value={formData.name}
@@ -1254,7 +1254,7 @@ export function CategoryManagementClient({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit_parentId" className="text-xs text-slate-400">ÜST KATEGORİ</Label>
+                                <Label htmlFor="edit_parentId" className="font-medium text-xs text-slate-400">ÜST KATEGORİ</Label>
                                 <select
                                     id="edit_parentId"
                                     value={formData.parentId}
@@ -1271,7 +1271,7 @@ export function CategoryManagementClient({
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)} className="text-xs">Vazgeç</Button>
-                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs font-bold" disabled={isPending}>
+                            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-xs " disabled={isPending}>
                                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Güncelle"}
                             </Button>
                         </DialogFooter>
@@ -1284,7 +1284,7 @@ export function CategoryManagementClient({
                 <DialogContent className="bg-slate-950 border-red-500/20 text-white max-w-lg p-0 overflow-hidden">
                     <div className="p-8">
                         <DialogHeader className="mb-6">
-                            <DialogTitle className="text-2xl font-bold flex items-center gap-3 text-red-500">
+                            <DialogTitle className="font-medium text-2xl  flex items-center gap-3 text-red-500">
                                 <AlertTriangle className="h-8 w-8" />
                                 Kritik İşlem Onayı
                             </DialogTitle>
@@ -1308,7 +1308,7 @@ export function CategoryManagementClient({
                                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", deleteMode === "full" ? "bg-red-500/20 text-red-400" : "bg-white/5 text-slate-500")}>
                                         <Trash2 className="h-5 w-5" />
                                     </div>
-                                    <p className={cn("font-bold text-sm", deleteMode === "full" ? "text-white" : "text-slate-400")}>Tamamen Sil</p>
+                                    <p className={cn(" text-sm", deleteMode === "full" ? "text-white" : "text-slate-400")}>Tamamen Sil</p>
                                     <p className="text-[10px] text-slate-500 mt-1">Kategori ve tüm alt ürünleri yok eder.</p>
                                 </button>
 
@@ -1324,7 +1324,7 @@ export function CategoryManagementClient({
                                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", deleteMode === "products" ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-slate-500")}>
                                         <Package className="h-5 w-5" />
                                     </div>
-                                    <p className={cn("font-bold text-sm", deleteMode === "products" ? "text-white" : "text-slate-400")}>Sadece Ürünleri Sil</p>
+                                    <p className={cn(" text-sm", deleteMode === "products" ? "text-white" : "text-slate-400")}>Sadece Ürünleri Sil</p>
                                     <p className="text-[10px] text-slate-500 mt-1">Kategori kalır, içindeki tüm stok temizlenir.</p>
                                 </button>
                             </div>
@@ -1334,7 +1334,7 @@ export function CategoryManagementClient({
                                     <Info className="h-5 w-5 text-red-400 mt-0.5" />
                                     <div className="space-y-1">
                                         <p className="text-xs text-slate-300">
-                                            Bu kategoride toplam <span className="text-white font-bold">{selectedStats?.totalStock}</span> adet ürün bulunuyor.
+                                            Bu kategoride toplam <span className="text-white ">{selectedStats?.totalStock}</span> adet ürün bulunuyor.
                                         </p>
                                         <p className="text-[10px] text-slate-500">
                                             Silme işlemi finansal tabloları etkilemez ancak stok takibini sonlandırır.
@@ -1355,14 +1355,14 @@ export function CategoryManagementClient({
                         </Button>
                         <div className="flex items-center gap-3">
                             {deleteCountdown > 0 ? (
-                                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold">
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm ">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     Bekleniyor ({deleteCountdown}s)
                                 </div>
                             ) : (
                                 <Button
                                     className={cn(
-                                        "px-8 font-bold transition-all",
+                                        "px-8  transition-all",
                                         deleteMode === "full" ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20" : "bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20"
                                     )}
                                     onClick={handleDeleteCategory}
@@ -1377,4 +1377,12 @@ export function CategoryManagementClient({
         </DndContext>
     );
 }
+
+
+
+
+
+
+
+
 

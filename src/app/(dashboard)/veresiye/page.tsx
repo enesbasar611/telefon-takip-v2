@@ -13,3 +13,6 @@ export default async function VeresiyePage() {
 
   return <VeresiyeClient debts={debts} thisMonthCollected={thisMonthCollected} accounts={accounts} />;
 }
+
+
+

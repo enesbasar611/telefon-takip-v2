@@ -153,14 +153,14 @@ export function CreateSupplierModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button id="create-supplier-trigger" className="h-10 px-4 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white gap-2 shadow-lg shadow-blue-500/20">
+        <Button id="create-supplier-trigger" className="h-10 px-4 rounded-xl  bg-blue-600 hover:bg-blue-500 text-white gap-2 shadow-lg shadow-blue-500/20">
           <Building className="h-4 w-4" />
           <span>Yeni Tedarikçi</span>
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-5xl bg-[#0B101B] border-white/5 p-0 overflow-hidden shadow-2xl [&>button]:hidden">
-        <DialogTitle className="sr-only">Yeni Tedarikçi Ekle</DialogTitle>
+        <DialogTitle className="font-medium sr-only">Yeni Tedarikçi Ekle</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-[90vh] sm:h-[80vh] max-h-[850px]">
 
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
@@ -175,28 +175,28 @@ export function CreateSupplierModal() {
                     <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
                       <FolderOpen className="h-5 w-5 text-blue-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white">Kurumsal Kimlik & İletişim</h3>
+                    <h3 className="font-medium text-sm  text-white">Kurumsal Kimlik & İletişim</h3>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">FİRMA ADI</Label>
-                      <Input id="name" {...register("name")} placeholder="Örn: Teknoloji Lojistik A.Ş." className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
+                      <Label htmlFor="name" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">FİRMA ADI</Label>
+                      <Input id="name" {...register("name")} placeholder="Örn: Teknoloji Lojistik A.Ş." className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
                       {errors.name && <p className="text-[10px] text-red-400">{errors.name.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="taxInfo" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">VERGİ NO / DAİRESİ</Label>
-                      <Input id="taxInfo" {...register("taxInfo")} placeholder="1234567890 / Boğaziçi VD" className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
+                      <Label htmlFor="taxInfo" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">VERGİ NO / DAİRESİ</Label>
+                      <Input id="taxInfo" {...register("taxInfo")} placeholder="1234567890 / Boğaziçi VD" className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                     <div className="space-y-2">
-                      <Label htmlFor="contact" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">YETKİLİ KİŞİ</Label>
-                      <Input id="contact" {...register("contact")} placeholder="Ad Soyad" className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
+                      <Label htmlFor="contact" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">YETKİLİ KİŞİ</Label>
+                      <Input id="contact" {...register("contact")} placeholder="Ad Soyad" className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">TELEFON</Label>
+                      <Label htmlFor="phone" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">TELEFON</Label>
                       <div className="relative">
                         <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                         <Controller
@@ -206,7 +206,7 @@ export function CreateSupplierModal() {
                             <Input
                               type="tel"
                               placeholder="+90 (___) ___ __ __"
-                              className="pl-9 bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500"
+                              className="pl-9 bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500"
                               {...field}
                               onChange={(e) => field.onChange(formatPhone(e.target.value))}
                             />
@@ -217,20 +217,20 @@ export function CreateSupplierModal() {
                   </div>
 
                   <div className="space-y-2 mb-5">
-                    <Label htmlFor="email" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">E-POSTA ADRESİ</Label>
+                    <Label htmlFor="email" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">E-POSTA ADRESİ</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input id="email" type="email" {...register("email")} placeholder="iletisim@tedarikci.com" className="pl-9 bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
+                      <Input id="email" type="email" {...register("email")} placeholder="iletisim@tedarikci.com" className="pl-9 bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">FİRMA AÇIK ADRESİ</Label>
+                    <Label htmlFor="address" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">FİRMA AÇIK ADRESİ</Label>
                     <Textarea
                       id="address"
                       {...register("address")}
                       placeholder="Sokak, Mahalle, İlçe/İl detaylarını giriniz..."
-                      className="bg-white/[0.03] border-white/5 min-h-[80px] rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500 resize-none"
+                      className="bg-white/[0.03] border-white/5 min-h-[80px] rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500 resize-none"
                     />
                   </div>
                 </div>
@@ -244,7 +244,7 @@ export function CreateSupplierModal() {
                       <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
                         <Building2 className="h-4 w-4 text-emerald-400" />
                       </div>
-                      <h3 className="text-sm font-bold text-white">Tedarik Kategorisi</h3>
+                      <h3 className="font-medium text-sm  text-white">Tedarik Kategorisi</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {CATEGORIES.map((cat) => {
@@ -256,7 +256,7 @@ export function CreateSupplierModal() {
                             type="button"
                             onClick={() => setValue("category", cat.id)}
                             className={cn(
-                              "flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-bold transition-all border",
+                              "flex items-center justify-center gap-2 h-10 rounded-xl text-xs  transition-all border",
                               isSelected
                                 ? "bg-[#1E293B] border-blue-500/50 text-blue-400 shadow-md shadow-blue-500/10"
                                 : "bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/[0.04] hover:text-white"
@@ -276,13 +276,13 @@ export function CreateSupplierModal() {
                       <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
                         <Landmark className="h-4 w-4 text-indigo-400" />
                       </div>
-                      <h3 className="text-sm font-bold text-white">Banka Bilgileri</h3>
+                      <h3 className="font-medium text-sm  text-white">Banka Bilgileri</h3>
                     </div>
                     <div className="space-y-3">
                       <Input
                         {...register("bankName")}
                         placeholder="Banka Adı"
-                        className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500"
+                        className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500"
                       />
                       <Controller
                         name="iban"
@@ -290,7 +290,7 @@ export function CreateSupplierModal() {
                         render={({ field }) => (
                           <Input
                             placeholder="IBAN (TR...)"
-                            className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-blue-500 uppercase font-mono"
+                            className="bg-white/[0.03] border-white/5 h-10 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-blue-500 uppercase font-mono"
                             {...field}
                             onChange={(e) => field.onChange(formatIban(e.target.value))}
                           />
@@ -308,11 +308,11 @@ export function CreateSupplierModal() {
 
                 {/* Scoring */}
                 <div className="rounded-2xl bg-[#0F172A]/50 border border-white/[0.05] p-5">
-                  <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-4">BAŞLANGIÇ PUANLAMASI</h3>
+                  <h3 className="font-medium text-[10px]  tracking-wider text-slate-400 uppercase mb-4">BAŞLANGIÇ PUANLAMASI</h3>
 
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-300">Güvenilirlik Skoru</span>
-                    <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                    <span className="text-xs  text-slate-300">Güvenilirlik Skoru</span>
+                    <span className="text-xs  text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
                       Önerilen: {trustScore.toFixed(1)}
                     </span>
                   </div>
@@ -332,14 +332,14 @@ export function CreateSupplierModal() {
                   />
 
                   <div className="mt-6 rounded-xl bg-white/[0.02] border border-white/5 p-4 text-center">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">KRİTİKLİK SEVİYESİ</p>
+                    <p className="text-[10px]  text-slate-500 uppercase tracking-widest mb-3">KRİTİKLİK SEVİYESİ</p>
                     <div className="flex items-center justify-center gap-1.5 mb-2">
                       {[...Array(4)].map((_, i) => (
                         <div key={i} className={cn("h-1.5 w-8 rounded-full transition-all duration-300", i < risk.bars ? risk.color : "bg-white/10")} />
                       ))}
                     </div>
                     <p className="text-xs font-medium text-slate-400 leading-relaxed mt-2">
-                      Bu tedarikçi <span className={cn("font-bold text-white", risk.color.replace('bg-', 'text-'))}>"{risk.label}"</span> olarak değerlendirilmektedir.
+                      Bu tedarikçi <span className={cn(" text-white", risk.color.replace('bg-', 'text-'))}>"{risk.label}"</span> olarak değerlendirilmektedir.
                     </p>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export function CreateSupplierModal() {
                 {/* Notes */}
                 <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-5 flex flex-col h-[200px]">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">YÖNETİCİ NOTLARI</h3>
+                    <h3 className="font-medium text-[10px]  tracking-wider text-slate-400 uppercase">YÖNETİCİ NOTLARI</h3>
                     <Settings className="h-3.5 w-3.5 text-slate-600" />
                   </div>
                   <Textarea
@@ -357,7 +357,7 @@ export function CreateSupplierModal() {
                   />
                   <div className="flex items-center gap-2 mt-2 pt-3 border-t border-white/5">
                     <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">SİSTEM TARAFINDAN OTOMATİK KAYDEDİLİYOR</span>
+                    <span className="text-[9px]  text-slate-500 uppercase tracking-wider">SİSTEM TARAFINDAN OTOMATİK KAYDEDİLİYOR</span>
                   </div>
                 </div>
 
@@ -367,7 +367,7 @@ export function CreateSupplierModal() {
                     <Info className="h-3 w-3 text-indigo-400" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-indigo-300 mb-1">Hızlı İpucu</h4>
+                    <h4 className="font-medium text-xs  text-indigo-300 mb-1">Hızlı İpucu</h4>
                     <p className="text-xs font-medium text-indigo-400/70 leading-relaxed">
                       Banka bilgilerini IBAN tarayıcı ile otomatik doldurmak için mobil uygulamayı kullanabilirsiniz.
                     </p>
@@ -380,10 +380,10 @@ export function CreateSupplierModal() {
 
           {/* Footer */}
           <div className="p-4 sm:px-6 sm:py-4 border-t border-white/5 bg-[#080B12] flex items-center justify-between shrink-0">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-slate-400 hover:text-white font-bold h-11 px-6 rounded-xl hover:bg-white/5">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-slate-400 hover:text-white  h-11 px-6 rounded-xl hover:bg-white/5">
               İptal
             </Button>
-            <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 gap-2 transition-all">
+            <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white  h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 gap-2 transition-all">
               {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               Tedarikçiyi Kaydet
             </Button>
@@ -393,3 +393,10 @@ export function CreateSupplierModal() {
     </Dialog>
   );
 }
+
+
+
+
+
+
+

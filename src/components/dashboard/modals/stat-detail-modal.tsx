@@ -16,6 +16,7 @@ import {
     getAccountBalanceDetails
 } from "@/lib/actions/dashboard-detail-actions";
 import { Loader2, Plus, ChevronRight, ArrowRight, Wallet, Landmark, CreditCard, User, Package, Wrench, ShoppingCart, Banknote, Clock, CheckCircle2, AlertTriangle, ArrowDownCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -186,17 +187,17 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                     <Icon className={cn("h-7 w-7", config.color)} />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-2xl font-bold tracking-tight uppercase">
+                                    <DialogTitle className="font-medium text-2xl  tracking-tight uppercase">
                                         {selectedSupplier ? "ÖDEME YAP: " + selectedSupplier.name : config.title}
                                     </DialogTitle>
-                                    <DialogDescription className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
+                                    <DialogDescription className="text-[11px]  text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
                                         {selectedSupplier ? "BORÇ ÖDEME SİHİRBAZI" : "Sistem Kayıtları ve Detaylı Analiz"}
                                     </DialogDescription>
                                 </div>
                             </div>
                             {!selectedSupplier ? (
                                 <Link href={config.route}>
-                                    <Button variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest px-4 border-border/40 hover:bg-muted transition-all">
+                                    <Button variant="outline" className="rounded-xl h-9 text-[10px]  uppercase tracking-widest px-4 border-border/40 hover:bg-muted transition-all">
                                         TÜMÜNE GİT <ChevronRight className="ml-1 h-3 w-3" />
                                     </Button>
                                 </Link>
@@ -212,12 +213,12 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
                                 <div className="flex justify-between items-center mb-4">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">TOPLAM GÜNCEL BORÇ</span>
-                                    <span className="text-xl font-bold text-indigo-500 tracking-tight">₺{Number(selectedSupplier.balance).toLocaleString('tr-TR')}</span>
+                                    <span className="text-[10px]  text-muted-foreground uppercase opacity-60">TOPLAM GÜNCEL BORÇ</span>
+                                    <span className="text-xl  text-indigo-500 tracking-tight">₺{Number(selectedSupplier.balance).toLocaleString('tr-TR')}</span>
                                 </div>
                                 <div className="space-y-4 pt-4 border-t border-indigo-500/10">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ÖDEME YAPILACAK HESAP</label>
+                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">ÖDEME YAPILACAK HESAP</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {accounts.map((acc) => (
                                                 <button
@@ -230,8 +231,8 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                             : "bg-background border-border/40 hover:border-indigo-500/30"
                                                     )}
                                                 >
-                                                    <div className={cn("text-[10px] font-bold uppercase tracking-tighter mb-1", selectedAccountId === acc.id ? "text-white" : "text-foreground")}>{acc.name}</div>
-                                                    <div className={cn("text-xs font-bold", selectedAccountId === acc.id ? "text-indigo-100" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
+                                                    <div className={cn("text-[10px]  uppercase tracking-tighter mb-1", selectedAccountId === acc.id ? "text-white" : "text-foreground")}>{acc.name}</div>
+                                                    <div className={cn("text-xs ", selectedAccountId === acc.id ? "text-indigo-100" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
                                                     {selectedAccountId === acc.id && (
                                                         <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                                             <CheckCircle2 className="h-4 w-4 text-white" />
@@ -243,24 +244,24 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ÖDEME TUTARI (₺)</label>
+                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">ÖDEME TUTARI (₺)</Label>
                                         <input
                                             type="number"
                                             value={paymentAmount}
                                             onChange={(e) => setPaymentAmount(e.target.value)}
                                             placeholder="Tutar giriniz..."
-                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm font-bold focus:border-indigo-500 focus:outline-none transition-all"
+                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm  focus:border-indigo-500 focus:outline-none transition-all"
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AÇIKLAMA (OPSİYONEL)</label>
+                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">AÇIKLAMA (OPSİYONEL)</Label>
                                         <input
                                             type="text"
                                             value={paymentDescription}
                                             onChange={(e) => setPaymentDescription(e.target.value)}
                                             placeholder="Ödeme notu..."
-                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm font-bold focus:border-indigo-500 focus:outline-none transition-all"
+                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm  focus:border-indigo-500 focus:outline-none transition-all"
                                         />
                                     </div>
                                 </div>
@@ -268,7 +269,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                             <Button
                                 onClick={handlePayDebt}
                                 disabled={paying || !paymentAmount}
-                                className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest shadow-xl shadow-indigo-600/30 transition-all active:scale-[0.98]"
+                                className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-xs  uppercase tracking-widest shadow-xl shadow-indigo-600/30 transition-all active:scale-[0.98]"
                             >
                                 {paying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CreditCard className="h-5 w-5 mr-2" />}
                                 ÖDEMEYİ ONAYLA VE TAMAMLA
@@ -279,14 +280,14 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    <p className="text-xs font-bold uppercase tracking-[0.2em] animate-pulse">Veriler Getiriliyor...</p>
+                                    <p className="text-xs  uppercase tracking-[0.2em] animate-pulse">Veriler Getiriliyor...</p>
                                 </div>
                             ) : data.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground/40 text-center uppercase">
                                     <div className="h-16 w-16 rounded-full border-2 border-dashed border-current flex items-center justify-center">
                                         <Icon className="h-8 w-8" />
                                     </div>
-                                    <p className="text-xs font-bold tracking-widest">Henüz bir kayıt bulunamadı</p>
+                                    <p className="text-xs  tracking-widest">Henüz bir kayıt bulunamadı</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -300,13 +301,13 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                                 <User className="h-5 w-5 text-muted-foreground" />
                                                             </div>
                                                             <div>
-                                                                <h4 className="text-sm font-bold uppercase tracking-tight">{supplier.name}</h4>
-                                                                <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase">{supplier.phone || "Telefon Yok"}</p>
+                                                                <h4 className="font-medium text-sm  uppercase tracking-tight">{supplier.name}</h4>
+                                                                <p className="text-[10px]  text-muted-foreground opacity-60 uppercase">{supplier.phone || "Telefon Yok"}</p>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">BEKLEYEN BORÇ</p>
-                                                            <p className="text-lg font-bold text-indigo-500 tracking-tight">₺{Number(supplier.balance).toLocaleString('tr-TR')}</p>
+                                                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">BEKLEYEN BORÇ</p>
+                                                            <p className="text-lg  text-indigo-500 tracking-tight">₺{Number(supplier.balance).toLocaleString('tr-TR')}</p>
                                                         </div>
                                                     </div>
                                                     <Button
@@ -314,7 +315,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                             setSelectedSupplier(supplier);
                                                             setPaymentAmount(String(supplier.balance));
                                                         }}
-                                                        className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-600/20"
+                                                        className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-[10px]  uppercase tracking-widest shadow-lg shadow-indigo-600/20"
                                                     >
                                                         ÖDEME YAP <ArrowRight className="ml-2 h-3.5 w-3.5" />
                                                     </Button>
@@ -332,15 +333,15 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                             <Banknote className="h-5 w-5 text-amber-500" />
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-sm font-bold uppercase tracking-tight">{item.sale?.customer?.name || "Hızlı Satış"}</h4>
-                                                            <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase tracking-tighter">
+                                                            <h4 className="font-medium text-sm  uppercase tracking-tight">{item.sale?.customer?.name || "Hızlı Satış"}</h4>
+                                                            <p className="text-[10px]  text-muted-foreground opacity-60 uppercase tracking-tighter">
                                                                 {item.createdAt ? format(new Date(item.createdAt), "HH:mm", { locale: tr }) : "00:00"} • {item.account?.name || "Kasa"}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
-                                                        <p className="text-base font-bold text-emerald-500 tracking-tight">₺{Number(item.amount).toLocaleString('tr-TR')}</p>
+                                                        <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
+                                                        <p className="text-base  text-emerald-500 tracking-tight">₺{Number(item.amount).toLocaleString('tr-TR')}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -357,17 +358,17 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                             {product.stock === 0 && <div className="absolute inset-0 bg-rose-500/10 animate-pulse" />}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <h4 className="text-sm font-bold uppercase tracking-tight line-clamp-1">{product.name}</h4>
+                                                            <h4 className="font-medium text-sm  uppercase tracking-tight line-clamp-1">{product.name}</h4>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                <Badge variant="outline" className="text-[8px] font-bold border-rose-500/30 text-rose-500 px-2 py-0">KRİTİK</Badge>
-                                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase truncate">{product.category?.name}</span>
+                                                                <Badge variant="outline" className="text-[8px]  border-rose-500/30 text-rose-500 px-2 py-0">KRİTİK</Badge>
+                                                                <span className="text-[10px]  text-muted-foreground/60 uppercase truncate">{product.category?.name}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-4 shrink-0 px-2">
                                                         <div className="text-right hidden sm:block">
-                                                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">STOK</p>
-                                                            <p className={cn("text-base font-bold tracking-tight", product.stock === 0 ? "text-rose-600" : "text-amber-600")}>
+                                                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">STOK</p>
+                                                            <p className={cn("text-base  tracking-tight", product.stock === 0 ? "text-rose-600" : "text-amber-600")}>
                                                                 {product.stock} {product.unit || 'ADET'}
                                                             </p>
                                                         </div>
@@ -375,7 +376,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                             size="sm"
                                                             onClick={() => handleAddShortage(product)}
                                                             disabled={addingToShortage === product.id}
-                                                            className="h-9 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 shadow-none transition-all flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest"
+                                                            className="h-9 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 shadow-none transition-all flex items-center gap-2  text-[10px] uppercase tracking-widest"
                                                         >
                                                             {addingToShortage === product.id ? (
                                                                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -394,16 +395,16 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                     {type === "DAILY_SALES" && statsData && (
                                         <div className="grid grid-cols-3 gap-3 mb-6">
                                             <div className="bg-muted/10 border border-border/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-70">KASA AÇILIŞ</span>
-                                                <span className="text-sm font-bold text-foreground">{statsData.kasaOpeningBalance || "₺0"}</span>
+                                                <span className="text-[9px]  text-muted-foreground uppercase tracking-widest mb-1 opacity-70">KASA AÇILIŞ</span>
+                                                <span className="text-sm  text-foreground">{statsData.kasaOpeningBalance || "₺0"}</span>
                                             </div>
                                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-widest mb-1">GÜNLÜK SATIŞ</span>
-                                                <span className="text-sm font-bold text-emerald-500">+{statsData.todaySales || "₺0"}</span>
+                                                <span className="text-[9px]  text-emerald-600/70 uppercase tracking-widest mb-1">GÜNLÜK SATIŞ</span>
+                                                <span className="text-sm  text-emerald-500">+{statsData.todaySales || "₺0"}</span>
                                             </div>
                                             <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px] font-bold text-primary/70 uppercase tracking-widest mb-1">GÜNCEL KASA</span>
-                                                <span className="text-sm font-bold text-primary">{statsData.kasaBalance || "₺0"}</span>
+                                                <span className="text-[9px]  text-primary/70 uppercase tracking-widest mb-1">GÜNCEL KASA</span>
+                                                <span className="text-sm  text-primary">{statsData.kasaBalance || "₺0"}</span>
                                             </div>
                                         </div>
                                     )}
@@ -443,17 +444,17 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                                 )}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <h4 className="text-[13px] font-bold uppercase tracking-tight line-clamp-1">{String(title || "Bilinmiyor")}</h4>
-                                                                <p className="text-[10px] font-bold text-muted-foreground opacity-60 uppercase tracking-tighter truncate mt-0.5">
+                                                                <h4 className="font-medium text-[13px]  uppercase tracking-tight line-clamp-1">{String(title || "Bilinmiyor")}</h4>
+                                                                <p className="text-[10px]  text-muted-foreground opacity-60 uppercase tracking-tighter truncate mt-0.5">
                                                                     {String(subtitle || "Detay Yok")}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                         {value !== null && (
                                                             <div className="text-right">
-                                                                <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
+                                                                <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
                                                                 <p className={cn(
-                                                                    "text-base font-bold tracking-tight",
+                                                                    "text-base  tracking-tight",
                                                                     type === "DAILY_SALES" || type === "REPAIR_INCOME" || type === "CASH_BALANCE" ? "text-emerald-500" : "text-foreground"
                                                                 )}>
                                                                     {type === "DAILY_SALES" || type === "REPAIR_INCOME" ? "+" : ""}
@@ -495,3 +496,9 @@ const LayoutDashboard = (props: any) => (
         <rect width="7" height="5" x="3" y="15" rx="1" />
     </svg>
 );
+
+
+
+
+
+

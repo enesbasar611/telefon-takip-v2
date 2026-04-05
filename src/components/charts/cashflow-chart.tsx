@@ -13,11 +13,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="bg-card border border-border/50 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
+                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">{label}</p>
                 {payload.map((p: any) => (
                     <div key={p.dataKey} className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                        <span className="text-xs font-bold text-muted-foreground capitalize">
+                        <span className="text-xs  text-muted-foreground capitalize">
                             {p.dataKey === "income" ? "Gelir" : "Gider"}:
                         </span>
                         <span className="text-sm font-extrabold" style={{ color: p.color }}>
@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                     </div>
                 ))}
                 <div className="border-t border-border/30 pt-2 mt-1">
-                    <span className="text-xs font-bold text-muted-foreground">Net: </span>
+                    <span className="text-xs  text-muted-foreground">Net: </span>
                     <span className={`text-sm font-extrabold ${(payload[0]?.value - (payload[1]?.value || 0)) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                         ₺{(Number(payload[0]?.value || 0) - Number(payload[1]?.value || 0)).toLocaleString("tr-TR")}
                     </span>
@@ -61,3 +61,6 @@ export function CashflowChart({ data }: CashflowChartProps) {
         </ResponsiveContainer>
     );
 }
+
+
+

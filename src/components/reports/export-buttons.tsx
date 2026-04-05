@@ -128,7 +128,7 @@ export function ExportButtons({ exportData, dashboardRef }: ExportButtonsProps) 
                 size="sm"
                 onClick={exportToExcel}
                 disabled={isExportingExcel || !exportData}
-                className="gap-2 rounded-xl border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/60 transition-all font-bold text-xs uppercase tracking-wider h-10 px-4"
+                className="gap-2 rounded-xl border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/60 transition-all  text-xs uppercase tracking-wider h-10 px-4"
             >
                 {isExportingExcel ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -142,7 +142,7 @@ export function ExportButtons({ exportData, dashboardRef }: ExportButtonsProps) 
                 size="sm"
                 onClick={exportToPdf}
                 disabled={isExportingPdf}
-                className="gap-2 rounded-xl border-blue-500/30 text-blue-500 hover:bg-blue-500/10 hover:border-blue-500/60 transition-all font-bold text-xs uppercase tracking-wider h-10 px-4"
+                className="gap-2 rounded-xl border-blue-500/30 text-blue-500 hover:bg-blue-500/10 hover:border-blue-500/60 transition-all  text-xs uppercase tracking-wider h-10 px-4"
             >
                 {isExportingPdf ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -154,3 +154,6 @@ export function ExportButtons({ exportData, dashboardRef }: ExportButtonsProps) 
         </div>
     );
 }
+
+
+

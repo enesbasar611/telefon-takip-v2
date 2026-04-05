@@ -60,10 +60,13 @@ export function DeviceExportButton({ devices }: DeviceExportButtonProps) {
         <Button
             onClick={handleExport}
             variant="outline"
-            className="h-12 px-6 rounded-2xl bg-slate-900 border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-300 hover:text-emerald-400 font-bold transition-all gap-2 group shadow-lg"
+            className="h-12 px-6 rounded-2xl bg-slate-900 border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-300 hover:text-emerald-400  transition-all gap-2 group shadow-lg"
         >
             <FileSpreadsheet className="h-5 w-5 group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline">DIŞA AKTAR</span>
         </Button>
     );
 }
+
+
+

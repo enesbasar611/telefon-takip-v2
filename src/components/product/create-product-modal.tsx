@@ -215,7 +215,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <Package className="h-6 w-6 text-blue-400" />
                   </div>
                   <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight">Akıllı Envanter Tanımlama</DialogTitle>
+                    <DialogTitle className="font-medium text-xl  tracking-tight">Akıllı Envanter Tanımlama</DialogTitle>
                     <DialogDescription className="text-[13px] font-medium text-slate-400 mt-1">
                       Sisteme yeni bir yedek parça, aksesuar veya cihaz kaydedin. <br />
                       <span className="text-indigo-400 opacity-80">Alt kategorileri sırayla seçerek ilerleyin.</span>
@@ -228,7 +228,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                   type="button"
                   onClick={() => setAiExpanded(prev => !prev)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-[11px] tracking-wider uppercase transition-all",
+                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border  text-[11px] tracking-wider uppercase transition-all",
                     aiExpanded
                       ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-[0_0_16px_theme(colors.violet.500/0.2)]"
                       : "bg-white/[0.03] border-white/10 text-slate-400 hover:bg-white/[0.07] hover:text-white"
@@ -249,19 +249,19 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <Wand2 className="h-3.5 w-3.5 text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-violet-400 uppercase tracking-widest">Gemini AI Asistan</p>
+                    <p className="text-[11px]  text-violet-400 uppercase tracking-widest">Gemini AI Asistan</p>
                     <p className="text-[10px] text-slate-500 font-medium">Ürünü serbest metin olarak tarif edin, AI formu otomatik dolduracak</p>
                   </div>
                   {aiStatus === "success" && (
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">Dolduruldu</span>
+                      <span className="text-[10px]  text-emerald-400 uppercase tracking-wide">Dolduruldu</span>
                     </div>
                   )}
                   {aiStatus === "error" && (
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
                       <XCircle className="h-3.5 w-3.5 text-red-500" />
-                      <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Hata</span>
+                      <span className="text-[10px]  text-red-400 uppercase tracking-wide">Hata</span>
                     </div>
                   )}
                 </div>
@@ -284,7 +284,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     type="button"
                     onClick={handleAIAnalyze}
                     disabled={isAIPending || !aiDescription.trim()}
-                    className="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-[12px] uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_28px_rgba(139,92,246,0.5)] disabled:opacity-40 gap-2"
+                    className="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white  text-[12px] uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_28px_rgba(139,92,246,0.5)] disabled:opacity-40 gap-2"
                   >
                     {isAIPending ? (
                       <>
@@ -306,7 +306,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
               {/* Kategori Hiyerarşisi */}
               <div className="space-y-4 bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full" />
-                <h4 className="text-[11px] font-bold text-indigo-400/80 uppercase tracking-widest flex items-center gap-2 mb-2">
+                <h4 className="font-medium text-[11px]  text-indigo-400/80 uppercase tracking-widest flex items-center gap-2 mb-2">
                   <Package className="h-3.5 w-3.5" /> Varyant ve Kategori Belirleme
                 </h4>
                 <div className="flex flex-wrap items-center gap-3 relative z-10 w-full">
@@ -314,7 +314,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <div key={idx} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 flex-1 min-w-[200px]">
                       {idx > 0 && <ChevronRight className="h-4 w-4 text-indigo-500/50 hidden md:block" />}
                       <div className="space-y-1.5 flex-1">
-                        <Label className="text-[10px] font-semibold text-slate-500 uppercase">
+                        <Label className="font-medium text-[10px] font-semibold text-slate-500 uppercase">
                           {idx === 0 ? "Ana Kategori" : `${idx}. Alt Kategori`}
                         </Label>
                         <Select
@@ -341,17 +341,17 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
               {/* Temel Bilgiler */}
               <div className="space-y-5">
-                <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Temel Kimlik
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-8 space-y-2">
-                    <Label htmlFor="name" className="text-[12px] font-semibold text-slate-400">Ürün Adı &amp; Kesin Tanımı</Label>
+                    <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-slate-400">Ürün Adı &amp; Kesin Tanımı</Label>
                     <Input id="name" {...register("name")} placeholder="Örn: iPhone 13 Pro Max Ön Cam" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                     {errors.name && <p className="text-[11px] text-rose-500 font-medium">{errors.name.message}</p>}
                   </div>
                   <div className="md:col-span-4 space-y-2">
-                    <Label htmlFor="barcode" className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
                     <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
@@ -362,14 +362,14 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
               {/* Finansal Parametreler */}
               <div className="space-y-5 bg-stone-900/30 p-5 rounded-2xl border border-white/5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                  <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
                     <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Finansal Parametreler
                   </h4>
                   <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
                     {(["TRY", "USD", "EUR"] as const).map((c) => (
                       <Button key={c} type="button" size="sm" variant={currency === c ? "default" : "ghost"}
                         onClick={() => setCurrency(c)}
-                        className={`h-8 px-4 text-[12px] font-bold rounded-lg transition-colors ${currency === c
+                        className={`h-8 px-4 text-[12px]  rounded-lg transition-colors ${currency === c
                           ? c === "TRY" ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                             : c === "USD" ? "bg-emerald-500 hover:bg-emerald-400 text-black"
                               : "bg-blue-500 hover:bg-blue-400 text-black"
@@ -382,7 +382,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="buyPrice" className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
                       <div className="p-1.5 rounded-md bg-stone-800 border border-stone-700">
                         <DollarSign className="h-3.5 w-3.5 text-amber-400" />
                       </div>
@@ -394,18 +394,18 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                         value={watch("buyPrice")}
                         onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
                         prefix={currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
-                        className="bg-black/40 border-stone-800 rounded-xl h-12 pl-12 text-[15px] font-bold text-white focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner"
+                        className="bg-black/40 border-stone-800 rounded-xl h-12 pl-12 text-[15px]  text-white focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner"
                       />
                     </div>
                     {currency !== "TRY" && (
                       <div className="flex items-center gap-1.5 mt-2 px-1 opacity-90">
                         <ArrowRightLeft className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="text-[11px] font-bold text-slate-400">≈ {calculateTryPrice(watchBuyPrice)} ₺ (Günün Kuruyla)</span>
+                        <span className="text-[11px]  text-slate-400">≈ {calculateTryPrice(watchBuyPrice)} ₺ (Günün Kuruyla)</span>
                       </div>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="sellPrice" className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="sellPrice" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
                       <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
                         <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
                       </div>
@@ -416,7 +416,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                         id="sellPrice"
                         value={watch("sellPrice")}
                         onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                        className="bg-black/40 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px] font-bold text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner"
+                        className="bg-black/40 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px]  text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -425,22 +425,22 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
               {/* Stok ve Konum */}
               <div className="space-y-5">
-                <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Envanter Konumlandırması
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-3 space-y-2">
-                    <Label htmlFor="stock" className="text-[12px] font-semibold text-slate-400">Başlangıç Stoğu</Label>
-                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-white/10 rounded-xl h-12 text-[15px] font-bold focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
+                    <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-slate-400">Başlangıç Stoğu</Label>
+                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-white/10 rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-3 space-y-2">
-                    <Label htmlFor="criticalStock" className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                     </Label>
-                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px] font-bold text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
+                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-6 space-y-2">
-                    <Label htmlFor="location" className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-blue-400" /> Raf / Konum
                     </Label>
                     <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
@@ -455,7 +455,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
               * Kayıt tamamlandıktan sonra modal kapanmaz, seri varyant hızlıca ekleyebilirsiniz.
             </p>
             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px] font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px]  text-slate-400 hover:text-white hover:bg-white/5 transition-all">
                 İptal Et
               </Button>
               <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-blue-500 hover:bg-blue-400 text-black font-extrabold px-8 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">
@@ -469,3 +469,9 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
     </Dialog>
   );
 }
+
+
+
+
+
+

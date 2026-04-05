@@ -109,7 +109,7 @@ function RoleBadge({ role }: { role: string }) {
     const config = configs[role] || configs.STAFF;
 
     return (
-        <Badge className={cn("w-fit text-[9px] font-bold border-none px-2 py-0.5", config.className)}>
+        <Badge className={cn("w-fit text-[9px]  border-none px-2 py-0.5", config.className)}>
             {config.label}
         </Badge>
     );
@@ -166,42 +166,42 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
                 <DialogHeader className="p-8 pb-4">
-                    <DialogTitle className="text-2xl font-bold">Personel Yetkilerini Düzenle</DialogTitle>
+                    <DialogTitle className="font-medium text-2xl ">Personel Yetkilerini Düzenle</DialogTitle>
                     <DialogDescription className="text-slate-500 text-xs font-medium italic">
                         {member?.name || "Personel"} için sistem erişim yetkilerini özelleştirin.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">AD SOYAD</Label>
+                        <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest pl-1">AD SOYAD</Label>
                         <Input
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl font-bold"
+                            className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl "
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">ROL</Label>
+                        <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest pl-1">ROL</Label>
                         <Select
                             value={formData.role}
                             onValueChange={(v: any) => setFormData({ ...formData, role: v })}
                         >
-                            <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl font-bold">
+                            <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl ">
                                 <SelectValue placeholder="Rol seçin" />
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 rounded-xl">
-                                <SelectItem value="ADMIN" className="font-bold text-xs uppercase tracking-widest">Yönetici</SelectItem>
-                                <SelectItem value="MANAGER" className="font-bold text-xs uppercase tracking-widest">Müdür</SelectItem>
-                                <SelectItem value="CASHIER" className="font-bold text-xs uppercase tracking-widest">Kasiyer</SelectItem>
-                                <SelectItem value="TECHNICIAN" className="font-bold text-xs uppercase tracking-widest">Teknisyen</SelectItem>
-                                <SelectItem value="STAFF" className="font-bold text-xs uppercase tracking-widest">Personel</SelectItem>
+                                <SelectItem value="ADMIN" className=" text-xs uppercase tracking-widest">Yönetici</SelectItem>
+                                <SelectItem value="MANAGER" className=" text-xs uppercase tracking-widest">Müdür</SelectItem>
+                                <SelectItem value="CASHIER" className=" text-xs uppercase tracking-widest">Kasiyer</SelectItem>
+                                <SelectItem value="TECHNICIAN" className=" text-xs uppercase tracking-widest">Teknisyen</SelectItem>
+                                <SelectItem value="STAFF" className=" text-xs uppercase tracking-widest">Personel</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     <div className="space-y-3">
-                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">YETKİLER</Label>
+                        <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest pl-1">YETKİLER</Label>
                         <div className="grid grid-cols-2 gap-3">
                             {[
                                 { id: 'canSell', label: 'Satış' },
@@ -228,18 +228,18 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                                         }}
                                         onClick={(e) => e.stopPropagation()}
                                     />
-                                    <span className="text-[10px] font-bold uppercase tracking-tight">{perm.label}</span>
+                                    <span className="text-[10px]  uppercase tracking-tight">{perm.label}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
                 <DialogFooter className="p-8 pt-0 gap-2">
-                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-slate-400 font-bold uppercase text-[10px] tracking-widest">Vazgeç</Button>
+                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-slate-400  uppercase text-[10px] tracking-widest">Vazgeç</Button>
                     <Button
                         onClick={handleSave}
                         disabled={loading}
-                        className="rounded-2xl bg-blue-600 hover:bg-blue-500 font-bold px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest"
+                        className="rounded-2xl bg-blue-600 hover:bg-blue-500  px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest"
                     >
                         {loading ? "GÜNCELLENİYOR..." : "DEĞİŞİKLİKLERİ KAYDET"}
                     </Button>
@@ -288,7 +288,7 @@ function RoleTemplateModal({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl bg-white dark:bg-slate-900 border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
                 <DialogHeader className="p-8 pb-4">
-                    <DialogTitle className="text-2xl font-bold">Yetki Şablonlarını Düzenle</DialogTitle>
+                    <DialogTitle className="font-medium text-2xl ">Yetki Şablonlarını Düzenle</DialogTitle>
                     <DialogDescription className="text-slate-500 text-xs font-medium italic">
                         * Bu değişiklikler sadece yeni oluşturulan personelleri etkiler.
                     </DialogDescription>
@@ -297,13 +297,13 @@ function RoleTemplateModal({
                     <Table>
                         <TableHeader>
                             <TableRow className="border-slate-50 dark:border-white/5 hover:bg-transparent">
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">ROL</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">SATIŞ</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">SERVİS</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">STOK</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">FİNANS</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">DÜZENLE</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">SİL</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400">ROL</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">SATIŞ</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">SERVİS</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">STOK</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">FİNANS</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">DÜZENLE</TableHead>
+                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-400 text-center">SİL</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -316,7 +316,7 @@ function RoleTemplateModal({
                                 };
                                 return (
                                     <TableRow key={role} className="hover:bg-transparent border-b border-slate-50 dark:border-white/5 last:border-none">
-                                        <TableCell className="font-bold text-xs text-slate-500 uppercase tracking-widest py-6">
+                                        <TableCell className=" text-xs text-slate-500 uppercase tracking-widest py-6">
                                             {role === 'ADMIN' ? 'YÖNETİCİ' :
                                                 role === 'MANAGER' ? 'MÜDÜR' :
                                                     role === 'CASHIER' ? 'KASİYER' :
@@ -365,7 +365,7 @@ function RoleTemplateModal({
                     </Table>
                 </div>
                 <DialogFooter className="p-8 pt-4">
-                    <Button onClick={onClose} className="rounded-2xl bg-slate-900 dark:bg-blue-600 text-white font-bold px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest">Kapat</Button>
+                    <Button onClick={onClose} className="rounded-2xl bg-slate-900 dark:bg-blue-600 text-white  px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest">Kapat</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -452,7 +452,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
         <div className="space-y-8 pb-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Ekip Yönetimi</h1>
+                    <h1 className="font-medium text-3xl font-medium text-slate-900 dark:text-white tracking-tight">Ekip Yönetimi</h1>
                     <p className="text-slate-500 font-medium">Personel performansını ve yetkilerini buradan yönetin.</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -477,8 +477,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
-                                <h3 className="text-4xl font-bold text-slate-900 dark:text-white">{s.val}</h3>
+                                <p className="text-[10px]  text-slate-400 uppercase tracking-widest">{s.label}</p>
+                                <h3 className="font-medium text-4xl  text-slate-900 dark:text-white">{s.val}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -488,7 +488,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 space-y-6">
                     <div className="flex items-center justify-between px-1">
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Personel Listesi</h2>
+                        <h2 className="font-medium text-xl  text-slate-900 dark:text-white">Personel Listesi</h2>
                         <div className="flex items-center gap-2 p-1 bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-white/5">
                             {[
                                 { id: "all", label: "TÜMÜ" },
@@ -501,7 +501,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     variant="ghost"
                                     onClick={() => setFilter(t.id as any)}
                                     className={cn(
-                                        "h-10 px-6 rounded-xl text-[10px] font-bold tracking-widest transition-all",
+                                        "h-10 px-6 rounded-xl text-[10px]  tracking-widest transition-all",
                                         filter === t.id
                                             ? "bg-slate-900 text-white shadow-lg shadow-black/20"
                                             : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
@@ -515,13 +515,13 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
                     <Card className="rounded-[2.5rem] border-none shadow-xl shadow-black/5 bg-white dark:bg-slate-900/50 overflow-hidden">
                         <Table>
-                            <TableHeader className="bg-slate-50/50 dark:bg-slate-800/30">
+                            <TableHeader className="font-medium bg-slate-50/50 dark:bg-slate-800/30">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="py-6 px-8 text-[10px] font-bold uppercase tracking-widest text-slate-500">İSİM / ROL</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">İŞ SAYISI</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">BAŞARI</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">SON GİRİŞ</TableHead>
-                                    <TableHead className="text-right pr-8 text-[10px] font-bold uppercase tracking-widest text-slate-500">AKSİYON</TableHead>
+                                    <TableHead className="font-medium py-6 px-8 text-[10px]  uppercase tracking-widest text-slate-500">İSİM / ROL</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-500">İŞ SAYISI</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-500">BAŞARI</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-slate-500">SON GİRİŞ</TableHead>
+                                    <TableHead className="font-medium text-right pr-8 text-[10px]  uppercase tracking-widest text-slate-500">AKSİYON</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -538,23 +538,23 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                 <div className="flex items-center gap-4">
                                                     <Avatar className="h-12 w-12 rounded-2xl border-2 border-white dark:border-slate-800 shadow-sm">
                                                         <AvatarImage src={member.image || ""} />
-                                                        <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs">
+                                                        <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white  text-xs">
                                                             {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                                        <span className=" text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                                                             {member.name}
                                                         </span>
                                                         <RoleBadge role={member.role} />
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                            <TableCell className="text-sm  text-slate-700 dark:text-slate-300">
                                                 {member.assignedTickets.length + member.sales.length}
                                             </TableCell>
-                                            <TableCell className="text-sm font-bold text-emerald-500">%98.5</TableCell>
-                                            <TableCell className="text-xs font-bold text-slate-400">Şimdi aktif</TableCell>
+                                            <TableCell className="text-sm  text-emerald-500">%98.5</TableCell>
+                                            <TableCell className="text-xs  text-slate-400">Şimdi aktif</TableCell>
                                             <TableCell className="text-right pr-8">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -568,12 +568,12 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                                 setSelectedMember(member);
                                                                 setEditModalOpen(true);
                                                             }}
-                                                            className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs"
+                                                            className="rounded-xl gap-2 cursor-pointer  py-3 text-xs"
                                                         >
                                                             <Shield className="w-4 h-4" /> Düzenle & Yetkilendir
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="bg-white/5" />
-                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold py-3 text-xs text-rose-500">
+                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer  py-3 text-xs text-rose-500">
                                                             <XCircle className="w-4 h-4" /> Personeli Çıkar
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -590,10 +590,10 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 <div className="lg:col-span-4 space-y-8">
                     <Card className="rounded-[2.5rem] border-none shadow-xl shadow-black/5 bg-white dark:bg-slate-900/50 overflow-hidden">
                         <CardHeader className="p-8 pb-4">
-                            <h2 className="text-xl font-bold">Yetki Seviyeleri</h2>
+                            <h2 className="font-medium text-xl ">Yetki Seviyeleri</h2>
                         </CardHeader>
                         <CardContent className="p-8 pt-4 space-y-6">
-                            <div className="grid grid-cols-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-white/5 pb-4">
+                            <div className="grid grid-cols-5 text-[10px]  text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-white/5 pb-4">
                                 <div className="col-span-1">MODÜL</div>
                                 <div className="text-center">ADM</div>
                                 <div className="text-center">MÜD</div>
@@ -602,7 +602,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                             </div>
                             {rolePermissions.map((mod, i) => (
                                 <div key={i} className="grid grid-cols-5 items-center">
-                                    <div className="col-span-1 text-[10px] font-bold text-slate-700 dark:text-slate-300">{mod.name}</div>
+                                    <div className="col-span-1 text-[10px]  text-slate-700 dark:text-slate-300">{mod.name}</div>
                                     {mod.perms.map((p, pi) => (
                                         <div key={pi} className="flex justify-center">
                                             {p ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-slate-200 dark:text-slate-800" />}
@@ -612,7 +612,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                             ))}
                             <Button
                                 onClick={() => setTemplateModalOpen(true)}
-                                className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-none shadow-sm text-slate-900 dark:text-white font-bold text-xs uppercase tracking-widest"
+                                className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-none shadow-sm text-slate-900 dark:text-white  text-xs uppercase tracking-widest"
                             >
                                 Yetki Şablonlarını Düzenle
                             </Button>
@@ -621,8 +621,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
                     <div className="p-1 bg-slate-900 dark:bg-blue-600 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
                         <div className="p-8 space-y-4 relative z-10">
-                            <div className="flex items-center justify-between font-bold text-white">
-                                <h3 className="text-lg">Performans Ara</h3>
+                            <div className="flex items-center justify-between  text-white">
+                                <h3 className="font-medium text-lg">Performans Ara</h3>
                                 <Activity className="w-5 h-5 text-blue-200" />
                             </div>
                             <div className="relative">
@@ -631,7 +631,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     placeholder="Personel ara..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="h-12 bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/40 focus:ring-2 focus:ring-white/20 font-bold"
+                                    className="h-12 bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/40 focus:ring-2 focus:ring-white/20 "
                                 />
                             </div>
                         </div>
@@ -641,7 +641,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
             <div className="space-y-6">
                 <div className="flex items-center justify-between px-1">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h2 className="font-medium text-xl  text-slate-900 dark:text-white flex items-center gap-2">
                         İşlem Logları <Activity className="w-4 h-4 text-blue-500" />
                     </h2>
                     <div className="flex items-center gap-3">
@@ -651,20 +651,20 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                 placeholder="İşlem veya personel ara..."
                                 value={logSearch}
                                 onChange={(e) => setLogSearch(e.target.value)}
-                                className="h-9 w-64 bg-white dark:bg-slate-900/50 border-none rounded-xl pl-9 text-xs font-bold"
+                                className="h-9 w-64 bg-white dark:bg-slate-900/50 border-none rounded-xl pl-9 text-xs "
                             />
                         </div>
                         <Input
                             type="date"
                             value={logDate}
                             onChange={(e) => setLogDate(e.target.value)}
-                            className="h-9 w-40 bg-white dark:bg-slate-900/50 border-none rounded-xl text-xs font-bold"
+                            className="h-9 w-40 bg-white dark:bg-slate-900/50 border-none rounded-xl text-xs "
                         />
                         <Button
                             onClick={handleExportCSV}
                             variant="outline"
                             size="sm"
-                            className="h-9 rounded-xl bg-white dark:bg-slate-900 border-none shadow-sm gap-2 text-[10px] font-bold uppercase tracking-widest"
+                            className="h-9 rounded-xl bg-white dark:bg-slate-900 border-none shadow-sm gap-2 text-[10px]  uppercase tracking-widest"
                         >
                             <Download className="w-3.5 h-3.5" /> CSV İNDİR
                         </Button>
@@ -691,8 +691,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     )}
                                 </div>
                                 <div className="space-y-0.5">
-                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                                        <span className="font-bold text-slate-900 dark:text-white uppercase text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded-md mr-2">
+                                    <p className="text-sm  text-slate-700 dark:text-slate-200">
+                                        <span className=" text-slate-900 dark:text-white uppercase text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded-md mr-2">
                                             {log.user?.name}
                                         </span>
                                         {log.message}
@@ -702,10 +702,10 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                             </div>
                             <div className="flex items-center gap-6">
                                 <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-900 dark:text-white">
+                                    <p className="text-[10px]  text-slate-900 dark:text-white">
                                         {new Date(log.createdAt).toLocaleDateString('tr-TR')}
                                     </p>
-                                    <p className="text-[10px] font-bold text-slate-400">
+                                    <p className="text-[10px]  text-slate-400">
                                         {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
@@ -718,7 +718,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                     {!isLogsLoading && logs.length === 0 && (
                         <div className="p-20 text-center space-y-4">
                             <Activity className="w-12 h-12 text-slate-200 dark:text-slate-800 mx-auto" />
-                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Kayıt Bulunamadı</p>
+                            <p className="text-slate-400  text-xs uppercase tracking-widest">Kayıt Bulunamadı</p>
                         </div>
                     )}
                 </div>
@@ -729,18 +729,18 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                             variant="ghost"
                             disabled={logPage === 1}
                             onClick={() => setLogPage(p => p - 1)}
-                            className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2"
+                            className="rounded-xl  text-[10px] uppercase tracking-widest gap-2"
                         >
                             <ChevronLeft className="w-4 h-4" /> Önceki
                         </Button>
-                        <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                        <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl text-[10px]  text-slate-600 dark:text-slate-400">
                             SAYFA {logPage} / {logTotalPages}
                         </div>
                         <Button
                             variant="ghost"
                             disabled={logPage === logTotalPages}
                             onClick={() => setLogPage(p => p + 1)}
-                            className="rounded-xl font-bold text-[10px] uppercase tracking-widest gap-2"
+                            className="rounded-xl  text-[10px] uppercase tracking-widest gap-2"
                         >
                             Sonraki <ChevronRight className="w-4 h-4" />
                         </Button>
@@ -761,3 +761,12 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
         </div>
     );
 }
+
+
+
+
+
+
+
+
+

@@ -105,7 +105,7 @@ export function WarrantySearchClient() {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="h-10 w-full sm:w-auto px-8 rounded-lg font-bold bg-primary text-primary-foreground"
+                                className="h-10 w-full sm:w-auto px-8 rounded-lg  bg-primary text-primary-foreground"
                             >
                                 {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Sorgula"}
                             </Button>
@@ -117,7 +117,7 @@ export function WarrantySearchClient() {
             {/* Results */}
             {hasSearched && (
                 <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-muted-foreground px-1 uppercase tracking-wider">Arama Sonuçları</h3>
+                    <h3 className="font-medium text-sm  text-muted-foreground px-1 uppercase tracking-wider">Arama Sonuçları</h3>
                     {results.length === 0 ? (
                         <div className="text-center p-8 bg-muted/10 rounded-xl border border-border border-dashed">
                             <p className="text-muted-foreground font-medium">Böyle bir kayıt bulunamadı.</p>
@@ -153,19 +153,19 @@ export function WarrantySearchClient() {
 
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                                                 <div>
-                                                    <p className="text-[10px] uppercase font-bold text-muted-foreground/70 mb-1">Müşteri</p>
+                                                    <p className="text-[10px] uppercase  text-muted-foreground/70 mb-1">Müşteri</p>
                                                     <p className="text-sm font-semibold">{ticket.customer?.name || "Bilinmiyor"}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] uppercase font-bold text-muted-foreground/70 mb-1">Cihaz</p>
+                                                    <p className="text-[10px] uppercase  text-muted-foreground/70 mb-1">Cihaz</p>
                                                     <p className="text-sm font-semibold">{ticket.deviceBrand} {ticket.deviceModel}</p>
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <p className="text-[10px] uppercase font-bold text-muted-foreground/70 mb-1">Teslim & Bitiş Tarihi</p>
+                                                    <p className="text-[10px] uppercase  text-muted-foreground/70 mb-1">Teslim & Bitiş Tarihi</p>
                                                     <p className="text-sm font-medium">
                                                         {ticket.deliveredAt ? format(new Date(ticket.deliveredAt), "dd MMM yyyy", { locale: tr }) : "-"}
                                                         {' → '}
-                                                        <span className={hasActiveWarranty ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
+                                                        <span className={hasActiveWarranty ? "text-emerald-600 " : "text-muted-foreground"}>
                                                             {ticket.warrantyExpiry ? format(new Date(ticket.warrantyExpiry), "dd MMM yyyy", { locale: tr }) : "-"}
                                                         </span>
                                                     </p>
@@ -175,7 +175,7 @@ export function WarrantySearchClient() {
                                             {/* Kullanılan Parçalar */}
                                             {ticket.usedParts && ticket.usedParts.length > 0 && (
                                                 <div className="mt-4 flex flex-wrap gap-2">
-                                                    <span className="text-[10px] uppercase font-bold text-muted-foreground/70 flex items-center h-6 mr-1">Değişen Parçalar:</span>
+                                                    <span className="text-[10px] uppercase  text-muted-foreground/70 flex items-center h-6 mr-1">Değişen Parçalar:</span>
                                                     {ticket.usedParts.map((part: any) => (
                                                         <div key={part.id} className="flex items-center gap-1.5 text-xs font-medium bg-muted/50 border border-border/50 px-2 py-1 rounded-md">
                                                             <Cpu className="h-3 w-3 text-muted-foreground" />
@@ -210,7 +210,7 @@ export function WarrantySearchClient() {
                 <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-border/50">
                     <div className="bg-gradient-to-b from-primary/10 to-transparent p-6 pb-2">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-extrabold flex items-center gap-2">
+                            <DialogTitle className="font-medium text-xl font-extrabold flex items-center gap-2">
                                 <ShieldAlert className="h-5 w-5 text-primary" />
                                 Garanti İstemi Oluştur
                             </DialogTitle>
@@ -222,7 +222,7 @@ export function WarrantySearchClient() {
 
                     <div className="p-6 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Arızalı Parça (İade Edilecek)</Label>
+                            <Label className="font-medium text-xs  uppercase text-muted-foreground">Arızalı Parça (İade Edilecek)</Label>
                             <Select value={selectedPart} onValueChange={setSelectedPart}>
                                 <SelectTrigger className="h-12 rounded-xl">
                                     <SelectValue placeholder="Değişen parçalardan birini seçin" />
@@ -241,7 +241,7 @@ export function WarrantySearchClient() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">İade Sebebi</Label>
+                            <Label className="font-medium text-xs  uppercase text-muted-foreground">İade Sebebi</Label>
                             <Select value={returnReason} onValueChange={setReturnReason}>
                                 <SelectTrigger className="h-12 rounded-xl">
                                     <SelectValue placeholder="Sebebini belirleyin" />
@@ -256,7 +256,7 @@ export function WarrantySearchClient() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">İnceleme Notları</Label>
+                            <Label className="font-medium text-xs  uppercase text-muted-foreground">İnceleme Notları</Label>
                             <Textarea
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
@@ -272,11 +272,11 @@ export function WarrantySearchClient() {
                     </div>
 
                     <DialogFooter className="p-4 border-t border-border/20 bg-muted/10 pr-6 pb-6">
-                        <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsModalOpen(false)}>İptal</Button>
+                        <Button variant="ghost" className="rounded-xl " onClick={() => setIsModalOpen(false)}>İptal</Button>
                         <Button
                             onClick={handleSubmitReturn}
                             disabled={submitLoading || !selectedPart || !returnReason}
-                            className="rounded-xl font-bold px-6"
+                            className="rounded-xl  px-6"
                         >
                             {submitLoading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : "İşlemi Onayla"}
                         </Button>
@@ -286,3 +286,9 @@ export function WarrantySearchClient() {
         </div>
     );
 }
+
+
+
+
+
+

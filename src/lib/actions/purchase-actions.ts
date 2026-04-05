@@ -16,42 +16,80 @@ export async function createPurchaseOrderAction(data: {
     description?: string;
     paymentStatus?: PaymentStatus;
     paymentMethod?: PaymentMethod;
+    accountId?: string;
 }) {
     try {
         const shopId = await getShopId();
-        const order = await prisma.purchaseOrder.create({
-            data: {
-                shopId,
-                supplierId: data.supplierId,
-                orderNo: data.orderNo,
-                totalAmount: data.totalAmount,
-                vatAmount: data.vatAmount,
-                netAmount: data.netAmount,
-                description: data.description,
-                status: "PENDING",
-                remainingAmount: data.totalAmount, // Başlangıçta tüm tutar borç
-                paymentStatus: data.paymentStatus || "UNPAID",
-                paymentMethod: data.paymentMethod || "CASH",
-                items: {
-                    create: data.items.map((item) => ({
-                        productId: item.productId,
-                        name: item.name,
-                        quantity: item.quantity,
-                        buyPrice: item.buyPrice,
-                        vatRate: item.vatRate || 20,
-                        shopId
-                    })),
+        const { getUserId } = await import("@/lib/auth");
+        const userId = await getUserId();
+
+        const order = await prisma.$transaction(async (tx: any) => {
+            const o = await tx.purchaseOrder.create({
+                data: {
+                    shopId,
+                    supplierId: data.supplierId,
+                    orderNo: data.orderNo,
+                    totalAmount: data.totalAmount,
+                    vatAmount: data.vatAmount,
+                    netAmount: data.netAmount,
+                    description: data.description,
+                    status: "PENDING",
+                    remainingAmount: data.paymentStatus === "PAID" ? 0 : data.totalAmount,
+                    paymentStatus: data.paymentStatus || "UNPAID",
+                    paymentMethod: data.paymentMethod || "CASH",
+                    items: {
+                        create: data.items.map((item) => ({
+                            productId: item.productId,
+                            name: item.name,
+                            quantity: item.quantity,
+                            buyPrice: item.buyPrice,
+                            vatRate: item.vatRate || 20,
+                            shopId
+                        })),
+                    },
                 },
-            },
-            include: {
-                items: true,
-            },
+                include: {
+                    items: true,
+                },
+            });
+
+            if (data.paymentStatus === "PAID" && data.accountId) {
+                // Peşin ödeme işlemi, tedarikçi ekstresine ve kasaya yansıtılır
+                await tx.supplierTransaction.create({
+                    data: {
+                        supplierId: data.supplierId,
+                        amount: Math.round(data.totalAmount),
+                        type: "EXPENSE",
+                        description: `${data.orderNo} nolu sipariş peşin ödemesi`,
+                        purchaseOrderId: o.id,
+                        shopId
+                    }
+                });
+
+                await tx.transaction.create({
+                    data: {
+                        type: "EXPENSE",
+                        amount: Math.round(data.totalAmount),
+                        description: `[Peşin Satın Alma] ${data.orderNo} nolu sipariş`,
+                        paymentMethod: data.paymentMethod || "CASH",
+                        financeAccountId: data.accountId,
+                        userId,
+                        shopId,
+                        category: "TEDARİKÇİ"
+                    }
+                });
+
+                await tx.financeAccount.update({
+                    where: { id: data.accountId },
+                    data: { balance: { decrement: data.totalAmount } }
+                });
+            }
+
+            return o;
         });
 
-        // If payment status is PAID or PARTIAL, create a transaction? 
-        // Usually it's better to do this in a separate step or Mal Kabul.
-
-        // revalidatePath("/tedarikciler");
+        revalidatePath("/tedarikciler");
+        revalidatePath("/stok");
         return { success: true, order: serializePrisma(order) };
 
     } catch (error) {
@@ -108,9 +146,14 @@ export async function createSupplierTransactionAction(data: {
     type: TransactionType;
     description: string;
     purchaseOrderId?: string;
+    accountId?: string;
+    paymentMethod?: PaymentMethod;
 }) {
     try {
         const shopId = await getShopId();
+        const { getUserId } = await import("@/lib/auth");
+        const userId = await getUserId();
+
         const transaction = await prisma.$transaction(async (tx: any) => {
             const t = await tx.supplierTransaction.create({
                 data: {
@@ -122,6 +165,29 @@ export async function createSupplierTransactionAction(data: {
                     shopId
                 },
             });
+
+            // If an account is selected and this impacts cash flow:
+            // "EXPENSE" in supplier means we PAY money -> decreases our FinanceAccount (EXPENSE transaction)
+            if (data.accountId && data.type === "EXPENSE") {
+                await tx.transaction.create({
+                    data: {
+                        type: "EXPENSE",
+                        amount: Math.round(data.amount),
+                        description: `[Tedarikçi Ödemesi] ${data.description}`,
+                        paymentMethod: data.paymentMethod || "CASH",
+                        financeAccountId: data.accountId,
+                        userId,
+                        shopId,
+                        category: "TEDARİKÇİ"
+                    }
+                });
+
+                // Dedükte balance in FinanceAccount
+                await tx.financeAccount.update({
+                    where: { id: data.accountId },
+                    data: { balance: { decrement: data.amount } }
+                });
+            }
 
             // Borç/Ödeme miktarını yuvarla
             const roundedAmount = Math.round(data.amount);
@@ -176,7 +242,8 @@ export async function createSupplierTransactionAction(data: {
             return t;
         });
 
-        // revalidatePath("/tedarikciler");
+        revalidatePath("/tedarikciler");
+        revalidatePath("/finans");
         return { success: true, transaction: serializePrisma(transaction) };
     } catch (error) {
         console.error("Error creating transaction:", error);
@@ -304,7 +371,8 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
             return order;
         });
 
-        // revalidatePath("/tedarikciler");
+        revalidatePath("/tedarikciler");
+        revalidatePath("/stok");
         return { success: true, order: serializePrisma(result) };
     } catch (error) {
         console.error("Error receiving order:", error);

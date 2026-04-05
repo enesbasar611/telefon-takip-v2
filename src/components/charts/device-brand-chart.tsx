@@ -25,7 +25,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="bg-card border border-border/50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-sm">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{payload[0].name}</p>
+                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest mb-1">{payload[0].name}</p>
                 <p className="text-lg font-extrabold" style={{ color: payload[0].payload.fill }}>
                     {payload[0].value} cihaz
                 </p>
@@ -66,11 +66,14 @@ export function DeviceBrandChart({ data }: DeviceBrandChartProps) {
                 {data.slice(0, 8).map((item, index) => (
                     <div key={item.name} className="flex items-center gap-2">
                         <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: COLORS[index % COLORS.length] }} />
-                        <span className="text-[10px] font-bold text-muted-foreground truncate uppercase tracking-wide">{item.name}</span>
-                        <span className="text-[10px] font-bold ml-auto" style={{ color: COLORS[index % COLORS.length] }}>{item.value}</span>
+                        <span className="text-[10px]  text-muted-foreground truncate uppercase tracking-wide">{item.name}</span>
+                        <span className="text-[10px]  ml-auto" style={{ color: COLORS[index % COLORS.length] }}>{item.value}</span>
                     </div>
                 ))}
             </div>
         </div>
     );
 }
+
+
+

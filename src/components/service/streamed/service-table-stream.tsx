@@ -12,3 +12,6 @@ export async function ServiceTableStream({ status }: ServiceTableStreamProps) {
 
     return <ServiceTable data={tickets} />;
 }
+
+
+

@@ -309,7 +309,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <h4 className={`text-[14px] font-bold leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
+          <h4 className={`text-[14px]  leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
           <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">{desc}</p>
         </div>
         {active && <div className={`absolute top-3 right-3 h-2 w-2 rounded-full ${dotBg[color]}`} />}
@@ -318,13 +318,13 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   };
 
   const inputCls = "bg-slate-950 border-slate-800 rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
-  const labelCls = "text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-0.5";
+  const labelCls = "text-[9px]  text-slate-500 uppercase tracking-widest pl-0.5";
   const sectionCls = "p-5 rounded-2xl bg-slate-900 border border-slate-800/60 space-y-4";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2 font-bold h-10 px-6 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2  h-10 px-6 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
           <Plus className="h-4 w-4" /> Cihaz Ekle
         </Button>
       </DialogTrigger>
@@ -333,7 +333,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         {/* Header */}
         <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-slate-800/60">
           <div>
-            <DialogTitle className="text-[21px] font-bold text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
+            <DialogTitle className="font-medium text-[21px]  text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
             <p className="text-[12px] text-slate-500 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
           </div>
         </div>
@@ -361,9 +361,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-800">
                       {POPULAR_BRANDS.map((b) => (
-                        <SelectItem key={b} value={b} className="font-bold">{b}</SelectItem>
+                        <SelectItem key={b} value={b} className="">{b}</SelectItem>
                       ))}
-                      <SelectItem value="Diğer" className="font-bold text-slate-400">Diğer</SelectItem>
+                      <SelectItem value="Diğer" className=" text-slate-400">Diğer</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand.message}</p>}
@@ -413,7 +413,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                               className={`h-8 w-8 rounded-full border-2 transition-all shadow-lg ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "border-blue-500 scale-110 shadow-blue-500/30" : "border-slate-800 hover:border-slate-600 scale-100 shadow-black/40"}`}
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className={`text-[8px] font-bold uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
+                            <span className={`text-[8px]  uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
                               {c.name.split(" ")[0]}
                             </span>
                           </button>
@@ -421,7 +421,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       </div>
                     )}
                   </div>
-                  {selectedColor && <p className="text-[10px] font-bold text-blue-400/80 mt-1 pl-1 capitalize">Seçilen Renk: {selectedColor}</p>}
+                  {selectedColor && <p className="text-[10px]  text-blue-400/80 mt-1 pl-1 capitalize">Seçilen Renk: {selectedColor}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>RAM</Label>
@@ -429,7 +429,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 8 GB" /></SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-800">
                       {["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB"].map((v) => (
-                        <SelectItem key={v} value={v} className="font-bold">{v}</SelectItem>
+                        <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -440,7 +440,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 256 GB" /></SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-800">
                       {["64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].map((v) => (
-                        <SelectItem key={v} value={v} className="font-bold">{v}</SelectItem>
+                        <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -456,14 +456,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <>
                   <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800 w-fit gap-1">
                     <button type="button" onClick={() => setWarrantyMode("months")}
-                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
                       Ay Seç
                     </button>
                     <button
                       type="button"
                       disabled={isNew}
                       onClick={() => setWarrantyMode("date")}
-                      className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
                       Tarih Gir
                     </button>
                   </div>
@@ -483,7 +483,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                         </SelectTrigger>
                         <SelectContent className="bg-slate-900 border-slate-800">
                           {WARRANTY_MONTHS_OPTIONS.map((m) => (
-                            <SelectItem key={m} value={String(m)} className="font-bold">
+                            <SelectItem key={m} value={String(m)} className="">
                               {m} Ay {isNew && m === 24 ? "✓ (Sabit)" : ""}
                             </SelectItem>
                           ))}
@@ -515,7 +515,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim1NotUsed}
                           onCheckedChange={(checked) => setValue("sim1NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim1NotUsed" className="text-[10px] font-bold text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim1NotUsed" className="font-medium text-[10px]  text-slate-500 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input {...register("sim1ExpirationDate")} type="date" className={inputCls} disabled={sim1NotUsed} />
@@ -529,7 +529,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim2NotUsed}
                           onCheckedChange={(checked) => setValue("sim2NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim2NotUsed" className="text-[10px] font-bold text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim2NotUsed" className="font-medium text-[10px]  text-slate-500 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input
@@ -539,7 +539,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       disabled={sim2NotUsed}
                     />
                   </div>
-                  <div className="col-span-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] text-purple-300 font-medium font-bold">
+                  <div className="col-span-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] text-purple-300 font-medium ">
                     💡 Yurtdışı cihazlarda her SIM için yıllık 120 gün kullanım hakkı verilir. BTK'dan kalan süreleri öğrenip manuel tarih olarak giriniz.
                   </div>
                 </div>
@@ -554,14 +554,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>Pil Sağlığı</Label>
                   <div className="relative">
                     <Input {...register("batteryHealth")} type="number" min={1} max={100} placeholder="100" className={inputCls} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-500">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px]  text-slate-500">%</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Kozmetik Durum</Label>
                   <Select onValueChange={(v) => setValue("cosmeticScore", v)} defaultValue="10">
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Seç" /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800 font-bold">
+                    <SelectContent className="bg-slate-900 border-slate-800 ">
                       <SelectItem value="10">Kusursuz (10/10)</SelectItem>
                       <SelectItem value="9">Çok İyi (9/10)</SelectItem>
                       <SelectItem value="8">İyi – Ufak Çizikler (8/10)</SelectItem>
@@ -583,7 +583,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
                   <Plus className="h-3 w-3 text-emerald-400" />
                 </div>
-                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
+                <p className="text-[10px]  text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
@@ -610,7 +610,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
                     >
                       {sellerIdFront ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px] font-bold uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
+                      <span className="text-[9px]  uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
                     </button>
 
                     <button
@@ -619,7 +619,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
                     >
                       {sellerIdBack ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px] font-bold uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
+                      <span className="text-[9px]  uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
                     </button>
                   </div>
                 </div>
@@ -629,56 +629,56 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             {/* Fiyat & Ödeme Hesabı */}
             <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
               <div className="col-span-2 space-y-1.5 pb-2">
-                <Label className="text-[9px] font-bold text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
+                <Label className="font-medium text-[9px]  text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
                 <Select
                   value={watch("financeAccountId")}
                   onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
                 >
-                  <SelectTrigger className="bg-slate-950 border-slate-800 h-11 text-[13px] font-bold">
+                  <SelectTrigger className="bg-slate-950 border-slate-800 h-11 text-[13px] ">
                     <SelectValue placeholder="Ödeme Hesabı Seçin" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-800">
                     {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                      <SelectItem key={acc.id} value={acc.id} className="">
                         {acc.name} - <span className="text-blue-400">{acc.balance.toLocaleString("tr-TR")} ₺</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.financeAccountId && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.financeAccountId.message}</p>}
+                {errors.financeAccountId && <p className="text-[10px] text-rose-500  mt-1">{errors.financeAccountId.message}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[9px] font-bold text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
+                <Label className="font-medium text-[9px]  text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-blue-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]  text-blue-500">₺</span>
                   <Input
                     {...register("buyPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-bold pl-8 dark:text-white"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px]  pl-8 dark:text-white"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("buyPrice", formatted, { shouldValidate: true });
                     }}
                   />
                 </div>
-                {errors.buyPrice && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.buyPrice.message}</p>}
+                {errors.buyPrice && <p className="text-[10px] text-rose-500  mt-1">{errors.buyPrice.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
+                <Label className="font-medium text-[9px]  text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-emerald-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]  text-emerald-500">₺</span>
                   <Input
                     {...register("sellPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px] font-bold pl-8 text-emerald-400"
+                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px]  pl-8 text-emerald-400"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("sellPrice", formatted, { shouldValidate: true });
                     }}
                   />
                 </div>
-                {errors.sellPrice && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.sellPrice.message}</p>}
+                {errors.sellPrice && <p className="text-[10px] text-rose-500  mt-1">{errors.sellPrice.message}</p>}
               </div>
             </div>
 
@@ -690,12 +690,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <button type="button" onClick={() => photoInputRef.current?.click()}
                   className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
                   <Camera className="h-5 w-5 text-slate-500" />
-                  <span className="text-[11px] font-bold text-slate-500">Fotoğraf Seç</span>
+                  <span className="text-[11px]  text-slate-500">Fotoğraf Seç</span>
                 </button>
                 {photoFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {photoFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-[10px] font-bold text-slate-300">
+                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-[10px]  text-slate-300">
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                         {f.name.slice(0, 12)}...
                         <button type="button" onClick={() => removePhoto(i)} className="ml-1 text-slate-500 hover:text-rose-400"><X className="h-3 w-3" /></button>
@@ -710,10 +710,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <button type="button" onClick={() => invoiceInputRef.current?.click()}
                   className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
                   <FileText className="h-5 w-5 text-slate-500" />
-                  <span className="text-[11px] font-bold text-slate-500">Fatura Seç</span>
+                  <span className="text-[11px]  text-slate-500">Fatura Seç</span>
                 </button>
                 {invoiceFile && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 text-[11px] font-bold text-slate-300">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 text-[11px]  text-slate-300">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     {invoiceFile.name.slice(0, 20)}
                     <button type="button" onClick={() => setInvoiceFile(null)} className="ml-auto text-slate-500 hover:text-rose-400"><X className="h-3.5 w-3.5" /></button>
@@ -727,12 +727,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <div className="px-7 py-5 border-t border-slate-800/60 bg-[#0B0F19] flex justify-between items-center">
             <p className="text-[11px] text-slate-600 font-medium">
               Otomatik kategori:{" "}
-              <span className="text-slate-400 font-bold">
+              <span className="text-slate-400 ">
                 Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
               </span>
             </p>
             <Button type="submit" disabled={isPending}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
+              className="bg-blue-600 hover:bg-blue-500 text-white  text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Kaydı Tamamla
             </Button>
@@ -742,3 +742,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     </Dialog>
   );
 }
+
+
+
+
+

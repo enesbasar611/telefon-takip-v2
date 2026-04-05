@@ -124,7 +124,7 @@ export default function NewCustomerPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Yeni Müşteri Kaydı</h1>
+              <h1 className="font-medium text-3xl ">Yeni Müşteri Kaydı</h1>
               <p className="text-gray-500 text-sm mt-1">Sistem için yeni bir teknik servis ortağı veya bireysel müşteri tanımlayın.</p>
             </div>
             <div className="flex items-center gap-3">
@@ -139,7 +139,7 @@ export default function NewCustomerPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 font-bold flex gap-2"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8  flex gap-2"
               >
                 <Save className="h-4 w-4" />
                 {loading ? "Kaydediliyor..." : "Kaydet"}
@@ -164,7 +164,7 @@ export default function NewCustomerPage() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]">MÜŞTERİ ADI SOYADI</FormLabel>
+                              <FormLabel className="text-gray-500  text-[10px]">MÜŞTERİ ADI SOYADI</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -181,12 +181,12 @@ export default function NewCustomerPage() {
                           name="type"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]">MÜŞTERİ TİPİ</FormLabel>
+                              <FormLabel className="text-gray-500  text-[10px]">MÜŞTERİ TİPİ</FormLabel>
                               <div className="flex gap-2 p-1 bg-background rounded-lg border border-white/5">
                                 <Button
                                   type="button"
                                   variant={field.value === "BIREYSEL" ? "secondary" : "ghost"}
-                                  className={`flex-1 gap-2 text-xs font-bold ${field.value === "BIREYSEL" ? "bg-blue-600/10 text-blue-500 hover:bg-blue-600/20" : "text-gray-500"}`}
+                                  className={`flex-1 gap-2 text-xs  ${field.value === "BIREYSEL" ? "bg-blue-600/10 text-blue-500 hover:bg-blue-600/20" : "text-gray-500"}`}
                                   onClick={() => field.onChange("BIREYSEL")}
                                 >
                                   <UserCircle className="h-4 w-4" />
@@ -195,7 +195,7 @@ export default function NewCustomerPage() {
                                 <Button
                                   type="button"
                                   variant={field.value === "KURUMSAL" ? "secondary" : "ghost"}
-                                  className={`flex-1 gap-2 text-xs font-bold ${field.value === "KURUMSAL" ? "bg-blue-600/10 text-blue-500 hover:bg-blue-600/20" : "text-gray-500"}`}
+                                  className={`flex-1 gap-2 text-xs  ${field.value === "KURUMSAL" ? "bg-blue-600/10 text-blue-500 hover:bg-blue-600/20" : "text-gray-500"}`}
                                   onClick={() => field.onChange("KURUMSAL")}
                                 >
                                   <Building2 className="h-4 w-4" />
@@ -212,7 +212,7 @@ export default function NewCustomerPage() {
                           name="phone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]">TELEFON NUMARASI</FormLabel>
+                              <FormLabel className="text-gray-500  text-[10px]">TELEFON NUMARASI</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
@@ -239,7 +239,7 @@ export default function NewCustomerPage() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-500 font-bold text-[10px]">E-POSTA ADRESİ</FormLabel>
+                              <FormLabel className="text-gray-500  text-[10px]">E-POSTA ADRESİ</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -257,7 +257,7 @@ export default function NewCustomerPage() {
                         name="address"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-400 font-bold text-xs ml-1">ADRES BİLGİSİ</FormLabel>
+                            <FormLabel className="text-gray-400  text-xs ml-1">ADRES BİLGİSİ</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
@@ -284,7 +284,7 @@ export default function NewCustomerPage() {
                         name="secondaryPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-400 font-bold text-xs ml-1">YEDEK TELEFON</FormLabel>
+                            <FormLabel className="text-gray-400  text-xs ml-1">YEDEK TELEFON</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
@@ -305,7 +305,7 @@ export default function NewCustomerPage() {
                                 />
                               </div>
                             </FormControl>
-                            <FormDescription className="text-gray-600 text-xs font-bold">Müşteriye ulaşılamadığında aranacak ikincil numara.</FormDescription>
+                            <FormDescription className="text-gray-600 text-xs ">Müşteriye ulaşılamadığında aranacak ikincil numara.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -320,7 +320,7 @@ export default function NewCustomerPage() {
               {/* Profile Photo Card */}
               <Card className="bg-card border-none shadow-sm overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between px-6">
-                  <CardTitle className="text-gray-500 font-bold text-[10px]">MÜŞTERİ FOTOĞRAFI</CardTitle>
+                  <CardTitle className="font-medium text-gray-500  text-[10px]">MÜŞTERİ FOTOĞRAFI</CardTitle>
                   {photoPreview && (
                     <Button
                       type="button"
@@ -373,7 +373,7 @@ export default function NewCustomerPage() {
                             <Star className={`h-5 w-5 ${field.value ? 'fill-blue-500' : ''}`} />
                           </div>
                           <div>
-                            <FormLabel className="text-sm font-bold block">VIP Müşteri</FormLabel>
+                            <FormLabel className="text-sm  block">VIP Müşteri</FormLabel>
                             <p className="text-[10px] text-gray-500 font-medium">Öncelikli servis ve indirim</p>
                           </div>
                         </div>
@@ -394,7 +394,7 @@ export default function NewCustomerPage() {
               <Card className="bg-card border-none shadow-sm h-full">
                 <CardHeader className="pb-2 flex flex-row items-center gap-2">
                   <StickyNote className="h-4 w-4 text-gray-500" />
-                  <CardTitle className="text-gray-500 font-bold text-[10px]">ÖZEL NOTLAR</CardTitle>
+                  <CardTitle className="font-medium text-gray-500  text-[10px]">ÖZEL NOTLAR</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <FormField
@@ -442,3 +442,8 @@ function PlusIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+
+
+
+

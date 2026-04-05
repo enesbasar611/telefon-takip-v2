@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,6 +60,11 @@ import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 
 export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurchaseOrders, aiAlerts, criticalProducts }: TedarikcilerPageClientProps) {
     const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
+
+    useEffect(() => {
+        setPurchaseOrders(initialPurchaseOrders);
+    }, [initialPurchaseOrders]);
+
     const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
     const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
@@ -78,6 +83,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
             <SupplierProfile
                 supplier={selectedSupplier}
                 onBack={() => setSelectedSupplierId(null)}
+                suppliers={suppliers}
             />
         );
     }
@@ -134,20 +140,20 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Operasyonel Genel Bakış</p>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Tedarikçi &amp; Satın Alma</h1>
+                    <p className="text-[10px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">Operasyonel Genel Bakış</p>
+                    <h1 className="font-medium text-3xl  text-foreground tracking-tight">Tedarikçi &amp; Satın Alma</h1>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap justify-end">
                     {/* Supplier Order Lists Button with badge */}
                     <Button
                         variant="outline"
                         onClick={() => setIsOrderPanelOpen(true)}
-                        className="relative h-10 px-4 rounded-xl font-bold text-xs gap-2 border-white/10 hover:bg-white/5"
+                        className="relative h-10 px-4 rounded-xl  text-xs gap-2 border-white/10 hover:bg-white/5"
                     >
                         <ShoppingBasket className="h-4 w-4" />
                         Sipariş Listeleri
                         {totalItemCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-blue-600 text-[9px] font-bold text-white flex items-center justify-center border-2 border-background">
+                            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-blue-600 text-[9px]  text-white flex items-center justify-center border-2 border-background">
                                 {totalItemCount}
                             </span>
                         )}
@@ -155,7 +161,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     <Button
                         onClick={() => setIsAnalysisOpen(true)}
                         className={cn(
-                            "h-10 px-4 rounded-xl font-bold text-xs gap-2 transition-all",
+                            "h-10 px-4 rounded-xl  text-xs gap-2 transition-all",
                             hasCritical
                                 ? "bg-rose-600/10 border border-rose-500/30 text-rose-400 hover:bg-rose-600/20"
                                 : "bg-white/5 border border-white/10 text-foreground hover:bg-white/10"
@@ -164,7 +170,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         <Brain className="h-4 w-4" />
                         Tedarik Analizi
                         {totalUrgent > 0 && (
-                            <Badge className="bg-rose-500/20 text-rose-400 border-none text-[9px] font-bold px-1.5 py-0 ml-1">
+                            <Badge className="bg-rose-500/20 text-rose-400 border-none text-[9px]  px-1.5 py-0 ml-1">
                                 {totalUrgent}
                             </Badge>
                         )}
@@ -220,13 +226,13 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                     <stat.icon className={cn("h-5 w-5", stat.color)} />
                                 </div>
                                 {stat.badge && (
-                                    <Badge className={cn("text-[9px] font-bold border-none px-2 py-0.5 rounded-lg", stat.badgeColor)}>
+                                    <Badge className={cn("text-[9px]  border-none px-2 py-0.5 rounded-lg", stat.badgeColor)}>
                                         {stat.badge}
                                     </Badge>
                                 )}
                             </div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{stat.label}</p>
-                            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                            <p className="text-xs  text-muted-foreground uppercase tracking-wide mb-1">{stat.label}</p>
+                            <p className="text-2xl  text-foreground">{stat.value}</p>
                         </CardContent>
                     </Card>
                 ))}
@@ -240,7 +246,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     <Card className="bg-card border-white/5 overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
                             <div>
-                                <h2 className="text-sm font-bold text-foreground">Öne Çıkan Tedarikçiler</h2>
+                                <h2 className="font-medium text-sm  text-foreground">Öne Çıkan Tedarikçiler</h2>
                                 <p className="text-xs text-muted-foreground font-medium">En sık işlem yaptığınız tedarik ortakları</p>
                             </div>
                         </div>
@@ -248,7 +254,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             <TableHeader>
                                 <TableRow className="border-b border-white/5 hover:bg-transparent">
                                     {["Tedarikçi Adı", "İletişim", "Aktif Sipariş", "Son Alım", "Güvenilirlik", ""].map((h) => (
-                                        <TableHead key={h} className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</TableHead>
+                                        <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                     ))}
                                 </TableRow>
                             </TableHeader>
@@ -271,22 +277,22 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                             <TableRow key={supplier.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group cursor-pointer" onClick={() => setSelectedSupplierId(supplier.id)}>
                                                 <TableCell className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={cn("h-9 w-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
+                                                        <div className={cn("h-9 w-9 rounded-xl  text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
                                                             {initials}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
+                                                            <p className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
                                                             <p className="text-[10px] font-medium text-muted-foreground">{supplier.phone || supplier.email || "—"}</p>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px] font-bold px-2.5 rounded-lg">
+                                                    <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px]  px-2.5 rounded-lg">
                                                         {supplier.contact || "Genel"}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span className="text-sm font-bold text-foreground">
+                                                    <span className="text-sm  text-foreground">
                                                         {activeOrders.length > 0 ? `${activeOrders.length} sipariş` : "—"}
                                                     </span>
                                                 </TableCell>
@@ -298,7 +304,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                         <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden w-16">
                                                             <div className={cn("h-full rounded-full", reliability >= 80 ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${reliability}%` }} />
                                                         </div>
-                                                        <span className={cn("text-[10px] font-bold", reliability >= 80 ? "text-emerald-400" : "text-amber-400")}>+{reliability}%</span>
+                                                        <span className={cn("text-[10px] ", reliability >= 80 ? "text-emerald-400" : "text-amber-400")}>+{reliability}%</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -316,7 +322,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     <Card className="bg-card border-white/5 overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
                             <div>
-                                <h2 className="text-sm font-bold text-foreground">Son Satın Alma İşlemleri</h2>
+                                <h2 className="font-medium text-sm  text-foreground">Son Satın Alma İşlemleri</h2>
                                 <p className="text-xs text-muted-foreground font-medium">Tüm tedarikçilerle gerçekleştirilen son işlemler</p>
                             </div>
                         </div>
@@ -324,7 +330,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             <TableHeader>
                                 <TableRow className="border-b border-white/5 hover:bg-transparent">
                                     {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
-                                        <TableHead key={h} className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</TableHead>
+                                        <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                     ))}
                                 </TableRow>
                             </TableHeader>
@@ -341,11 +347,11 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                         const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
                                         return (
                                             <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
-                                                <TableCell className="px-6 py-4 font-bold text-sm text-foreground">{orderNum}</TableCell>
+                                                <TableCell className="px-6 py-4  text-sm text-foreground">{orderNum}</TableCell>
                                                 <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
                                                 <TableCell>
                                                     <Badge className={cn(
-                                                        "text-[9px] font-bold border px-2 py-0.5 rounded-lg",
+                                                        "text-[9px]  border px-2 py-0.5 rounded-lg",
                                                         order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                                                             order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                                                                 "bg-rose-500/10 text-rose-400 border-rose-500/20"
@@ -355,9 +361,9 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className={cn("text-[9px] font-bold border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
+                                                    <Badge className={cn("text-[9px]  border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
                                                 </TableCell>
-                                                <TableCell className="text-sm font-bold text-foreground">
+                                                <TableCell className="text-sm  text-foreground">
                                                     ₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}
                                                 </TableCell>
                                                 <TableCell className="text-xs font-medium text-muted-foreground">
@@ -372,7 +378,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                 setGlobalSelectedOrder(order);
                                                                 setIsGlobalPaymentOpen(true);
                                                             }}
-                                                            className="h-8 text-xs font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                                                            className="h-8 text-xs  text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
                                                             disabled={order.paymentStatus === "PAID"}
                                                         >
                                                             Ödeme Yap
@@ -389,7 +395,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                     setIsGlobalDetailOpen(true);
                                                                 }
                                                             }}
-                                                            className="h-8 text-xs font-bold text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                            className="h-8 text-xs  text-blue-400 hover:bg-blue-500/10 rounded-lg"
                                                         >
                                                             {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
                                                         </Button>
@@ -408,7 +414,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 <div className="space-y-5">
                     <Card className="bg-card border-white/5 overflow-hidden">
                         <div className="px-6 py-5 border-b border-white/5">
-                            <h2 className="text-sm font-bold text-foreground">Hızlı Aksiyonlar</h2>
+                            <h2 className="font-medium text-sm  text-foreground">Hızlı Aksiyonlar</h2>
                         </div>
                         <CardContent className="p-4 space-y-2">
                             {[
@@ -420,7 +426,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                     <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", action.bg)}>
                                         <action.icon className={cn("h-4 w-4", action.color)} />
                                     </div>
-                                    <span className="text-sm font-bold text-foreground group-hover:text-blue-400 transition-colors">{action.label}</span>
+                                    <span className="text-sm  text-foreground group-hover:text-blue-400 transition-colors">{action.label}</span>
                                     <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                             ))}
@@ -430,12 +436,12 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                 <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10 relative">
                                     <ShoppingBasket className="h-4 w-4 text-blue-400" />
                                     {totalItemCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-[8px] font-bold text-white flex items-center justify-center">
+                                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-[8px]  text-white flex items-center justify-center">
                                             {totalItemCount}
                                         </span>
                                     )}
                                 </div>
-                                <span className="text-sm font-bold text-blue-400 group-hover:text-blue-300 transition-colors">Sipariş Listelerim</span>
+                                <span className="text-sm  text-blue-400 group-hover:text-blue-300 transition-colors">Sipariş Listelerim</span>
                                 <ArrowRight className="h-3 w-3 text-blue-400 ml-auto" />
                             </button>
                         </CardContent>
@@ -444,7 +450,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     {/* Analytics */}
                     <Card className="bg-card border-white/5 overflow-hidden">
                         <div className="px-6 py-5 border-b border-white/5">
-                            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                            <h2 className="font-medium text-xs  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Zap className="h-3.5 w-3.5 text-blue-500" />
                                 Analiz Özeti
                             </h2>
@@ -457,8 +463,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             ].map((metric, i) => (
                                 <div key={i} className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-muted-foreground">{metric.label}</span>
-                                        <span className="text-xs font-bold text-foreground">{metric.value}%</span>
+                                        <span className="text-xs  text-muted-foreground">{metric.label}</span>
+                                        <span className="text-xs  text-foreground">{metric.value}%</span>
                                     </div>
                                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                                         <div className={cn("h-full rounded-full", metric.color)} style={{ width: `${metric.value}%` }} />
@@ -469,7 +475,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                 <div className="flex items-start gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Smart Alım</p>
+                                        <p className="text-[10px]  text-blue-400 uppercase tracking-wider mb-1">Smart Alım</p>
                                         <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
                                             {topSupplier
                                                 ? `En yüksek güven skoruna sahip ${topSupplier.name} ile toplu alım planlayarak maliyetlerinizi düşürebilirsiniz.`
@@ -484,7 +490,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     {/* Activity */}
                     <Card className="bg-card border-white/5 overflow-hidden">
                         <div className="px-6 py-5 border-b border-white/5">
-                            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                            <h2 className="font-medium text-xs  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Activity className="h-3.5 w-3.5 text-blue-500" />
                                 Son Hareketler
                             </h2>
@@ -497,10 +503,10 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                     <div key={item.id} className="flex items-start gap-3">
                                         <div className={cn("h-2 w-2 rounded-full mt-1.5 shrink-0", item.dot)} />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
+                                            <p className="text-xs  text-foreground truncate">{item.title}</p>
                                             <p className="text-[10px] font-medium text-muted-foreground">{item.desc}</p>
                                         </div>
-                                        <span className="text-[9px] font-bold text-muted-foreground shrink-0">
+                                        <span className="text-[9px]  text-muted-foreground shrink-0">
                                             {item.time ? format(new Date(item.time), "dd MMM", { locale: tr }) : "—"}
                                         </span>
                                     </div>
@@ -565,3 +571,9 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
         </div>
     );
 }
+
+
+
+
+
+

@@ -45,20 +45,20 @@ export function ServiceStatusUpdater({ ticketId, currentStatus }: { ticketId: st
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-blue-500 text-black font-bold hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
+        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-blue-500 text-black  hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "DURUMU GÜNCELLE"}
           {!isPending && <ChevronDown className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-card border-white/5 text-white p-2 min-w-[220px] shadow-none">
-        <DropdownMenuLabel className="text-[10px] font-bold text-gray-500 p-3">Yeni Durum Seçin</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-[10px]  text-gray-500 p-3">Yeni Durum Seçin</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-white/5" />
         {Object.entries(statusMap).map(([status, info]) => (
           <DropdownMenuItem
             key={status}
             onClick={() => handleUpdate(status as ServiceStatus)}
             disabled={status === currentStatus}
-            className="p-3 text-[10px] font-bold rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
+            className="p-3 text-[10px]  rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
           >
             <div className={cn("w-2 h-2 rounded-full", info.color)} />
             {info.label} YAP
@@ -68,3 +68,6 @@ export function ServiceStatusUpdater({ ticketId, currentStatus }: { ticketId: st
     </DropdownMenu>
   );
 }
+
+
+

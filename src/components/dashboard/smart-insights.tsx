@@ -69,7 +69,7 @@ export function SmartInsights({ stats }: { stats: any }) {
             <Zap className="h-5 w-5 text-emerald-500" />
           </div>
           <div>
-            <CardTitle className="text-lg font-bold">Tahminleyici zeka</CardTitle>
+            <CardTitle className="font-medium text-lg ">Tahminleyici zeka</CardTitle>
             <p className="text-xs text-muted-foreground font-medium mt-1">İçgörü ve operasyonel analiz</p>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function SmartInsights({ stats }: { stats: any }) {
           </div>
         ))}
         {insights.length === 0 && (
-          <div className="p-10 text-center text-gray-600 text-[10px] font-bold">
+          <div className="p-10 text-center text-gray-600 text-[10px] ">
             Sistem analizi sürüyor...
           </div>
         )}
@@ -99,3 +99,7 @@ export function SmartInsights({ stats }: { stats: any }) {
     </Card>
   );
 }
+
+
+
+

@@ -284,10 +284,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                             <CreditCard className="w-8 h-8 text-indigo-500" />
                         </div>
                         <div>
-                            <h1 className="text-4xl lg:text-5xl font-bold text-white uppercase">Veresiye Terminali</h1>
+                            <h1 className="font-medium text-4xl lg:text-5xl  text-white uppercase">Veresiye Terminali</h1>
                             <div className="flex items-center gap-2 mt-2">
-                                <Badge className="bg-indigo-500/10 text-indigo-400 border-none px-3 py-1 font-bold text-[9px] uppercase">FİNANSAL DENETİM</Badge>
-                                <span className="text-slate-500 font-bold text-[10px]">Dükkan alacak takibi ve analiz merkezi</span>
+                                <Badge className="bg-indigo-500/10 text-indigo-400 border-none px-3 py-1  text-[9px] uppercase">FİNANSAL DENETİM</Badge>
+                                <span className="text-slate-500  text-[10px]">Dükkan alacak takibi ve analiz merkezi</span>
                             </div>
                         </div>
                     </div>
@@ -296,7 +296,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                     <Button
                         onClick={exportToExcel}
                         variant="ghost"
-                        className="h-14 px-8 rounded-2xl bg-white/5 border border-white/10 shadow-2xl gap-3 font-bold text-xs hover:bg-white/10 transition-all text-white"
+                        className="h-14 px-8 rounded-2xl bg-white/5 border border-white/10 shadow-2xl gap-3  text-xs hover:bg-white/10 transition-all text-white"
                     >
                         <Download className="w-4 h-4 text-indigo-400" />
                         Tabloyu İndir
@@ -321,16 +321,16 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                         )}>
                             <div className={cn("absolute top-0 left-0 w-[2px] h-0 group-hover:h-full transition-all duration-700 opacity-60", `bg-${stat.color}-500`)} />
                             <CardHeader className="flex flex-row items-center justify-between pb-4 px-8 pt-8">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">{stat.label}</span>
+                                <span className="text-[10px]  text-slate-500 uppercase">{stat.label}</span>
                                 <div className={cn("p-3 rounded-2xl transition-transform duration-500 group-hover:scale-110", `bg-${stat.color}-500/10`, stat.pulse && "animate-pulse")}>
                                     <stat.icon className={cn("w-5 h-5", `text-${stat.color}-500`)} />
                                 </div>
                             </CardHeader>
                             <CardContent className="px-8 pb-8 mt-2">
-                                <div className={cn("text-4xl font-bold tabular-nums", stat.color === 'rose' ? "text-rose-500" : stat.color === 'emerald' ? "text-emerald-500" : stat.color === 'amber' ? "text-amber-500" : "text-white")}>
+                                <div className={cn("text-4xl  tabular-nums", stat.color === 'rose' ? "text-rose-500" : stat.color === 'emerald' ? "text-emerald-500" : stat.color === 'amber' ? "text-amber-500" : "text-white")}>
                                     {stat.value}
                                 </div>
-                                <div className={cn("flex items-center gap-2 mt-4 font-bold text-[10px] opacity-60 group-hover:opacity-100 transition-opacity", `text-${stat.color}-400`)}>
+                                <div className={cn("flex items-center gap-2 mt-4  text-[10px] opacity-60 group-hover:opacity-100 transition-opacity", `text-${stat.color}-400`)}>
                                     {stat.trend === 'up' && <TrendingUp className="w-3.5 h-3.5" />}
                                     <span>{stat.subValue}</span>
                                 </div>
@@ -347,7 +347,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                 <div className="lg:col-span-3 space-y-10">
                     <Card className="border-none bg-white/[0.03] backdrop-blur-3xl shadow-2xl shadow-black/20 overflow-hidden rounded-[2.5rem] border border-white/5">
                         <CardHeader className="px-8 pt-8 pb-4">
-                            <CardTitle className="text-[10px] font-bold uppercase flex items-center gap-4 text-slate-500">
+                            <CardTitle className="font-medium text-[10px]  uppercase flex items-center gap-4 text-slate-500">
                                 <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
                                 ANALİZ MERKEZİ
                             </CardTitle>
@@ -360,8 +360,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                             ].map((g, i) => (
                                 <div key={i} className="space-y-4">
                                     <div className="flex justify-between items-end">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase">{g.label}</span>
-                                        <span className={cn("text-xs font-bold tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>₺{g.amount.toLocaleString('tr-TR')}</span>
+                                        <span className="text-[10px]  text-slate-500 uppercase">{g.label}</span>
+                                        <span className={cn("text-xs  tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>₺{g.amount.toLocaleString('tr-TR')}</span>
                                     </div>
                                     <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-[2px]">
                                         <motion.div
@@ -380,7 +380,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                 <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 dark:opacity-5 transition-all duration-700">
                                     <AlertCircle className="w-24 h-24 text-indigo-500 -rotate-12" />
                                 </div>
-                                <p className="text-[11px] text-slate-400 font-bold italic leading-relaxed relative z-10 antialiased">
+                                <p className="text-[11px] text-slate-400  italic leading-relaxed relative z-10 antialiased">
                                     "{aging['60+'].percentage > 30 ? 'Dikkat seviyesi yüksek! Ödeme süresi geciken alacaklar nakit akışını zorlayabilir. ' : 'Portföy sağlığı stabil. 60 gün üzeri alacak payınız güvenli baremde. '} Mevcut risk oranı: %{Math.round(aging['60+'].percentage)}"
                                 </p>
                             </div>
@@ -395,14 +395,14 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                             </div>
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent)] pointer-events-none" />
                             <CardHeader className="px-8 pt-10 pb-4">
-                                <CardTitle className="text-[10px] font-bold uppercase flex items-center gap-3 opacity-90">
+                                <CardTitle className="font-medium text-[10px]  uppercase flex items-center gap-3 opacity-90">
                                     <TrendingDown className="w-4 h-4" />
                                     AI PROJEKSİYON
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="px-8 pb-12 pt-2">
-                                <h3 className="text-2xl font-bold leading-tight mb-4 uppercase">Ay Sonu Tahsilat Öngörüsü</h3>
-                                <p className="text-sm font-bold leading-relaxed opacity-80 antialiased">
+                                <h3 className="font-medium text-2xl  leading-tight mb-4 uppercase">Ay Sonu Tahsilat Öngörüsü</h3>
+                                <p className="text-sm  leading-relaxed opacity-80 antialiased">
                                     Algoritmik analiz, toplam alacaklarınızın <span className="underline decoration-white/40 underline-offset-8">%{Math.max(10, 100 - Math.round(aging['60+'].percentage))}</span>'lik kısmının mevcut tahsilat ivmesiyle bu dönem içinde kasaya gireceğini öngörüyor.
                                 </p>
                             </CardContent>
@@ -414,10 +414,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                 <div className="lg:col-span-9 space-y-8">
                     <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 px-2">
                         <div className="space-y-2">
-                            <h2 className="text-3xl font-bold text-white uppercase">Müşteri Portföyü</h2>
+                            <h2 className="font-medium text-3xl  text-white uppercase">Müşteri Portföyü</h2>
                             <div className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-bold text-slate-500 opacity-80">Aktif alacaklar ve cari hareketler listesi</span>
+                                <span className="text-[10px]  text-slate-500 opacity-80">Aktif alacaklar ve cari hareketler listesi</span>
                             </div>
                         </div>
 
@@ -429,7 +429,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                     placeholder="İsim veya telefon numarası..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-14 h-14 bg-white/[0.03] border-white/5 shadow-2xl rounded-2xl focus-visible:ring-indigo-500/20 focus-visible:bg-white/[0.06] transition-all font-bold text-sm text-white relative z-10"
+                                    className="pl-14 h-14 bg-white/[0.03] border-white/5 shadow-2xl rounded-2xl focus-visible:ring-indigo-500/20 focus-visible:bg-white/[0.06] transition-all  text-sm text-white relative z-10"
                                 />
                             </div>
 
@@ -446,7 +446,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                         variant="ghost"
                                         size="sm"
                                         className={cn(
-                                            "h-10 px-5 rounded-2xl text-[10px] font-bold transition-all uppercase",
+                                            "h-10 px-5 rounded-2xl text-[10px]  transition-all uppercase",
                                             filterStatus === tab.id
                                                 ? "bg-indigo-500 text-white shadow-2xl shadow-indigo-500/20"
                                                 : "text-slate-500 hover:bg-white/5 hover:text-white"
@@ -462,13 +462,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                     <Card className="bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-white/10 relative z-10 min-h-[600px]">
                         <div className={cn("transition-all duration-500 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
                             <Table>
-                                <TableHeader className="bg-white/[0.03]">
+                                <TableHeader className="font-medium bg-white/[0.03]">
                                     <TableRow className="hover:bg-transparent border-b border-white/5">
-                                        <TableHead className="font-bold text-[10px] uppercase text-slate-500 py-8 px-10">Müşteri Profili</TableHead>
-                                        <TableHead className="font-bold text-[10px] uppercase text-slate-500">Son Hareket</TableHead>
-                                        <TableHead className="font-bold text-[10px] uppercase text-slate-500">Güncel Bakıye</TableHead>
-                                        <TableHead className="font-bold text-[10px] uppercase text-slate-500">Durum</TableHead>
-                                        <TableHead className="font-bold text-[10px] uppercase text-slate-500 text-right pr-10">Hızlı İşlem</TableHead>
+                                        <TableHead className="font-medium  text-[10px] uppercase text-slate-500 py-8 px-10">Müşteri Profili</TableHead>
+                                        <TableHead className="font-medium  text-[10px] uppercase text-slate-500">Son Hareket</TableHead>
+                                        <TableHead className="font-medium  text-[10px] uppercase text-slate-500">Güncel Bakıye</TableHead>
+                                        <TableHead className="font-medium  text-[10px] uppercase text-slate-500">Durum</TableHead>
+                                        <TableHead className="font-medium  text-[10px] uppercase text-slate-500 text-right pr-10">Hızlı İşlem</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -483,14 +483,14 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                             >
                                                 <TableCell className="py-7 px-10">
                                                     <div className="flex items-center gap-6">
-                                                        <div className="w-14 h-14 rounded-[1.75rem] bg-indigo-500/10 flex items-center justify-center font-bold text-indigo-400 text-lg shadow-2xl shadow-indigo-500/10 border border-indigo-500/10 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 group-hover:rotate-6">
+                                                        <div className="w-14 h-14 rounded-[1.75rem] bg-indigo-500/10 flex items-center justify-center  text-indigo-400 text-lg shadow-2xl shadow-indigo-500/10 border border-indigo-500/10 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-500 group-hover:rotate-6">
                                                             {item.customer.name.substring(0, 1).toUpperCase()}
                                                         </div>
                                                         <div className="flex flex-col space-y-1.5">
-                                                            <span className="font-bold text-[16px] text-white capitalize group-hover:text-indigo-400 transition-colors">{item.customer.name}</span>
+                                                            <span className=" text-[16px] text-white capitalize group-hover:text-indigo-400 transition-colors">{item.customer.name}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <Phone className="w-3 h-3 text-slate-600" />
-                                                                <span className="text-[10px] font-bold text-slate-500">
+                                                                <span className="text-[10px]  text-slate-500">
                                                                     {item.customer.phone || "Kayıt bulunamadı"}
                                                                 </span>
                                                             </div>
@@ -501,18 +501,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                     <div className="flex flex-col space-y-2">
                                                         <div className="flex items-center gap-2">
                                                             <Calendar className="w-3.5 h-3.5 text-indigo-500/60" />
-                                                            <span className="text-[12px] font-bold text-slate-300 font-mono tabular-nums">
+                                                            <span className="text-[12px]  text-slate-300 font-mono tabular-nums">
                                                                 {format(new Date(item.lastTransactionDate), "dd MMM yyyy", { locale: tr })}
                                                             </span>
                                                         </div>
-                                                        <Badge variant="outline" className="w-fit text-[9px] font-bold px-2 py-0.5 bg-white/5 border-white/5 text-slate-500 group-hover:text-slate-300 transition-colors">
+                                                        <Badge variant="outline" className="w-fit text-[9px]  px-2 py-0.5 bg-white/5 border-white/5 text-slate-500 group-hover:text-slate-300 transition-colors">
                                                             {item.lastTransactionNote.substring(0, 20)}...
                                                         </Badge>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="font-bold text-xl text-white tabular-nums">₺{item.remainingAmount.toLocaleString('tr-TR')}</span>
+                                                        <span className=" text-xl text-white tabular-nums">₺{item.remainingAmount.toLocaleString('tr-TR')}</span>
                                                         <div className="h-1 w-12 bg-white/5 rounded-full overflow-hidden">
                                                             <div className="h-full bg-emerald-500 w-1/2 opacity-50" />
                                                         </div>
@@ -521,14 +521,14 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                 <TableCell>
                                                     <div className="flex flex-wrap items-center gap-3">
                                                         <Badge className={cn(
-                                                            "font-bold text-[9px] px-3 py-1 rounded-[0.75rem] border-none shadow-xl",
+                                                            " text-[9px] px-3 py-1 rounded-[0.75rem] border-none shadow-xl",
                                                             item.status === 'GECİKMİŞ' ? "bg-rose-500/20 text-rose-500" :
                                                                 item.status === 'KISMI ÖDENDİ' ? "bg-emerald-500/20 text-emerald-500" : "bg-white/5 text-slate-400"
                                                         )}>
                                                             {item.status === 'GECİKMİŞ' ? 'Gecikmiş' : item.status === 'KISMI ÖDENDİ' ? 'Kısmi Ödendi' : 'Beklemede'}
                                                         </Badge>
                                                         {item.debtItems.some(di => di.isTracking) && (
-                                                            <Badge className="font-bold text-[9px] px-3 py-1 rounded-[0.75rem] border-none bg-indigo-500/20 text-indigo-400 shadow-xl animate-pulse">
+                                                            <Badge className=" text-[9px] px-3 py-1 rounded-[0.75rem] border-none bg-indigo-500/20 text-indigo-400 shadow-xl animate-pulse">
                                                                 Takipte
                                                             </Badge>
                                                         )}
@@ -541,7 +541,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                                 e.stopPropagation();
                                                                 setSelectedDebt(item.debtItems[0]);
                                                             }}
-                                                            className="h-12 px-6 rounded-[1.25rem] bg-emerald-500 text-white hover:bg-emerald-600 border-none shadow-[0_10px_30px_rgba(16,185,129,0.3)] font-bold text-[10px] gap-2 active:scale-95 transition-all"
+                                                            className="h-12 px-6 rounded-[1.25rem] bg-emerald-500 text-white hover:bg-emerald-600 border-none shadow-[0_10px_30px_rgba(16,185,129,0.3)]  text-[10px] gap-2 active:scale-95 transition-all"
                                                         >
                                                             <ArrowUpRight className="w-4 h-4" />
                                                             Ödeme Al
@@ -554,13 +554,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" className="bg-slate-900 border-white/10 text-white rounded-[1.75rem] p-3 w-56 shadow-[0_30px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-                                                                <div className="text-[9px] font-bold text-slate-500 uppercase px-4 py-2 border-b border-white/5 mb-2">SEÇENEKLER</div>
+                                                                <div className="text-[9px]  text-slate-500 uppercase px-4 py-2 border-b border-white/5 mb-2">SEÇENEKLER</div>
                                                                 <DropdownMenuItem className="gap-4 py-3.5 px-4 rounded-xl focus:bg-white/10 cursor-pointer" asChild>
                                                                     <Link href={`/musteriler/${item.customer.id}`}>
                                                                         <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
                                                                             <History className="w-4 h-4" />
                                                                         </div>
-                                                                        <span className="font-bold text-[11px]">Tüm geçmişi görüntüle</span>
+                                                                        <span className=" text-[11px]">Tüm geçmişi görüntüle</span>
                                                                     </Link>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
@@ -570,7 +570,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                                     <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
                                                                         <MessageCircle className="w-4 h-4" />
                                                                     </div>
-                                                                    <span className="font-bold text-[11px]">WhatsApp ile hatırlat</span>
+                                                                    <span className=" text-[11px]">WhatsApp ile hatırlat</span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
                                                                     onClick={() => setTrackingDebt(item.debtItems[0])}
@@ -579,7 +579,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                                     <div className="p-2 bg-rose-500/20 rounded-xl text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-all">
                                                                         <AlertCircle className="w-4 h-4" />
                                                                     </div>
-                                                                    <span className="font-bold text-[11px]">Takip listesine al</span>
+                                                                    <span className=" text-[11px]">Takip listesine al</span>
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
@@ -597,8 +597,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                         <CheckCircle2 className="w-14 h-14 text-slate-500" />
                                     </div>
                                     <div className="text-center space-y-3 px-6">
-                                        <h3 className="text-2xl font-bold text-white uppercase">Borç Kaydı Yok</h3>
-                                        <p className="text-[10px] font-bold text-slate-500 max-w-sm mx-auto leading-relaxed">Şu anda seçili filtrelere uygun herhangi bir alacak kaydı bulunmuyor.</p>
+                                        <h3 className="font-medium text-2xl  text-white uppercase">Borç Kaydı Yok</h3>
+                                        <p className="text-[10px]  text-slate-500 max-w-sm mx-auto leading-relaxed">Şu anda seçili filtrelere uygun herhangi bir alacak kaydı bulunmuyor.</p>
                                     </div>
                                 </div>
                             )}
@@ -629,18 +629,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                     />
 
                     <AlertDialogHeader className="relative z-10">
-                        <AlertDialogTitle className="text-2xl font-bold text-slate-900 dark:text-white uppercase">Tahsilat İşlemi</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-500 font-bold text-xs pt-2">
+                        <AlertDialogTitle className="text-2xl  text-slate-900 dark:text-white uppercase">Tahsilat İşlemi</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-500  text-xs pt-2">
                             {selectedDebt?.customer.name} için ödeme alınıyor • <span className="text-indigo-500">Kalan: ₺{selectedDebt?.remainingAmount.toLocaleString('tr-TR')}</span>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
                     <div className="py-8 space-y-8 relative z-10">
                         <div className="space-y-4">
-                            <Label className="text-[11px] font-bold text-slate-400">Tahsilat tutarı (₺)</Label>
+                            <Label className="font-medium text-[11px]  text-slate-400">Tahsilat tutarı (₺)</Label>
                             <div className="relative group">
                                 <span className={cn(
-                                    "absolute left-6 top-1/2 -translate-y-1/2 font-bold text-2xl transition-all duration-300",
+                                    "absolute left-6 top-1/2 -translate-y-1/2  text-2xl transition-all duration-300",
                                     paymentAmount ? "text-indigo-500 scale-125" : "text-slate-400"
                                 )}>₺</span>
                                 <Input
@@ -648,13 +648,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                     value={paymentAmount}
                                     onChange={(e) => setPaymentAmount(e.target.value)}
                                     placeholder="0.00"
-                                    className="pl-14 h-20 bg-slate-50 dark:bg-white/[0.05] border-none rounded-[1.5rem] text-3xl font-bold focus-visible:ring-4 focus-visible:ring-indigo-500/10 transition-all font-mono"
+                                    className="pl-14 h-20 bg-slate-50 dark:bg-white/[0.05] border-none rounded-[1.5rem] text-3xl  focus-visible:ring-4 focus-visible:ring-indigo-500/10 transition-all font-mono"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-4">
-                            <Label className="text-[11px] font-bold text-slate-400">Ödeme yöntemi seçin</Label>
+                            <Label className="font-medium text-[11px]  text-slate-400">Ödeme yöntemi seçin</Label>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
                                     { id: 'CASH', label: 'Nakit', icon: Wallet },
@@ -672,12 +672,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                         className={cn(
                                             "flex flex-col h-20 gap-2 rounded-2xl border-none transition-all duration-300",
                                             paymentMethod === method.id
-                                                ? "bg-indigo-500 text-white shadow-[0_15px_30px_rgba(99,102,241,0.3)] scale-105 font-bold"
+                                                ? "bg-indigo-500 text-white shadow-[0_15px_30px_rgba(99,102,241,0.3)] scale-105 "
                                                 : "bg-slate-50 dark:bg-white/5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
                                         )}
                                     >
                                         <method.icon className="w-5 h-5" />
-                                        <span className="text-[10px] font-bold uppercase">{method.label}</span>
+                                        <span className="text-[10px]  uppercase">{method.label}</span>
                                     </Button>
                                 ))}
                             </div>
@@ -691,11 +691,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                     exit={{ opacity: 0, y: 10, height: 0 }}
                                     className="space-y-4"
                                 >
-                                    <Label className="text-[11px] font-bold text-slate-400">
+                                    <Label className="font-medium text-[11px]  text-slate-400">
                                         Hesap seçimi yapın
                                     </Label>
                                     <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                                        <SelectTrigger className="h-14 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold text-sm text-slate-300 shadow-inner group transition-all">
+                                        <SelectTrigger className="h-14 bg-slate-50 dark:bg-white/5 border-none rounded-2xl  text-sm text-slate-300 shadow-inner group transition-all">
                                             <SelectValue placeholder="Aktarılacak hesabı seçin..." />
                                         </SelectTrigger>
                                         <SelectContent className="bg-slate-900 border-white/10 rounded-[1.5rem] p-2 shadow-2xl">
@@ -708,7 +708,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                                                 .map(acc => (
                                                     <SelectItem key={acc.id} value={acc.id} className="text-white focus:bg-indigo-500 rounded-xl py-3 px-4 transition-all">
                                                         <div className="flex justify-between items-center w-full gap-8">
-                                                            <span className="font-bold text-sm">{acc.name}</span>
+                                                            <span className=" text-sm">{acc.name}</span>
                                                             <span className="opacity-50 text-[10px] font-mono">₺{Number(acc.balance).toLocaleString('tr-TR')}</span>
                                                         </div>
                                                     </SelectItem>
@@ -722,11 +722,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                     </div>
 
                     <AlertDialogFooter className="flex-col md:flex-row gap-4 pt-4 relative z-10">
-                        <AlertDialogCancel className="h-14 flex-1 rounded-2xl border-none bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold text-[11px] hover:bg-slate-100 dark:hover:bg-white/10 transition-all">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="h-14 flex-1 rounded-2xl border-none bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400  text-[11px] hover:bg-slate-100 dark:hover:bg-white/10 transition-all">Vazgeç</AlertDialogCancel>
                         <Button
                             onClick={handleCollectPayment}
                             disabled={isPending}
-                            className="h-14 flex-[2] rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600 border-none shadow-[0_15px_40px_rgba(16,185,129,0.3)] font-bold text-[11px] transition-all hover:scale-[1.02] active:scale-95"
+                            className="h-14 flex-[2] rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600 border-none shadow-[0_15px_40px_rgba(16,185,129,0.3)]  text-[11px] transition-all hover:scale-[1.02] active:scale-95"
                         >
                             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Tahsilatı Tamamla"}
                         </Button>
@@ -753,37 +753,46 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
                     />
 
                     <AlertDialogHeader className="relative z-10">
-                        <AlertDialogTitle className="text-2xl font-bold text-slate-900 dark:text-white uppercase">İzleme & Takip</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-500 font-bold text-xs pt-2">
+                        <AlertDialogTitle className="text-2xl  text-slate-900 dark:text-white uppercase">İzleme & Takip</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-500  text-xs pt-2">
                             Ödeme sözü takip sistemi
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="py-8 space-y-6 relative z-10">
                         <div className="space-y-4">
-                            <Label className="text-[11px] font-bold text-slate-400">Hatırlatma tarihi seçin</Label>
+                            <Label className="font-medium text-[11px]  text-slate-400">Hatırlatma tarihi seçin</Label>
                             <Input
                                 type="date"
                                 value={trackingDate}
                                 onChange={(e) => setTrackingDate(e.target.value)}
-                                className="h-14 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm font-bold text-white focus:ring-4 focus:ring-rose-500/10 transition-all cursor-pointer"
+                                className="h-14 bg-slate-50 dark:bg-white/5 border-none rounded-2xl text-sm  text-white focus:ring-4 focus:ring-rose-500/10 transition-all cursor-pointer"
                             />
                         </div>
                         <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10 backdrop-blur-md">
-                            <p className="text-[11px] font-bold text-rose-500/80 leading-relaxed italic antialiased">Sistem bu tarihte müşteri için öncelikli bildirim oluşturacak ve finansal radar kapsamına alacaktır.</p>
+                            <p className="text-[11px]  text-rose-500/80 leading-relaxed italic antialiased">Sistem bu tarihte müşteri için öncelikli bildirim oluşturacak ve finansal radar kapsamına alacaktır.</p>
                         </div>
                     </div>
                     <AlertDialogFooter className="flex-col gap-4 relative z-10">
                         <Button
                             onClick={handleStartTracking}
                             disabled={isPending || !trackingDate}
-                            className="h-14 w-full rounded-2xl bg-rose-500 hover:bg-rose-600 text-white border-none shadow-[0_15px_40px_rgba(244,63,94,0.3)] font-bold text-[11px] transition-all active:scale-95"
+                            className="h-14 w-full rounded-2xl bg-rose-500 hover:bg-rose-600 text-white border-none shadow-[0_15px_40px_rgba(244,63,94,0.3)]  text-[11px] transition-all active:scale-95"
                         >
                             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Takibi Başlat"}
                         </Button>
-                        <AlertDialogCancel className="h-12 w-full rounded-2xl border-none bg-white/5 text-slate-500 font-bold text-[11px] active:scale-95 transition-all">İptal Et</AlertDialogCancel>
+                        <AlertDialogCancel className="h-12 w-full rounded-2xl border-none bg-white/5 text-slate-500  text-[11px] active:scale-95 transition-all">İptal Et</AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </div>
     );
 }
+
+
+
+
+
+
+
+
+

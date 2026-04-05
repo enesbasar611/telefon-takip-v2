@@ -1,5 +1,6 @@
 "use client";
 
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import {
     ChevronLeft,
@@ -121,12 +122,12 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                 <Button
                     variant="ghost"
                     onClick={onBack}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-[11px] gap-2 transition-all text-slate-400 hover:text-white"
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10  text-[11px] gap-2 transition-all text-slate-400 hover:text-white"
                 >
                     <ChevronLeft className="h-4 w-4" /> Geri Dön
                 </Button>
                 <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold text-white">Hatırlatıcı Yönetimi</h2>
+                    <h2 className="font-medium text-xl  text-white">Hatırlatıcı Yönetimi</h2>
                     <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                 </div>
             </div>
@@ -143,12 +144,12 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                             <div className="h-10 w-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
                                 <BellPlus className="h-5 w-5 text-blue-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-white">Yeni Hatırlatıcı Ekle</h3>
+                            <h3 className="font-medium text-lg  text-white">Yeni Hatırlatıcı Ekle</h3>
                         </div>
 
                         <div className="space-y-4 relative z-10">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">HATIRLATICI BAŞLIĞI</label>
+                                <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">HATIRLATICI BAŞLIĞI</Label>
                                 <Input
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
@@ -158,7 +159,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">AÇIKLAMA</label>
+                                <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">AÇIKLAMA</Label>
                                 <Textarea
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
@@ -169,7 +170,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">TARİH VE SAAT</label>
+                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">TARİH VE SAAT</Label>
                                     <div className="relative">
                                         <Input
                                             type="date"
@@ -188,7 +189,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">KATEGORİ</label>
+                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">KATEGORİ</Label>
                                     <Select value={category} onValueChange={setCategory}>
                                         <SelectTrigger className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium">
                                             <SelectValue placeholder="Seçiniz" />
@@ -205,7 +206,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">TEKRARLAMA</label>
+                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">TEKRARLAMA</Label>
                                     <Select value={recurrence} onValueChange={setRecurrence}>
                                         <SelectTrigger className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium">
                                             <SelectValue placeholder="Yok" />
@@ -220,7 +221,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">PERSONEL</label>
+                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">PERSONEL</Label>
                                     <div className="relative">
                                         <Input
                                             placeholder="Tüm Personel"
@@ -233,11 +234,11 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                             </div>
 
                             <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
-                                <Button variant="ghost" onClick={() => setTitle("")} className="text-slate-500 hover:text-white font-bold text-xs uppercase tracking-widest">İPTAL</Button>
+                                <Button variant="ghost" onClick={() => setTitle("")} className="text-slate-500 hover:text-white  text-xs uppercase tracking-widest">İPTAL</Button>
                                 <Button
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-8 rounded-xl flex items-center gap-2 shadow-xl shadow-blue-600/20"
+                                    className="bg-blue-600 hover:bg-blue-500 text-white  text-xs px-8 rounded-xl flex items-center gap-2 shadow-xl shadow-blue-600/20"
                                 >
                                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} KAYDET
                                 </Button>
@@ -250,10 +251,10 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                 <div className="lg:col-span-7 space-y-4">
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-white uppercase tracking-tighter">Bekleyen Hatırlatıcılar</h3>
-                            <span className="px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-500 text-[9px] font-bold">{reminders.length} AKTİF</span>
+                            <h3 className="font-medium text-sm  text-white uppercase tracking-tighter">Bekleyen Hatırlatıcılar</h3>
+                            <span className="px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-500 text-[9px] ">{reminders.length} AKTİF</span>
                         </div>
-                        <Button variant="ghost" className="h-8 text-[10px] font-bold text-slate-500 gap-1 hover:text-white transition-colors">
+                        <Button variant="ghost" className="h-8 text-[10px]  text-slate-500 gap-1 hover:text-white transition-colors">
                             Tümünü Görüntüle <ChevronRight className="h-3 w-3" />
                         </Button>
                     </div>
@@ -265,7 +266,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                             </div>
                         ) : reminders.length === 0 ? (
                             <div className="py-20 text-center matte-card rounded-3xl border-white/5 bg-white/[0.01]">
-                                <h4 className="text-slate-500 font-bold text-sm">Bekleyen hatırlatıcı bulunamadı.</h4>
+                                <h4 className="font-medium text-slate-500  text-sm">Bekleyen hatırlatıcı bulunamadı.</h4>
                             </div>
                         ) : (
                             reminders.map((r, idx) => (
@@ -284,7 +285,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-1">
                                                 <span className={cn(
-                                                    "text-[9px] font-bold uppercase tracking-widest",
+                                                    "text-[9px]  uppercase tracking-widest",
                                                     r.category === "Stok Uyarısı" ? "text-blue-400" :
                                                         r.category === "Servis Teslimatı" ? "text-emerald-400" :
                                                             "text-rose-400"
@@ -295,7 +296,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                                     {format(new Date(r.date), "PPP p", { locale: tr })}
                                                 </span>
                                             </div>
-                                            <h4 className="text-sm font-bold text-white mb-1 leading-tight group-hover:text-blue-400 transition-colors">{r.title}</h4>
+                                            <h4 className="font-medium text-sm  text-white mb-1 leading-tight group-hover:text-blue-400 transition-colors">{r.title}</h4>
                                             {r.description && <p className="text-[12px] text-slate-400 line-clamp-2 leading-snug mb-3">{r.description}</p>}
 
                                             <div className="flex items-center justify-between pt-2 border-t border-white/5">
@@ -308,7 +309,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                                 <div className="flex items-center gap-1.5">
                                                     <Button
                                                         onClick={() => handleToggleComplete(r.id, false)}
-                                                        className="h-7 px-3 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px] font-bold border border-emerald-500/20 transition-all gap-1.5"
+                                                        className="h-7 px-3 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px]  border border-emerald-500/20 transition-all gap-1.5"
                                                     >
                                                         <CheckCircle2 className="h-3 w-3" /> BİTİR
                                                     </Button>
@@ -338,15 +339,15 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                 <div className="bg-blue-600 rounded-2xl p-4 shadow-xl shadow-blue-600/20 relative overflow-hidden group">
                                     <div className="absolute inset-x-0 bottom-0 top-0 bg-white/5 pointer-events-none" />
                                     <Clock className="absolute -right-2 -bottom-2 h-12 w-12 text-black/10 group-hover:rotate-12 transition-transform" />
-                                    <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest relative z-10">BU HAFTA</span>
-                                    <div className="text-2xl font-bold text-white relative z-10 leading-none my-1">{reminders.length}</div>
-                                    <p className="text-[9px] font-bold text-blue-100/70 relative z-10">Planlanan İşlem</p>
+                                    <span className="text-[10px]  text-blue-100 uppercase tracking-widest relative z-10">BU HAFTA</span>
+                                    <div className="text-2xl  text-white relative z-10 leading-none my-1">{reminders.length}</div>
+                                    <p className="text-[9px]  text-blue-100/70 relative z-10">Planlanan İşlem</p>
                                 </div>
                                 <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 relative overflow-hidden group">
                                     <AlertCircle className="absolute -right-2 -bottom-2 h-12 w-12 text-white/[0.03] group-hover:rotate-12 transition-transform" />
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest relative z-10">GECİKEN</span>
-                                    <div className="text-2xl font-bold text-white relative z-10 leading-none my-1">0</div>
-                                    <p className="text-[9px] font-bold text-rose-500 relative z-10 flex items-center gap-1">
+                                    <span className="text-[10px]  text-slate-500 uppercase tracking-widest relative z-10">GECİKEN</span>
+                                    <div className="text-2xl  text-white relative z-10 leading-none my-1">0</div>
+                                    <p className="text-[9px]  text-rose-500 relative z-10 flex items-center gap-1">
                                         <AlertCircle className="h-2 w-2" /> Aksiyon Gerekiyor
                                     </p>
                                 </div>
@@ -358,3 +359,12 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
         </div>
     );
 }
+
+
+
+
+
+
+
+
+

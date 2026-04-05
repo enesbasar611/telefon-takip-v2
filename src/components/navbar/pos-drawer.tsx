@@ -41,7 +41,7 @@ export function POSDrawer() {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden md:flex gap-2 text-sm font-bold text-muted-foreground bg-muted/20 border border-border/50 rounded-xl px-5 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group"
+          className="hidden md:flex gap-2 text-sm  text-muted-foreground bg-muted/20 border border-border/50 rounded-xl px-5 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group"
         >
           <ShoppingCart className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           <span>Hızlı Satış</span>
@@ -51,7 +51,7 @@ export function POSDrawer() {
         <div className="h-full flex flex-col">
           <SheetHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-slate-700/30">
             <div className="flex flex-col">
-              <SheetTitle className="text-2xl font-bold text-foreground leading-none">Hızlı Satış</SheetTitle>
+              <SheetTitle className="text-2xl  text-foreground leading-none">Hızlı Satış</SheetTitle>
               <SheetDescription className="text-muted-foreground font-medium text-xs mt-1.5">
                 Sık kullanılan ürünler ve sepet yönetimi
               </SheetDescription>
@@ -59,7 +59,7 @@ export function POSDrawer() {
           </SheetHeader>
           <div className="flex-1 overflow-hidden relative">
             {loading ? (
-              <div className="h-full flex items-center justify-center text-slate-500 font-bold animate-pulse">
+              <div className="h-full flex items-center justify-center text-slate-500  animate-pulse">
                 Veriler Yükleniyor...
               </div>
             ) : (
@@ -73,3 +73,6 @@ export function POSDrawer() {
     </Sheet>
   );
 }
+
+
+

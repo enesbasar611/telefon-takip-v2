@@ -25,11 +25,11 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                         <div className="p-2.5 bg-purple-500/10 rounded-xl text-purple-500 group-hover:scale-110 transition-transform">
                             <Sparkles className="h-5 w-5" />
                         </div>
-                        <div className="text-[9px] font-bold tracking-widest text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full z-10">AI ÖNERİSİ</div>
+                        <div className="text-[9px]  tracking-widest text-purple-500 bg-purple-500/10 px-2 py-0.5 rounded-full z-10">AI ÖNERİSİ</div>
                     </div>
                     <div className="mt-2 relative z-10">
-                        <h3 className="text-[32px] font-bold text-white leading-none">{missingItems.length}</h3>
-                        <p className="text-[11px] text-slate-500 font-bold tracking-wide mt-2">Eksik Stok Listesi</p>
+                        <h3 className="font-medium text-[32px]  text-white leading-none">{missingItems.length}</h3>
+                        <p className="text-[11px] text-slate-500  tracking-wide mt-2">Eksik Stok Listesi</p>
                     </div>
                     <div className="absolute -right-4 -bottom-4 opacity-[0.03] rotate-12 scale-150 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                         <Sparkles className="h-40 w-40 text-purple-500" />
@@ -44,7 +44,7 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                                 <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-bold">AI Stok Öngörüsü</DialogTitle>
+                                <DialogTitle className="font-medium text-2xl ">AI Stok Öngörüsü</DialogTitle>
                                 <p className="text-sm text-slate-400 font-medium">Satış trendlerine göre dükkanda olması gereken 'Eksik' listesi.</p>
                             </div>
                         </div>
@@ -54,9 +54,9 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                         <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 flex flex-col gap-4 relative overflow-hidden group">
                             <div className="flex items-center gap-2">
                                 <Target className="h-4 w-4 text-purple-400" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Stratejik Öneri</span>
+                                <span className="text-[10px]  text-slate-500 uppercase tracking-widest leading-none">Stratejik Öneri</span>
                             </div>
-                            <p className="text-[13px] text-slate-200 font-bold leading-relaxed pr-6">
+                            <p className="text-[13px] text-slate-200  leading-relaxed pr-6">
                                 "Son 30 günde en çok 2. El iPhone 11 ve 12 serisi sattınız. Dükkandaki iPhone stoğunuzu %20 artırmak ciroyu doğrudan %15 etkileyebilir."
                             </p>
                             <div className="absolute -right-6 -top-6 opacity-10 group-hover:rotate-12 transition-transform duration-500 pointer-events-none">
@@ -67,16 +67,16 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                         <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 flex flex-col gap-4 relative overflow-hidden group">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4 text-amber-400" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Kritik Uyarı</span>
+                                <span className="text-[10px]  text-slate-500 uppercase tracking-widest leading-none">Kritik Uyarı</span>
                             </div>
-                            <p className="text-[13px] text-slate-200 font-bold leading-relaxed pr-6">
+                            <p className="text-[13px] text-slate-200  leading-relaxed pr-6">
                                 "Dükkanda şu an 'Yurtdışı' cihaz stoğunuz tükenmek üzere. Karlılığın en yüksek olduğu bu kategoride acil alım yapmanız önerilir."
                             </p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Eksik Stok Listesi (Talep Gelen/Satılan Ama Stokta Yok)</h4>
+                        <h4 className="font-medium text-xs  text-slate-500 uppercase tracking-widest pl-1">Eksik Stok Listesi (Talep Gelen/Satılan Ama Stokta Yok)</h4>
                         <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                             {missingItems.map((item, i) => (
                                 <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-slate-900/60 border border-slate-800/60 hover:bg-slate-800/40 transition-all group translate-x-0 hover:translate-x-1 duration-300">
@@ -85,10 +85,10 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                                             <Smartphone className="h-6 w-6 text-purple-500" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-white leading-none">{item.productName}</p>
-                                            <p className="text-[11px] text-slate-500 font-bold mt-1.5 uppercase tracking-tighter">
+                                            <p className="text-sm  text-white leading-none">{item.productName}</p>
+                                            <p className="text-[11px] text-slate-500  mt-1.5 uppercase tracking-tighter">
                                                 En son <span className="text-purple-400/80">{item.color}</span> / <span className="text-purple-400/80">{item.storage}</span> modelini sattınız. <br />
-                                                <span className="text-rose-500/70 text-[9px] font-bold">ŞU AN STOKTA YOK!</span>
+                                                <span className="text-rose-500/70 text-[9px] ">ŞU AN STOKTA YOK!</span>
                                             </p>
                                         </div>
                                     </div>
@@ -102,13 +102,13 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
                             {missingItems.length === 0 && (
                                 <div className="p-20 text-center flex flex-col items-center gap-4">
                                     <Zap className="h-12 w-12 text-slate-800" />
-                                    <p className="text-slate-500 font-bold text-sm">Stoklarınız şu an çok dengeli. Eksik listesi boş.</p>
+                                    <p className="text-slate-500  text-sm">Stoklarınız şu an çok dengeli. Eksik listesi boş.</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10 text-[11px] text-blue-400 font-bold text-center">
+                    <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10 text-[11px] text-blue-400  text-center">
                         💡 Bu öneriler son 30 günlük satış trendleriniz ve güncel stok durumunuz kıyaslanarak AI motoru tarafından oluşturulmuştur.
                     </div>
                 </div>
@@ -116,3 +116,9 @@ export function DeviceAiStockAdviceModal({ missingItems }: DeviceAiStockAdviceMo
         </Dialog>
     );
 }
+
+
+
+
+
+

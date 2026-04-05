@@ -20,7 +20,7 @@ export function CurrencyDisplay() {
     );
   }
 
-  const badgeClass = "h-10 px-4 bg-surface-container-low border-none rounded-xl text-xs font-bold text-foreground hover:bg-surface-container-highest transition-all flex items-center gap-3 shadow-sm group";
+  const badgeClass = "h-10 px-4 bg-surface-container-low border-none rounded-xl text-xs  text-foreground hover:bg-surface-container-highest transition-all flex items-center gap-3 shadow-sm group";
 
   return (
     <div className="flex items-center gap-3">
@@ -65,3 +65,6 @@ export function CurrencyDisplay() {
     </div>
   );
 }
+
+
+

@@ -12,6 +12,7 @@ import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
 import { useUI } from "@/lib/context/ui-context";
 import { useAura } from "@/lib/context/aura-context";
 import { useEffect } from "react";
+import { Label } from "@/components/ui/label";
 
 export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [command, setCommand] = useState("");
@@ -75,7 +76,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <RefreshCcw className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1 text-left">
-                            <DialogTitle className="text-lg font-bold tracking-tight">Akıllı Güncelleme</DialogTitle>
+                            <DialogTitle className="font-medium text-lg  tracking-tight">Akıllı Güncelleme</DialogTitle>
                             <p className="text-[11px] text-slate-400 mt-0.5">
                                 BAŞAR AI: Mevcut stokları yapay zeka ile topluca güncelleyin.
                             </p>
@@ -87,9 +88,9 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     {!updates ? (
                         <>
                             <div className="space-y-2">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Label className="font-medium text-[11px]  text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Ne yapmak istiyorsunuz?
-                                </label>
+                                </Label>
                                 <textarea
                                     value={command}
                                     onChange={e => {
@@ -118,7 +119,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Button
                                 onClick={handleParse}
                                 disabled={isPending || !command.trim()}
-                                className="w-full h-12 bg-violet-600 hover:bg-violet-700 font-bold"
+                                className="w-full h-12 bg-violet-600 hover:bg-violet-700 "
                             >
                                 {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Yorumlanıyor...</> : <><Sparkles className="h-4 w-4 mr-2" /> İşlemi Planla</>}
                             </Button>
@@ -130,7 +131,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     <Sparkles className="h-5 w-5 text-violet-400" />
                                 </div>
                                 <div className="space-y-1">
-                                    <h3 className="text-sm font-bold text-violet-200">BAŞAR AI Planı</h3>
+                                    <h3 className="font-medium text-sm  text-violet-200">BAŞAR AI Planı</h3>
                                     <p className="text-[12px] text-violet-300/80 leading-relaxed font-medium">
                                         {aiResponse?.summary}
                                     </p>
@@ -139,7 +140,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                             {aiResponse?.warnings && aiResponse.warnings.length > 0 && (
                                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-2">
-                                    <h3 className="text-[11px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                                    <h3 className="font-medium text-[11px]  text-amber-500 uppercase tracking-wider flex items-center gap-2">
                                         <AlertTriangle className="h-3 w-3" /> Uyarılar
                                     </h3>
                                     <ul className="space-y-1">
@@ -153,13 +154,13 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             )}
 
                             <div className="space-y-1">
-                                <h3 className="text-sm font-bold text-slate-200">Etkilenecek Ürünler ({aiResponse?.affectedCount})</h3>
+                                <h3 className="font-medium text-sm  text-slate-200">Etkilenecek Ürünler ({aiResponse?.affectedCount})</h3>
                                 <p className="text-[11px] text-slate-500 italic">Lütfen yapılacak değişiklikleri onaylayın.</p>
                             </div>
 
                             <div className="bg-[#18181A] border border-[#222] rounded-xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
                                 <table className="w-full text-[12px]">
-                                    <thead className="bg-[#111] sticky top-0 border-b border-[#222] text-slate-500 font-bold tracking-wider uppercase text-[9px]">
+                                    <thead className="bg-[#111] sticky top-0 border-b border-[#222] text-slate-500  tracking-wider uppercase text-[9px]">
                                         <tr>
                                             <th className="px-4 py-3 text-left">Ürün</th>
                                             <th className="px-4 py-3 text-right">Eski Durum</th>
@@ -173,7 +174,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-medium text-slate-300">{up.name}</span>
-                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit font-bold uppercase ${up.status === 'Halledildi' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit  uppercase ${up.status === 'Halledildi' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
                                                             }`}>
                                                             {up.status}
                                                         </span>
@@ -184,11 +185,11 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex flex-col items-end">
-                                                        {up.newName && <span className="text-violet-400 font-bold">Yeni İsim: {up.newName}</span>}
-                                                        {up.sellPrice !== undefined && <span className="text-emerald-400 font-bold">₺{up.sellPrice}</span>}
-                                                        {up.buyPriceUsd !== undefined && <span className="text-blue-400 font-bold">${up.buyPriceUsd}</span>}
-                                                        {up.stock !== undefined && <span className="text-orange-400 font-bold">Stok: {up.stock}</span>}
-                                                        {up.location && <span className="text-cyan-400 font-bold">Raf: {up.location}</span>}
+                                                        {up.newName && <span className="text-violet-400 ">Yeni İsim: {up.newName}</span>}
+                                                        {up.sellPrice !== undefined && <span className="text-emerald-400 ">₺{up.sellPrice}</span>}
+                                                        {up.buyPriceUsd !== undefined && <span className="text-blue-400 ">${up.buyPriceUsd}</span>}
+                                                        {up.stock !== undefined && <span className="text-orange-400 ">Stok: {up.stock}</span>}
+                                                        {up.location && <span className="text-cyan-400 ">Raf: {up.location}</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-500 text-[11px] leading-tight max-w-[150px]">{up.reason}</td>
@@ -210,14 +211,14 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     variant="outline"
                                     onClick={() => setAiResponse(null)}
                                     disabled={isPending}
-                                    className="flex-1 h-11 border-[#333] hover:bg-[#222] text-slate-400 font-bold"
+                                    className="flex-1 h-11 border-[#333] hover:bg-[#222] text-slate-400 "
                                 >
                                     <ArrowLeft className="h-4 w-4 mr-2" /> Geri Dön
                                 </Button>
                                 <Button
                                     onClick={handleApply}
                                     disabled={isPending}
-                                    className="flex-[2] h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                                    className="flex-[2] h-11 bg-emerald-600 hover:bg-emerald-700 text-white "
                                 >
                                     {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uygulanıyor...</> : <><Check className="h-4 w-4 mr-2" /> Onayla ve Uygula</>}
                                 </Button>
@@ -229,3 +230,9 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Dialog>
     );
 }
+
+
+
+
+
+

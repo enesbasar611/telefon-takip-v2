@@ -64,9 +64,9 @@ export function ServiceStats({ tickets }: ServiceStatsProps) {
                             <TrendingUp className="h-4 w-4 text-slate-200" />
                         </div>
                         <div className="mt-6">
-                            <p className="text-[10px] font-bold text-muted-foreground tracking-wider mb-1">{stat.label}</p>
+                            <p className="text-[10px]  text-muted-foreground tracking-wider mb-1">{stat.label}</p>
                             <div className="flex items-baseline gap-2">
-                                <p className="text-4xl font-bold text-foreground">{stat.value}</p>
+                                <p className="text-4xl  text-foreground">{stat.value}</p>
                                 <p className="text-[10px] text-muted-foreground font-medium">{stat.description}</p>
                             </div>
                         </div>
@@ -76,3 +76,6 @@ export function ServiceStats({ tickets }: ServiceStatsProps) {
         </div>
     );
 }
+
+
+

@@ -37,6 +37,7 @@ import { TedarikciCariEkstreModal } from "./tedarikci-cari-ekstre-modal";
 import { EditSupplierModal } from "./edit-supplier-modal";
 import { deleteSupplier } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
+import { PurchaseForm } from "./purchase-form";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -52,9 +53,10 @@ import { Trash2 } from "lucide-react";
 interface SupplierProfileProps {
     supplier: any;
     onBack: () => void;
+    suppliers: any[];
 }
 
-export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierProfileProps) {
+export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }: SupplierProfileProps) {
     const [supplier, setSupplier] = useState(initialSupplier);
     const [activeTab, setActiveTab] = useState("orders");
     const [isMalKabulOpen, setIsMalKabulOpen] = useState(false);
@@ -63,6 +65,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isEkstreOpen, setIsEkstreOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -117,7 +120,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
             <div className="flex flex-col gap-4">
                 <button
                     onClick={onBack}
-                    className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors w-fit"
+                    className="flex items-center gap-2 text-xs  text-muted-foreground hover:text-foreground transition-colors w-fit"
                 >
                     <ArrowLeft className="h-3 w-3" />
                     Tedarikçi Listesine Dön
@@ -130,22 +133,22 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
 
                     <div className="flex items-start gap-6 relative z-10">
                         {/* Logo Placeholder */}
-                        <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-blue-500/20 shrink-0">
+                        <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center  text-2xl text-white shadow-xl shadow-blue-500/20 shrink-0">
                             {supplier.name[0]}
                         </div>
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight">{supplier.name}</h1>
-                                <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider py-0.5 px-2 rounded-lg">
+                                <h1 className="font-medium text-2xl  text-foreground tracking-tight">{supplier.name}</h1>
+                                <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]  uppercase tracking-wider py-0.5 px-2 rounded-lg">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Onaylı Tedarikçi
                                 </Badge>
                                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Aktif</span>
+                                <span className="text-[10px]  text-emerald-500 uppercase tracking-widest">Aktif</span>
                             </div>
 
-                            <p className="text-xs font-bold text-muted-foreground">{supplier.category || "Yedek Parça & Aksesuar"} • {supplier.address?.split(',')[0] || "İstanbul, TR"}</p>
+                            <p className="text-xs  text-muted-foreground">{supplier.category || "Yedek Parça & Aksesuar"} • {supplier.address?.split(',')[0] || "İstanbul, TR"}</p>
 
                             <div className="flex items-center gap-4 text-[11px] font-medium text-muted-foreground pt-1">
                                 <div className="flex items-center gap-1.5 hover:text-blue-400 transition-colors cursor-pointer">
@@ -167,9 +170,9 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                     <div className="flex items-center gap-3 relative z-10">
                         <div className="hidden xl:flex flex-col items-end mr-6 pr-6 border-r border-white/5 space-y-3">
                             <div className="flex flex-col items-end">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Güven Skoru</p>
+                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest mb-1">Güven Skoru</p>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-2xl font-bold text-emerald-500">{supplier.trustScore || 98}/100</span>
+                                    <span className="text-2xl  text-emerald-500">{supplier.trustScore || 98}/100</span>
                                     <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                         <PackageCheck className="h-4 w-4 text-emerald-500" />
                                     </div>
@@ -184,7 +187,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                     { label: "Kalite", value: Number(supplier.qualityScore || 90) }
                                 ].map((item, i) => (
                                     <div key={i} className="space-y-1">
-                                        <div className="flex items-center justify-between text-[8px] font-bold uppercase tracking-tighter">
+                                        <div className="flex items-center justify-between text-[8px]  uppercase tracking-tighter">
                                             <span className="text-slate-500">{item.label}</span>
                                             <span className={item.value >= 80 ? "text-emerald-500" : "text-amber-500"}>%{item.value}</span>
                                         </div>
@@ -205,7 +208,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Button
                             variant="outline"
                             onClick={() => setIsEditOpen(true)}
-                            className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5"
+                            className="h-11 rounded-xl  text-xs gap-2 border-white/5 hover:bg-white/5"
                         >
                             <Edit3 className="h-4 w-4" />
                             Düzenle
@@ -214,7 +217,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Button
                             variant="outline"
                             onClick={() => setIsDeleteAlertOpen(true)}
-                            className="h-11 rounded-xl font-bold text-xs gap-2 border-rose-500/10 hover:bg-rose-500/10 text-rose-500 bg-rose-500/5 px-4"
+                            className="h-11 rounded-xl  text-xs gap-2 border-rose-500/10 hover:bg-rose-500/10 text-rose-500 bg-rose-500/5 px-4"
                         >
                             <Trash2 className="h-4 w-4" />
                             Sil
@@ -224,7 +227,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                             <Button
                                 variant="outline"
                                 onClick={() => setIsIbanOpen(true)}
-                                className="h-11 rounded-xl font-bold text-xs gap-2 border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 bg-indigo-500/5 text-indigo-300"
+                                className="h-11 rounded-xl  text-xs gap-2 border-indigo-500/20 hover:bg-indigo-500/10 hover:text-indigo-400 bg-indigo-500/5 text-indigo-300"
                             >
                                 <Landmark className="h-4 w-4" />
                                 IBAN Göster
@@ -234,12 +237,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Button
                             variant="outline"
                             onClick={() => setIsPaymentOpen(true)}
-                            className="h-11 rounded-xl font-bold text-xs gap-2 border-white/5 hover:bg-white/5 px-4 bg-white/5"
+                            className="h-11 rounded-xl  text-xs gap-2 border-white/5 hover:bg-white/5 px-4 bg-white/5"
                         >
                             <CreditCard className="h-4 w-4" />
                             Ödeme Yap
                         </Button>
-                        <Button className="h-11 rounded-xl font-bold text-xs gap-2 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 px-6">
+                        <Button onClick={() => setIsPurchaseFormOpen(true)} className="h-11 rounded-xl  text-xs gap-2 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 px-6">
                             <PlusCircle className="h-4 w-4" />
                             Yeni Sipariş
                         </Button>
@@ -257,13 +260,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                     <stat.icon className={cn("h-5 w-5", stat.color)} />
                                 </div>
                                 {stat.trend && (
-                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[10px] font-bold">
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[10px] ">
                                         {stat.trend}
                                     </Badge>
                                 )}
                             </div>
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{stat.label}</p>
-                            <p className="text-2xl font-bold text-foreground tracking-tight">{stat.value}</p>
+                            <p className="text-xs  text-muted-foreground uppercase tracking-wider mb-1">{stat.label}</p>
+                            <p className="text-2xl  text-foreground tracking-tight">{stat.value}</p>
                         </CardContent>
                     </Card>
                 ))}
@@ -281,7 +284,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <TabsTrigger
                             key={tab.id}
                             value={tab.id}
-                            className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-foreground rounded-none px-0 py-4 text-xs font-bold text-muted-foreground hover:text-foreground transition-all gap-2"
+                            className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-foreground rounded-none px-0 py-4 text-xs  text-muted-foreground hover:text-foreground transition-all gap-2"
                         >
                             <tab.icon className="h-3.5 w-3.5" />
                             {tab.label}
@@ -293,14 +296,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                     <TabsContent value="orders" className="m-0 focus-visible:outline-none">
                         <Card className="bg-card border-white/5 overflow-hidden">
                             <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Aktif ve Bekleyen Siparişler</h3>
+                                <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Aktif ve Bekleyen Siparişler</h3>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-white/5 text-left bg-white/[0.01]">
                                             {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
-                                                <th key={h} className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
+                                                <th key={h} className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -314,12 +317,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                         ) : (
                                             supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").map((order: any) => (
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
-                                                    <td className="px-6 py-4 text-sm font-bold text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
+                                                    <td className="px-6 py-4 text-sm  text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
                                                     <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-sm  text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px] font-bold border-none px-2 rounded-xl",
+                                                            "text-[10px]  border-none px-2 rounded-xl",
                                                             order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
                                                                 order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
                                                         )}>
@@ -328,7 +331,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px] font-bold border-none px-2 rounded-xl",
+                                                            "text-[10px]  border-none px-2 rounded-xl",
                                                             order.status === "PENDING" ? "bg-amber-500/10 text-amber-500" :
                                                                 order.status === "ON_WAY" ? "bg-blue-500/10 text-blue-500" : "bg-slate-500/10 text-slate-400"
                                                         )}>
@@ -341,7 +344,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                                 onClick={() => handleMalKabul(order)}
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-8 rounded-lg text-[10px] font-bold uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
+                                                                className="h-8 rounded-lg text-[10px]  uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
                                                             >
                                                                 Teslim Al
                                                             </Button>
@@ -349,7 +352,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                                 onClick={() => handleDetail(order)}
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-8 rounded-lg text-[10px] font-bold uppercase text-muted-foreground hover:bg-white/5"
+                                                                className="h-8 rounded-lg text-[10px]  uppercase text-muted-foreground hover:bg-white/5"
                                                             >
                                                                 Detay
                                                             </Button>
@@ -367,14 +370,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                     <TabsContent value="history" className="m-0">
                         <Card className="bg-card border-white/5 overflow-hidden">
                             <div className="p-6 border-b border-white/5">
-                                <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
+                                <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-white/5 text-left bg-white/[0.01]">
                                             {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
-                                                <th key={h} className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
+                                                <th key={h} className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -388,12 +391,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                         ) : (
                                             supplier.purchases?.filter((p: any) => p.status === "COMPLETED").map((order: any) => (
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
-                                                    <td className="px-6 py-4 text-sm font-bold text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
+                                                    <td className="px-6 py-4 text-sm  text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
                                                     <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-sm  text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px] font-bold border-none px-2 rounded-xl",
+                                                            "text-[10px]  border-none px-2 rounded-xl",
                                                             order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
                                                                 order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
                                                         )}>
@@ -401,7 +404,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                         </Badge>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <Badge className="text-[10px] font-bold border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                                                        <Badge className="text-[10px]  border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                                                             Tamamlandı
                                                         </Badge>
                                                     </td>
@@ -411,7 +414,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                                 onClick={() => handleDetail(order)}
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-8 rounded-lg text-[10px] font-bold uppercase text-muted-foreground hover:bg-white/5"
+                                                                className="h-8 rounded-lg text-[10px]  uppercase text-muted-foreground hover:bg-white/5"
                                                             >
                                                                 Detay
                                                             </Button>
@@ -430,13 +433,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Card className="bg-card border-white/5 overflow-hidden">
                             <div className="p-6 border-b border-white/5 flex items-center justify-between">
                                 <div className="flex flex-col gap-1">
-                                    <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Cari Hesap Ekstresi (Banka Tipi)</h3>
+                                    <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Cari Hesap Ekstresi (Banka Tipi)</h3>
                                     <p className="text-[10px] font-medium text-muted-foreground">Tüm alım ve ödeme hareketlerinin kümülatif bakiye dökümü.</p>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 rounded-xl text-[10px] font-bold uppercase gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+                                    className="h-9 rounded-xl text-[10px]  uppercase gap-2 border-white/10 hover:bg-white/5 bg-white/5"
                                     onClick={() => setIsEkstreOpen(true)}
                                 >
                                     <Printer className="h-3.5 w-3.5" />
@@ -447,12 +450,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-white/5 text-left bg-white/[0.01]">
-                                            <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tarih</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">İşlem Tipi</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Açıklama</th>
-                                            <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Eski Bakiye</th>
-                                            <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Tutar</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Yeni Bakiye</th>
+                                            <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">Tarih</th>
+                                            <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">İşlem Tipi</th>
+                                            <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">Açıklama</th>
+                                            <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest text-right">Eski Bakiye</th>
+                                            <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest text-right">Tutar</th>
+                                            <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest text-right">Yeni Bakiye</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
@@ -482,25 +485,25 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <Badge className={cn(
-                                                                "text-[10px] font-bold border-none px-2 rounded-xl",
+                                                                "text-[10px]  border-none px-2 rounded-xl",
                                                                 t.type === "INCOME" ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"
                                                             )}>
                                                                 {t.type === "INCOME" ? "Borç Alım" : "Borç Ödeme"}
                                                             </Badge>
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm font-bold text-foreground">
+                                                        <td className="px-6 py-4 text-sm  text-foreground">
                                                             {t.description}
                                                         </td>
-                                                        <td className="px-4 py-4 text-xs font-bold text-slate-500 text-right">
+                                                        <td className="px-4 py-4 text-xs  text-slate-500 text-right">
                                                             ₺{Math.round(prevBalance).toLocaleString("tr-TR")}
                                                         </td>
                                                         <td className={cn(
-                                                            "px-4 py-4 text-sm font-bold text-right",
+                                                            "px-4 py-4 text-sm  text-right",
                                                             t.type === "INCOME" ? "text-rose-400" : "text-emerald-400"
                                                         )}>
                                                             {t.type === "INCOME" ? "+" : "-"} ₺{Math.round(amount).toLocaleString("tr-TR")}
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm font-bold text-foreground text-right bg-white/[0.01]">
+                                                        <td className="px-6 py-4 text-sm  text-foreground text-right bg-white/[0.01]">
                                                             ₺{Math.round(currentBalance).toLocaleString("tr-TR")}
                                                         </td>
                                                     </tr>
@@ -549,21 +552,21 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
 
             <Dialog open={isIbanOpen} onOpenChange={setIsIbanOpen}>
                 <DialogContent className="max-w-md w-11/12 sm:w-full bg-[#0F172A] border-white/10 p-8 flex flex-col items-center justify-center text-center rounded-3xl">
-                    <DialogTitle className="sr-only">IBAN Bilgisi</DialogTitle>
+                    <DialogTitle className="font-medium sr-only">IBAN Bilgisi</DialogTitle>
                     <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 shadow-inner shadow-indigo-500/20 border border-indigo-500/20">
                         <Landmark className="h-8 w-8 text-indigo-400" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">{supplier.name}</h2>
-                    <p className="text-sm font-bold text-indigo-400 mb-8">{supplier.bankName || "Banka Adı Girilmemiş"}</p>
+                    <h2 className="font-medium text-2xl  text-white mb-2">{supplier.name}</h2>
+                    <p className="text-sm  text-indigo-400 mb-8">{supplier.bankName || "Banka Adı Girilmemiş"}</p>
 
                     <div className="bg-[#0B101B] border border-white/10 rounded-2xl py-8 px-4 sm:px-8 w-full">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
-                        <p className="text-[17px] sm:text-2xl font-mono font-bold text-white tracking-widest break-all">
+                        <p className="text-[10px]  text-slate-500 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
+                        <p className="text-[17px] sm:text-2xl font-mono  text-white tracking-widest break-all">
                             {supplier.iban}
                         </p>
                     </div>
 
-                    <Button onClick={() => setIsIbanOpen(false)} className="w-full mt-8 h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition-all">
+                    <Button onClick={() => setIsIbanOpen(false)} className="w-full mt-8 h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white  transition-all">
                         Kapat
                     </Button>
                 </DialogContent>
@@ -582,17 +585,30 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                 supplier={supplier}
             />
 
+            <PurchaseForm
+                isOpen={isPurchaseFormOpen}
+                onClose={() => setIsPurchaseFormOpen(false)}
+                suppliers={suppliers}
+                defaultSupplierId={supplier.id}
+                onSuccess={(newOrder) => {
+                    setSupplier({
+                        ...supplier,
+                        purchases: [newOrder, ...(supplier.purchases || [])]
+                    });
+                }}
+            />
+
             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                 <AlertDialogContent className="bg-[#0F172A] border-white/10 rounded-3xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-bold text-white">Tedarikçiyi Sil</AlertDialogTitle>
+                        <AlertDialogTitle className="text-xl  text-white">Tedarikçiyi Sil</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-400 font-medium">
-                            <span className="font-bold text-white">"{supplier.name}"</span> isimli tedarikçiyi silmek istediğinize emin misiniz?
+                            <span className=" text-white">"{supplier.name}"</span> isimli tedarikçiyi silmek istediğinize emin misiniz?
                             Bu işlem geri alınamaz ve tedarikçiye ait tüm geçmiş veriler silinecektir.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="bg-white/5 border-white/5 text-white font-bold rounded-xl hover:bg-white/10 hover:text-white">
+                        <AlertDialogCancel className="bg-white/5 border-white/5 text-white  rounded-xl hover:bg-white/10 hover:text-white">
                             Vazgeç
                         </AlertDialogCancel>
                         <AlertDialogAction
@@ -601,7 +617,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                                 handleDelete(false);
                             }}
                             disabled={isDeleting}
-                            className="bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/20"
+                            className="bg-rose-600 hover:bg-rose-500 text-white  rounded-xl shadow-lg shadow-rose-600/20"
                         >
                             {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                             Onayla ve Sil
@@ -613,12 +629,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
             <Dialog open={isPendingOrdersModalOpen} onOpenChange={setIsPendingOrdersModalOpen}>
                 <DialogContent className="max-w-xl bg-[#0F172A] border-white/10 rounded-3xl p-8">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                        <DialogTitle className="font-medium text-2xl  text-white flex items-center gap-3">
                             <Clock className="text-amber-500 h-6 w-6" />
                             Bekleyen İşlemler Var!
                         </DialogTitle>
                         <p className="text-slate-400 font-medium pt-2">
-                            Bu tedarikçiye ait henüz tamamlanmamış <span className="text-white font-bold">{pendingOrdersToDelete.length}</span> adet sipariş bulunuyor.
+                            Bu tedarikçiye ait henüz tamamlanmamış <span className="text-white ">{pendingOrdersToDelete.length}</span> adet sipariş bulunuyor.
                             Tedarikçiyi silmek için bu siparişlerdeki ürünleri ne yapmak istersiniz?
                         </p>
                     </DialogHeader>
@@ -627,12 +643,12 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         {pendingOrdersToDelete.map((order) => (
                             <div key={order.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-bold text-white">#{order.orderNo}</p>
-                                    <p className="text-[10px] font-bold text-slate-500">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
+                                    <p className="text-xs  text-white">#{order.orderNo}</p>
+                                    <p className="text-[10px]  text-slate-500">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs font-bold text-amber-500">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
-                                    <p className="text-[10px] font-bold text-slate-500">{order.items?.length || 0} Kalem Ürün</p>
+                                    <p className="text-xs  text-amber-500">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
+                                    <p className="text-[10px]  text-slate-500">{order.items?.length || 0} Kalem Ürün</p>
                                 </div>
                             </div>
                         ))}
@@ -642,7 +658,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Button
                             onClick={() => handleDelete(true)}
                             disabled={isDeleting}
-                            className="w-full h-12 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/20 gap-2"
+                            className="w-full h-12 bg-amber-600 hover:bg-amber-500 text-white  rounded-xl shadow-lg shadow-amber-600/20 gap-2"
                         >
                             {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
                             Tümünü Eksik Listesine Gönder ve Sil
@@ -650,7 +666,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
                         <Button
                             variant="ghost"
                             onClick={() => setIsPendingOrdersModalOpen(false)}
-                            className="w-full h-12 text-slate-400 hover:text-white font-bold bg-white/5 rounded-xl transition-all"
+                            className="w-full h-12 text-slate-400 hover:text-white  bg-white/5 rounded-xl transition-all"
                         >
                             Vazgeç
                         </Button>
@@ -660,3 +676,10 @@ export function SupplierProfile({ supplier: initialSupplier, onBack }: SupplierP
         </div>
     );
 }
+
+
+
+
+
+
+

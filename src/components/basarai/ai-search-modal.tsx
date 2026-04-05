@@ -50,7 +50,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Search className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1">
-                            <DialogTitle className="text-lg font-bold tracking-tight">Akıllı Arama</DialogTitle>
+                            <DialogTitle className="font-medium text-lg  tracking-tight">Akıllı Arama</DialogTitle>
                             <p className="text-[11px] text-slate-400 mt-0.5">
                                 BAŞAR AI: Doğal dilde arama yapın. (Örn: Alış fiyatı 10 dolar altındaki Type-C kablolar)
                             </p>
@@ -83,7 +83,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Button
                         onClick={handleSearch}
                         disabled={isPending || !query.trim()}
-                        className="w-full h-12 bg-violet-600 hover:bg-violet-700 font-bold"
+                        className="w-full h-12 bg-violet-600 hover:bg-violet-700 "
                     >
                         {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aranıyor...</> : <><Sparkles className="h-4 w-4 mr-2" /> Ara</>}
                     </Button>
@@ -92,3 +92,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
         </Dialog>
     );
 }
+
+
+
+

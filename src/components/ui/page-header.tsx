@@ -32,10 +32,10 @@ export function PageHeader({
                 </div>
                 <div>
                     {badge && <div className="mb-2">{badge}</div>}
-                    <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
+                    <h1 className="font-medium text-4xl lg:text-5xl  text-white tracking-tight leading-tight">
                         {title}
                     </h1>
-                    <p className="text-sm text-slate-400 font-bold mt-1 max-w-2xl leading-relaxed">
+                    <p className="text-sm text-slate-400  mt-1 max-w-2xl leading-relaxed">
                         {description}
                     </p>
                 </div>
@@ -44,3 +44,7 @@ export function PageHeader({
         </div>
     );
 }
+
+
+
+

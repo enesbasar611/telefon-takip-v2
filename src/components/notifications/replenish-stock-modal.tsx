@@ -1,5 +1,6 @@
 "use client";
 
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import {
     Dialog,
@@ -118,30 +119,30 @@ export function ReplenishStockModal({
                         <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
                             <ShoppingCart className="h-7 w-7 text-blue-500" />
                         </div>
-                        <DialogTitle className="text-2xl font-bold tracking-tight">Sipariş Oluştur</DialogTitle>
+                        <DialogTitle className="font-medium text-2xl  tracking-tight">Sipariş Oluştur</DialogTitle>
                         <DialogDescription className="text-slate-400 font-medium pt-2">
-                            <span className="text-white font-bold">{productName}</span> ürünü için tedarik süreci başlatın.
+                            <span className="text-white ">{productName}</span> ürünü için tedarik süreci başlatın.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
+                            <Label className="font-medium text-[10px]  uppercase tracking-widest text-slate-500 ml-1">
                                 TEDARİKÇİ SEÇİMİ
-                            </label>
+                            </Label>
                             <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                                <SelectTrigger className="h-14 bg-white/[0.03] border-white/5 rounded-2xl font-bold text-sm focus:ring-blue-500 transition-all">
+                                <SelectTrigger className="h-14 bg-white/[0.03] border-white/5 rounded-2xl  text-sm focus:ring-blue-500 transition-all">
                                     <SelectValue placeholder="Tedarikçi Seçin" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-slate-900 border-white/5 text-white rounded-xl">
-                                    <SelectItem value="NONE" className="font-bold py-3">
+                                    <SelectItem value="NONE" className=" py-3">
                                         <div className="flex items-center gap-2">
                                             <AlertCircle className="h-4 w-4 text-orange-400" />
                                             Tedarikçi Yok (Eksik Listesine Ekle)
                                         </div>
                                     </SelectItem>
                                     {suppliers.map(s => (
-                                        <SelectItem key={s.id} value={s.id} className="font-bold py-3">
+                                        <SelectItem key={s.id} value={s.id} className=" py-3">
                                             <div className="flex items-center gap-2">
                                                 <Truck className="h-4 w-4 text-blue-400" />
                                                 {s.name}
@@ -157,14 +158,14 @@ export function ReplenishStockModal({
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="flex-1 h-14 rounded-2xl font-bold text-xs hover:bg-white/5 border border-white/5"
+                            className="flex-1 h-14 rounded-2xl  text-xs hover:bg-white/5 border border-white/5"
                         >
                             İPTAL
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={isSubmitting || isLoading}
-                            className="flex-[2] h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 font-bold text-xs shadow-xl shadow-blue-600/20 gap-2"
+                            className="flex-[2] h-14 rounded-2xl bg-blue-600 hover:bg-blue-500  text-xs shadow-xl shadow-blue-600/20 gap-2"
                         >
                             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "SİPARİŞİ ONAYLA"}
                         </Button>
@@ -174,3 +175,10 @@ export function ReplenishStockModal({
         </Dialog>
     );
 }
+
+
+
+
+
+
+

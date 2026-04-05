@@ -71,7 +71,7 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "ticketNumber",
     header: "FİŞ NO",
-    cell: ({ row }) => <div className="font-bold text-sm bg-muted px-4 py-1 rounded w-fit">{row.getValue("ticketNumber")}</div>,
+    cell: ({ row }) => <div className=" text-sm bg-muted px-4 py-1 rounded w-fit">{row.getValue("ticketNumber")}</div>,
   },
   {
     accessorKey: "customer_name",
@@ -79,8 +79,8 @@ export const columns: ColumnDef<any>[] = [
     accessorFn: (row) => row.customer?.name,
     cell: ({ row }) => (
       <Link href={`/musteriler/${row.original.customerId}`} className="flex flex-col group/name">
-        <span className="font-bold text-sm group-hover/name:text-blue-500 transition-colors">{row.original.customer?.name}</span>
-        <span className="text-xs text-blue-500 font-bold">{formatPhone(row.original.customer?.phone)}</span>
+        <span className=" text-sm group-hover/name:text-blue-500 transition-colors">{row.original.customer?.name}</span>
+        <span className="text-xs text-blue-500 ">{formatPhone(row.original.customer?.phone)}</span>
       </Link>
     ),
   },
@@ -90,15 +90,15 @@ export const columns: ColumnDef<any>[] = [
     accessorFn: (row) => `${row.deviceBrand} ${row.deviceModel}`,
     cell: ({ row }) => (
       <div className="flex flex-col">
-        <span className="font-bold text-sm">{row.original.deviceBrand}</span>
-        <span className="text-sm text-slate-400 font-bold">{row.original.deviceModel}</span>
+        <span className=" text-sm">{row.original.deviceBrand}</span>
+        <span className="text-sm text-slate-400 ">{row.original.deviceModel}</span>
       </div>
     ),
   },
   {
     accessorKey: "problemDesc",
     header: "ARIZA TANIMI",
-    cell: ({ row }) => <div className="max-w-[150px] truncate text-xs font-bold text-slate-500">"{row.getValue("problemDesc")}"</div>,
+    cell: ({ row }) => <div className="max-w-[150px] truncate text-xs  text-slate-500">"{row.getValue("problemDesc")}"</div>,
   },
   {
     accessorKey: "status",
@@ -107,7 +107,7 @@ export const columns: ColumnDef<any>[] = [
       const status = row.getValue("status") as ServiceStatus;
       const config = statusConfig[status];
       return (
-        <Badge className={`${config.color} text-xs font-bold px-4 py-1 shadow-sm border-none`}>
+        <Badge className={`${config.color} text-xs  px-4 py-1 shadow-sm border-none`}>
           {config.label}
         </Badge>
       );
@@ -116,14 +116,14 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "createdAt",
     header: "KAYIT TARİHİ",
-    cell: ({ row }) => <div className="text-xs font-bold text-slate-500">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
+    cell: ({ row }) => <div className="text-xs  text-slate-500">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
   },
   {
     accessorKey: "estimatedCost",
     header: () => <div className="text-right">TAHMİNİ TUTAR</div>,
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("estimatedCost"));
-      return <div className="text-right font-bold text-blue-500 text-sm">₺{amount.toLocaleString('tr-TR')}</div>;
+      return <div className="text-right  text-blue-500 text-sm">₺{amount.toLocaleString('tr-TR')}</div>;
     },
   },
 ];
@@ -179,7 +179,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10 px-4 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white font-bold text-xs rounded-xl border border-emerald-500/20 gap-2 mb-0"
+                className="h-10 px-4 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white  text-xs rounded-xl border border-emerald-500/20 gap-2 mb-0"
                 onClick={() => {
                   setSelectedTicket(ticket);
                   setIsQuickDeliver(true);
@@ -217,9 +217,9 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[220px] bg-slate-900 border border-white/5 text-white p-2 rounded-2xl backdrop-blur-3xl">
-                <DropdownMenuLabel className="text-xs font-bold text-gray-500 p-3">Operasyon Paneli</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs  text-gray-500 p-3">Operasyon Paneli</DropdownMenuLabel>
                 <DropdownMenuItem
-                  className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
+                  className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
                     setShowManagement(true);
@@ -228,12 +228,12 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                   <Search className="h-4 w-4 text-blue-500" /> Detayları Gör
                 </DropdownMenuItem>
                 <Link href={`/musteriler/${ticket.customerId}`}>
-                  <DropdownMenuItem className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl">
+                  <DropdownMenuItem className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl">
                     <UserCircle className="h-4 w-4 text-blue-500" /> Müşteri Profili
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem
-                  className="text-sm font-bold gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
+                  className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
                     setShowManagement(true);
@@ -242,7 +242,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                   <Wrench className="h-4 w-4 text-blue-500" /> Durum Güncelle
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5" />
-                <DropdownMenuItem className="text-sm font-bold gap-3 p-4 cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 rounded-xl">
+                <DropdownMenuItem className="text-sm  gap-3 p-4 cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 rounded-xl">
                   <Trash2 className="h-4 w-4" /> Kaydı Sil
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -292,7 +292,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
           size="sm"
           onClick={() => setStatusFilter("ALL")}
           className={cn(
-            "h-10 px-8 rounded-xl text-xs font-bold transition-all",
+            "h-10 px-8 rounded-xl text-xs  transition-all",
             statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
           )}
         >
@@ -307,7 +307,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               size="sm"
               onClick={() => setStatusFilter(key)}
               className={cn(
-                "h-10 px-8 rounded-xl text-xs font-bold transition-all gap-3 shrink-0",
+                "h-10 px-8 rounded-xl text-xs  transition-all gap-3 shrink-0",
                 statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
               )}
             >
@@ -324,13 +324,13 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             placeholder="Müşteri, Fiş No veya IMEI Ara..."
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="pl-10 h-12 bg-white/[0.02] border-white/5 rounded-2xl text-xs font-bold text-white focus:bg-white/[0.05] transition-all"
+            className="pl-10 h-12 bg-white/[0.02] border-white/5 rounded-2xl text-xs  text-white focus:bg-white/[0.05] transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 font-bold text-xs h-12 bg-white/[0.02] border-white/5 px-6 rounded-2xl">
+              <Button variant="outline" className="gap-2  text-xs h-12 bg-white/[0.02] border-white/5 px-6 rounded-2xl">
                 Sütunlar <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -409,24 +409,24 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               >
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs font-bold bg-slate-900 border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
-                    <h3 className="font-bold text-white text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
-                    <p className="text-xs text-slate-500 font-bold">{ticket.customer?.name}</p>
+                    <span className="text-xs  bg-slate-900 border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
+                    <h3 className="font-medium  text-white text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
+                    <p className="text-xs text-slate-500 ">{ticket.customer?.name}</p>
                   </div>
-                  <Badge className={`${config.color} border-none text-xs font-bold px-3 py-1`}>
+                  <Badge className={`${config.color} border-none text-xs  px-3 py-1`}>
                     {config.label}
                   </Badge>
                 </div>
 
                 <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/[0.03]">
-                  <p className="text-xs font-bold text-slate-600 mb-2">Arıza Tanımı</p>
-                  <p className="text-xs text-slate-300 font-bold">"{ticket.problemDesc}"</p>
+                  <p className="text-xs  text-slate-600 mb-2">Arıza Tanımı</p>
+                  <p className="text-xs text-slate-300 ">"{ticket.problemDesc}"</p>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                   <div className="flex flex-col">
-                    <span className="text-xs text-slate-600 font-bold">Tahmini Ücret</span>
-                    <span className="text-xl font-bold text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
+                    <span className="text-xs text-slate-600 ">Tahmini Ücret</span>
+                    <span className="text-xl  text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
                   </div>
                   <div className="flex gap-3">
                     {ticket.status === "READY" && (
@@ -471,17 +471,17 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             );
           })
         ) : (
-          <p className="text-center py-10 text-slate-500 font-bold">Kayıt bulunamadı.</p>
+          <p className="text-center py-10 text-slate-500 ">Kayıt bulunamadı.</p>
         )}
       </div>
 
       <div className="hidden lg:block">
         <Table>
-          <TableHeader className="bg-slate-900/60">
+          <TableHeader className="font-medium bg-slate-900/60">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-white/5">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="font-bold text-xs tracking-[0.2em] text-slate-500 py-8">
+                  <TableHead key={header.id} className="font-medium  text-xs tracking-[0.2em] text-slate-500 py-8">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -518,7 +518,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               <TableRow>
                 <TableCell
                   colSpan={table.getAllColumns().length}
-                  className="h-32 text-center font-bold text-slate-600 underline decoration-blue-500/30 underline-offset-8"
+                  className="h-32 text-center  text-slate-600 underline decoration-blue-500/30 underline-offset-8"
                 >
                   Kayıt bulunamadı.
                 </TableCell>
@@ -529,7 +529,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
       </div>
 
       <div className="flex items-center justify-between p-10 border-t border-white/5 bg-slate-900/40">
-        <div className="text-xs font-bold text-slate-500">
+        <div className="text-xs  text-slate-500">
           SİSTEMDE TOPLAM {filteredData.length} İŞLEM KAYDI LİSTELENİYOR
         </div>
         <div className="flex gap-4">
@@ -538,7 +538,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="font-bold text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className=" text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
           >
             ÖNCEKİ
           </Button>
@@ -547,7 +547,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="font-bold text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className=" text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
           >
             SONRAKİ
           </Button>
@@ -556,3 +556,8 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
     </div >
   );
 }
+
+
+
+
+

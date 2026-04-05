@@ -29,7 +29,7 @@ export function BottomNav() {
             )}
           >
             <item.icon className="h-5 w-5" />
-            <span className="text-[8px] font-bold">{item.label}</span>
+            <span className="text-[8px] ">{item.label}</span>
             {isActive && <div className="h-1 w-1 rounded-full bg-blue-500" />}
           </Link>
         );
@@ -43,3 +43,6 @@ export function BottomNav() {
     </div>
   );
 }
+
+
+

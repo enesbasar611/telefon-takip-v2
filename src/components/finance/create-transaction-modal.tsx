@@ -41,6 +41,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { createManualTransaction, updateManualTransaction, getAccounts, getTransactions } from "@/lib/actions/finance-actions";
+import { CreateAccountModal } from "./create-account-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -208,7 +209,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="rounded-xl shadow-lg shadow-blue-500/20 gap-2 h-10 px-5 text-xs font-bold bg-blue-600 hover:bg-blue-700">
+          <Button className="rounded-xl shadow-lg shadow-blue-500/20 gap-2 h-10 px-5 text-xs  bg-blue-600 hover:bg-blue-700">
             <PlusCircle className="h-4 w-4" />
             <span>YENİ İŞLEM EKLE</span>
           </Button>
@@ -234,10 +235,10 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 }
               </div>
               <div>
-                <DialogTitle className="text-3xl font-bold tracking-tight text-foreground">
+                <DialogTitle className="font-medium text-3xl  tracking-tight text-foreground">
                   {initialData ? "İşlem Düzenle" : "Kasa Giriş/Çıkış İşlemi"}
                 </DialogTitle>
-                <p className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-[0.2em] opacity-60">Atölye finansal hareketlerini hassasiyetle kaydedin.</p>
+                <p className="text-[11px]  text-muted-foreground mt-1 uppercase tracking-[0.2em] opacity-60">Atölye finansal hareketlerini hassasiyetle kaydedin.</p>
               </div>
             </div>
           </DialogHeader>
@@ -249,7 +250,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 type="button"
                 onClick={() => setValue("type", "INCOME")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs font-bold transition-all duration-300",
+                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs  transition-all duration-300",
                   transactionType === "INCOME"
                     ? "bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 scale-[1.02]"
                     : "text-muted-foreground hover:bg-emerald-500/5 hover:text-emerald-500"
@@ -262,7 +263,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 type="button"
                 onClick={() => setValue("type", "EXPENSE")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs font-bold transition-all duration-300",
+                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs  transition-all duration-300",
                   transactionType === "EXPENSE"
                     ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]"
                     : "text-muted-foreground hover:bg-rose-500/5 hover:text-rose-500"
@@ -275,26 +276,26 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <PlusCircle className="h-3 w-3" /> İŞLEM TÜRÜ
                 </Label>
                 <Select onValueChange={(val) => setValue("category", val)} defaultValue="GENEL">
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-xs shadow-inner hover:bg-muted/30 transition-all">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner hover:bg-muted/30 transition-all">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 shadow-2xl">
-                    <SelectItem value="GENEL" className="text-xs font-bold rounded-xl py-3">Genel İşlem</SelectItem>
-                    <SelectItem value="KİRA" className="text-xs font-bold rounded-xl py-3">Kira / Gider</SelectItem>
-                    <SelectItem value="MAAŞ" className="text-xs font-bold rounded-xl py-3">Maaş Ödemesi</SelectItem>
-                    <SelectItem value="FATURA" className="text-xs font-bold rounded-xl py-3">Fatura Ödemesi</SelectItem>
-                    <SelectItem value="STOK" className="text-xs font-bold rounded-xl py-3">Stok Alımı</SelectItem>
-                    <SelectItem value="DİĞER" className="text-xs font-bold rounded-xl py-3">Diğer</SelectItem>
+                    <SelectItem value="GENEL" className="text-xs  rounded-xl py-3">Genel İşlem</SelectItem>
+                    <SelectItem value="KİRA" className="text-xs  rounded-xl py-3">Kira / Gider</SelectItem>
+                    <SelectItem value="MAAŞ" className="text-xs  rounded-xl py-3">Maaş Ödemesi</SelectItem>
+                    <SelectItem value="FATURA" className="text-xs  rounded-xl py-3">Fatura Ödemesi</SelectItem>
+                    <SelectItem value="STOK" className="text-xs  rounded-xl py-3">Stok Alımı</SelectItem>
+                    <SelectItem value="DİĞER" className="text-xs  rounded-xl py-3">Diğer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="amount" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Label htmlFor="amount" className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Landmark className="h-3 w-3" /> TUTAR
                 </Label>
                 <div className="relative group">
@@ -303,7 +304,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     value={watch("amount")}
                     onChange={(v) => setValue("amount", String(v), { shouldValidate: true })}
                     placeholder="0,00"
-                    className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-2xl pl-12 shadow-inner group-hover:bg-muted/30 transition-all"
+                    className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-2xl pl-12 shadow-inner group-hover:bg-muted/30 transition-all"
                   />
                 </div>
               </div>
@@ -311,35 +312,50 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <CreditCard className="h-3 w-3" /> ÖDEME YÖNTEMİ
                 </Label>
                 <Select onValueChange={(val) => setValue("paymentMethod", val as any)} defaultValue="CASH">
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-xs shadow-inner">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
-                    <SelectItem value="CASH" className="text-xs font-bold rounded-xl py-3">NAKİT</SelectItem>
-                    <SelectItem value="CARD" className="text-xs font-bold rounded-xl py-3">KREDİ KARTI</SelectItem>
-                    <SelectItem value="TRANSFER" className="text-xs font-bold rounded-xl py-3">HAVALE / EFT</SelectItem>
+                    <SelectItem value="CASH" className="text-xs  rounded-xl py-3">NAKİT</SelectItem>
+                    <SelectItem value="CARD" className="text-xs  rounded-xl py-3">KREDİ KARTI</SelectItem>
+                    <SelectItem value="TRANSFER" className="text-xs  rounded-xl py-3">HAVALE / EFT</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Wallet className="h-3 w-3" /> KASA SEÇİMİ
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Wallet className="h-3 w-3" /> KASA SEÇİMİ
+                  </Label>
+                  <CreateAccountModal trigger={
+                    <button type="button" className="text-[10px] uppercase tracking-widest text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                      [+] HIZLI EKLE
+                    </button>
+                  } />
+                </div>
                 <Select onValueChange={(val) => setValue("accountId", val)} value={watch("accountId")}>
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-xs shadow-inner">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
+                  <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 min-w-[300px]">
                     {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id} className="text-xs font-bold rounded-xl py-3">
-                        <div className="flex items-center gap-2">
-                          {getAccountIcon(acc.type)}
-                          {acc.name}
+                      <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3">
+                        <div className="flex items-center justify-between w-full min-w-[240px]">
+                          <div className="flex items-center gap-2">
+                            {getAccountIcon(acc.type)}
+                            <span>{acc.name}</span>
+                          </div>
+                          <span className={cn(
+                            "font-medium text-[10px] ml-4",
+                            acc.balance >= 0 ? "text-emerald-500" : "text-rose-500"
+                          )}>
+                            ₺{Number(acc.balance).toLocaleString('tr-TR')}
+                          </span>
                         </div>
                       </SelectItem>
                     ))}
@@ -349,32 +365,32 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             </div>
 
             <div className="space-y-3">
-              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Calendar className="h-3 w-3" /> TARİH VE SAAT
               </Label>
               <Input
                 type="date"
                 {...register("date")}
-                className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-xs px-6 shadow-inner"
+                className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs px-6 shadow-inner"
               />
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="description" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Label htmlFor="description" className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                 <FileText className="h-3 w-3" /> AÇIKLAMA / NOT
               </Label>
               <Textarea
                 id="description"
                 {...register("description")}
                 placeholder="İşlem detaylarını buraya yazın..."
-                className="min-h-[100px] rounded-[1.2rem] bg-muted/20 border-border/40 font-bold text-xs p-5 shadow-inner focus-visible:ring-primary/20 transition-all"
+                className="min-h-[100px] rounded-[1.2rem] bg-muted/20 border-border/40  text-xs p-5 shadow-inner focus-visible:ring-primary/20 transition-all"
               />
-              {errors.description && <p className="text-[10px] font-bold text-rose-500 ml-2 italic">{errors.description.message}</p>}
+              {errors.description && <p className="text-[10px]  text-rose-500 ml-2 italic">{errors.description.message}</p>}
             </div>
 
             {/* Document Upload Area */}
             <div className="space-y-3">
-              <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Upload className="h-3 w-3" /> BELGE / FİŞ YÜKLE
               </Label>
               <input
@@ -396,8 +412,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     <Upload className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
-                <p className="text-[11px] font-bold text-muted-foreground uppercase">Dosyayı sürükleyin veya <span className="text-primary hover:underline">göz atın</span></p>
-                <p className="text-[9px] font-bold text-muted-foreground/50 mt-2">PNG, JPG, PDF (MAX. 10MB)</p>
+                <p className="text-[11px]  text-muted-foreground uppercase">Dosyayı sürükleyin veya <span className="text-primary hover:underline">göz atın</span></p>
+                <p className="text-[9px]  text-muted-foreground/50 mt-2">PNG, JPG, PDF (MAX. 10MB)</p>
               </div>
 
               {/* Uploaded Files List */}
@@ -414,8 +430,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-foreground truncate uppercase">{file.filename}</p>
-                          <p className="text-[9px] font-bold text-muted-foreground/50">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-[10px]  text-foreground truncate uppercase">{file.filename}</p>
+                          <p className="text-[9px]  text-muted-foreground/50">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                       </div>
                       <Button
@@ -437,8 +453,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             </div>
 
             <div className="flex gap-4 pt-4 sticky bottom-0 bg-background/50 backdrop-blur-sm -mx-2 px-2 pb-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px] font-bold uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">İPTAL</Button>
-              <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px] font-bold uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">İPTAL</Button>
+              <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
                 {isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
@@ -459,7 +475,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             {/* Balances Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <Wallet className="h-3 w-3" /> GÜNCEL KASA VARLIKLARI
                 </Label>
               </div>
@@ -469,13 +485,13 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <div key={acc.id} className="p-5 rounded-[1.5rem] bg-background/50 border border-border/40 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 transition-all group-hover:scale-110" />
                     <div className="relative z-10">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
+                      <p className="text-[10px]  text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
                       <div className="flex items-end justify-between">
-                        <p className="text-xl font-bold text-foreground tracking-tighter">
+                        <p className="text-xl  text-foreground tracking-tighter">
                           ₺{Number(acc.balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                         </p>
                         <div className={cn(
-                          "px-3 py-1 rounded-full text-[9px] font-bold uppercase flex items-center gap-1.5",
+                          "px-3 py-1 rounded-full text-[9px]  uppercase flex items-center gap-1.5",
                           acc.balance >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                         )}>
                           {acc.balance >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
@@ -485,7 +501,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center py-6 text-muted-foreground font-bold text-xs italic">
+                  <div className="text-center py-6 text-muted-foreground  text-xs italic">
                     Hesap bulunamadı
                   </div>
                 )}
@@ -495,7 +511,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             {/* Recent History Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <History className="h-3 w-3" /> SON HAREKETLER
                 </Label>
                 <button type="button" className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
@@ -515,24 +531,24 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                       {tx.type === "INCOME" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
-                      <p className="text-[10px] font-bold text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
+                      <p className="text-[11px]  text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
+                      <p className="text-[10px]  text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
                         {format(new Date(tx.createdAt), "HH:mm")} • {tx.account?.name || "Bilinmiyor"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className={cn(
-                        "text-xs font-bold tracking-tighter",
+                        "text-xs  tracking-tighter",
                         tx.type === "INCOME" ? "text-emerald-500" : "text-rose-500"
                       )}>
                         {tx.type === "INCOME" ? "+" : "-"}₺{Number(tx.amount).toLocaleString('tr-TR')}
                       </p>
-                      <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{tx.paymentMethod}</p>
+                      <p className="text-[9px]  text-muted-foreground/40 uppercase tracking-widest">{tx.paymentMethod}</p>
                     </div>
                   </div>
                 ))}
 
-                <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-border/40 text-[10px] font-bold uppercase tracking-widest hover:border-primary/40 transition-all mt-4">
+                <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-border/40 text-[10px]  uppercase tracking-widest hover:border-primary/40 transition-all mt-4">
                   TÜM HAREKETLERİ GÖR
                 </Button>
               </div>
@@ -546,9 +562,9 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <div className="h-8 w-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
                     <History className="h-4 w-4 text-indigo-500" />
                   </div>
-                  <h4 className="text-xs font-bold text-foreground tracking-widest">FİNANSAL ÖZET</h4>
+                  <h4 className="font-medium text-xs  text-foreground tracking-widest">FİNANSAL ÖZET</h4>
                 </div>
-                <p className="text-[11px] font-bold text-muted-foreground/70 leading-relaxed uppercase tracking-tighter">
+                <p className="text-[11px]  text-muted-foreground/70 leading-relaxed uppercase tracking-tighter">
                   BU AY TOPLAM GELİRİNİZ GİDERLERİNİZDEN <span className="text-emerald-500 font-extrabold tracking-normal">₺{(summary.income - summary.expense).toLocaleString('tr-TR')}</span> DAHA FAZLA. PERFORMANS %12 ARTIŞTA.
                 </p>
               </div>
@@ -560,4 +576,10 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
     </Dialog>
   );
 }
+
+
+
+
+
+
 

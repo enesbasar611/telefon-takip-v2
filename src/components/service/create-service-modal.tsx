@@ -116,7 +116,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-8 bg-slate-900/50 border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">Yeni Servis Kaydı</DialogTitle>
+              <DialogTitle className="font-medium text-2xl ">Yeni Servis Kaydı</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 Müşteri ve cihaz bilgilerini girerek yeni bir teknik servis kaydı oluşturun.
               </DialogDescription>
@@ -126,12 +126,12 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           <div className="p-8 space-y-8">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="customerName" className="text-xs font-bold text-muted-foreground">Müşteri Ad Soyad</Label>
+                <Label htmlFor="customerName" className="font-medium text-xs  text-muted-foreground">Müşteri Ad Soyad</Label>
                 <div className="relative group">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
                 </div>
-                {errors.customerName && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.customerName.message}</p>}
+                {errors.customerName && <p className="text-[10px] text-red-500  ml-1">{errors.customerName.message}</p>}
               </div>
 
               <PhoneInput
@@ -148,58 +148,58 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="deviceBrand" className="text-xs font-bold text-muted-foreground">Cihaz Markası</Label>
+                <Label htmlFor="deviceBrand" className="font-medium text-xs  text-muted-foreground">Cihaz Markası</Label>
                 <div className="relative group">
                   <SmartphoneIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
                 </div>
-                {errors.deviceBrand && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.deviceBrand.message}</p>}
+                {errors.deviceBrand && <p className="text-[10px] text-red-500  ml-1">{errors.deviceBrand.message}</p>}
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="deviceModel" className="text-xs font-bold text-muted-foreground">Cihaz Modeli</Label>
-                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-slate-900 border-white/5 rounded-2xl px-6 text-sm font-bold" />
-                {errors.deviceModel && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.deviceModel.message}</p>}
+                <Label htmlFor="deviceModel" className="font-medium text-xs  text-muted-foreground">Cihaz Modeli</Label>
+                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-slate-900 border-white/5 rounded-2xl px-6 text-sm " />
+                {errors.deviceModel && <p className="text-[10px] text-red-500  ml-1">{errors.deviceModel.message}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="imei" className="text-xs font-bold text-muted-foreground">IMEI / Seri No</Label>
+                <Label htmlFor="imei" className="font-medium text-xs  text-muted-foreground">IMEI / Seri No</Label>
                 <div className="relative group">
                   <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
                 </div>
-                {errors.imei && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.imei.message}</p>}
+                {errors.imei && <p className="text-[10px] text-red-500  ml-1">{errors.imei.message}</p>}
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="estimatedCost" className="text-xs font-bold text-muted-foreground">Tahmini Ücret</Label>
+                <Label htmlFor="estimatedCost" className="font-medium text-xs  text-muted-foreground">Tahmini Ücret</Label>
                 <PriceInput
                   id="estimatedCost"
                   value={watch("estimatedCost")}
                   onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
                   placeholder="0,00"
-                  className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm font-bold transition-all tabular-nums text-emerald-500"
+                  className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500"
                 />
-                {errors.estimatedCost && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.estimatedCost.message}</p>}
+                {errors.estimatedCost && <p className="text-[10px] text-red-500  ml-1">{errors.estimatedCost.message}</p>}
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="problemDesc" className="text-xs font-bold text-muted-foreground">Arıza Tanımı</Label>
+              <Label htmlFor="problemDesc" className="font-medium text-xs  text-muted-foreground">Arıza Tanımı</Label>
               <div className="relative group">
                 <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
-                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
               </div>
-              {errors.problemDesc && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.problemDesc.message}</p>}
+              {errors.problemDesc && <p className="text-[10px] text-red-500  ml-1">{errors.problemDesc.message}</p>}
             </div>
           </div>
 
           <div className="p-8 bg-slate-900/50 border-t border-white/5">
             <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl font-bold text-slate-400">Vazgeç</Button>
-              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl gap-3 transition-all active:scale-95">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-slate-400">Vazgeç</Button>
+              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white  text-sm rounded-2xl gap-3 transition-all active:scale-95">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Kaydı Tamamla
               </Button>
@@ -210,3 +210,8 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
     </Dialog>
   );
 }
+
+
+
+
+

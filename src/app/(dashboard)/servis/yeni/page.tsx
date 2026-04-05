@@ -80,7 +80,7 @@ const SectionBadge = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <div className="p-2.5 bg-primary/10 rounded-xl">
       <Icon className="h-4 w-4 text-primary" strokeWidth={1.5} />
     </div>
-    <h3 className="font-semibold text-base tracking-tight">{title}</h3>
+    <h3 className="font-medium font-semibold text-base tracking-tight">{title}</h3>
   </div>
 );
 
@@ -498,7 +498,7 @@ export default function NewServicePage() {
         {/* Header */}
         <div className="mb-8">
           <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1.5">Servis İşlemleri</p>
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
+          <h2 className="font-medium text-2xl font-semibold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
         </div>
 
         <form
@@ -741,7 +741,7 @@ export default function NewServicePage() {
                   <Label className={labelClass}>Kozmetik Durum</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {["Çizik", "Ezik", "Kırık Cam", "Sıvı Teması"].map((item) => (
-                      <label key={item} className="flex items-center gap-2.5 p-3.5 bg-muted/30 rounded-xl cursor-pointer border border-transparent hover:border-primary/20 transition-all">
+                      <Label key={item} className="font-medium flex items-center gap-2.5 p-3.5 bg-muted/30 rounded-xl cursor-pointer border border-transparent hover:border-primary/20 transition-all">
                         <Checkbox
                           className="rounded-md data-[state=checked]:bg-primary h-4 w-4 border-muted-foreground/30"
                           onCheckedChange={(checked) => {
@@ -751,7 +751,7 @@ export default function NewServicePage() {
                           }}
                         />
                         <span className="text-sm font-medium text-foreground">{item}</span>
-                      </label>
+                      </Label>
                     ))}
                   </div>
                   <Textarea
@@ -781,7 +781,7 @@ export default function NewServicePage() {
                   <Label className={labelClass}>Teslim Alınan Aksesuarlar</Label>
                   <div className="flex flex-wrap gap-2">
                     {["Şarj Aleti", "Kutu", "Kılıf", "SIM Kart", "Hafıza Kart"].map((item) => (
-                      <label key={item} className="inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
+                      <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
                         <Checkbox
                           className="rounded-sm border-muted-foreground/40 h-3.5 w-3.5"
                           onCheckedChange={(checked) => {
@@ -791,7 +791,7 @@ export default function NewServicePage() {
                           }}
                         />
                         <span className="text-sm font-medium whitespace-nowrap">{item}</span>
-                      </label>
+                      </Label>
                     ))}
                   </div>
                 </div>
@@ -806,7 +806,7 @@ export default function NewServicePage() {
               <section className="bg-blue-500/5 p-6 rounded-2xl border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                  <h3 className="text-xs font-semibold tracking-widest text-blue-600 uppercase">Geçmiş Analizi</h3>
+                  <h3 className="font-medium text-xs font-semibold tracking-widest text-blue-600 uppercase">Geçmiş Analizi</h3>
                 </div>
                 <div className="space-y-4">
                   <Badge className={cn("border-none text-[10px] px-3 py-1 font-medium",
@@ -1007,3 +1007,9 @@ export default function NewServicePage() {
     </main>
   );
 }
+
+
+
+
+
+

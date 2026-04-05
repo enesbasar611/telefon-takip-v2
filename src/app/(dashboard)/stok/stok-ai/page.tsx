@@ -128,9 +128,9 @@ export default function StockAIPage() {
                         <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-600/20 shadow-[0_0_30px_rgba(37,99,235,0.2)]">
                             <Brain className="h-6 w-6 text-blue-500" />
                         </div>
-                        <Badge className="bg-blue-600/10 text-blue-500 border-none px-4 py-1.5 font-bold text-[10px] uppercase tracking-[0.2em]">Yapay Zeka Destekli Envanter</Badge>
+                        <Badge className="bg-blue-600/10 text-blue-500 border-none px-4 py-1.5  text-[10px] uppercase tracking-[0.2em]">Yapay Zeka Destekli Envanter</Badge>
                     </div>
-                    <h1 className="text-5xl font-bold text-white tracking-tighter leading-none">
+                    <h1 className="font-medium text-5xl  text-white tracking-tighter leading-none">
                         AI <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent opacity-90 pb-2 pr-2">Önerileri</span>
                     </h1>
                     <p className="text-slate-400 font-medium max-w-xl text-lg leading-relaxed">
@@ -143,7 +143,7 @@ export default function StockAIPage() {
                     <Button
                         onClick={handleRunAnalysis}
                         disabled={isPending}
-                        className="relative z-10 h-16 px-8 rounded-[2rem] bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-widest gap-3 shadow-[0_20px_40px_rgba(37,99,235,0.3)] animate-pulse-soft transition-all"
+                        className="relative z-10 h-16 px-8 rounded-[2rem] bg-blue-600 hover:bg-blue-500 text-white  text-sm uppercase tracking-widest gap-3 shadow-[0_20px_40px_rgba(37,99,235,0.3)] animate-pulse-soft transition-all"
                     >
                         {isPending ? (
                             <RefreshCw className="h-5 w-5 animate-spin" />
@@ -160,8 +160,8 @@ export default function StockAIPage() {
                 {/* Main Alerts Feed */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between px-4">
-                        <h2 className="text-xl font-bold text-white uppercase tracking-widest">AKTİF ÖNERİLER</h2>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                        <h2 className="font-medium text-xl  text-white uppercase tracking-widest">AKTİF ÖNERİLER</h2>
+                        <span className="text-[10px]  text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
                             {alerts.length} KAYIT BULUNDU
                         </span>
                     </div>
@@ -177,7 +177,7 @@ export default function StockAIPage() {
                             <CardContent className="flex flex-col items-center justify-center text-center gap-4">
                                 <Zap className="h-16 w-16 text-slate-700 animate-pulse" />
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-500 uppercase">Her Şey Yolunda</h3>
+                                    <h3 className="font-medium text-lg  text-slate-500 uppercase">Her Şey Yolunda</h3>
                                     <p className="text-sm text-slate-600 font-medium mt-1">Şu an için kritik bir stok uyarısı veya sistem önerisi bulunmuyor.</p>
                                 </div>
                             </CardContent>
@@ -203,19 +203,19 @@ export default function StockAIPage() {
                                             </div>
                                             <div className="space-y-1.5 max-w-md">
                                                 <div className="flex items-center gap-3">
-                                                    <span className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", style.color)}>
+                                                    <span className={cn("text-[9px]  uppercase tracking-[0.2em]", style.color)}>
                                                         {style.label}
                                                     </span>
                                                     <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                                    <span className="text-[9px] font-bold text-slate-500 uppercase">
+                                                    <span className="text-[9px]  text-slate-500 uppercase">
                                                         {format(new Date(alert.createdAt), "dd MMMM HH:mm", { locale: tr })}
                                                     </span>
                                                 </div>
-                                                <h3 className="text-lg font-extrabold text-slate-100 leading-tight">
+                                                <h3 className="font-medium text-lg font-extrabold text-slate-100 leading-tight">
                                                     {alert.message}
                                                 </h3>
                                                 {alert.product && (
-                                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                    <p className="text-xs  text-slate-500 uppercase tracking-widest">
                                                         REF: {alert.product.name} ({alert.product.stock} Adet)
                                                     </p>
                                                 )}
@@ -231,7 +231,7 @@ export default function StockAIPage() {
                                                 <Trash2 className="h-5 w-5" />
                                             </Button>
                                             <Button
-                                                className="h-12 px-6 rounded-2xl bg-white border border-white/10 text-black hover:bg-white/90 font-bold text-[11px] uppercase tracking-widest flex-1 md:flex-none gap-2"
+                                                className="h-12 px-6 rounded-2xl bg-white border border-white/10 text-black hover:bg-white/90  text-[11px] uppercase tracking-widest flex-1 md:flex-none gap-2"
                                                 onClick={async () => {
                                                     if (!alert.product) return;
 
@@ -283,7 +283,7 @@ export default function StockAIPage() {
                             <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center border border-white/30 mb-6">
                                 <Sparkles className="h-6 w-6" />
                             </div>
-                            <CardTitle className="text-2xl font-bold tracking-tight">AI Nasıl Çalışır?</CardTitle>
+                            <CardTitle className="font-medium text-2xl  tracking-tight">AI Nasıl Çalışır?</CardTitle>
                             <CardDescription className="text-blue-100/70 font-medium">Yerel yapay zeka sistemimiz aşağıdaki kriterleri 7/24 izler:</CardDescription>
                         </CardHeader>
                         <CardContent className="px-8 pb-8 space-y-4 relative z-10">
@@ -295,7 +295,7 @@ export default function StockAIPage() {
                                 <div key={i} className="flex gap-4 p-4 rounded-3xl bg-white/10 border border-white/10">
                                     <item.icon className="h-5 w-5 mt-1 shrink-0" />
                                     <div>
-                                        <h4 className="font-bold text-sm uppercase tracking-wider">{item.title}</h4>
+                                        <h4 className="font-medium  text-sm uppercase tracking-wider">{item.title}</h4>
                                         <p className="text-xs text-blue-100/60 font-medium mt-0.5">{item.desc}</p>
                                     </div>
                                 </div>
@@ -305,19 +305,19 @@ export default function StockAIPage() {
 
                     <Card className="rounded-[2.5rem] bg-white/[0.01] border border-white/5 overflow-hidden">
                         <CardHeader className="p-8 border-b border-white/5">
-                            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <CardTitle className="font-medium text-sm  text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-blue-500" /> SİSTEM BİLGİSİ
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 space-y-4">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            <div className="flex justify-between items-center text-[10px]  text-slate-500 uppercase tracking-widest">
                                 <span>BİLDİRİM SÜRESİ</span>
                                 <span className="text-white">48 SAAT (2 GÜN)</span>
                             </div>
                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                 <div className="h-full w-full bg-blue-500/50" />
                             </div>
-                            <p className="text-[10px] text-slate-600 font-bold leading-relaxed uppercase">
+                            <p className="text-[10px] text-slate-600  leading-relaxed uppercase">
                                 Tüm öneriler 2 gün sonra otomatik olarak silinir. Bu, verilerinizin her zaman taze kalmasını sağlar.
                             </p>
                         </CardContent>
@@ -338,4 +338,12 @@ export default function StockAIPage() {
         </div>
     );
 }
+
+
+
+
+
+
+
+
 

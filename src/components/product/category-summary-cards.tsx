@@ -48,7 +48,7 @@ export function CategorySummaryCards({ products, categories }: CategorySummaryCa
                             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
                                 <Folder className="h-4 w-4" />
                             </div>
-                            <h3 className="text-[14px] font-semibold text-slate-200">{stat.name}</h3>
+                            <h3 className="font-medium text-[14px] font-semibold text-slate-200">{stat.name}</h3>
                         </div>
                         <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[11px] font-medium text-slate-300 shadow-inner">
                             {stat.count} Adet
@@ -77,3 +77,7 @@ export function CategorySummaryCards({ products, categories }: CategorySummaryCa
         </div>
     );
 }
+
+
+
+

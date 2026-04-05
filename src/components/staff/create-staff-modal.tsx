@@ -110,7 +110,7 @@ export function CreateStaffModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center">
+        <Button className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white  text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center">
           <UserPlus className="h-4 w-4" />
           Yeni Personel Ekle
         </Button>
@@ -122,7 +122,7 @@ export function CreateStaffModal() {
               <UserPlus className="w-6 h-6" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
+              <DialogTitle className="font-medium text-xl  text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
               <DialogDescription className="text-slate-500 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</DialogDescription>
             </div>
           </div>
@@ -159,7 +159,7 @@ export function CreateStaffModal() {
                   {previewImage ? (
                     <img src={previewImage} className="w-full h-full object-cover" alt="Preview" />
                   ) : initials !== "?" ? (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl font-bold text-slate-400 dark:text-white/20">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl  text-slate-400 dark:text-white/20">
                       {initials}
                     </div>
                   ) : (
@@ -181,7 +181,7 @@ export function CreateStaffModal() {
                       setPreviewImage(url);
                     }}
                     className={cn(
-                      "flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
+                      "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
                       watch("gender") === "MALE" ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
                     )}
                   >
@@ -196,50 +196,50 @@ export function CreateStaffModal() {
                       setPreviewImage(url);
                     }}
                     className={cn(
-                      "flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
+                      "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
                       watch("gender") === "FEMALE" ? "bg-rose-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
                     )}
                   >
                     KADIN
                   </button>
                 </div>
-                <p className="text-[9px] font-bold text-center text-slate-400 uppercase tracking-widest">HIZLI AVATAR</p>
+                <p className="text-[9px]  text-center text-slate-400 uppercase tracking-widest">HIZLI AVATAR</p>
               </div>
             </div>
 
             {/* Form Fields */}
             <div className="flex-1 grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ADI</Label>
+                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ADI</Label>
                 <Input
                   {...register("name")}
                   placeholder="Örn: Ahmet"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">SOYADI</Label>
+                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">SOYADI</Label>
                 <Input
                   {...register("surname")}
                   placeholder="Örn: Yılmaz"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-POSTA</Label>
+                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">E-POSTA</Label>
                 <Input
                   {...register("email")}
                   placeholder="ahmet@example.com"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
+                <Label className="font-medium text-[10px]  text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
                 <Input
                   {...register("password")}
                   type="password"
                   placeholder="******"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs focus:ring-2 focus:ring-rose-500/20"
+                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-rose-500/20"
                 />
               </div>
               <PhoneInput
@@ -255,24 +255,24 @@ export function CreateStaffModal() {
           {/* Role and Branch Selection */}
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
+              <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("role", v as any)} defaultValue="STAFF">
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs">
+                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs">
                   <SelectValue placeholder="Bir rol seçin..." />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 rounded-xl">
-                  <SelectItem value="ADMIN" className="font-bold">Yönetici (Full)</SelectItem>
-                  <SelectItem value="MANAGER" className="font-bold">Mağaza Müdürü</SelectItem>
-                  <SelectItem value="CASHIER" className="font-bold">Kasiyer</SelectItem>
-                  <SelectItem value="TECHNICIAN" className="font-bold">Teknisyen</SelectItem>
-                  <SelectItem value="STAFF" className="font-bold">Satış Danışmanı / Personel</SelectItem>
+                  <SelectItem value="ADMIN" className="">Yönetici (Full)</SelectItem>
+                  <SelectItem value="MANAGER" className="">Mağaza Müdürü</SelectItem>
+                  <SelectItem value="CASHIER" className="">Kasiyer</SelectItem>
+                  <SelectItem value="TECHNICIAN" className="">Teknisyen</SelectItem>
+                  <SelectItem value="STAFF" className="">Satış Danışmanı / Personel</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
+              <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube">
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl font-bold text-xs">
+                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3 h-3 text-slate-400" />
                     <SelectValue placeholder="Bir şube seçin..." />
@@ -288,7 +288,7 @@ export function CreateStaffModal() {
 
           {/* Quick Permissions */}
           <div className="pt-4 border-t border-white/5 mt-4">
-            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
+            <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
@@ -301,7 +301,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canSell") ? "border-emerald-500 bg-emerald-500" : "border-slate-700")}>
                   {watch("canSell") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">SATIŞ</span>
+                <span className="text-[10px]  uppercase tracking-wider">SATIŞ</span>
               </button>
 
               <button
@@ -315,7 +315,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canService") ? "border-blue-500 bg-blue-500" : "border-slate-700")}>
                   {watch("canService") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">SERVİS</span>
+                <span className="text-[10px]  uppercase tracking-wider">SERVİS</span>
               </button>
 
               <button
@@ -329,7 +329,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canStock") ? "border-orange-500 bg-orange-500" : "border-slate-700")}>
                   {watch("canStock") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">STOK</span>
+                <span className="text-[10px]  uppercase tracking-wider">STOK</span>
               </button>
 
               <button
@@ -343,7 +343,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canFinance") ? "border-purple-500 bg-purple-500" : "border-slate-700")}>
                   {watch("canFinance") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">FİNANS</span>
+                <span className="text-[10px]  uppercase tracking-wider">FİNANS</span>
               </button>
 
               <button
@@ -357,7 +357,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canEdit") ? "border-indigo-500 bg-indigo-500" : "border-slate-700")}>
                   {watch("canEdit") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">DÜZENLEME</span>
+                <span className="text-[10px]  uppercase tracking-wider">DÜZENLEME</span>
               </button>
 
               <button
@@ -371,7 +371,7 @@ export function CreateStaffModal() {
                 <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canDelete") ? "border-red-500 bg-red-500" : "border-slate-700")}>
                   {watch("canDelete") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider">SİLME</span>
+                <span className="text-[10px]  uppercase tracking-wider">SİLME</span>
               </button>
             </div>
           </div>
@@ -381,14 +381,14 @@ export function CreateStaffModal() {
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
-              className="font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className=" text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >
               İptal
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center"
+              className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white  text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center"
             >
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
               Personeli Kaydet
@@ -399,3 +399,8 @@ export function CreateStaffModal() {
     </Dialog>
   );
 }
+
+
+
+
+

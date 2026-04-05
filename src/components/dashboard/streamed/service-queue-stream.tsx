@@ -38,12 +38,12 @@ export async function ServiceQueueStream() {
                         <Smartphone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-lg font-bold tracking-tight font-sans uppercase">Servis Kuyruğu</CardTitle>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
+                        <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">Servis Kuyruğu</CardTitle>
+                        <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
                     </div>
                 </div>
                 <Link href="/servis/liste">
-                    <Button variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
+                    <Button variant="outline" className="text-[10px]  uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
                         YÖNET <ChevronRight className="h-3 w-3 ml-2" />
                     </Button>
                 </Link>
@@ -61,8 +61,8 @@ export async function ServiceQueueStream() {
                                 <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
                             </div>
                             <div className="min-w-0">
-                                <h4 className="font-bold text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-1 truncate">
+                                <h4 className="font-medium  text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                                <p className="text-[10px] text-muted-foreground  uppercase tracking-tight mt-1 truncate">
                                     {ticket.customer?.name} • <span className="text-primary tracking-tighter">#{ticket.ticketNumber}</span>
                                 </p>
                             </div>
@@ -70,12 +70,12 @@ export async function ServiceQueueStream() {
                         <div className="text-right shrink-0">
                             <Badge
                                 variant="outline"
-                                className="text-[8px] font-bold uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
+                                className="text-[8px]  uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
                                 style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
                             >
                                 {statusLabels[ticket.status]}
                             </Badge>
-                            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter opacity-60">
+                            <p className="text-[9px] text-muted-foreground  uppercase tracking-tighter opacity-60">
                                 {ticket.technician?.name || "BOŞTA"}
                             </p>
                         </div>
@@ -85,3 +85,8 @@ export async function ServiceQueueStream() {
         </Card>
     );
 }
+
+
+
+
+

@@ -13,9 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CreditCard, Save } from "lucide-react";
+import { Loader2, CreditCard, Save, Wallet } from "lucide-react";
 import { createSupplierTransactionAction } from "@/lib/actions/purchase-actions";
 import { getSupplierProfileDataAction } from "@/lib/actions/purchase-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
+import { CreateAccountModal } from "@/components/finance/create-account-modal";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
@@ -46,6 +48,8 @@ const supplierPaymentSchema = z.object({
     type: z.enum(["INCOME", "EXPENSE"]),
     description: z.string().min(2, "Açıklama giriniz"),
     purchaseOrderId: z.string().optional(),
+    accountId: z.string().optional(),
+    paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]).optional(),
 });
 
 type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
@@ -61,6 +65,13 @@ export function SupplierPaymentModal({
     onSuccess
 }: SupplierPaymentModalProps) {
     const [isPending, startTransition] = useTransition();
+    const [accounts, setAccounts] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            getAccounts().then(setAccounts);
+        }
+    }, [isOpen]);
 
     const {
         register,
@@ -108,6 +119,8 @@ export function SupplierPaymentModal({
                 type: data.type,
                 description: data.description,
                 purchaseOrderId: data.purchaseOrderId === "manual" ? undefined : data.purchaseOrderId,
+                accountId: data.accountId,
+                paymentMethod: data.paymentMethod,
             });
 
             if (result.success) {
@@ -140,7 +153,7 @@ export function SupplierPaymentModal({
                             <CreditCard className="h-6 w-6 text-emerald-400" />
                         </div>
                         <div>
-                            <DialogTitle className="text-xl font-bold text-white">Cari İşlem / Ödeme</DialogTitle>
+                            <DialogTitle className="font-medium text-xl  text-white">Cari İşlem / Ödeme</DialogTitle>
                             <p className="text-xs font-semibold text-slate-400 mt-1">
                                 {initialSupplierName || "Tedarikçi"} hesabına işlem giriyorsunuz.
                             </p>
@@ -151,18 +164,18 @@ export function SupplierPaymentModal({
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     {!initialSupplierId && (
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">TEDARİKÇİ SEÇİN</Label>
+                            <Label className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">TEDARİKÇİ SEÇİN</Label>
                             <Controller
                                 control={control}
                                 name="supplierId"
                                 render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
-                                        <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm font-bold text-white focus:ring-emerald-500">
+                                        <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm  text-white focus:ring-emerald-500">
                                             <SelectValue placeholder="Tedarikçi Seçin" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl">
                                             {suppliers.map((s: any) => (
-                                                <SelectItem key={s.id} value={s.id} className="text-xs font-bold">
+                                                <SelectItem key={s.id} value={s.id} className="text-xs ">
                                                     {s.name} (Borç: ₺{Math.round(Number(s.balance)).toLocaleString("tr-TR")})
                                                 </SelectItem>
                                             ))}
@@ -179,7 +192,7 @@ export function SupplierPaymentModal({
                             type="button"
                             onClick={() => setValue("type", "EXPENSE")}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold transition-all border",
+                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs  transition-all border",
                                 selectedType === "EXPENSE"
                                     ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
                                     : "bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/[0.04] hover:text-white"
@@ -191,7 +204,7 @@ export function SupplierPaymentModal({
                             type="button"
                             onClick={() => setValue("type", "INCOME")}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold transition-all border",
+                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs  transition-all border",
                                 selectedType === "INCOME"
                                     ? "bg-rose-500/10 border-rose-500/50 text-rose-400"
                                     : "bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/[0.04] hover:text-white"
@@ -202,19 +215,19 @@ export function SupplierPaymentModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">ÖDEME İLE İLİŞKİLİ SİPARİŞ</Label>
+                        <Label className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">ÖDEME İLE İLİŞKİLİ SİPARİŞ</Label>
                         <Controller
                             control={control}
                             name="purchaseOrderId"
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm font-bold text-white focus:ring-emerald-500">
+                                    <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm  text-white focus:ring-emerald-500">
                                         <SelectValue placeholder="Manuel İşlem (Sipariş Seçilmedi)" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl">
-                                        <SelectItem value="manual" className="text-xs font-bold text-slate-400">Manuel İşlem / Genel Ödeme</SelectItem>
+                                        <SelectItem value="manual" className="text-xs  text-slate-400">Manuel İşlem / Genel Ödeme</SelectItem>
                                         {effectiveUnpaidOrders.map((order: any) => (
-                                            <SelectItem key={order.id} value={order.id} className="text-xs font-bold">
+                                            <SelectItem key={order.id} value={order.id} className="text-xs ">
                                                 {order.orderNo} - ₺{Math.round(Number(order.remainingAmount || order.totalAmount)).toLocaleString("tr-TR")} ({format(new Date(order.createdAt), "dd MMM", { locale: tr })})
                                             </SelectItem>
                                         ))}
@@ -224,35 +237,93 @@ export function SupplierPaymentModal({
                         />
                     </div>
 
+                    {selectedType === "EXPENSE" && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label className="font-medium text-[10px] tracking-wider text-slate-500 uppercase">ÖDEME YÖNTEMİ</Label>
+                                <Controller
+                                    control={control}
+                                    name="paymentMethod"
+                                    render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value || "CASH"}>
+                                            <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm text-white focus:ring-emerald-500">
+                                                <SelectValue placeholder="Seçiniz" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl">
+                                                <SelectItem value="CASH" className="text-xs">NAKİT</SelectItem>
+                                                <SelectItem value="CARD" className="text-xs">KREDİ KARTI</SelectItem>
+                                                <SelectItem value="TRANSFER" className="text-xs">HAVALE/EFT</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label className="font-medium text-[10px] tracking-wider text-slate-500 uppercase">KASA / HESAP</Label>
+                                    <CreateAccountModal trigger={
+                                        <button type="button" className="text-[10px] uppercase tracking-widest text-emerald-400 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                            [+] HIZLI EKLE
+                                        </button>
+                                    } />
+                                </div>
+                                <Controller
+                                    control={control}
+                                    name="accountId"
+                                    render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <SelectTrigger className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm text-white focus:ring-emerald-500">
+                                                <SelectValue placeholder="Kasa Seçin" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-[#0B101B] border-white/10 rounded-xl min-w-[240px]">
+                                                {accounts.map(acc => (
+                                                    <SelectItem key={acc.id} value={acc.id} className="text-xs p-3">
+                                                        <div className="flex items-center justify-between w-full min-w-[200px]">
+                                                            <span>{acc.name}</span>
+                                                            <span className={cn("font-medium text-[10px]", acc.balance >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                                                                ₺{Number(acc.balance).toLocaleString("tr-TR")}
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="space-y-2">
-                        <Label htmlFor="amount" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">TUTAR (₺)</Label>
+                        <Label htmlFor="amount" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">TUTAR (₺)</Label>
                         <PriceInput
                             id="amount"
                             value={watch("amount")}
                             onChange={(v) => setValue("amount", v, { shouldValidate: true })}
                             placeholder="0,00"
-                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg font-bold text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-lg  text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
                         />
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">AÇIKLAMA</Label>
+                        <Label htmlFor="description" className="font-medium text-[10px]  tracking-wider text-slate-500 uppercase">AÇIKLAMA</Label>
                         <Input
                             id="description"
                             {...register("description")}
                             placeholder="Örn: 102 nolu fatura ödemesi, elden nakit vb."
-                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            className="bg-white/[0.03] border-white/5 h-12 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
                         />
                         {errors.description && <p className="text-[10px] text-red-400">{errors.description.message}</p>}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
-                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-white font-bold h-11 px-6 rounded-xl hover:bg-white/5">
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-white  h-11 px-6 rounded-xl hover:bg-white/5">
                             İptal
                         </Button>
                         <Button type="submit" disabled={isPending} className={cn(
-                            "text-white font-bold h-11 px-8 rounded-xl shadow-lg gap-2 transition-all",
+                            "text-white  h-11 px-8 rounded-xl shadow-lg gap-2 transition-all",
                             selectedType === "EXPENSE" ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-500 shadow-rose-500/20"
                         )}>
                             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
@@ -264,3 +335,8 @@ export function SupplierPaymentModal({
         </Dialog>
     );
 }
+
+
+
+
+

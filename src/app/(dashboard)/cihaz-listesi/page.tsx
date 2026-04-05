@@ -154,7 +154,7 @@ export default async function DeviceHubPage() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <MonitorSmartphone className="h-4 w-4 text-slate-500" />
-          <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
+          <h2 className="font-medium text-[10px]  text-slate-500 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <MetricCard icon={MonitorSmartphone} label="TOPLAM STOK" value={devices.length.toString()} subLabel="Cihaz Adet" color="blue" />
@@ -170,7 +170,7 @@ export default async function DeviceHubPage() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Coins className="h-4 w-4 text-slate-500" />
-          <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
+          <h2 className="font-medium text-[10px]  text-slate-500 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
         </div>
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel="Toplam Alış" color="rose" />
@@ -207,14 +207,19 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
         <div className={`p-2.5 rounded-xl transition-colors ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div className={`text-[9px] font-bold tracking-widest px-2 py-0.5 rounded-full ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
+        <div className={`text-[9px]  tracking-widest px-2 py-0.5 rounded-full ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           {label}
         </div>
       </div>
       <div className="mt-2">
-        <h3 className="text-[26px] font-bold text-white leading-none tracking-tight">{value}</h3>
-        <p className="text-[11px] text-slate-500 font-bold tracking-wide mt-2">{subLabel}</p>
+        <h3 className="font-medium text-[26px]  text-white leading-none tracking-tight">{value}</h3>
+        <p className="text-[11px] text-slate-500  tracking-wide mt-2">{subLabel}</p>
       </div>
     </div>
   );
 }
+
+
+
+
+

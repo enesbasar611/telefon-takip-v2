@@ -153,7 +153,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 <ClipboardCheck className="h-5 w-5 text-blue-500" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-bold tracking-tight">Mal Kabul Girişi</DialogTitle>
+                                <DialogTitle className="font-medium text-2xl  tracking-tight">Mal Kabul Girişi</DialogTitle>
                                 <DialogDescription className="text-xs font-medium text-muted-foreground pt-0.5"> Gelen sevkiyatları doğrulayın ve stok bakiyelerini güncelleyin. </DialogDescription>
                             </div>
                         </div>
@@ -166,8 +166,8 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 <Package className="h-5 w-5 text-blue-400" />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tedarikçi</p>
-                                <p className="text-sm font-bold truncate text-foreground">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</p>
+                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Tedarikçi</p>
+                                <p className="text-sm  truncate text-foreground">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</p>
                             </div>
                         </Card>
 
@@ -176,8 +176,8 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 <Wallet className="h-5 w-5 text-emerald-400" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Güncel Değer</p>
-                                <p className="text-sm font-bold truncate">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Güncel Değer</p>
+                                <p className="text-sm  truncate">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                             </div>
                         </Card>
 
@@ -186,8 +186,8 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 <Truck className="h-5 w-5 text-purple-400" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sevkiyat Detayları</p>
-                                <p className="text-sm font-bold truncate">{order.shippingInfo || "BELİRTİLMEMİŞ"}</p>
+                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Sevkiyat Detayları</p>
+                                <p className="text-sm  truncate">{order.shippingInfo || "BELİRTİLMEMİŞ"}</p>
                             </div>
                         </Card>
                     </div>
@@ -195,12 +195,12 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                     {/* Verification Table */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-blue-500" />
                                 Ürün Doğrulama Listesi
                             </h3>
                             {mismatches > 0 && (
-                                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-bold uppercase rounded-lg">
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px]  uppercase rounded-lg">
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {mismatches} Uyuşmazlık Mevcut
                                 </Badge>
@@ -211,12 +211,12 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                             <table className="w-full text-left">
                                 <thead className="bg-white/[0.02] border-b border-white/5">
                                     <tr>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase">Ürün Adı</th>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase text-center w-28">Stok Durumu</th>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase text-center">Sipariş</th>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase text-center w-28">Gelen</th>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase text-center w-32">Alış Fiyatı ($)</th>
-                                        <th className="px-4 py-4 text-[10px] font-bold text-muted-foreground uppercase text-right">Durum</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase">Ürün Adı</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-28">Stok Durumu</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center">Sipariş</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-28">Gelen</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-32">Alış Fiyatı ($)</th>
+                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-right">Durum</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -231,26 +231,26 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         <Package className="h-5 w-5 text-muted-foreground" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-foreground">{item.name}</p>
+                                                        <p className="text-sm  text-foreground">{item.name}</p>
                                                         <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[150px]">ID: {item.productId || "Manuel Giriş"}</p>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-sm font-bold text-slate-400">{item.product?.stock || 0}</span>
+                                                        <span className="text-sm  text-slate-400">{item.product?.stock || 0}</span>
                                                         <span className="text-slate-600">→</span>
-                                                        <span className="text-sm font-bold text-emerald-400">{(item.product?.stock || 0) + received}</span>
+                                                        <span className="text-sm  text-emerald-400">{(item.product?.stock || 0) + received}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
-                                                    <span className="text-sm font-bold text-foreground">{item.quantity} Adet</span>
+                                                    <span className="text-sm  text-foreground">{item.quantity} Adet</span>
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <Input
                                                         type="number"
                                                         value={received}
                                                         onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                                        className="h-10 rounded-xl bg-white/5 border-white/10 text-center font-bold text-sm"
+                                                        className="h-10 rounded-xl bg-white/5 border-white/10 text-center  text-sm"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-4 w-32 align-top">
@@ -259,7 +259,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCurrencies(prev => ({ ...prev, [item.id]: prev[item.id] === 'USD' ? 'TRY' : 'USD' }))}
-                                                                className="h-full px-2 text-xs font-bold text-blue-400 bg-blue-500/10 border-r border-white/10 rounded-l-xl hover:bg-blue-500/20 transition-colors"
+                                                                className="h-full px-2 text-xs  text-blue-400 bg-blue-500/10 border-r border-white/10 rounded-l-xl hover:bg-blue-500/20 transition-colors"
                                                             >
                                                                 {currencies[item.id] === 'USD' ? '$' : '₺'}
                                                             </button>
@@ -269,11 +269,11 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                             step="0.01"
                                                             value={buyPrices[item.id] !== undefined ? buyPrices[item.id] : ""}
                                                             onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                                            className="w-full h-10 bg-white/5 border-white/10 text-xs font-bold rounded-xl pl-8 text-right pr-2"
+                                                            className="w-full h-10 bg-white/5 border-white/10 text-xs  rounded-xl pl-8 text-right pr-2"
                                                         />
                                                     </div>
                                                     {currencies[item.id] === 'USD' && buyPrices[item.id] > 0 && (
-                                                        <div className="text-[10px] font-bold text-muted-foreground mt-1 text-right">
+                                                        <div className="text-[10px]  text-muted-foreground mt-1 text-right">
                                                             ≈ {((buyPrices[item.id] || 0) * usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}₺
                                                         </div>
                                                     )}
@@ -313,11 +313,11 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 
                 <div className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Genel Toplam</p>
-                        <p className="text-3xl font-bold text-blue-500 tracking-tighter">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Genel Toplam</p>
+                        <p className="text-3xl  text-blue-500 tracking-tighter">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button onClick={onClose} variant="ghost" className="h-12 px-6 rounded-2xl font-bold text-xs">İptal</Button>
+                        <Button onClick={onClose} variant="ghost" className="h-12 px-6 rounded-2xl  text-xs">İptal</Button>
                         <Button
                             onClick={() => {
                                 if (window.confirm("Mal kabul işlemini tamamlamak ve stokları güncellemek istediğinize emin misiniz?")) {
@@ -325,7 +325,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                 }
                             }}
                             disabled={loading}
-                            className="h-12 px-8 rounded-2xl font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20 uppercase tracking-widest gap-2"
+                            className="h-12 px-8 rounded-2xl  text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20 uppercase tracking-widest gap-2"
                         >
                             {loading ? "İşleniyor..." : (
                                 <>
@@ -344,3 +344,8 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 function Card({ children, className }: { children: React.ReactNode, className?: string }) {
     return <div className={cn("bg-card border border-white/5", className)}>{children}</div>;
 }
+
+
+
+
+

@@ -27,3 +27,6 @@ export function Barcode({ value, width = 2, height = 50, fontSize = 12 }: Barcod
     </div>
   );
 }
+
+
+

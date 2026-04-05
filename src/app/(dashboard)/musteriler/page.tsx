@@ -7,3 +7,6 @@ export default async function CustomersPage() {
    const customers = await getCustomers();
    return <CustomerListClient customers={customers} />;
 }
+
+
+

@@ -31,3 +31,6 @@ export async function StatsGridStream() {
 
     return <StatsClientWrapper stats={stats} statTypes={statTypes} statsData={statsData} />;
 }
+
+
+

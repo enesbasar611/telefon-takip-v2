@@ -26,7 +26,7 @@ export default async function BildirimlerPage() {
           <Bell className="h-7 w-7 text-blue-500" />
         </div>
         <div>
-          <h1 className="text-4xl font-extrabold">Sistem bildirimleri</h1>
+          <h1 className="font-medium text-4xl font-extrabold">Sistem bildirimleri</h1>
           <p className="text-xs text-muted-foreground font-medium mt-1">İşletmenizin kritik uyarıları ve operasyonel hatırlatıcıları</p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default async function BildirimlerPage() {
           <Card className="rounded-xl border-border shadow-sm bg-card">
             <CardHeader className="text-center py-20">
               <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-20" />
-              <CardTitle className="mt-6 text-muted-foreground font-bold">Şu an için yeni bir bildirim bulunmuyor</CardTitle>
+              <CardTitle className="font-medium mt-6 text-muted-foreground ">Şu an için yeni bir bildirim bulunmuyor</CardTitle>
             </CardHeader>
           </Card>
         ) : (
@@ -52,15 +52,15 @@ export default async function BildirimlerPage() {
                       {getIcon(n.type)}
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-extrabold">{n.title}</CardTitle>
+                      <CardTitle className="font-medium text-xl font-extrabold">{n.title}</CardTitle>
                       <CardDescription className="text-base font-medium mt-1.5">{n.message}</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="px-5 py-1.5 rounded-full font-bold text-xs">
+                    <Badge variant={n.priority === 'HIGH' ? 'destructive' : 'secondary'} className="px-5 py-1.5 rounded-full  text-xs">
                       {n.priority === 'HIGH' ? 'Kritik' : 'Normal'}
                     </Badge>
-                    <span className="text-xs text-muted-foreground font-bold">
+                    <span className="text-xs text-muted-foreground ">
                       {format(new Date(n.createdAt), "dd MMM yyyy HH:mm", { locale: tr })}
                     </span>
                   </div>
@@ -73,3 +73,8 @@ export default async function BildirimlerPage() {
     </div>
   );
 }
+
+
+
+
+

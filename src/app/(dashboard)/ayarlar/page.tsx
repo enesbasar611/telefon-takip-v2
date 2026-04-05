@@ -12,3 +12,6 @@ export default async function AyarlarPage() {
     <SettingsInterface initialSettings={settings} receiptSettings={receiptSettings} />
   );
 }
+
+
+

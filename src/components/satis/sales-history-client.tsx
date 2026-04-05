@@ -171,17 +171,17 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                         <ShoppingCart className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-extrabold text-foreground font-manrope">Satış Arşivi</h1>
-                        <p className="text-[11px] text-slate-500 font-bold mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
+                        <h1 className="font-medium text-3xl font-extrabold text-foreground font-manrope">Satış Arşivi</h1>
+                        <p className="text-[11px] text-slate-500  mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
                     </div>
                 </div>
 
                 {selectedIds.length > 0 && (
                     <div className="flex items-center gap-4 animate-in slide-in-from-top-4 duration-300">
-                        <span className="text-xs font-bold text-muted-foreground">{selectedIds.length} öğe seçildi</span>
+                        <span className="text-xs  text-muted-foreground">{selectedIds.length} öğe seçildi</span>
                         <Button
                             variant="destructive"
-                            className="rounded-xl h-11 px-6 font-bold text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-destructive/20"
+                            className="rounded-xl h-11 px-6  text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-destructive/20"
                             onClick={() => {
                                 setTargetId(null);
                                 setDeleteConfirmOpen(true);
@@ -200,7 +200,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Satış no, müşteri veya ürün ara..."
-                                className="pl-12 h-12 rounded-2xl bg-background border-border/40 text-xs font-bold"
+                                className="pl-12 h-12 rounded-2xl bg-background border-border/40 text-xs "
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -208,36 +208,36 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                         <div className="flex items-center gap-3">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
+                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40  text-[11px] uppercase tracking-widest gap-2">
                                         <Filter className="h-4 w-4" />
                                         {paymentFilter === "ALL" ? "TÜM ÖDEMELER" : getPaymentLabel(paymentFilter)}
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
-                                    <DropdownMenuLabel className="text-[10px] font-bold opacity-50 px-3 uppercase tracking-widest">ÖDEME YÖNTEMİ</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => setPaymentFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜMÜ</DropdownMenuItem>
+                                    <DropdownMenuLabel className="text-[10px]  opacity-50 px-3 uppercase tracking-widest">ÖDEME YÖNTEMİ</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("ALL")} className="rounded-xl  text-[11px] h-10 px-3">TÜMÜ</DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
-                                    <DropdownMenuItem onClick={() => setPaymentFilter("CASH")} className="rounded-xl font-bold text-[11px] h-10 px-3">NAKİT</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPaymentFilter("CARD")} className="rounded-xl font-bold text-[11px] h-10 px-3">KART</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPaymentFilter("TRANSFER")} className="rounded-xl font-bold text-[11px] h-10 px-3">HAVALE</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPaymentFilter("DEBT")} className="rounded-xl font-bold text-[11px] h-10 px-3">VERESİYE</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("CASH")} className="rounded-xl  text-[11px] h-10 px-3">NAKİT</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("CARD")} className="rounded-xl  text-[11px] h-10 px-3">KART</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("TRANSFER")} className="rounded-xl  text-[11px] h-10 px-3">HAVALE</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPaymentFilter("DEBT")} className="rounded-xl  text-[11px] h-10 px-3">VERESİYE</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40 font-bold text-[11px] uppercase tracking-widest gap-2">
+                                    <Button variant="outline" className="rounded-xl h-12 px-6 border-border/40  text-[11px] uppercase tracking-widest gap-2">
                                         <Calendar className="h-4 w-4" />
                                         {dateFilter === "ALL" ? "TÜM ZAMANLAR" : dateFilter === "TODAY" ? "BUGÜN" : dateFilter === "WEEK" ? "BU HAFTA" : "BU AY"}
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="rounded-2xl border-none shadow-2xl p-2 bg-card/80 backdrop-blur-xl">
-                                    <DropdownMenuLabel className="text-[10px] font-bold opacity-50 px-3 uppercase tracking-widest">TARİH ARALIĞI</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => setDateFilter("ALL")} className="rounded-xl font-bold text-[11px] h-10 px-3">TÜM ZAMANLAR</DropdownMenuItem>
+                                    <DropdownMenuLabel className="text-[10px]  opacity-50 px-3 uppercase tracking-widest">TARİH ARALIĞI</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setDateFilter("ALL")} className="rounded-xl  text-[11px] h-10 px-3">TÜM ZAMANLAR</DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-border/40 my-1 mx-2" />
-                                    <DropdownMenuItem onClick={() => setDateFilter("TODAY")} className="rounded-xl font-bold text-[11px] h-10 px-3">BUGÜN</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setDateFilter("WEEK")} className="rounded-xl font-bold text-[11px] h-10 px-3">BU HAFTA</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setDateFilter("MONTH")} className="rounded-xl font-bold text-[11px] h-10 px-3">BU AY</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setDateFilter("TODAY")} className="rounded-xl  text-[11px] h-10 px-3">BUGÜN</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setDateFilter("WEEK")} className="rounded-xl  text-[11px] h-10 px-3">BU HAFTA</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setDateFilter("MONTH")} className="rounded-xl  text-[11px] h-10 px-3">BU AY</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -247,7 +247,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-border/40 bg-muted/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                <tr className="border-b border-border/40 bg-muted/5 text-[10px]  text-muted-foreground uppercase tracking-widest">
                                     <th className="px-8 py-5 text-left w-12">
                                         <Checkbox
                                             checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
@@ -287,7 +287,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                             />
                                         </td>
                                         <td className="px-4 py-6">
-                                            <span className="text-xs font-bold text-foreground tracking-tight">{sale.saleNumber}</span>
+                                            <span className="text-xs  text-foreground tracking-tight">{sale.saleNumber}</span>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-3">
@@ -295,33 +295,33 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                                                     <User className="h-4 w-4 text-primary" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-foreground">{sale.customer?.name || "Hızlı Satış"}</span>
-                                                    <span className="text-[10px] font-bold text-muted-foreground opacity-60">{sale.customer?.phone || "-"}</span>
+                                                    <span className="text-xs  text-foreground">{sale.customer?.name || "Hızlı Satış"}</span>
+                                                    <span className="text-[10px]  text-muted-foreground opacity-60">{sale.customer?.phone || "-"}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col gap-1 max-w-[200px]">
                                                 {sale.items.map((item: any, idx: number) => (
-                                                    <div key={idx} className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                                                    <div key={idx} className="flex items-center gap-2 text-[10px]  text-muted-foreground">
                                                         <Package className="h-3 w-3 opacity-40" />
                                                         <span className="truncate">{item.product.name}</span>
-                                                        <span className="text-primary font-bold">x{item.quantity}</span>
+                                                        <span className="text-primary ">x{item.quantity}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <Badge variant="outline" className="rounded-lg h-7 px-3 bg-muted/30 border-border/40 text-[9px] font-bold uppercase tracking-widest gap-1.5">
+                                            <Badge variant="outline" className="rounded-lg h-7 px-3 bg-muted/30 border-border/40 text-[9px]  uppercase tracking-widest gap-1.5">
                                                 {getPaymentIcon(sale.paymentMethod)}
                                                 {getPaymentLabel(sale.paymentMethod)}
                                             </Badge>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <span className="text-sm font-bold text-emerald-500 tracking-tight">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</span>
+                                            <span className="text-sm  text-emerald-500 tracking-tight">₺{Number(sale.finalAmount).toLocaleString('tr-TR')}</span>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <span className="text-[11px] font-bold text-muted-foreground">
+                                            <span className="text-[11px]  text-muted-foreground">
                                                 {format(new Date(sale.createdAt), "dd MMM yyyy", { locale: tr })}
                                                 <br />
                                                 <span className="opacity-50">{format(new Date(sale.createdAt), "HH:mm")}</span>
@@ -370,22 +370,22 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                 <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-3 text-2xl font-bold">
+                        <AlertDialogTitle className="flex items-center gap-3 text-2xl ">
                             <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
                                 <AlertCircle className="h-6 w-6 text-destructive" />
                             </div>
                             Emin misiniz?
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="font-bold text-sm pt-4">
+                        <AlertDialogDescription className=" text-sm pt-4">
                             {targetId
                                 ? "Bu satış kaydı kalıcı olarak silinecek ve ilgili ürün stokları iade edilecektir. Bu işlem geri alınamaz."
                                 : `${selectedIds.length} adet satış kaydı ve ilgili stok hareketleri silinecektir. Devam etmek istiyor musunuz?`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-3 mt-6">
-                        <AlertDialogCancel className="rounded-xl h-12 px-6 font-bold border-border/40 hover:bg-muted/50">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl h-12 px-6  border-border/40 hover:bg-muted/50">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction
-                            className="rounded-xl h-12 px-8 font-bold bg-destructive hover:bg-destructive/90 shadow-lg shadow-destructive/20"
+                            className="rounded-xl h-12 px-8  bg-destructive hover:bg-destructive/90 shadow-lg shadow-destructive/20"
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleDelete();
@@ -415,3 +415,7 @@ const History = ({ className }: { className?: string }) => (
         <path d="M12 7v5l4 2" />
     </svg>
 );
+
+
+
+

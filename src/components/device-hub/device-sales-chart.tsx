@@ -58,3 +58,6 @@ export function DeviceSalesChart({ data }: { data: any[] }) {
         </div>
     );
 }
+
+
+

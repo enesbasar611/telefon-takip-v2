@@ -103,27 +103,27 @@ export function ServiceTable({ data }: ServiceTableProps) {
   return (
     <div className="rounded-xl obsidian overflow-hidden whisper-border border-white/5 shadow-none">
       <Table>
-        <TableHeader className="bg-white/[0.01]">
+        <TableHeader className="font-medium bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
-            <TableHead className="px-8 py-6 h-[70px]">
+            <TableHead className="font-medium px-8 py-6 h-[70px]">
               <SortableHeader label="Fiş No" field="ticketNumber" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="py-6 h-[70px]">
+            <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="Müşteri" field="customer.name" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="py-6 h-[70px]">
+            <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="Cihaz Analizi" field="deviceBrand" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="py-6 h-[70px]">
+            <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="İşlem Durumu" field="status" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="py-6 h-[70px]">
+            <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="Kayıt Tarihi" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="py-6 h-[70px]">
+            <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="Maliyet" field="estimatedCost" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
             </TableHead>
-            <TableHead className="px-8 py-6 text-xs font-bold text-muted-foreground text-right">Aksiyon</TableHead>
+            <TableHead className="font-medium px-8 py-6 text-xs  text-muted-foreground text-right">Aksiyon</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -137,11 +137,11 @@ export function ServiceTable({ data }: ServiceTableProps) {
             sortedData.map((ticket) => (
               <TableRow key={ticket.id} className="border-b border-white/[0.03] group hover:bg-white/[0.01] transition-colors">
                 <TableCell className="px-8 py-6">
-                  <span className="font-bold text-sm text-foreground">#{ticket.ticketNumber}</span>
+                  <span className=" text-sm text-foreground">#{ticket.ticketNumber}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-bold text-sm text-foreground group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
+                    <span className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
                     <span className="text-xs text-muted-foreground font-medium">{formatPhone(ticket.customer.phone)}</span>
                   </div>
                 </TableCell>
@@ -151,20 +151,20 @@ export function ServiceTable({ data }: ServiceTableProps) {
                       <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm text-foreground">{ticket.deviceBrand} {ticket.deviceModel}</span>
+                      <span className=" text-sm text-foreground">{ticket.deviceBrand} {ticket.deviceModel}</span>
                       <span className="text-xs text-muted-foreground font-medium truncate max-w-[150px]">"{ticket.problemDesc}"</span>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none font-bold text-xs px-4 py-2 rounded-xl transition-all`} variant="outline">
+                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none  text-xs px-4 py-2 rounded-xl transition-all`} variant="outline">
                     {statusMap[ticket.status as ServiceStatus].label}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs font-medium text-muted-foreground">
                   {format(new Date(ticket.createdAt), "dd MMM, HH:mm", { locale: tr })}
                 </TableCell>
-                <TableCell className="text-right font-bold text-lg text-emerald-500">
+                <TableCell className="text-right  text-lg text-emerald-500">
                   ₺{Number(ticket.estimatedCost).toLocaleString("tr-TR")}
                 </TableCell>
                 <TableCell className="px-8">
@@ -195,7 +195,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-card border-white/5 text-foreground p-2 min-w-[200px] shadow-none">
-                        <DropdownMenuLabel className="text-xs font-bold text-muted-foreground p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/5" />
                         {Object.entries(statusMap).map(([status, info]) => (
                           <DropdownMenuItem
@@ -229,3 +229,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
     </div>
   );
 }
+
+
+
+

@@ -86,22 +86,22 @@ export function TedarikciCariEkstreModal({ isOpen, onClose, supplier }: Tedarikc
             <div className="p-10 w-full" id="print-area">
                 {/* Print Title */}
                 <div className="flex flex-col items-center text-center mb-10 border-b-2 border-black pb-6">
-                    <h1 className="text-2xl font-bold uppercase tracking-widest mb-1">CARI HESAP EKSTRESI</h1>
-                    <p className="text-xs font-bold text-slate-600">Basım Tarihi: {format(new Date(), "dd MMMM yyyy HH:mm", { locale: tr })}</p>
+                    <h1 className="font-medium text-2xl  uppercase tracking-widest mb-1">CARI HESAP EKSTRESI</h1>
+                    <p className="text-xs  text-slate-600">Basım Tarihi: {format(new Date(), "dd MMMM yyyy HH:mm", { locale: tr })}</p>
 
                     <div className="mt-8 flex justify-between w-full text-left">
                         <div className="flex-1">
-                            <h3 className="text-[10px] font-bold uppercase text-slate-500 mb-1">TEDARİKÇİ BİLGİLERİ</h3>
-                            <p className="text-sm font-bold text-black">{supplier.name}</p>
+                            <h3 className="font-medium text-[10px]  uppercase text-slate-500 mb-1">TEDARİKÇİ BİLGİLERİ</h3>
+                            <p className="text-sm  text-black">{supplier.name}</p>
                             <p className="text-xs font-medium text-slate-800">{supplier.phone || "-"}</p>
                             <p className="text-xs font-medium text-slate-800 max-w-[300px]">{supplier.address || "-"}</p>
                         </div>
                         <div className="text-right flex-1">
-                            <h3 className="text-[10px] font-bold uppercase text-slate-500 mb-1">HESAP ÖZETİ</h3>
+                            <h3 className="font-medium text-[10px]  uppercase text-slate-500 mb-1">HESAP ÖZETİ</h3>
                             <div className="space-y-1">
                                 <p className="text-xs font-medium text-slate-800">Toplam Shopping: ₺{Number(supplier.totalShopping || 0).toLocaleString("tr-TR")}</p>
-                                <p className="text-sm font-bold text-black">Güncel Bakiye: ₺{Number(supplier.balance).toLocaleString("tr-TR")}</p>
-                                <p className="text-[10px] font-bold text-rose-600 uppercase">
+                                <p className="text-sm  text-black">Güncel Bakiye: ₺{Number(supplier.balance).toLocaleString("tr-TR")}</p>
+                                <p className="text-[10px]  text-rose-600 uppercase">
                                     {Number(supplier.balance) > 0 ? "TEDARİKÇİYE BORÇLUYUZ" : Number(supplier.balance) < 0 ? "TEDARİKÇİDEN ALACAKLIYIZ" : "HESAP KAPALI"}
                                 </p>
                             </div>
@@ -144,7 +144,7 @@ export function TedarikciCariEkstreModal({ isOpen, onClose, supplier }: Tedarikc
                                         <td className="text-right">
                                             {t.type === "INCOME" ? "+" : "-"} ₺{amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
                                         </td>
-                                        <td className="text-right font-bold">₺{currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</td>
+                                        <td className="text-right ">₺{currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                 );
                             });
@@ -157,14 +157,19 @@ export function TedarikciCariEkstreModal({ isOpen, onClose, supplier }: Tedarikc
                 <div className="grid grid-cols-2 gap-20 mt-20 px-10">
                     <div className="text-center">
                         <div className="w-full border-b border-black mb-2"></div>
-                        <p className="text-[10px] font-bold uppercase">TESLİM EDEN</p>
+                        <p className="text-[10px]  uppercase">TESLİM EDEN</p>
                     </div>
                     <div className="text-center">
                         <div className="w-full border-b border-black mb-2"></div>
-                        <p className="text-[10px] font-bold uppercase">TESLİM ALAN</p>
+                        <p className="text-[10px]  uppercase">TESLİM ALAN</p>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
+
+
+
+

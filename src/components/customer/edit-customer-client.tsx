@@ -93,7 +93,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Müşteri Düzenle</h1>
+                    <h1 className="font-medium text-3xl  tracking-tight">Müşteri Düzenle</h1>
                     <p className="text-muted-foreground">{customer.name} bilgilerini güncelliyorsunuz.</p>
                 </div>
             </div>
@@ -106,7 +106,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                                 <User className="h-6 w-6" />
                             </div>
                             <div>
-                                <CardTitle className="text-xl">Profil Bilgileri</CardTitle>
+                                <CardTitle className="font-medium text-xl">Profil Bilgileri</CardTitle>
                                 <CardDescription>Müşterinin temel iletişim ve detay bilgileri.</CardDescription>
                             </div>
                         </div>
@@ -116,7 +116,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                             {/* Sol Kolon */}
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">Ad Soyad</Label>
+                                    <Label className="font-medium text-xs  text-muted-foreground uppercase">Ad Soyad</Label>
                                     <Input
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -139,7 +139,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                                 />
 
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">E-Posta (Opsiyonel)</Label>
+                                    <Label className="font-medium text-xs  text-muted-foreground uppercase">E-Posta (Opsiyonel)</Label>
                                     <Input
                                         type="email"
                                         value={formData.email}
@@ -153,7 +153,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                             {/* Sağ Kolon */}
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">Müşteri Tipi</Label>
+                                    <Label className="font-medium text-xs  text-muted-foreground uppercase">Müşteri Tipi</Label>
                                     <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
                                         <SelectTrigger className="h-12 rounded-xl bg-background">
                                             <SelectValue placeholder="Tip Seçin" />
@@ -167,7 +167,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
 
                                 <div className="flex flex-row items-center justify-between rounded-xl border p-4 bg-background">
                                     <div className="space-y-0.5">
-                                        <Label className="text-sm font-bold">VIP Müşteri</Label>
+                                        <Label className="font-medium text-sm ">VIP Müşteri</Label>
                                         <p className="text-[10px] text-muted-foreground">Özel indirim ve öncelik tanınan müşteri</p>
                                     </div>
                                     <Switch
@@ -177,7 +177,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase">Açık Adres</Label>
+                                    <Label className="font-medium text-xs  text-muted-foreground uppercase">Açık Adres</Label>
                                     <Textarea
                                         value={formData.address}
                                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -189,7 +189,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
                         </div>
 
                         <div className="space-y-2 pt-2">
-                            <Label className="text-xs font-bold text-muted-foreground uppercase">Özel Notlar</Label>
+                            <Label className="font-medium text-xs  text-muted-foreground uppercase">Özel Notlar</Label>
                             <Textarea
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -200,14 +200,14 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
 
                         <div className="flex items-center gap-4 pt-4 border-t border-border/50">
                             <Link href="/musteriler" className="flex-1">
-                                <Button type="button" variant="outline" className="w-full h-12 rounded-xl font-bold">
+                                <Button type="button" variant="outline" className="w-full h-12 rounded-xl ">
                                     İptal Et
                                 </Button>
                             </Link>
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="flex-[2] h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white gap-2"
+                                className="flex-[2] h-12 rounded-xl  bg-blue-600 hover:bg-blue-500 text-white gap-2"
                             >
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
                                 Değişiklikleri Kaydet
@@ -219,3 +219,9 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
         </div>
     );
 }
+
+
+
+
+
+

@@ -83,9 +83,9 @@ export function FinansClient({
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         <div className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-                        <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest">Finansal Yönetim Merkezi</span>
+                        <span className="text-[10px]  text-blue-500/80 uppercase tracking-widest">Finansal Yönetim Merkezi</span>
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tight">Kasa &amp; Muhasebe</h1>
+                    <h1 className="font-medium text-4xl  tracking-tight">Kasa &amp; Muhasebe</h1>
                     <p className="text-sm text-muted-foreground font-medium max-w-md mt-1">İşletmenizin finansal sağlığını, nakit akışını ve hesaplarını profesyonelce yönetin.</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -106,11 +106,11 @@ export function FinansClient({
                                 <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} border border-current/10`}>
                                     <stat.icon className="h-5 w-5" />
                                 </div>
-                                <Badge variant="outline" className="text-[8px] font-bold tracking-tighter uppercase px-2">GÜNCEL DURUM</Badge>
+                                <Badge variant="outline" className="text-[8px]  tracking-tighter uppercase px-2">GÜNCEL DURUM</Badge>
                             </div>
-                            <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">{stat.label}</p>
+                            <p className="text-[10px]  text-muted-foreground tracking-wider uppercase">{stat.label}</p>
                             <div className="mt-1 flex items-baseline gap-2">
-                                <RevealFinancial amount={stat.value} className="text-3xl font-bold tracking-tight" />
+                                <RevealFinancial amount={stat.value} className="text-3xl  tracking-tight" />
                             </div>
                             <p className="text-[9px] text-muted-foreground font-medium mt-2 leading-relaxed">{stat.description}</p>
                         </CardContent>
@@ -127,7 +127,7 @@ export function FinansClient({
                 <div className="lg:col-span-1 space-y-4">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        <h2 className="text-xs font-bold tracking-wider">GELİR / GİDER ÖZETİ</h2>
+                        <h2 className="font-medium text-xs  tracking-wider">GELİR / GİDER ÖZETİ</h2>
                     </div>
                     {incomeStats.map((stat, i) => (
                         <Card key={i} className="border-border/40 bg-card/30">
@@ -137,8 +137,8 @@ export function FinansClient({
                                         <stat.icon className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">{stat.label}</p>
-                                        <RevealFinancial amount={stat.value} className="text-xl font-bold tracking-tight" />
+                                        <p className="text-[11px]  text-muted-foreground uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                                        <RevealFinancial amount={stat.value} className="text-xl  tracking-tight" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -147,7 +147,7 @@ export function FinansClient({
 
                     <div className="p-6 rounded-[2rem] bg-muted/30 border border-border/60 mt-8 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.05] rounded-full bg-blue-500 group-hover:scale-110 transition-transform" />
-                        <h4 className="text-[11px] font-bold text-blue-500 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                        <h4 className="font-medium text-[11px]  text-blue-500 mb-3 flex items-center gap-2 uppercase tracking-widest">
                             <AlertCircle className="h-4 w-4" /> BİLGİLENDİRME
                         </h4>
                         <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
@@ -164,8 +164,8 @@ export function FinansClient({
                                 <History className="h-4 w-4 text-blue-500" />
                             </div>
                             <div>
-                                <CardTitle className="text-sm font-bold tracking-tight">Finansal Hareketler</CardTitle>
-                                <p className="text-[10px] text-muted-foreground font-bold tracking-wider">HESAP BAZLI NAKİT AKIŞI</p>
+                                <CardTitle className="font-medium text-sm  tracking-tight">Finansal Hareketler</CardTitle>
+                                <p className="text-[10px] text-muted-foreground  tracking-wider">HESAP BAZLI NAKİT AKIŞI</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export function FinansClient({
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Filtrele..."
-                                    className="pl-9 h-9 rounded-xl text-[11px] font-bold border-border/40 bg-muted/20"
+                                    className="pl-9 h-9 rounded-xl text-[11px]  border-border/40 bg-muted/20"
                                 />
                             </div>
                             <div className="flex items-center gap-1 p-1 bg-muted/30 border border-border/40 rounded-xl">
@@ -186,7 +186,7 @@ export function FinansClient({
                                         size="sm"
                                         onClick={() => setPaymentFilter(method)}
                                         className={cn(
-                                            "h-7 text-[11px] font-bold rounded-lg px-3 transition-all",
+                                            "h-7 text-[11px]  rounded-lg px-3 transition-all",
                                             paymentFilter === method ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -199,19 +199,19 @@ export function FinansClient({
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-muted/10">
+                                <TableHeader className="font-medium bg-muted/10">
                                     <TableRow className="border-border/40 hover:bg-transparent">
-                                        <TableHead className="py-4 pl-8 h-[60px]">
+                                        <TableHead className="font-medium py-4 pl-8 h-[60px]">
                                             <SortableHeader label="TARİH" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                         </TableHead>
-                                        <TableHead className="py-4 h-[60px]">
+                                        <TableHead className="font-medium py-4 h-[60px]">
                                             <SortableHeader label="HESAP / KANAL" field="accountId" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                         </TableHead>
-                                        <TableHead className="py-4 h-[60px]">
+                                        <TableHead className="font-medium py-4 h-[60px]">
                                             <SortableHeader label="AÇIKLAMA" field="description" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                         </TableHead>
-                                        <TableHead className="text-[10px] font-bold text-muted-foreground py-4">SORUMLU</TableHead>
-                                        <TableHead className="pr-8 h-[60px]">
+                                        <TableHead className="font-medium text-[10px]  text-muted-foreground py-4">SORUMLU</TableHead>
+                                        <TableHead className="font-medium pr-8 h-[60px]">
                                             <SortableHeader label="TUTAR" field="amount" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
                                         </TableHead>
                                     </TableRow>
@@ -219,7 +219,7 @@ export function FinansClient({
                                 <TableBody>
                                     {sortedData.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-xs font-bold text-muted-foreground">
+                                            <TableCell colSpan={5} className="h-32 text-center text-xs  text-muted-foreground">
                                                 {search || paymentFilter !== "ALL" ? "Filtre kriterine uyan işlem bulunamadı." : "Henüz finansal hareket yok."}
                                             </TableCell>
                                         </TableRow>
@@ -228,41 +228,41 @@ export function FinansClient({
                                             <TableRow key={t.id} className="border-border/10 hover:bg-muted/5 transition-colors group">
                                                 <TableCell className="py-4 pl-8">
                                                     <div className="flex flex-col">
-                                                        <span className="text-[11px] font-bold">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</span>
-                                                        <span className="text-[9px] text-muted-foreground font-bold">{format(new Date(t.createdAt), "HH:mm")}</span>
+                                                        <span className="text-[11px] ">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                        <span className="text-[9px] text-muted-foreground ">{format(new Date(t.createdAt), "HH:mm")}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1 uppercase tracking-wider">
+                                                        <span className="text-[10px]  text-blue-500 flex items-center gap-1 uppercase tracking-wider">
                                                             {t.account?.name || 'GENEL KASA'}
                                                         </span>
-                                                        <Badge variant="outline" className="w-fit text-[8px] font-bold py-0 h-4 rounded-md bg-muted/20 opacity-70">
+                                                        <Badge variant="outline" className="w-fit text-[8px]  py-0 h-4 rounded-md bg-muted/20 opacity-70">
                                                             {paymentLabels[t.paymentMethod] || t.paymentMethod}
                                                         </Badge>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{t.description}</span>
-                                                        {t.category && <span className="text-[8px] font-bold text-muted-foreground/60 uppercase">{t.category}</span>}
+                                                        <span className="text-xs  text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{t.description}</span>
+                                                        {t.category && <span className="text-[8px]  text-muted-foreground/60 uppercase">{t.category}</span>}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <div className="h-6 w-6 rounded-lg bg-muted border border-border/40 flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                                                        <div className="h-6 w-6 rounded-lg bg-muted border border-border/40 flex items-center justify-center text-[9px]  text-muted-foreground">
                                                             {t.user?.name?.charAt(0) || 'S'}
                                                         </div>
-                                                        <span className="text-[10px] font-bold uppercase">{t.user?.name || 'SİSTEM'}</span>
+                                                        <span className="text-[10px]  uppercase">{t.user?.name || 'SİSTEM'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right pr-8">
                                                     <div className="flex flex-col items-end">
-                                                        <div className={cn("flex items-center gap-1 text-sm font-bold", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
+                                                        <div className={cn("flex items-center gap-1 text-sm ", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
                                                             {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
                                                             {t.type === 'INCOME' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                                                         </div>
-                                                        <Badge variant={t.type === 'INCOME' ? 'secondary' : 'outline'} className={cn("text-[8px] font-bold px-1.5 h-4 mt-1 border-none", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
+                                                        <Badge variant={t.type === 'INCOME' ? 'secondary' : 'outline'} className={cn("text-[8px]  px-1.5 h-4 mt-1 border-none", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
                                                             {t.type === 'INCOME' ? 'TAHSİLAT' : 'ÖDEME'}
                                                         </Badge>
                                                     </div>
@@ -275,7 +275,7 @@ export function FinansClient({
                         </div>
                     </CardContent>
                     <div className="p-4 border-t border-border/40 flex items-center justify-between bg-muted/5">
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">
+                        <p className="text-[10px]  text-muted-foreground tracking-widest uppercase">
                             {filtered.length} / {transactions.length} İŞLEM LİSTELENİYOR
                         </p>
                     </div>
@@ -284,4 +284,12 @@ export function FinansClient({
         </div>
     );
 }
+
+
+
+
+
+
+
+
 

@@ -196,13 +196,13 @@ export function StockListTable({ products, categories }: { products: any[], cate
       <div className="p-0">
         <div className="block lg:hidden space-y-4 p-4">
           {sortedData.length === 0 ? (
-            <p className="text-center py-10 text-slate-500 font-bold">Ürün bulunamadı.</p>
+            <p className="text-center py-10 text-slate-500 ">Ürün bulunamadı.</p>
           ) : (
             sortedData.map((product: any) => (
               <div key={product.id} className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 space-y-4 cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium text-slate-200 text-[14px] leading-tight">{product.name}</h3>
+                    <h3 className="font-medium font-medium text-slate-200 text-[14px] leading-tight">{product.name}</h3>
                     <p className="text-[11px] text-slate-500 font-medium mt-1">SKU: {product.sku || '-'}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
@@ -245,9 +245,9 @@ export function StockListTable({ products, categories }: { products: any[], cate
                   <div className="flex flex-col items-start gap-1">
                     <div className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-[9px] text-slate-500">MALİYET</div>
                     <div className="flex items-center gap-2">
-                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-slate-300 font-bold" />
+                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-slate-300 " />
                       {product.buyPriceUsd && (
-                        <span className="text-[11px] text-blue-400 font-bold flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                        <span className="text-[11px] text-blue-400  flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                           ${product.buyPriceUsd}
                         </span>
                       )}
@@ -290,19 +290,19 @@ export function StockListTable({ products, categories }: { products: any[], cate
         <Table className="hidden lg:table">
           <TableHeader>
             <TableRow className="border-b border-white/5 hover:bg-transparent">
-              <TableHead className="py-3 pl-8 h-11">
+              <TableHead className="font-medium py-3 pl-8 h-11">
                 <SortableHeader label="Ürün Bilgisi" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
               </TableHead>
-              <TableHead className="py-3 h-11">
+              <TableHead className="font-medium py-3 h-11">
                 <SortableHeader label="Kategori" field="categoryId" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
               </TableHead>
-              <TableHead className="py-3 h-11">
+              <TableHead className="font-medium py-3 h-11">
                 <SortableHeader label="Stok" field="stock" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} align="center" />
               </TableHead>
-              <TableHead className="py-3 h-11">
+              <TableHead className="font-medium py-3 h-11">
                 <SortableHeader label="Fiyat" field="sellPrice" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} align="right" />
               </TableHead>
-              <TableHead className="py-3 pr-8 h-11 text-right"></TableHead>
+              <TableHead className="font-medium py-3 pr-8 h-11 text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -358,10 +358,10 @@ export function StockListTable({ products, categories }: { products: any[], cate
                     <div className="flex flex-col items-end">
                       <span className="text-[14px] font-semibold text-slate-200 group-hover:text-white transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Maliyet:</span>
-                        <RevealFinancial amount={product.buyPrice} className="text-[12px] font-bold text-slate-400" />
+                        <span className="text-[9px]  uppercase tracking-widest text-slate-500">Maliyet:</span>
+                        <RevealFinancial amount={product.buyPrice} className="text-[12px]  text-slate-400" />
                         {product.buyPriceUsd && (
-                          <span className="text-[10px] text-blue-400/90 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                          <span className="text-[10px] text-blue-400/90  bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                             ${product.buyPriceUsd}
                           </span>
                         )}
@@ -420,3 +420,8 @@ export function StockListTable({ products, categories }: { products: any[], cate
     </div>
   );
 }
+
+
+
+
+

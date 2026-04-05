@@ -53,11 +53,11 @@ export function GlobalSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => query.length >= 2 && setIsOpen(true)}
-        className="w-full bg-slate-900/40 border-border/10/50 pl-10 h-10 rounded-xl text-[10px] font-bold text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-slate-900/60 transition-all"
+        className="w-full bg-slate-900/40 border-border/10/50 pl-10 h-10 rounded-xl text-[10px]  text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-slate-900/60 transition-all"
       />
       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/10 backdrop-blur-md">
-          <span className="text-[8px] font-bold text-slate-500">SHIFT + S</span>
+          <span className="text-[8px]  text-slate-500">SHIFT + S</span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export function GlobalSearch() {
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
             <div className="p-3 mb-2 bg-blue-500/5 rounded-xl border border-blue-500/10 flex items-center justify-center gap-2">
               <Sparkles className="h-3 w-3 text-blue-400" />
-              <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest text-center">
+              <p className="text-[9px]  text-blue-400 uppercase tracking-widest text-center">
                 Shift + S ile Detaylı Arama Yap
               </p>
             </div>
@@ -82,20 +82,20 @@ export function GlobalSearch() {
                   >
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">{r.breadcrumb}</span>
-                        <Badge className="h-3 text-[7px] font-bold px-1 pb-0 border-none bg-white/10 text-slate-300">
+                        <span className="text-[8px]  text-slate-500 uppercase tracking-tighter">{r.breadcrumb}</span>
+                        <Badge className="h-3 text-[7px]  px-1 pb-0 border-none bg-white/10 text-slate-300">
                           {r.type}
                         </Badge>
                       </div>
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-blue-400">{r.title}</span>
-                      <span className="text-[9px] text-slate-600 font-bold truncate max-w-[250px]">{r.subtitle}</span>
+                      <span className="text-xs  text-slate-200 group-hover:text-blue-400">{r.title}</span>
+                      <span className="text-[9px] text-slate-600  truncate max-w-[250px]">{r.subtitle}</span>
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-800 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="text-center py-8 text-[10px] font-bold text-slate-600">Sonuç bulunamadı.</p>
+              <p className="text-center py-8 text-[10px]  text-slate-600">Sonuç bulunamadı.</p>
             )}
           </div>
         </div>
@@ -103,3 +103,6 @@ export function GlobalSearch() {
     </div>
   );
 }
+
+
+

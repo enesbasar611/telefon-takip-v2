@@ -18,7 +18,7 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-        <p className="text-xs font-bold">Aktif cihaz bulunamadı</p>
+        <p className="text-xs ">Aktif cihaz bulunamadı</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
               backgroundColor: entry.color,
             }}
           >
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity font-bold whitespace-nowrap">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity  whitespace-nowrap">
               {entry.name}: {entry.value}
             </div>
           </div>
@@ -60,10 +60,10 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-foreground/80 group-hover:text-primary transition-colors truncate uppercase tracking-tight">{entry.name}</span>
+                  <span className="text-xs  text-foreground/80 group-hover:text-primary transition-colors truncate uppercase tracking-tight">{entry.name}</span>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                    <span className="text-[10px] font-bold" style={{ color: entry.color }}>{pct}%</span>
-                    <span className="text-[10px] font-bold text-muted-foreground/60">{entry.value} CİHAZ</span>
+                    <span className="text-[10px] " style={{ color: entry.color }}>{pct}%</span>
+                    <span className="text-[10px]  text-muted-foreground/60">{entry.value} CİHAZ</span>
                   </div>
                 </div>
                 <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
@@ -80,4 +80,7 @@ export function ServiceStatusChart({ data }: ServiceStatusChartProps) {
     </div>
   );
 }
+
+
+
 

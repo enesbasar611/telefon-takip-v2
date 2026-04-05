@@ -107,7 +107,7 @@ export function DashboardCore({
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <div className="h-8 w-1.5 bg-primary rounded-full" />
-            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground font-sans uppercase">
+            <h1 className="font-medium text-4xl lg:text-5xl  tracking-tight text-foreground font-sans uppercase">
               {title}
             </h1>
           </div>
@@ -120,14 +120,14 @@ export function DashboardCore({
           <div className="flex items-center gap-4 px-5 py-3 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/10">
             <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-emerald-600/70 tracking-tighter uppercase leading-none mb-1">Sistem Durumu</span>
-              <span className="text-xs font-bold text-emerald-600 tracking-tight">AKTİF & STABİL</span>
+              <span className="text-[10px]  text-emerald-600/70 tracking-tighter uppercase leading-none mb-1">Sistem Durumu</span>
+              <span className="text-xs  text-emerald-600 tracking-tight">AKTİF & STABİL</span>
             </div>
           </div>
           <div className="px-5 py-3">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tighter uppercase leading-none mb-1">Veri Akışı</span>
-              <span className="text-xs font-bold text-foreground tracking-tight uppercase">Gerçek Zamanlı</span>
+              <span className="text-[10px]  text-muted-foreground/60 tracking-tighter uppercase leading-none mb-1">Veri Akışı</span>
+              <span className="text-xs  text-foreground tracking-tight uppercase">Gerçek Zamanlı</span>
             </div>
           </div>
         </div>
@@ -153,13 +153,13 @@ export function DashboardCore({
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {stat.trend && (
-                    <span className="text-[10px] font-bold bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
+                    <span className="text-[10px]  bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
                       {stat.trend} Δ
                     </span>
                   )}
                   {stat.badge && (
                     <span className={cn(
-                      "text-[10px] font-bold px-3 py-1.5 rounded-full border border-border/50 tracking-tighter uppercase shadow-sm",
+                      "text-[10px]  px-3 py-1.5 rounded-full border border-border/50 tracking-tighter uppercase shadow-sm",
                       stat.colorClass,
                       stat.bgClass
                     )}>
@@ -170,16 +170,16 @@ export function DashboardCore({
               </div>
 
               <div className="mt-8 relative">
-                <p className="text-[10px] font-bold mb-2 text-muted-foreground/60 tracking-[0.2em] uppercase">{stat.label}</p>
+                <p className="text-[10px]  mb-2 text-muted-foreground/60 tracking-[0.2em] uppercase">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
                   {typeof stat.value === 'string' && stat.value.includes('₺') ? (
-                    <RevealFinancial amount={stat.value} className={cn("text-4xl font-bold tracking-tight", stat.colorClass)} />
+                    <RevealFinancial amount={stat.value} className={cn("text-4xl  tracking-tight", stat.colorClass)} />
                   ) : (
-                    <h3 className={cn("text-5xl font-bold tracking-tighter", stat.colorClass)}>{stat.value}</h3>
+                    <h3 className={cn("text-5xl  tracking-tighter", stat.colorClass)}>{stat.value}</h3>
                   )}
                 </div>
                 {stat.subValue && (
-                  <p className="text-[11px] font-bold text-muted-foreground/50 mt-2 tracking-tight">{stat.subValue}</p>
+                  <p className="text-[11px]  text-muted-foreground/50 mt-2 tracking-tight">{stat.subValue}</p>
                 )}
               </div>
             </CardContent>
@@ -193,24 +193,24 @@ export function DashboardCore({
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 pb-6 p-8 bg-muted/5">
             <div className="flex items-center gap-8">
               <div className="flex flex-col gap-1">
-                <CardTitle className="text-xl font-bold tracking-tight font-sans uppercase">Gelir Analizi</CardTitle>
-                <p className="text-xs text-muted-foreground font-bold opacity-70 uppercase tracking-wider">Son 30 Günlük Performans</p>
+                <CardTitle className="font-medium text-xl  tracking-tight font-sans uppercase">Gelir Analizi</CardTitle>
+                <p className="text-xs text-muted-foreground  opacity-70 uppercase tracking-wider">Son 30 Günlük Performans</p>
               </div>
               <div className="h-10 w-px bg-border/40 hidden md:block" />
               <div className="hidden md:flex gap-10">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Brüt Gelir</span>
-                  <span className="text-lg font-bold text-foreground tracking-tight">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
+                  <span className="text-[9px]  text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Brüt Gelir</span>
+                  <span className="text-lg  text-foreground tracking-tight">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Net Kâr</span>
-                  <span className="text-lg font-bold text-secondary tracking-tight">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
+                  <span className="text-[9px]  text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Net Kâr</span>
+                  <span className="text-lg  text-secondary tracking-tight">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2.5 bg-blue-500/10 px-4 py-2 rounded-2xl border border-blue-500/20">
               <Activity className="h-4 w-4 text-blue-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">Canlı Analitik</span>
+              <span className="text-[10px]  text-blue-500 uppercase tracking-tighter">Canlı Analitik</span>
             </div>
           </CardHeader>
           <CardContent className="p-8 w-full">
@@ -226,15 +226,15 @@ export function DashboardCore({
         <Card className="shadow-xl overflow-hidden group rounded-[2rem] bg-card border border-border/40 transition-all duration-500 hover:shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
             <div className="flex flex-col gap-1">
-              <CardTitle className="text-xl font-bold tracking-tight font-sans uppercase">Servis Durumu</CardTitle>
+              <CardTitle className="font-medium text-xl  tracking-tight font-sans uppercase">Servis Durumu</CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Kapasite Analizi</p>
+                <p className="text-[10px] text-muted-foreground  uppercase tracking-wider">Kapasite Analizi</p>
               </div>
             </div>
             <div className="flex flex-col items-end">
-              <div className="text-2xl font-bold text-foreground leading-none">{totalServiceUnits}</div>
-              <div className="text-[9px] font-bold text-muted-foreground/60 tracking-widest uppercase">Cihaz</div>
+              <div className="text-2xl  text-foreground leading-none">{totalServiceUnits}</div>
+              <div className="text-[9px]  text-muted-foreground/60 tracking-widest uppercase">Cihaz</div>
             </div>
           </CardHeader>
           <CardContent className="p-8 pt-2">
@@ -259,12 +259,12 @@ export function DashboardCore({
                     <History className="h-5 w-5 text-secondary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-bold tracking-tight font-sans uppercase">Finansal Kayıtlar</CardTitle>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Son İşlemler</p>
+                    <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">Finansal Kayıtlar</CardTitle>
+                    <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">Son İşlemler</p>
                   </div>
                 </div>
                 <Link href="/satis/kasa">
-                  <Button variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-blue-500 border-blue-500/20 hover:bg-blue-500/5 h-9 rounded-xl px-5 transition-all">
+                  <Button variant="outline" className="text-[10px]  uppercase tracking-tighter text-blue-500 border-blue-500/20 hover:bg-blue-500/5 h-9 rounded-xl px-5 transition-all">
                     TÜMÜ <ChevronRight className="h-3 w-3 ml-2" />
                   </Button>
                 </Link>
@@ -273,7 +273,7 @@ export function DashboardCore({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-[10px] font-bold text-muted-foreground/60 bg-muted/20 tracking-[.15em] uppercase">
+                      <tr className="text-[10px]  text-muted-foreground/60 bg-muted/20 tracking-[.15em] uppercase">
                         <th className="px-8 py-4">Müşteri / Zaman</th>
                         <th className="px-6 py-4 border-none lg:table-cell hidden">Detay</th>
                         <th className="px-6 py-4">Tutar</th>
@@ -284,16 +284,16 @@ export function DashboardCore({
                       {recentTransactions.map((t: any, idx: number) => (
                         <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
                           <td className="px-8 py-5">
-                            <div className="font-bold text-foreground text-sm tracking-tight">{t.sale?.customer?.name || "Hızlı Satış"}</div>
-                            <div className="text-[9px] font-bold text-muted-foreground/60 mt-1 uppercase tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
+                            <div className=" text-foreground text-sm tracking-tight">{t.sale?.customer?.name || "Hızlı Satış"}</div>
+                            <div className="text-[9px]  text-muted-foreground/60 mt-1 uppercase tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                           </td>
-                          <td className="px-6 py-5 text-xs text-muted-foreground font-bold lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>
+                          <td className="px-6 py-5 text-xs text-muted-foreground  lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>
                           <td className="px-6 py-5">
-                            <RevealFinancial amount={t.amount} className="text-sm font-bold tracking-tight" />
+                            <RevealFinancial amount={t.amount} className="text-sm  tracking-tight" />
                           </td>
                           <td className="px-8 py-5 text-right">
                             <Badge variant="outline" className={cn(
-                              "text-[8px] font-bold uppercase tracking-tighter px-3 py-1 rounded-lg border-none",
+                              "text-[8px]  uppercase tracking-tighter px-3 py-1 rounded-lg border-none",
                               t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive'
                             )}>
                               {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
@@ -315,12 +315,12 @@ export function DashboardCore({
                     <Smartphone className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-bold tracking-tight font-sans uppercase">Servis Kuyruğu</CardTitle>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
+                    <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">Servis Kuyruğu</CardTitle>
+                    <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
                   </div>
                 </div>
                 <Link href="/servis/liste">
-                  <Button variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
+                  <Button variant="outline" className="text-[10px]  uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
                     YÖNET <ChevronRight className="h-3 w-3 ml-2" />
                   </Button>
                 </Link>
@@ -338,8 +338,8 @@ export function DashboardCore({
                         <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-1 truncate">
+                        <h4 className="font-medium  text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                        <p className="text-[10px] text-muted-foreground  uppercase tracking-tight mt-1 truncate">
                           {ticket.customer?.name} • <span className="text-primary tracking-tighter">#{ticket.ticketNumber}</span>
                         </p>
                       </div>
@@ -347,12 +347,12 @@ export function DashboardCore({
                     <div className="text-right shrink-0">
                       <Badge
                         variant="outline"
-                        className="text-[8px] font-bold uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
+                        className="text-[8px]  uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
                         style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
                       >
                         {statusLabels[ticket.status]}
                       </Badge>
-                      <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter opacity-60">
+                      <p className="text-[9px] text-muted-foreground  uppercase tracking-tighter opacity-60">
                         {ticket.technician?.name || "BOŞTA"}
                       </p>
                     </div>
@@ -370,8 +370,8 @@ export function DashboardCore({
                   <TrendingUp className="h-5 w-5 text-amber-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-bold tracking-tight font-sans uppercase">Trend Ürünler</CardTitle>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">En Çok Tercih Edilenler</p>
+                  <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">Trend Ürünler</CardTitle>
+                  <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">En Çok Tercih Edilenler</p>
                 </div>
               </div>
             </CardHeader>
@@ -382,22 +382,22 @@ export function DashboardCore({
                     <div className="aspect-square rounded-[1.5rem] bg-card border border-border/40 flex items-center justify-center mb-5 relative overflow-hidden group-hover:shadow-lg transition-all">
                       <Package className="h-14 w-14 text-muted-foreground/20 group-hover:scale-110 transition-transform" />
                       {product.stock <= product.criticalStock && (
-                        <div className="absolute top-4 left-4 bg-rose-500 text-white text-[8px] font-bold px-3 py-1 rounded-lg uppercase tracking-widest shadow-lg">KRİTİK STOK</div>
+                        <div className="absolute top-4 left-4 bg-rose-500 text-white text-[8px]  px-3 py-1 rounded-lg uppercase tracking-widest shadow-lg">KRİTİK STOK</div>
                       )}
                     </div>
                     <div className="space-y-4">
                       <div className="min-h-[44px]">
-                        <h4 className="font-bold text-sm text-foreground tracking-tight line-clamp-2 uppercase font-sans leading-tight">{product.name}</h4>
-                        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 opacity-70">{product.category}</p>
+                        <h4 className="font-medium  text-sm text-foreground tracking-tight line-clamp-2 uppercase font-sans leading-tight">{product.name}</h4>
+                        <p className="text-[9px] text-muted-foreground  uppercase tracking-widest mt-1 opacity-70">{product.category}</p>
                       </div>
                       <div className="flex items-end justify-between pt-2 border-t border-border/20">
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-0.5">Birim Fiyat</span>
-                          <span className="text-xl font-bold text-blue-500 tracking-tighter">₺{product.price.toLocaleString('tr-TR')}</span>
+                          <span className="text-[8px]  text-muted-foreground/60 uppercase tracking-widest mb-0.5">Birim Fiyat</span>
+                          <span className="text-xl  text-blue-500 tracking-tighter">₺{product.price.toLocaleString('tr-TR')}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest block mb-1">Satış</span>
-                          <span className="text-xs font-bold text-foreground">{product.sales} ADET</span>
+                          <span className="text-[8px]  text-muted-foreground/60 uppercase tracking-widest block mb-1">Satış</span>
+                          <span className="text-xs  text-foreground">{product.sales} ADET</span>
                         </div>
                       </div>
                     </div>
@@ -418,3 +418,9 @@ export function DashboardCore({
     </div>
   );
 }
+
+
+
+
+
+

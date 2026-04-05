@@ -158,12 +158,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </div>
                     <div>
                         <div className="flex items-center gap-4 mb-2">
-                            <h1 className="text-4xl font-extrabold">{customer.name}</h1>
+                            <h1 className="font-medium text-4xl font-extrabold">{customer.name}</h1>
                             {customer.isVip && (
-                                <Badge className="bg-blue-500 text-white border-none font-bold text-[10px] px-4 py-1.5 rounded-xl animate-pulse">Vip üye</Badge>
+                                <Badge className="bg-blue-500 text-white border-none  text-[10px] px-4 py-1.5 rounded-xl animate-pulse">Vip üye</Badge>
                             )}
                         </div>
-                        <div className="flex flex-wrap gap-6 text-xs font-bold text-muted-foreground">
+                        <div className="flex flex-wrap gap-6 text-xs  text-muted-foreground">
                             <div className="flex items-center gap-2 group cursor-pointer hover:text-foreground transition-colors">
                                 <Phone className="h-4 w-4 text-blue-500" />
                                 <span>{customer.phone}</span>
@@ -175,7 +175,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] font-bold border-border text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg">
+                                <Badge variant="outline" className="text-[10px]  border-border text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg">
                                     {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3 mr-2 text-blue-500" /> : <UserCircle className="h-3 w-3 mr-2 text-blue-500" />}
                                     {customer.type === 'KURUMSAL' ? "Kurumsal" : "Bireysel"}
                                 </Badge>
@@ -186,10 +186,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
                 <div className="flex gap-3">
                     <Link href={`/musteriler/duzenle/${customer.id}`}>
-                        <Button variant="outline" className="border-border bg-muted hover:bg-blue-500/10 hover:text-blue-500 px-6 h-12 rounded-2xl font-bold transition-all shadow-none">Profili düzenle</Button>
+                        <Button variant="outline" className="border-border bg-muted hover:bg-blue-500/10 hover:text-blue-500 px-6 h-12 rounded-2xl  transition-all shadow-none">Profili düzenle</Button>
                     </Link>
                     <Link href={`/satis?customerId=${customer.id}`}>
-                        <Button className="bg-blue-600 text-white px-6 h-12 rounded-2xl font-bold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20">Satış yap</Button>
+                        <Button className="bg-blue-600 text-white px-6 h-12 rounded-2xl  hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20">Satış yap</Button>
                     </Link>
                 </div>
             </div>
@@ -201,7 +201,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     <CardHeader className="border-b border-border pb-6 bg-muted/10">
                         <div className="flex items-center gap-3">
                             <TrendingUp className="h-4 w-4 text-blue-500" />
-                            <CardTitle className="text-sm font-bold">Sadakat seviyesi</CardTitle>
+                            <CardTitle className="font-medium text-sm ">Sadakat seviyesi</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-10 space-y-8">
@@ -209,14 +209,14 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                             <div className={cn("h-24 w-24 rounded-xl flex items-center justify-center border-none shadow-lg mb-4 group-hover:scale-110 transition-transform", tier.color)}>
                                 <tier.icon className="h-12 w-12" />
                             </div>
-                            <h3 className="text-2xl font-extrabold">{tier.label}</h3>
-                            <p className="text-xs font-bold text-muted-foreground mt-1">Aktif üyelik seviyesi</p>
+                            <h3 className="font-medium text-2xl font-extrabold">{tier.label}</h3>
+                            <p className="text-xs  text-muted-foreground mt-1">Aktif üyelik seviyesi</p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-muted-foreground">Gelişim puanı</span>
-                                <span className="text-sm font-bold text-blue-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
+                                <span className="text-xs  text-muted-foreground">Gelişim puanı</span>
+                                <span className="text-sm  text-blue-500">{customer.loyaltyPoints} / {tier.next || customer.loyaltyPoints}</span>
                             </div>
                             <Progress value={tier.percent} className="h-2 bg-muted [&>div]:bg-blue-500 rounded-full" />
                             {tier.next > 0 && (
@@ -236,8 +236,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <Wallet className="h-7 w-7" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-muted-foreground mb-1">Toplam işlem hacmi</p>
-                                <h3 className="text-4xl font-extrabold">₺{formatCurrency(totalRevenue)}</h3>
+                                <p className="text-xs  text-muted-foreground mb-1">Toplam işlem hacmi</p>
+                                <h3 className="font-medium text-4xl font-extrabold">₺{formatCurrency(totalRevenue)}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -248,8 +248,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <Wrench className="h-7 w-7" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-muted-foreground mb-1">Aktif servis adedi</p>
-                                <h3 className="text-4xl font-extrabold">{activeTicketsCount} cihaz</h3>
+                                <p className="text-xs  text-muted-foreground mb-1">Aktif servis adedi</p>
+                                <h3 className="font-medium text-4xl font-extrabold">{activeTicketsCount} cihaz</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -260,8 +260,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <ArrowDownCircle className="h-7 w-7" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-muted-foreground mb-1">Güncel borç bakiyesi</p>
-                                <h3 className="text-4xl font-extrabold text-rose-500">₺{formatCurrency(totalDebt)}</h3>
+                                <p className="text-xs  text-muted-foreground mb-1">Güncel borç bakiyesi</p>
+                                <h3 className="font-medium text-4xl font-extrabold text-rose-500">₺{formatCurrency(totalDebt)}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -270,10 +270,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     <div className="col-span-1 md:col-span-3">
                         <Tabs defaultValue="history" className="w-full">
                             <TabsList className="bg-muted/30 border-b border-border w-full justify-start rounded-none h-auto p-0 gap-10 mb-8 overflow-x-auto">
-                                <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">İşlem arşivi</TabsTrigger>
-                                <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Kullanılan parçalar</TabsTrigger>
-                                <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Aktif garantiler</TabsTrigger>
-                                <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4 font-bold text-xs transition-all">Müşteri notları</TabsTrigger>
+                                <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">İşlem arşivi</TabsTrigger>
+                                <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Kullanılan parçalar</TabsTrigger>
+                                <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Aktif garantiler</TabsTrigger>
+                                <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Müşteri notları</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="history" className="space-y-6 outline-none">
@@ -290,26 +290,26 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                     <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-blue-500 border-4 border-card" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-lg group-hover:text-blue-600 transition-colors">
+                                                    <h4 className="font-medium  text-lg group-hover:text-blue-600 transition-colors">
                                                         {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)` : `${item.saleNumber} (Ürün satışı)`}
                                                     </h4>
-                                                    <p className="text-xs text-muted-foreground font-bold mt-1">
+                                                    <p className="text-xs text-muted-foreground  mt-1">
                                                         {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold">#{item.ticketNumber || item.saleNumber}</span>
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-12">
                                                 <div className="text-right hidden sm:block">
-                                                    <p className="text-[10px] font-bold text-muted-foreground mb-1.5">Durum sınıfı</p>
+                                                    <p className="text-[10px]  text-muted-foreground mb-1.5">Durum sınıfı</p>
                                                     <Badge variant="outline" className={cn(
-                                                        "text-[10px] font-bold border-none px-4 py-1.5 rounded-xl shadow-sm",
+                                                        "text-[10px]  border-none px-4 py-1.5 rounded-xl shadow-sm",
                                                         item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
                                                     )}>
                                                         {item.status ? statusLabels[item.status] : "Tamamlandı"}
                                                     </Badge>
                                                 </div>
                                                 <div className="text-right min-w-[120px]">
-                                                    <p className="text-[10px] font-bold text-muted-foreground mb-1.5">Net tutar</p>
+                                                    <p className="text-[10px]  text-muted-foreground mb-1.5">Net tutar</p>
                                                     <span className="text-2xl font-extrabold">₺{formatCurrency(Number(item.actualCost) || Number(item.finalAmount) || 0)}</span>
                                                 </div>
                                             </div>
@@ -322,7 +322,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 {allUsedItems.length === 0 ? (
                                     <div className="p-20 text-center bg-card rounded-xl border border-border border-dashed">
                                         <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                                        <p className="text-sm font-bold text-muted-foreground">Henüz parça/ürün kullanımı kaydedilmemiş</p>
+                                        <p className="text-sm  text-muted-foreground">Henüz parça/ürün kullanımı kaydedilmemiş</p>
                                     </div>
                                 ) : (
                                     <div className="bg-card border border-border rounded-xl shadow-sm">
@@ -330,11 +330,11 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                             <table className="w-full text-left">
                                                 <thead className="bg-muted/30 border-b border-border">
                                                     <tr>
-                                                        <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Parça / Ürün</th>
-                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tedarikçi</th>
-                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">İşlem</th>
-                                                        <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Maliyet/Fiyat</th>
-                                                        <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Garanti Durumu</th>
+                                                        <th className="px-8 py-5 text-[10px]  uppercase tracking-widest text-muted-foreground">Parça / Ürün</th>
+                                                        <th className="px-6 py-5 text-[10px]  uppercase tracking-widest text-muted-foreground">Tedarikçi</th>
+                                                        <th className="px-6 py-5 text-[10px]  uppercase tracking-widest text-muted-foreground">İşlem</th>
+                                                        <th className="px-6 py-5 text-[10px]  uppercase tracking-widest text-muted-foreground">Maliyet/Fiyat</th>
+                                                        <th className="px-8 py-5 text-[10px]  uppercase tracking-widest text-muted-foreground">Garanti Durumu</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border">
@@ -363,21 +363,21 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                             {p.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <div className="font-bold text-sm truncate">{p.itemName}</div>
-                                                                            <div className="text-[10px] text-muted-foreground font-bold mt-1 uppercase tracking-tighter">{p.itemCategory || 'Genel'}</div>
+                                                                            <div className=" text-sm truncate">{p.itemName}</div>
+                                                                            <div className="text-[10px] text-muted-foreground  mt-1 uppercase tracking-tighter">{p.itemCategory || 'Genel'}</div>
                                                                         </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex items-center gap-2">
                                                                         <Building2 className="h-3.5 w-3.5 text-muted-foreground/50" />
-                                                                        <span className="text-xs font-bold">{p.supplierName || 'Bilinmiyor'}</span>
+                                                                        <span className="text-xs ">{p.supplierName || 'Bilinmiyor'}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex flex-col gap-1">
                                                                         <div className={cn(
-                                                                            "text-[10px] font-bold uppercase tracking-widest",
+                                                                            "text-[10px]  uppercase tracking-widest",
                                                                             p.type === 'SERVICE' ? "text-blue-500" : "text-emerald-500"
                                                                         )}>#{p.referenceNumber}</div>
                                                                         <div className="text-[10px] text-muted-foreground font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</div>
@@ -385,8 +385,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                 </td>
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-[10px] font-bold text-muted-foreground">M: ₺{formatCurrency(p.cost || 0)}</span>
-                                                                        <span className="text-sm font-bold text-foreground">S: ₺{formatCurrency(p.price || 0)}</span>
+                                                                        <span className="text-[10px]  text-muted-foreground">M: ₺{formatCurrency(p.cost || 0)}</span>
+                                                                        <span className="text-sm  text-foreground">S: ₺{formatCurrency(p.price || 0)}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-8 py-6">
@@ -394,12 +394,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                         <div className="w-[180px] space-y-2">
                                                                             <div className="flex items-center justify-between">
                                                                                 <span className={cn(
-                                                                                    "text-[9px] font-bold uppercase tracking-widest",
+                                                                                    "text-[9px]  uppercase tracking-widest",
                                                                                     isExpired ? "text-rose-500" : "text-emerald-500"
                                                                                 )}>
                                                                                     {isExpired ? "Süre Doldu" : `${daysLeft} Gün Kaldı`}
                                                                                 </span>
-                                                                                <span className="text-[9px] font-bold text-muted-foreground/60">{format(new Date(p.warrantyExpiry), "d/MM/yy")}</span>
+                                                                                <span className="text-[9px]  text-muted-foreground/60">{format(new Date(p.warrantyExpiry), "d/MM/yy")}</span>
                                                                             </div>
                                                                             <Progress value={percent} className={cn(
                                                                                 "h-1.5 bg-muted rounded-full",
@@ -407,7 +407,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                             )} />
                                                                         </div>
                                                                     ) : (
-                                                                        <span className="text-[10px] font-bold text-muted-foreground/40 italic">- Garanti Tanımsız -</span>
+                                                                        <span className="text-[10px]  text-muted-foreground/40 italic">- Garanti Tanımsız -</span>
                                                                     )}
                                                                 </td>
                                                             </tr>
@@ -443,12 +443,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                 {p.type === 'SERVICE' ? <ShieldCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                                                             </div>
                                                             <div>
-                                                                <CardTitle className="text-xs font-bold leading-tight truncate max-w-[150px]">{p.itemName}</CardTitle>
-                                                                <CardDescription className="text-[10px] font-bold uppercase tracking-tighter">no: {p.referenceNumber}</CardDescription>
+                                                                <CardTitle className="font-medium text-xs  leading-tight truncate max-w-[150px]">{p.itemName}</CardTitle>
+                                                                <CardDescription className="text-[10px]  uppercase tracking-tighter">no: {p.referenceNumber}</CardDescription>
                                                             </div>
                                                         </div>
                                                         <Badge variant="outline" className={cn(
-                                                            "border-none font-bold text-[10px] px-3 py-1.5 rounded-xl",
+                                                            "border-none  text-[10px] px-3 py-1.5 rounded-xl",
                                                             isExpired ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10'
                                                         )}>
                                                             {isExpired ? 'Süre Doldu' : 'Aktif Koruma'}
@@ -458,17 +458,17 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                 <CardContent className="pt-10">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Kalan Süre</span>
+                                                            <span className="text-[10px]  text-muted-foreground uppercase tracking-widest">Kalan Süre</span>
                                                             <span className={cn(
-                                                                "text-lg font-bold mt-0.5",
+                                                                "text-lg  mt-0.5",
                                                                 isExpired ? 'text-rose-500/50' : 'text-emerald-500'
                                                             )}>
                                                                 {isExpired ? 'Tamamlandı' : `${daysLeft} GÜN`}
                                                             </span>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[9px] font-bold text-muted-foreground uppercase">Tedarikçi</div>
-                                                            <div className="text-[11px] font-bold text-foreground">{p.supplierName || '-'}</div>
+                                                            <div className="text-[9px]  text-muted-foreground uppercase">Tedarikçi</div>
+                                                            <div className="text-[11px]  text-foreground">{p.supplierName || '-'}</div>
                                                         </div>
                                                     </div>
                                                     <Progress value={percent} className={cn(
@@ -476,12 +476,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                         isExpired ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500 shadow-sm shadow-emerald-500/10"
                                                     )} />
                                                     <div className="flex items-center justify-between mt-6">
-                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                                                        <div className="flex items-center gap-2 text-[10px]  text-muted-foreground">
                                                             <Calendar className="h-3.5 w-3.5 text-blue-500" />
                                                             <span>Bitiş: {format(expiry, "d MMM yyyy", { locale: tr })}</span>
                                                         </div>
                                                         <Link href={p.type === 'SERVICE' ? `/servis/liste` : `/satis/kasa`}>
-                                                            <Button variant="ghost" className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
+                                                            <Button variant="ghost" className="text-[10px]  text-blue-500 hover:bg-blue-500/5 px-0 h-auto">
                                                                 Detayı gör <ArrowUpRight className="h-3 w-3 ml-1" />
                                                             </Button>
                                                         </Link>
@@ -498,7 +498,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                     <CardHeader className="border-b border-border bg-muted/10">
                                         <div className="flex items-center gap-3">
                                             <FileText className="h-4 w-4 text-blue-500" />
-                                            <CardTitle className="text-sm font-bold">Stratejik müşteri notları</CardTitle>
+                                            <CardTitle className="font-medium text-sm ">Stratejik müşteri notları</CardTitle>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-10">
@@ -515,3 +515,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
         </div>
     );
 }
+
+
+
+
+
+
+

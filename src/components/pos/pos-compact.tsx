@@ -137,7 +137,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
                         placeholder="Ürün veya seri no ara..."
-                        className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base font-bold text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                        className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base  text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                     />
@@ -157,7 +157,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                         )}
                     >
                         <ShoppingBag className="h-4 w-4" />
-                        <span className="text-xs font-bold">HEPSİ</span>
+                        <span className="text-xs ">HEPSİ</span>
                     </button>
                     {categories.map((cat) => {
                         const Icon = cat.name.toLowerCase().includes('aksesuar') ? Smartphone : (cat.name.toLowerCase().includes('parça') ? Package : Wrench);
@@ -173,7 +173,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 )}
                             >
                                 <Icon className="h-4 w-4" />
-                                <span className="text-xs font-bold truncate max-w-[150px]">{cat.name}</span>
+                                <span className="text-xs  truncate max-w-[150px]">{cat.name}</span>
                             </button>
                         );
                     })}
@@ -192,13 +192,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 <Package className="h-9 w-9 text-slate-500 opacity-20" />
                             </div>
                             <div className="flex flex-col">
-                                <h4 className="text-base font-bold text-white leading-tight">{product.name}</h4>
-                                <p className="text-xs text-blue-500 mt-1.5 font-bold">{product.category.name}</p>
+                                <h4 className="font-medium text-base  text-white leading-tight">{product.name}</h4>
+                                <p className="text-xs text-blue-500 mt-1.5 ">{product.category.name}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="text-right">
-                                <span className="text-lg font-bold text-white">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                <span className="text-lg  text-white">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
                             </div>
                             <button
                                 onClick={() => addToCart(product)}
@@ -215,7 +215,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
             <div className="p-10 bg-slate-900 border-t border-slate-700/50 backdrop-blur-3xl space-y-8">
                 <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                        <Label className="text-xs font-bold text-slate-500 tracking-[0.2em]">Operasyonel Müşteri Seçimi</Label>
+                        <Label className="font-medium text-xs  text-slate-500 tracking-[0.2em]">Operasyonel Müşteri Seçimi</Label>
                         {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
                             <button
                                 onClick={async () => {
@@ -228,7 +228,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                     }
                                     setIsProcessing(false);
                                 }}
-                                className="text-xs font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1.5 transition-colors pulse-animation"
+                                className="text-xs  text-blue-500 hover:text-blue-400 flex items-center gap-1.5 transition-colors pulse-animation"
                             >
                                 <UserPlus className="h-4 w-4" />
                                 Hızlı Müşteri Ekle
@@ -245,7 +245,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 setCustomerSearch(e.target.value);
                                 if (selectedCustomerId) setSelectedCustomerId(undefined);
                             }}
-                            className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base font-bold text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base  text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
                         />
 
                         {(customerSearch.length > 0 && !selectedCustomerId) && (
@@ -271,8 +271,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                                     <Plus className="h-6 w-6" />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-blue-400">SİSTEME KAYDET</span>
-                                                    <span className="text-sm font-bold text-white mt-1">{customerSearch}</span>
+                                                    <span className="text-xs  text-blue-400">SİSTEME KAYDET</span>
+                                                    <span className="text-sm  text-white mt-1">{customerSearch}</span>
                                                 </div>
                                             </div>
                                             <ChevronRight className="h-5 w-5 text-blue-500 group-hover:translate-x-1 transition-transform" />
@@ -286,7 +286,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                         }}
                                         className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/[0.03] transition-colors flex items-center justify-between group mb-2"
                                     >
-                                        <span className="text-xs font-bold text-slate-500">HIZLI SATIŞ (İSİMSİZ)</span>
+                                        <span className="text-xs  text-slate-500">HIZLI SATIŞ (İSİMSİZ)</span>
                                         <CheckCircle className={cn("h-5 w-5 text-emerald-500", !selectedCustomerId ? "opacity-100" : "opacity-0")} />
                                     </button>
 
@@ -304,11 +304,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                                 className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/[0.03] transition-colors flex items-center justify-between group mb-1"
                                             >
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white">{customer.name}</span>
+                                                    <span className="text-sm  text-white">{customer.name}</span>
                                                     {customer.phone && (
                                                         <div className="flex items-center gap-2 mt-1.5">
                                                             <Phone className="h-3 w-3 text-blue-500" />
-                                                            <span className="text-xs text-blue-500 font-bold">{formatPhone(customer.phone)}</span>
+                                                            <span className="text-xs text-blue-500 ">{formatPhone(customer.phone)}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -323,18 +323,18 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 </div>
 
                 <div className="space-y-4 pt-2">
-                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                    <div className="flex justify-between items-center text-sm  text-slate-500">
                         <span>Ara Toplam</span>
                         <span className="text-white">₺{subtotal.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                    <div className="flex justify-between items-center text-sm  text-slate-500">
                         <span>KDV (%20)</span>
                         <span className="text-white">₺{tax.toLocaleString('tr-TR')}</span>
                     </div>
                     <div className="flex justify-between items-end pt-4 border-t border-white/5">
-                        <span className="text-xl font-bold text-white">Tahsilat Tutarı</span>
+                        <span className="text-xl  text-white">Tahsilat Tutarı</span>
                         <div className="flex flex-col items-end">
-                            <span className="text-4xl font-bold text-blue-500 animate-pulse-slow">₺{total.toLocaleString('tr-TR')}</span>
+                            <span className="text-4xl  text-blue-500 animate-pulse-slow">₺{total.toLocaleString('tr-TR')}</span>
                         </div>
                     </div>
                 </div>
@@ -358,7 +358,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             )}
                         >
                             <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-slate-500")} />
-                            <span className="text-[8px] font-bold">{method.label}</span>
+                            <span className="text-[8px] ">{method.label}</span>
                         </button>
                     ))}
                 </div>
@@ -368,7 +368,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                         disabled={cart.length === 0 || isProcessing}
                         onClick={handleCheckout}
                         className={cn(
-                            "flex-1 h-20 font-bold text-base tracking-[0.1em] rounded-[1.5rem] shadow-2xl active:scale-[0.98] transition-all gap-4",
+                            "flex-1 h-20  text-base tracking-[0.1em] rounded-[1.5rem] shadow-2xl active:scale-[0.98] transition-all gap-4",
                             isDebtBlocked
                                 ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20"
                                 : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
@@ -396,3 +396,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
         </div>
     );
 }
+
+
+
+
+

@@ -32,16 +32,16 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                         <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                             <DollarSign className="h-4 w-4 text-blue-500" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-500 tracking-wider">TOPLAM STOK MALİYETİ</span>
+                        <span className="text-[10px]  text-slate-500 tracking-wider">TOPLAM STOK MALİYETİ</span>
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-baseline gap-2">
                             <RevealFinancial
                                 amount={stats.totalValue}
-                                className="text-4xl font-bold text-white tracking-tight"
+                                className="text-4xl  text-white tracking-tight"
                             />
                         </div>
-                        <p className="text-[10px] text-slate-500 font-bold mt-2 flex items-center gap-1">
+                        <p className="text-[10px] text-slate-500  mt-2 flex items-center gap-1">
                             <TrendingUp className="h-3 w-3 text-emerald-500" />
                             Şu anki dükkan mal varlığı değeri
                         </p>
@@ -55,16 +55,16 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                     <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <TrendingUp className="h-4 w-4 text-emerald-500" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500 tracking-wider">BEKLENEN KÂR</span>
+                    <span className="text-[10px]  text-slate-500 tracking-wider">BEKLENEN KÂR</span>
                 </div>
                 <div className="flex flex-col">
                     <RevealFinancial
                         amount={stats.potentialProfit}
-                        className="text-2xl font-bold text-white tracking-tight"
+                        className="text-2xl  text-white tracking-tight"
                     />
                     <div className="flex items-center gap-1 mt-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] text-emerald-500/80 font-bold uppercase">Satış Odaklı Kâr</span>
+                        <span className="text-[10px] text-emerald-500/80  uppercase">Satış Odaklı Kâr</span>
                     </div>
                 </div>
             </Card>
@@ -75,9 +75,9 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Layers className="h-4 w-4 text-orange-500" />
-                            <span className="text-[10px] font-bold text-slate-500">TOPLAM ÜRÜN</span>
+                            <span className="text-[10px]  text-slate-500">TOPLAM ÜRÜN</span>
                         </div>
-                        <span className="text-xl font-bold text-white">{stats.totalItems}</span>
+                        <span className="text-xl  text-white">{stats.totalItems}</span>
                     </div>
                 </Card>
 
@@ -85,9 +85,9 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <AlertTriangle className={`h-4 w-4 ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-slate-500'}`} />
-                            <span className="text-[10px] font-bold text-slate-500 font-bold uppercase">Kritik Stok</span>
+                            <span className="text-[10px]  text-slate-500  uppercase">Kritik Stok</span>
                         </div>
-                        <span className={`text-xl font-bold ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-white'}`}>
+                        <span className={`text-xl  ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-white'}`}>
                             {stats.criticalCount}
                         </span>
                     </div>
@@ -96,3 +96,6 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
         </div>
     );
 }
+
+
+

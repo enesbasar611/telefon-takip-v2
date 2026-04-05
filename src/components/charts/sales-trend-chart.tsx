@@ -10,7 +10,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-border/50 px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
+        <p className="text-[10px]  text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
         <p className="text-lg font-extrabold text-blue-500">₺{Number(payload[0].value).toLocaleString("tr-TR")}</p>
       </div>
     );
@@ -66,3 +66,6 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
     </div>
   );
 }
+
+
+

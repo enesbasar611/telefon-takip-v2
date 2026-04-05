@@ -116,7 +116,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                             <ShoppingBasket className="h-5 w-5 text-blue-500" />
                         </div>
                         <div>
-                            <SheetTitle className="text-base font-bold text-foreground">Tedarikçi Sipariş Listeleri</SheetTitle>
+                            <SheetTitle className="text-base  text-foreground">Tedarikçi Sipariş Listeleri</SheetTitle>
                             <p className="text-xs text-muted-foreground font-medium">
                                 {supplierIds.length} tedarikçi · {totalItemCount} ürün
                             </p>
@@ -132,7 +132,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                 <Sparkles className="h-8 w-8 text-slate-600" />
                             </div>
                             <div className="text-center">
-                                <h3 className="font-bold text-slate-500 uppercase text-sm">Liste Boş</h3>
+                                <h3 className="font-medium  text-slate-500 uppercase text-sm">Liste Boş</h3>
                                 <p className="text-xs text-slate-600 font-medium mt-1 max-w-44 leading-relaxed">
                                     Analiz modalındaki + butonuyla ürün ekleyin.
                                 </p>
@@ -155,13 +155,13 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                             <Truck className="h-4 w-4 text-blue-400" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm text-foreground truncate">{list.supplierName}</p>
+                                            <p className=" text-sm text-foreground truncate">{list.supplierName}</p>
                                             <p className="text-[10px] font-medium text-muted-foreground">
                                                 {list.items.length} çeşit · {totalQty} adet
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px] font-bold px-2">
+                                            <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px]  px-2">
                                                 {list.items.length}
                                             </Badge>
                                             {isExpanded ? (
@@ -184,7 +184,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                         <div className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                                                             <Package className="h-3.5 w-3.5 text-muted-foreground" />
                                                         </div>
-                                                        <span className="flex-1 text-xs font-bold text-foreground truncate">{item.name}</span>
+                                                        <span className="flex-1 text-xs  text-foreground truncate">{item.name}</span>
 
                                                         {/* Qty controls */}
                                                         <div className="flex items-center gap-1 shrink-0">
@@ -198,7 +198,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                                 type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => updateQty(supplierId, item.productId, item.name, parseInt(e.target.value) || 1)}
-                                                                className="h-6 w-10 text-center bg-white/5 border-white/10 text-[11px] font-bold text-blue-400 px-1 rounded-md focus-visible:ring-blue-500"
+                                                                className="h-6 w-10 text-center bg-white/5 border-white/10 text-[11px]  text-blue-400 px-1 rounded-md focus-visible:ring-blue-500"
                                                             />
                                                             <button
                                                                 onClick={() => updateQty(supplierId, item.productId, item.name, item.quantity + 1)}
@@ -222,7 +222,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                             <div className="px-3 pb-3 flex items-center gap-2">
                                                 <Button
                                                     onClick={() => sendWhatsApp(supplierId)}
-                                                    className="flex-1 h-10 rounded-xl bg-[#25D366] hover:bg-[#22c55e] text-white font-bold text-[10px] gap-2"
+                                                    className="flex-1 h-10 rounded-xl bg-[#25D366] hover:bg-[#22c55e] text-white  text-[10px] gap-2"
                                                 >
                                                     <MessageCircle className="h-4 w-4 shrink-0" />
                                                     <span className="truncate">WhatsApp Gönder</span>
@@ -232,7 +232,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                     onClick={() => handleCreateOrder(supplierId, list.items, list.supplierName)}
                                                     disabled={orderingStatus[supplierId] !== undefined && orderingStatus[supplierId] !== "idle"}
                                                     className={cn(
-                                                        "flex-1 text-white font-bold text-[10px] h-10 rounded-xl gap-2 transition-all",
+                                                        "flex-1 text-white  text-[10px] h-10 rounded-xl gap-2 transition-all",
                                                         orderingStatus[supplierId] === "success"
                                                             ? "bg-emerald-500 hover:bg-emerald-600"
                                                             : "bg-blue-600 hover:bg-blue-500"
@@ -255,7 +255,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleClearSupplier(supplierId, list.supplierName)}
-                                                    className="h-10 px-3 shrink-0 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 font-bold text-xs"
+                                                    className="h-10 px-3 shrink-0 rounded-xl text-rose-400 hover:bg-rose-500/10 border border-rose-500/20  text-xs"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
@@ -271,3 +271,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
         </Sheet>
     );
 }
+
+
+
+

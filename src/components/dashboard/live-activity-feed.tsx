@@ -31,8 +31,8 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
             <Activity className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-lg font-bold font-sans">Canlı akış</CardTitle>
-            <p className="text-xs text-muted-foreground font-bold mt-1">Gerçek zamanlı etkinlik trafiği</p>
+            <CardTitle className="font-medium text-lg  font-sans">Canlı akış</CardTitle>
+            <p className="text-xs text-muted-foreground  mt-1">Gerçek zamanlı etkinlik trafiği</p>
           </div>
         </div>
         <Badge variant="outline" className="text-[10px] font-extrabold border-primary/20 text-primary bg-primary/5 px-3 py-1 rounded-full animate-pulse">
@@ -49,20 +49,20 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-4 mb-2">
-                    <h4 className="text-[13px] font-bold text-foreground truncate font-sans">{item.title}</h4>
-                    <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap tracking-[0.1em] bg-muted px-2 py-0.5 rounded">
+                    <h4 className="font-medium text-[13px]  text-foreground truncate font-sans">{item.title}</h4>
+                    <span className="text-[10px]  text-muted-foreground whitespace-nowrap tracking-[0.1em] bg-muted px-2 py-0.5 rounded">
                       {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: tr })}
                     </span>
                   </div>
                   <p className="text-[12px] font-medium text-muted-foreground truncate group-hover:text-foreground transition-colors leading-relaxed">
-                    <span className="font-bold text-foreground">{item.user}</span> • {item.message}
+                    <span className=" text-foreground">{item.user}</span> • {item.message}
                   </p>
                 </div>
               </div>
             </div>
           ))}
           {activity.length === 0 && (
-            <div className="p-10 text-center text-gray-600 text-[10px] font-bold">
+            <div className="p-10 text-center text-gray-600 text-[10px] ">
               Henüz etkinlik yok.
             </div>
           )}
@@ -71,3 +71,8 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
     </Card>
   );
 }
+
+
+
+
+

@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 import { parseBulkProductsWithAI, AIProductResult } from "@/lib/actions/gemini-actions";
 import { createProduct } from "@/lib/actions/product-actions";
 import {
@@ -129,7 +130,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) handleReset(); }}>
             <DialogTrigger asChild>
                 <Button
-                    className="gap-2 h-10 px-5 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all font-bold text-xs uppercase tracking-wider"
+                    className="gap-2 h-10 px-5 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all  text-xs uppercase tracking-wider"
                 >
                     <Sparkles className="h-4 w-4" />
                     BAŞAR AI Stok Ekle
@@ -143,7 +144,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                             <Sparkles className="h-6 w-6 text-white" />
                         </div>
                         <div className="flex-1">
-                            <DialogTitle className="text-xl font-bold tracking-tight">Toplu AI Stok Ekleme</DialogTitle>
+                            <DialogTitle className="font-medium text-xl  tracking-tight">Toplu AI Stok Ekleme</DialogTitle>
                             <p className="text-[12px] text-slate-400 mt-1 font-medium">
                                 BAŞAR AI: Tek bir açıklama yazın, yapay zeka envanter tablosunu otomatik oluştursun.
                             </p>
@@ -151,17 +152,17 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                         {step === "review" && (
                             <div className="flex items-center gap-3">
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-violet-400">{rows.length}</p>
-                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Tespit</p>
+                                    <p className="text-2xl  text-violet-400">{rows.length}</p>
+                                    <p className="text-[9px] text-slate-500 uppercase ">Tespit</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-emerald-400">{savedRowCount}</p>
-                                    <p className="text-[9px] text-slate-500 uppercase font-bold">Kaydedildi</p>
+                                    <p className="text-2xl  text-emerald-400">{savedRowCount}</p>
+                                    <p className="text-[9px] text-slate-500 uppercase ">Kaydedildi</p>
                                 </div>
                                 {errorCount > 0 && (
                                     <div className="text-center">
-                                        <p className="text-2xl font-bold text-red-400">{errorCount}</p>
-                                        <p className="text-[9px] text-slate-500 uppercase font-bold">Hata</p>
+                                        <p className="text-2xl  text-red-400">{errorCount}</p>
+                                        <p className="text-[9px] text-slate-500 uppercase ">Hata</p>
                                     </div>
                                 )}
                             </div>
@@ -176,7 +177,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                         <div className="space-y-5">
                             {/* Examples */}
                             <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">✨ Örnek Açıklamalar</p>
+                                <p className="text-[10px]  text-slate-500 uppercase tracking-widest">✨ Örnek Açıklamalar</p>
                                 <div className="space-y-2">
                                     {EXAMPLES.map((ex, i) => (
                                         <button
@@ -185,7 +186,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                             onClick={() => setDescription(ex)}
                                             className="w-full text-left px-4 py-3 rounded-lg bg-[#18181A] border border-[#222222] text-[12px] text-slate-300 hover:bg-[#222222] hover:border-[#444] hover:text-white transition-all font-medium leading-relaxed"
                                         >
-                                            <span className="text-violet-400 font-bold mr-2">{i + 1}.</span>
+                                            <span className="text-violet-400  mr-2">{i + 1}.</span>
                                             {ex}
                                         </button>
                                     ))}
@@ -194,9 +195,9 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
 
                             {/* Textarea */}
                             <div className="space-y-2">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Label className="font-medium text-[11px]  text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Komut Verin
-                                </label>
+                                </Label>
                                 <textarea
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
@@ -218,7 +219,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                             <Button
                                 onClick={handleAnalyze}
                                 disabled={isAIPending || !description.trim()}
-                                className="w-full h-14 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-[14px] uppercase tracking-wider transition-all shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] disabled:opacity-40 gap-3"
+                                className="w-full h-14 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white  text-[14px] uppercase tracking-wider transition-all shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] disabled:opacity-40 gap-3"
                             >
                                 {isAIPending ? (
                                     <><Loader2 className="h-5 w-5 animate-spin" /> Gemini Analiz Ediyor...</>
@@ -236,14 +237,14 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                 <table className="w-full text-[12px]">
                                     <thead>
                                         <tr className="border-b border-[#333333] bg-[#111111]">
-                                            <th className="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-8">#</th>
-                                            <th className="text-left px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ürün Adı</th>
-                                            <th className="text-left px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kategori</th>
-                                            <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Maliyet</th>
-                                            <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Satış ₺</th>
-                                            <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Adet</th>
-                                            <th className="text-left px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Raf</th>
-                                            <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Durum</th>
+                                            <th className="text-left px-4 py-3 text-[10px]  text-slate-400 uppercase tracking-widest w-8">#</th>
+                                            <th className="text-left px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Ürün Adı</th>
+                                            <th className="text-left px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Kategori</th>
+                                            <th className="text-right px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Maliyet</th>
+                                            <th className="text-right px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Satış ₺</th>
+                                            <th className="text-center px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Adet</th>
+                                            <th className="text-left px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Raf</th>
+                                            <th className="text-center px-4 py-3 text-[10px]  text-slate-500 uppercase tracking-widest">Durum</th>
                                             <th className="px-4 py-3 w-10" />
                                         </tr>
                                     </thead>
@@ -258,7 +259,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                     row._status === "saving" && "opacity-70 animate-pulse"
                                                 )}
                                             >
-                                                <td className="px-4 py-3 text-slate-600 font-bold">{i + 1}</td>
+                                                <td className="px-4 py-3 text-slate-600 ">{i + 1}</td>
                                                 <td className="px-4 py-3">
                                                     <Input
                                                         value={row.name}
@@ -276,24 +277,24 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                     <div className="flex flex-col items-end gap-1 min-w-[90px]">
                                                         {row.buyPriceUsd != null && (
                                                             <div className="relative">
-                                                                <span className="absolute left-2 top-1.5 text-[10px] font-bold text-emerald-500/50">$</span>
+                                                                <span className="absolute left-2 top-1.5 text-[10px]  text-emerald-500/50">$</span>
                                                                 <Input
                                                                     type="number"
                                                                     value={row.buyPriceUsd}
                                                                     onChange={e => updateRow(row._id, "buyPriceUsd", Number(e.target.value))}
                                                                     disabled={row._status === "saved"}
-                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px] font-bold text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
+                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px]  text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
                                                                 />
                                                             </div>
                                                         )}
                                                         <div className="relative">
-                                                            <span className="absolute left-2 top-2 text-[10px] font-bold text-amber-500/50">₺</span>
+                                                            <span className="absolute left-2 top-2 text-[10px]  text-amber-500/50">₺</span>
                                                             <Input
                                                                 type="number"
                                                                 value={row.buyPrice}
                                                                 onChange={e => updateRow(row._id, "buyPrice", Number(e.target.value))}
                                                                 disabled={row._status === "saved"}
-                                                                className="h-8 bg-white/[0.03] border-white/10 rounded-lg text-[12px] font-bold text-amber-300 w-24 text-right pl-5 disabled:opacity-60"
+                                                                className="h-8 bg-white/[0.03] border-white/10 rounded-lg text-[12px]  text-amber-300 w-24 text-right pl-5 disabled:opacity-60"
                                                             />
                                                         </div>
                                                     </div>
@@ -304,7 +305,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                         value={row.sellPrice}
                                                         onChange={e => updateRow(row._id, "sellPrice", Number(e.target.value))}
                                                         disabled={row._status === "saved"}
-                                                        className="h-8 bg-white/[0.03] border-emerald-500/20 rounded-lg text-[12px] font-bold text-emerald-300 w-24 text-right disabled:opacity-60"
+                                                        className="h-8 bg-white/[0.03] border-emerald-500/20 rounded-lg text-[12px]  text-emerald-300 w-24 text-right disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -313,7 +314,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                         value={row.stock}
                                                         onChange={e => updateRow(row._id, "stock", Number(e.target.value))}
                                                         disabled={row._status === "saved"}
-                                                        className="h-8 bg-white/[0.03] border-white/10 rounded-lg text-[12px] font-bold text-blue-300 w-16 text-center disabled:opacity-60"
+                                                        className="h-8 bg-white/[0.03] border-white/10 rounded-lg text-[12px]  text-blue-300 w-16 text-center disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -327,7 +328,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     {row._status === "pending" && (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-[9px] font-bold text-slate-400 uppercase">Bekliyor</span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-[9px]  text-slate-400 uppercase">Bekliyor</span>
                                                     )}
                                                     {row._status === "saving" && (
                                                         <Loader2 className="h-4 w-4 animate-spin text-violet-400 mx-auto" />
@@ -336,7 +337,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                         <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
                                                     )}
                                                     {row._status === "error" && (
-                                                        <span title={row._error} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] font-bold text-red-400 uppercase cursor-help">
+                                                        <span title={row._error} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px]  text-red-400 uppercase cursor-help">
                                                             <AlertTriangle className="h-2.5 w-2.5" /> Hata
                                                         </span>
                                                     )}
@@ -358,7 +359,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                             <div className="flex items-center justify-between gap-4 pt-2">
                                 <div className="flex gap-3">
                                     <Button type="button" variant="ghost" onClick={handleReset}
-                                        className="gap-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] font-bold">
+                                        className="gap-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] ">
                                         <RotateCcw className="h-4 w-4" /> Yeniden Yaz
                                     </Button>
                                     <Button type="button" variant="ghost" onClick={() => {
@@ -369,7 +370,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                         };
                                         setRows(prev => [...prev, newRow]);
                                     }}
-                                        className="gap-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] font-bold">
+                                        className="gap-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] ">
                                         <Plus className="h-4 w-4" /> Satır Ekle
                                     </Button>
                                 </div>
@@ -379,7 +380,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                     onClick={handleSaveAll}
                                     disabled={isSavePending || pendingCount === 0}
                                     className={cn(
-                                        "h-12 px-8 rounded-xl font-bold text-[13px] uppercase tracking-wider transition-all gap-2",
+                                        "h-12 px-8 rounded-xl  text-[13px] uppercase tracking-wider transition-all gap-2",
                                         pendingCount > 0
                                             ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_24px_rgba(16,185,129,0.3)]"
                                             : "bg-slate-800 text-slate-500 cursor-not-allowed"
@@ -399,3 +400,8 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
         </Dialog>
     );
 }
+
+
+
+
+

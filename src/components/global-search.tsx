@@ -112,12 +112,12 @@ export function GlobalSearch() {
                                 value={query}
                                 onChange={(e) => handleSearch(e.target.value)}
                                 placeholder="Ürün, Müşteri, Tedarikçi veya Servis No Ara..."
-                                className="bg-transparent border-none h-10 text-xl font-bold text-white focus-visible:ring-0 focus-visible:border-none placeholder:text-slate-500 p-0 shadow-none outline-none"
+                                className="bg-transparent border-none h-10 text-xl  text-white focus-visible:ring-0 focus-visible:border-none placeholder:text-slate-500 p-0 shadow-none outline-none"
                             />
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5">
-                                <span className="text-[10px] font-bold text-slate-400">SHIFT</span>
-                                <span className="text-[10px] font-bold text-slate-400">+</span>
-                                <span className="text-[10px] font-bold text-slate-400">S</span>
+                                <span className="text-[10px]  text-slate-400">SHIFT</span>
+                                <span className="text-[10px]  text-slate-400">+</span>
+                                <span className="text-[10px]  text-slate-400">S</span>
                             </div>
                         </div>
 
@@ -129,14 +129,14 @@ export function GlobalSearch() {
                                         <Command className="h-10 w-10 text-blue-500/40" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-slate-300">Evrensel Takip Araması</p>
+                                        <p className="text-sm  text-slate-300">Evrensel Takip Araması</p>
                                         <p className="text-xs font-semibold text-slate-500 mt-1">Sistemdeki her şeyi anında bulun.</p>
                                     </div>
                                 </div>
                             ) : loading ? (
                                 <div className="p-20 flex flex-col items-center justify-center gap-4 text-blue-500">
                                     <Loader2 className="h-8 w-8 animate-spin" />
-                                    <span className="text-xs font-bold uppercase tracking-widest italic">Veriler Sorgulanıyor...</span>
+                                    <span className="text-xs  uppercase tracking-widest italic">Veriler Sorgulanıyor...</span>
                                 </div>
                             ) : results.length === 0 ? (
                                 <div className="p-12 text-center text-slate-500 italic font-medium">
@@ -167,14 +167,14 @@ export function GlobalSearch() {
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-blue-400">
+                                                    <span className="text-[9px]  uppercase tracking-widest text-slate-500 group-hover:text-blue-400">
                                                         {result.breadcrumb}
                                                     </span>
                                                     <Badge className="bg-white/10 text-slate-300 border-none text-[8px] h-4 rounded-md">
                                                         {result.type}
                                                     </Badge>
                                                 </div>
-                                                <h4 className="text-sm font-bold text-white group-hover:text-blue-300 truncate">
+                                                <h4 className="font-medium text-sm  text-white group-hover:text-blue-300 truncate">
                                                     {result.title}
                                                 </h4>
                                                 <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
@@ -193,7 +193,7 @@ export function GlobalSearch() {
                         </div>
 
                         {/* Footer Tips */}
-                        <div className="p-4 border-t border-white/5 bg-black/20 flex items-center justify-between text-[10px] font-bold text-slate-600">
+                        <div className="p-4 border-t border-white/5 bg-black/20 flex items-center justify-between text-[10px]  text-slate-600">
                             <div className="flex items-center gap-4">
                                 <span className="flex items-center gap-1"><span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400">↑↓</span> Seç</span>
                                 <span className="flex items-center gap-1"><span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-400">ENTER</span> Git</span>
@@ -210,3 +210,7 @@ export function GlobalSearch() {
         </>
     );
 }
+
+
+
+

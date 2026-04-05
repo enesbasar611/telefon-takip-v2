@@ -28,12 +28,12 @@ export default async function ServisMerkeziPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">{activeCount} Aktif İşlem</span>
+              <span className="text-[10px]  text-emerald-500 uppercase tracking-wider">{activeCount} Aktif İşlem</span>
             </div>
 
             <button className="flex items-center gap-2 bg-[#111111] hover:bg-[#18181A] px-3 py-1 rounded-full border border-[#333333] transition-colors group">
               <Sparkles className="h-3.5 w-3.5 text-violet-500 group-hover:animate-pulse" />
-              <span className="text-[10px] font-bold text-white uppercase tracking-wider">BAŞAR AI İLE CİHAZ GİRİŞİ</span>
+              <span className="text-[10px]  text-white uppercase tracking-wider">BAŞAR AI İLE CİHAZ GİRİŞİ</span>
             </button>
           </div>
         }
@@ -45,3 +45,6 @@ export default async function ServisMerkeziPage() {
     </div>
   );
 }
+
+
+

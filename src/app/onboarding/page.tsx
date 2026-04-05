@@ -79,7 +79,7 @@ function OnboardingForm() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <CardTitle className="text-3xl font-bold text-white tracking-tight">Dükkanınızı Kurun</CardTitle>
+                                <CardTitle className="font-medium text-3xl  text-white tracking-tight">Dükkanınızı Kurun</CardTitle>
                                 <CardDescription className="text-slate-500 text-sm font-medium">
                                     Hoş geldiniz! Mevcut envanterinizi ve kasanızı BAŞAR AI ile yönetmek için dükkan bilgilerinizi girin.
                                 </CardDescription>
@@ -88,7 +88,7 @@ function OnboardingForm() {
 
                         <CardContent className="px-10 space-y-6">
                             <div className="space-y-2.5">
-                                <Label htmlFor="name" className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">DÜKKAN ADI</Label>
+                                <Label htmlFor="name" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">DÜKKAN ADI</Label>
                                 <div className="relative group">
                                     <Store className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                     <Input
@@ -104,7 +104,7 @@ function OnboardingForm() {
 
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2.5">
-                                    <Label htmlFor="phone" className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">İLETİŞİM HATTI</Label>
+                                    <Label htmlFor="phone" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">İLETİŞİM HATTI</Label>
                                     <div className="relative group">
                                         <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                         <Input
@@ -118,7 +118,7 @@ function OnboardingForm() {
                                     </div>
                                 </div>
                                 <div className="space-y-2.5">
-                                    <Label htmlFor="balance" className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">AÇILIŞ KASASI (₺)</Label>
+                                    <Label htmlFor="balance" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">AÇILIŞ KASASI (₺)</Label>
                                     <div className="relative group">
                                         <Wallet className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                         <Input
@@ -135,7 +135,7 @@ function OnboardingForm() {
                             </div>
 
                             <div className="space-y-2.5">
-                                <Label htmlFor="address" className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">ADRES BİLGİSİ</Label>
+                                <Label htmlFor="address" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">ADRES BİLGİSİ</Label>
                                 <div className="relative group">
                                     <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                     <Input
@@ -162,7 +162,7 @@ function OnboardingForm() {
                         <CardFooter className="p-10 pt-4 flex flex-col gap-4">
                             <Button
                                 type="submit"
-                                className="w-full bg-white text-black hover:bg-slate-100 font-bold py-7 rounded-2xl transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 text-base"
+                                className="w-full bg-white text-black hover:bg-slate-100  py-7 rounded-2xl transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 text-base"
                                 disabled={loading}
                             >
                                 {loading ? (
@@ -177,7 +177,7 @@ function OnboardingForm() {
 
                             <button
                                 type="button"
-                                className="text-[11px] font-bold text-slate-600 hover:text-white transition-colors uppercase tracking-[0.2em] flex items-center justify-center gap-2 py-2"
+                                className="text-[11px]  text-slate-600 hover:text-white transition-colors uppercase tracking-[0.2em] flex items-center justify-center gap-2 py-2"
                                 onClick={() => signOut({ callbackUrl: '/login' })}
                             >
                                 <LogOut className="h-3 w-3" />
@@ -190,7 +190,7 @@ function OnboardingForm() {
                 <div className="mt-8 flex items-center justify-center gap-6 opacity-30">
                     <div className="flex items-center gap-2 group cursor-default">
                         <Sparkles className="h-4 w-4 text-blue-500" />
-                        <span className="text-[10px] font-bold text-white uppercase tracking-widest">AI INTEGRATED</span>
+                        <span className="text-[10px]  text-white uppercase tracking-widest">AI INTEGRATED</span>
                     </div>
                 </div>
             </motion.div>
@@ -205,3 +205,8 @@ export default function OnboardingPage() {
         </SessionProvider>
     );
 }
+
+
+
+
+

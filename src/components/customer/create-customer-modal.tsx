@@ -84,19 +84,19 @@ export function CreateCustomerModal() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-8 bg-slate-900/50 border-b border-white/5">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">Yeni Müşteri Kaydı</DialogTitle>
+              <DialogTitle className="font-medium text-2xl ">Yeni Müşteri Kaydı</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">Müşteri portföyüne yeni bir kişi veya kurum ekleyin.</DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="p-8 space-y-6">
             <div className="space-y-3">
-              <Label htmlFor="name" className="text-xs font-bold text-muted-foreground">Ad Soyad / Firma</Label>
+              <Label htmlFor="name" className="font-medium text-xs  text-muted-foreground">Ad Soyad / Firma</Label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="name" {...register("name")} placeholder="Ahmet Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold" />
+                <Input id="name" {...register("name")} placeholder="Ahmet Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
               </div>
-              {errors.name && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.name.message}</p>}
+              {errors.name && <p className="text-[10px] text-red-500  ml-1">{errors.name.message}</p>}
             </div>
 
             <PhoneInput
@@ -112,18 +112,18 @@ export function CreateCustomerModal() {
             />
 
             <div className="space-y-3">
-              <Label htmlFor="email" className="text-xs font-bold text-slate-500 tracking-[0.2em] ml-1">E-posta Adresi (Opsiyonel)</Label>
+              <Label htmlFor="email" className="font-medium text-xs  text-slate-500 tracking-[0.2em] ml-1">E-posta Adresi (Opsiyonel)</Label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-                <Input id="email" {...register("email")} placeholder="ahmet@email.com" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm font-bold focus:ring-0 focus:border-blue-500/30 transition-all" />
+                <Input id="email" {...register("email")} placeholder="ahmet@email.com" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm  focus:ring-0 focus:border-blue-500/30 transition-all" />
               </div>
             </div>
           </div>
 
           <div className="p-8 bg-slate-900/50 border-t border-white/5">
             <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl font-bold text-slate-400">Vazgeç</Button>
-              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl gap-3">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-slate-400">Vazgeç</Button>
+              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white  text-sm rounded-2xl gap-3">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Müşteriyi Kaydet
               </Button>
@@ -134,3 +134,8 @@ export function CreateCustomerModal() {
     </Dialog>
   );
 }
+
+
+
+
+

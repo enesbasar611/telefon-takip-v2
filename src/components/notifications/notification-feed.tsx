@@ -167,7 +167,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                     {/* Header Area */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                         <div className="space-y-1">
-                            <h1 className="text-3xl font-bold text-white tracking-tighter">
+                            <h1 className="font-medium text-3xl  text-white tracking-tighter">
                                 Bildirimler <span className="text-blue-500 font-serif italic text-2xl">&</span> Hatırlatmalar
                             </h1>
                             <p className="text-slate-400 font-medium text-[13px] flex items-center gap-2">
@@ -180,13 +180,13 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                             <Button
                                 variant="ghost"
                                 onClick={handleMarkAllRead}
-                                className="h-10 px-4 rounded-xl bg-white/[0.03] border border-white/5 font-bold text-[11px] gap-2 hover:bg-white/10 transition-all text-slate-400 hover:text-white"
+                                className="h-10 px-4 rounded-xl bg-white/[0.03] border border-white/5  text-[11px] gap-2 hover:bg-white/10 transition-all text-slate-400 hover:text-white"
                             >
                                 <CheckCheck className="h-3.5 w-3.5 text-blue-500" /> Tümünü Okundu İşaretle
                             </Button>
                             <Button
                                 onClick={() => setShowReminders(true)}
-                                className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-600/20 font-bold text-[11px] gap-2 transition-all"
+                                className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-600/20  text-[11px] gap-2 transition-all"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Hatırlatıcı Ekle
                             </Button>
@@ -204,16 +204,16 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                     key={cat}
                                     onClick={() => setActiveTab(cat)}
                                     className={cn(
-                                        "h-10 px-5 rounded-xl text-[11px] font-bold uppercase tracking-tighter transition-all flex items-center gap-3 whitespace-nowrap group relative",
+                                        "h-10 px-5 rounded-xl text-[11px]  uppercase tracking-tighter transition-all flex items-center gap-3 whitespace-nowrap group relative",
                                         isActive
-                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 font-bold scale-[1.02]"
+                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30  scale-[1.02]"
                                             : "text-slate-500 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/20"
                                     )}
                                 >
                                     <config.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
                                     {cat}
                                     <div className={cn(
-                                        "px-2.5 py-0.5 rounded-full text-[9px] font-bold transition-all",
+                                        "px-2.5 py-0.5 rounded-full text-[9px]  transition-all",
                                         isActive
                                             ? "bg-white/20 text-white shadow-inner"
                                             : "bg-white/5 text-slate-500 group-hover:bg-blue-500/20 group-hover:text-blue-400"
@@ -237,7 +237,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                     <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-white mb-1">Her Şey Yolunda!</h3>
+                                    <h3 className="font-medium text-lg  text-white mb-1">Her Şey Yolunda!</h3>
                                     <p className="text-slate-500 text-[13px] font-medium max-w-xs mx-auto">Şu an müdahale etmeniz gereken herhangi bir bildirim bulunmuyor.</p>
                                 </div>
                             </div>
@@ -270,12 +270,12 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                             <div className="flex-1 min-w-0 space-y-0.5">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className={cn(
-                                                        "text-sm font-bold tracking-tight transition-colors truncate",
-                                                        n.isRead ? "text-slate-400" : "text-white group-hover:text-blue-400 font-bold"
+                                                        "text-sm  tracking-tight transition-colors truncate",
+                                                        n.isRead ? "text-slate-400" : "text-white group-hover:text-blue-400 "
                                                     )}>
                                                         {n.title}
                                                     </h3>
-                                                    <span className="text-[10px] font-bold text-slate-500 shrink-0">
+                                                    <span className="text-[10px]  text-slate-500 shrink-0">
                                                         {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr }).replace('yaklaşık ', '')}
                                                     </span>
                                                 </div>
@@ -290,7 +290,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                             <div className="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 translate-x-2 lg:group-hover:translate-x-0">
                                                 <Button
                                                     className={cn(
-                                                        "h-8 px-4 rounded-lg font-bold text-[10px] shadow-lg transition-all uppercase tracking-tighter",
+                                                        "h-8 px-4 rounded-lg  text-[10px] shadow-lg transition-all uppercase tracking-tighter",
                                                         n.type === "CRITICAL_STOCK" ? "bg-rose-600 hover:bg-rose-500 shadow-rose-600/20" :
                                                             "bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
                                                     )}
@@ -325,7 +325,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                         <div className="flex justify-center pt-4">
                             <Button
                                 onClick={() => loadNotifications(page + 1, activeTab)}
-                                className="h-10 px-8 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/5 font-bold text-[10px] text-blue-500 gap-2 transition-all active:scale-95 tracking-widest"
+                                className="h-10 px-8 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/5  text-[10px] text-blue-500 gap-2 transition-all active:scale-95 tracking-widest"
                             >
                                 DAHA FAZLA GÖR <ChevronRight className="h-3 w-3" />
                             </Button>
@@ -347,3 +347,8 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
         </div>
     );
 }
+
+
+
+
+

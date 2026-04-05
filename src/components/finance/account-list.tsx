@@ -36,7 +36,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    <h2 className="text-sm font-bold tracking-tight">HESAPLARIM</h2>
+                    <h2 className="font-medium text-sm  tracking-tight">HESAPLARIM</h2>
                 </div>
                 <CreateAccountModal />
             </div>
@@ -55,13 +55,13 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                     <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
                                         <Icon className="h-6 w-6" />
                                     </div>
-                                    <Badge variant="outline" className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-border/40">
+                                    <Badge variant="outline" className="text-[10px]  tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-border/40">
                                         {account.type}
                                     </Badge>
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-2xl font-bold tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+                                    <h3 className="font-medium text-sm  tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
+                                    <p className="text-2xl  tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
                                 </div>
                                 <div className="mt-5 pt-5 border-t border-border/40 flex items-center gap-3">
                                     <AccountDetailModal account={account} />
@@ -78,7 +78,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         <div className="h-12 w-12 rounded-2xl bg-muted/20 flex items-center justify-center mb-3 text-muted-foreground/40">
                             <Plus className="h-6 w-6" />
                         </div>
-                        <p className="text-xs font-bold text-muted-foreground">Henüz tanımlı bir hesap yok.</p>
+                        <p className="text-xs  text-muted-foreground">Henüz tanımlı bir hesap yok.</p>
                         <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">Nakit veya banka hesabınızı ekleyerek başlayın.</p>
                     </div>
                 )}
@@ -86,3 +86,8 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
         </div>
     );
 }
+
+
+
+
+

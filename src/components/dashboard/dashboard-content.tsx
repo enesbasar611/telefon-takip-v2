@@ -24,3 +24,6 @@ export function DashboardContent({ children }: { children: React.ReactNode }) {
         </motion.div>
     );
 }
+
+
+

@@ -42,7 +42,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
         return (
             <div className="space-y-2 w-full">
                 {label && (
-                    <Label className="text-[11px] font-bold text-muted-foreground uppercase ml-1 mb-2 block">
+                    <Label className="font-medium text-[11px]  text-muted-foreground uppercase ml-1 mb-2 block">
                         {label} {required && <span className="text-destructive">*</span>}
                     </Label>
                 )}
@@ -54,7 +54,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                     className
                 )}>
                     <div className="pl-4 pr-3 flex items-center justify-center border-r border-border/50 h-full bg-muted/20">
-                        <span className="text-sm font-bold text-primary/80 select-none">+90</span>
+                        <span className="text-sm  text-primary/80 select-none">+90</span>
                     </div>
                     <input
                         {...props}
@@ -62,14 +62,14 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                         inputMode="numeric"
                         maxLength={14}
                         placeholder="5xx xxx xx xx"
-                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-bold text-foreground placeholder:text-muted-foreground/40 h-full w-full"
+                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm  text-foreground placeholder:text-muted-foreground/40 h-full w-full"
                         value={value}
                         onChange={handleChange}
                         ref={ref}
                     />
                     {isLookingUp && <Loader2 className="mr-4 h-4 w-4 animate-spin text-primary" />}
                 </div>
-                {error && <p className="text-xs text-destructive font-bold mt-2 animate-in slide-in-from-top-1 px-1">*{error}</p>}
+                {error && <p className="text-xs text-destructive  mt-2 animate-in slide-in-from-top-1 px-1">*{error}</p>}
             </div>
         );
     }
@@ -78,3 +78,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
 PhoneInput.displayName = "PhoneInput";
 
 export { PhoneInput };
+
+
+
+

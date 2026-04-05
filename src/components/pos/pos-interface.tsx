@@ -267,7 +267,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 <ShoppingCart className="h-6 w-6 text-white" />
               </div>
               <div className="flex flex-col">
-                <h2 className="text-2xl font-bold text-foreground">Hızlı <span className="text-primary">Satış</span></h2>
+                <h2 className="font-medium text-2xl  text-foreground">Hızlı <span className="text-primary">Satış</span></h2>
                 <p className="text-[11px] text-muted-foreground font-semibold leading-none mt-1">POS Terminal v2.0</p>
               </div>
             </div>
@@ -277,7 +277,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Ürün adı veya barkod..."
-                  className="pl-12 bg-muted/30 border-transparent h-12 rounded-2xl text-xs font-bold focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all border-border/40"
+                  className="pl-12 bg-muted/30 border-transparent h-12 rounded-2xl text-xs  focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all border-border/40"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoFocus
@@ -303,7 +303,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
               <TabsList className="bg-transparent gap-3 p-0 h-auto">
                 <TabsTrigger
                   value="ALL"
-                  className="rounded-full h-10 px-8 font-bold text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
+                  className="rounded-full h-10 px-8  text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
                 >
                   TÜM ÜRÜNLER
                 </TabsTrigger>
@@ -311,7 +311,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   <TabsTrigger
                     key={cat.id}
                     value={cat.id}
-                    className="rounded-full h-10 px-8 font-bold text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
+                    className="rounded-full h-10 px-8  text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
                   >
                     {cat.name.toUpperCase()}
                   </TabsTrigger>
@@ -332,14 +332,14 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 >
                   <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse group-hover:scale-125 transition-transform border-4 border-white shadow-lg" />
 
-                  <div className="text-[10px] font-bold text-primary mb-2 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                  <div className="text-[10px]  text-primary mb-2 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                     <Tag className="h-3 w-3" />
                     {product.category.name}
                   </div>
 
                   <div className="mt-auto flex flex-col gap-1">
-                    <div className="font-bold text-foreground text-4xl">₺{formatCurrency(product.sellPrice)}</div>
-                    <div className="font-bold text-muted-foreground text-[14px] line-clamp-2 leading-tight">
+                    <div className=" text-foreground text-4xl">₺{formatCurrency(product.sellPrice)}</div>
+                    <div className=" text-muted-foreground text-[14px] line-clamp-2 leading-tight">
                       {product.name}
                     </div>
                   </div>
@@ -360,34 +360,34 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 <ShoppingCart className="h-5 w-5 text-primary" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground">Aktif <span className="text-primary">Sepet</span></span>
-                <p className="text-[10px] text-muted-foreground font-bold">{cart.length} Ürün Seçildi</p>
+                <span className="text-xl  text-foreground">Aktif <span className="text-primary">Sepet</span></span>
+                <p className="text-[10px] text-muted-foreground ">{cart.length} Ürün Seçildi</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-10 rounded-full text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 px-6 border border-rose-500/40">
+            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-10 rounded-full text-[10px]  text-rose-500 hover:bg-rose-500/10 px-6 border border-rose-500/40">
               BOŞALT
             </Button>
           </div>
 
           <div className="p-8 border-b border-border/40 bg-muted/5">
             <div className="flex items-center justify-between mb-4">
-              <Label className="text-[11px] font-bold text-muted-foreground tracking-[0.2em]">MÜŞTERİ BİLGİSİ</Label>
+              <Label className="font-medium text-[11px]  text-muted-foreground tracking-[0.2em]">MÜŞTERİ BİLGİSİ</Label>
               <Dialog open={isNewCustomerOpen} onOpenChange={setIsNewCustomerOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" className="h-8 px-4 rounded-full text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 flex items-center gap-2 group hover:bg-primary hover:text-white transition-all">
+                  <Button variant="ghost" className="h-8 px-4 rounded-full text-[10px]  text-primary bg-primary/10 border border-primary/20 flex items-center gap-2 group hover:bg-primary hover:text-white transition-all">
                     <UserPlus className="h-3 w-3" /> YENİ EKLE
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] bg-[#0a0a0a] border border-white/10 text-white shadow-2xl p-0 overflow-hidden">
                   <div className="px-6 py-5 border-b border-white/10 flex flex-col gap-1.5 bg-white/[0.02]">
-                    <DialogTitle className="text-lg font-bold">Hızlı Müşteri Kaydı</DialogTitle>
+                    <DialogTitle className="font-medium text-lg ">Hızlı Müşteri Kaydı</DialogTitle>
                     <DialogDescription className="text-xs text-slate-400 font-medium">
                       Aktif sepete atamak için sisteme anında müşteri tanımlayın.
                     </DialogDescription>
                   </div>
                   <div className="p-6 space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="c-name" className="text-xs font-semibold text-slate-400">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
+                      <Label htmlFor="c-name" className="font-medium text-xs font-semibold text-slate-400">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
                       <Input
                         id="c-name"
                         placeholder="Örn: Ahmet Yılmaz"
@@ -412,7 +412,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                       type="button"
                       onClick={handleCreateCustomer}
                       disabled={isCreatingCustomer}
-                      className="h-10 px-6 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                      className="h-10 px-6 rounded-lg text-xs  bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
                     >
                       {isCreatingCustomer ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
                       Müşteriyi Kaydet ve Seç
@@ -428,10 +428,10 @@ export function POSInterface({ products: initialProducts, customers, categories,
               <SelectContent className="bg-card border border-border/60 text-foreground rounded-[1.5rem] shadow-2xl p-2 max-h-80">
                 <SelectItem value="null" className="text-[13px] font-medium py-3 rounded-xl hover:bg-muted transition-colors">Varsayılan (İsimsiz)</SelectItem>
                 {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="text-[13px] font-bold py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
+                  <SelectItem key={c.id} value={c.id} className="text-[13px]  py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
                     <div className="flex flex-col gap-1">
-                      <span className="font-bold leading-none text-slate-200">{c.name}</span>
-                      <span className="text-[10px] text-blue-500 font-bold leading-none mt-1">
+                      <span className=" leading-none text-slate-200">{c.name}</span>
+                      <span className="text-[10px] text-blue-500  leading-none mt-1">
                         {formatPhone(c.phone)}
                       </span>
                     </div>
@@ -451,19 +451,19 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     <ShoppingCart className="h-16 w-16 mb-4 opacity-[0.03] text-foreground" />
                     <ShoppingCart className="h-8 w-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 text-primary" />
                   </div>
-                  <p className="font-bold text-[9px] opacity-40">Sepetiniz şu an boş</p>
+                  <p className=" text-[9px] opacity-40">Sepetiniz şu an boş</p>
                 </div>
               ) : (
                 cart.map((item) => (
                   <div key={item.id} className="p-6 flex items-center justify-between hover:bg-muted/30 transition-colors group border-b border-border/40 last:border-none gap-6">
                     <div className="flex-1 min-w-0">
-                      <span className="text-[15px] font-bold text-foreground block leading-tight mb-1 truncate">{item.name}</span>
+                      <span className="text-[15px]  text-foreground block leading-tight mb-1 truncate">{item.name}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-[13px] text-primary font-bold">
+                        <span className="text-[13px] text-primary ">
                           ₺{formatCurrency(item.sellPrice)}
                         </span>
                         <div className="h-1 w-1 rounded-full bg-border" />
-                        <span className="text-[10px] text-muted-foreground font-bold">MEVCUT: {item.stock}</span>
+                        <span className="text-[10px] text-muted-foreground ">MEVCUT: {item.stock}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 flex-shrink-0">
@@ -474,7 +474,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                         >
                           <Minus className="h-3 w-3" />
                         </button>
-                        <span className="text-[14px] font-bold text-foreground w-10 text-center">{item.quantity}</span>
+                        <span className="text-[14px]  text-foreground w-10 text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
                           className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-all active:scale-95"
@@ -516,22 +516,22 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   onClick={() => setPaymentMethod(method.id)}
                 >
                   <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-muted-foreground")} />
-                  <span className="text-[9px] font-bold">{method.label}</span>
+                  <span className="text-[9px] ">{method.label}</span>
                 </Button>
               ))}
             </div>
 
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between px-2">
-                <span className="text-[11px] font-bold text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
+                <span className="text-[11px]  text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-bold text-foreground drop-shadow-sm">₺{formatCurrency(total)}</span>
+                  <span className="text-5xl  text-foreground drop-shadow-sm">₺{formatCurrency(total)}</span>
                 </div>
               </div>
 
               <Button
                 className={cn(
-                  "h-20 w-full text-[14px] font-bold gap-4 rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98]",
+                  "h-20 w-full text-[14px]  gap-4 rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98]",
                   paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
                     ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
@@ -581,3 +581,9 @@ export function POSInterface({ products: initialProducts, customers, categories,
     </div>
   );
 }
+
+
+
+
+
+

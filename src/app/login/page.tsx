@@ -69,12 +69,12 @@ export default function LoginPage() {
                             <Smartphone className="h-10 w-10 text-violet-500" />
                         </div>
                     </div>
-                    <h1 className="text-4xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent">
+                    <h1 className="font-medium text-4xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent">
                         BAŞAR TEKNİK
                     </h1>
                     <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
                         <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Güvenli Yönetim Sistemi v2.0</span>
+                        <span className="text-[10px]  text-slate-400 uppercase tracking-widest">Güvenli Yönetim Sistemi v2.0</span>
                     </div>
                 </motion.div>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
                     <Card className="border-white/5 bg-[#0A0A0A]/60 backdrop-blur-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] overflow-hidden">
                         <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-violet-600 to-transparent opacity-50" />
                         <CardHeader className="text-center pt-10 pb-6">
-                            <CardTitle className="text-2xl font-bold text-white tracking-tight">Giriş Yap</CardTitle>
+                            <CardTitle className="font-medium text-2xl  text-white tracking-tight">Giriş Yap</CardTitle>
                             <CardDescription className="text-slate-500 text-sm mt-2">
                                 Dükkan yönetimine başlamak için Google hesabınızı kullanın
                             </CardDescription>
@@ -103,30 +103,30 @@ export default function LoginPage() {
                                         className="space-y-4"
                                     >
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-POSTA ADRESİ</Label>
+                                            <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">E-POSTA ADRESİ</Label>
                                             <Input
                                                 type="email"
                                                 placeholder="ahmet@basarteknik.com"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 font-bold focus:ring-2 focus:ring-violet-500/20"
+                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20  focus:ring-2 focus:ring-violet-500/20"
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">ŞİFRE</Label>
+                                            <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ŞİFRE</Label>
                                             <Input
                                                 type="password"
                                                 placeholder="••••••"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 font-bold focus:ring-2 focus:ring-violet-500/20"
+                                                className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20  focus:ring-2 focus:ring-violet-500/20"
                                                 required
                                             />
                                         </div>
                                         <Button
                                             type="submit"
-                                            className="w-full h-14 bg-violet-600 text-white hover:bg-violet-700 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-violet-600/20"
+                                            className="w-full h-14 bg-violet-600 text-white hover:bg-violet-700 rounded-2xl  transition-all active:scale-95 shadow-xl shadow-violet-600/20"
                                             disabled={isLoading}
                                         >
                                             {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Giriş Yap"}
@@ -140,7 +140,7 @@ export default function LoginPage() {
                                         exit={{ opacity: 0, x: 20 }}
                                     >
                                         <Button
-                                            className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg group"
+                                            className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl  flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg group"
                                             onClick={handleGoogleLogin}
                                             disabled={isLoading}
                                         >
@@ -162,13 +162,13 @@ export default function LoginPage() {
                                     <span className="w-full border-t border-white/5" />
                                 </div>
                                 <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
-                                    <span className="bg-[#0A0A0A] px-4 text-slate-500 font-bold">Veya</span>
+                                    <span className="bg-[#0A0A0A] px-4 text-slate-500 ">Veya</span>
                                 </div>
                             </div>
 
                             <Button
                                 variant="ghost"
-                                className="text-xs font-bold text-slate-400 hover:text-white"
+                                className="text-xs  text-slate-400 hover:text-white"
                                 onClick={() => setIsCredentialsLogin(!isCredentialsLogin)}
                             >
                                 {isCredentialsLogin ? "Google ile giriş yap" : "E-posta ile giriş yap"}
@@ -189,3 +189,9 @@ export default function LoginPage() {
         </div>
     );
 }
+
+
+
+
+
+

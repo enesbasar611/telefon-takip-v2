@@ -66,18 +66,18 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="ghost" size="sm" className="text-primary font-bold hover:text-primary/80 gap-1 h-auto p-0">
+                    <Button variant="ghost" size="sm" className="text-primary  hover:text-primary/80 gap-1 h-auto p-0">
                         <UserPlus className="h-4 w-4" /> Yeni Müşteri Ekle
                     </Button>
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] bg-slate-900 border-white/10 text-white">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Yeni Müşteri Ekle</DialogTitle>
+                    <DialogTitle className="font-medium text-xl ">Yeni Müşteri Ekle</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-400">AD SOYAD</Label>
+                        <Label className="font-medium text-xs  text-slate-400">AD SOYAD</Label>
                         <Input
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -92,7 +92,7 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                         onChange={(val: string) => setFormData({ ...formData, phone: val })}
                     />
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-400">E-POSTA (OPSİYONEL)</Label>
+                        <Label className="font-medium text-xs  text-slate-400">E-POSTA (OPSİYONEL)</Label>
                         <Input
                             type="email"
                             value={formData.email}
@@ -102,7 +102,7 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-400">NOTLAR</Label>
+                        <Label className="font-medium text-xs  text-slate-400">NOTLAR</Label>
                         <Textarea
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -112,7 +112,7 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                     </div>
                     <Button
                         disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 rounded-xl mt-4"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white  h-12 rounded-xl mt-4"
                     >
                         {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : "MÜŞTERİYİ KAYDET"}
                     </Button>
@@ -121,3 +121,8 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
         </Dialog>
     );
 }
+
+
+
+
+

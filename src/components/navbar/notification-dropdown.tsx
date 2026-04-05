@@ -113,7 +113,7 @@ export function NotificationDropdown() {
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-rose-600 border-2 border-background shadow-lg flex items-center justify-center">
-                            <span className="text-[10px] text-white font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                            <span className="text-[10px] text-white ">{unreadCount > 9 ? '9+' : unreadCount}</span>
                         </span>
                     )}
                 </Button>
@@ -121,7 +121,7 @@ export function NotificationDropdown() {
             <DropdownMenuContent align="end" className="w-[420px] bg-card/80 backdrop-blur-3xl border-border shadow-2xl rounded-2xl p-0 overflow-hidden font-sans z-[100]">
                 <DropdownMenuLabel className="p-6 flex items-center justify-between bg-muted/20">
                     <div className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-foreground">Sistem Bildirimleri</span>
+                        <span className="text-xs  text-foreground">Sistem Bildirimleri</span>
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                             <p className="text-[11px] text-muted-foreground font-medium">{unreadCount} Bekleyen İşlem</p>
@@ -137,7 +137,7 @@ export function NotificationDropdown() {
                             window.dispatchEvent(new CustomEvent("notification-update"));
                             router.refresh();
                         }}
-                        className="h-9 text-xs font-bold text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 transition-all"
+                        className="h-9 text-xs  text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 transition-all"
                     >
                         Tümünü Okundu İşaretle
                     </Button>
@@ -153,7 +153,7 @@ export function NotificationDropdown() {
                     ) : notifications.length === 0 ? (
                         <div className="p-20 text-center">
                             <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-10 mb-6" />
-                            <p className="text-[12px] font-bold text-muted-foreground">Şu an bildirim bulunmuyor</p>
+                            <p className="text-[12px]  text-muted-foreground">Şu an bildirim bulunmuyor</p>
                         </div>
                     ) : (
                         notifications.map((n) => (
@@ -179,12 +179,12 @@ export function NotificationDropdown() {
                                     <div className="flex flex-col flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className={cn(
-                                                "text-[13px] font-bold truncate pr-4 uppercase tracking-tighter",
+                                                "text-[13px]  truncate pr-4 uppercase tracking-tighter",
                                                 n.isRead ? "text-muted-foreground" : "text-foreground"
                                             )}>
                                                 {n.title}
                                             </span>
-                                            <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap opacity-60">
+                                            <span className="text-[9px]  text-muted-foreground whitespace-nowrap opacity-60">
                                                 {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr }).toUpperCase()}
                                             </span>
                                         </div>
@@ -203,7 +203,7 @@ export function NotificationDropdown() {
 
                 <DropdownMenuSeparator className="bg-border m-0" />
                 <Link href="/bildirimler" className="w-full">
-                    <div className="p-5 text-center text-[11px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
+                    <div className="p-5 text-center text-[11px]  uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
                         Bildirim Merkezine Git
                     </div>
                 </Link>
@@ -211,3 +211,6 @@ export function NotificationDropdown() {
         </DropdownMenu>
     );
 }
+
+
+

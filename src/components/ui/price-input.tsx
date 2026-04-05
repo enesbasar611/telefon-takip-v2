@@ -57,3 +57,6 @@ export const PriceInput = ({ value, onChange, prefix = "₺", className, ...prop
         </div>
     );
 };
+
+
+

@@ -70,16 +70,16 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                     </Link>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-bold">{ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span></h1>
-                            <Badge variant="outline" className={`text-[10px] font-bold px-4 py-1 rounded-xl whisper-border ${statusColors[ticket.status]}`}>
+                            <h1 className="font-medium text-3xl ">{ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span></h1>
+                            <Badge variant="outline" className={`text-[10px]  px-4 py-1 rounded-xl whisper-border ${statusColors[ticket.status]}`}>
                                 {statusLabels[ticket.status]}
                             </Badge>
                         </div>
-                        <p className="text-xs text-gray-500 font-bold mt-1 tracking-wider">Servis Kaydı Analizi • #{ticket.ticketNumber}</p>
+                        <p className="text-xs text-gray-500  mt-1 tracking-wider">Servis Kaydı Analizi • #{ticket.ticketNumber}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" className="text-[10px] font-bold text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all">
+                    <Button variant="ghost" className="text-[10px]  text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all">
                         PROFİLİ DÜZENLE
                     </Button>
                 </div>
@@ -94,21 +94,21 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                             <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                                 <div className="flex items-center gap-3">
                                     <Smartphone className="h-4 w-4 text-blue-500" />
-                                    <CardTitle className="text-xs font-bold text-white">Cihaz Bilgileri</CardTitle>
+                                    <CardTitle className="font-medium text-xs  text-white">Cihaz Bilgileri</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 <div className="flex justify-between items-center border-b border-white/[0.02] pb-3">
-                                    <span className="text-xs font-bold text-gray-600">IMEI / SERÍ NO</span>
-                                    <span className="text-sm font-bold text-white">{ticket.imei || ticket.serialNumber || 'Bilinmiyor'}</span>
+                                    <span className="text-xs  text-gray-600">IMEI / SERÍ NO</span>
+                                    <span className="text-sm  text-white">{ticket.imei || ticket.serialNumber || 'Bilinmiyor'}</span>
                                 </div>
                                 <div className="flex justify-between items-center border-b border-white/[0.02] pb-3">
-                                    <span className="text-xs font-bold text-gray-600">KOZMETİK DURUM</span>
-                                    <span className="text-sm font-bold text-white">{ticket.cosmeticCondition || 'Normal'}</span>
+                                    <span className="text-xs  text-gray-600">KOZMETİK DURUM</span>
+                                    <span className="text-sm  text-white">{ticket.cosmeticCondition || 'Normal'}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-600">ARIZA TANIMI</span>
-                                    <span className="text-sm font-bold text-blue-400">{ticket.problemDesc}</span>
+                                    <span className="text-xs  text-gray-600">ARIZA TANIMI</span>
+                                    <span className="text-sm  text-blue-400">{ticket.problemDesc}</span>
                                 </div>
                                 <div className="pt-6 border-t border-white/[0.03]">
                                     <ServicePartManager
@@ -125,21 +125,21 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                             <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                                 <div className="flex items-center gap-3">
                                     <User className="h-4 w-4 text-emerald-500" />
-                                    <CardTitle className="text-xs font-bold text-white">Müşteri Profili</CardTitle>
+                                    <CardTitle className="font-medium text-xs  text-white">Müşteri Profili</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 <div className="flex justify-between items-center border-b border-white/[0.02] pb-3">
-                                    <span className="text-xs font-bold text-gray-600">AD SOYAD</span>
-                                    <span className="text-sm font-bold text-white">{ticket.customer.name}</span>
+                                    <span className="text-xs  text-gray-600">AD SOYAD</span>
+                                    <span className="text-sm  text-white">{ticket.customer.name}</span>
                                 </div>
                                 <div className="flex justify-between items-center border-b border-white/[0.02] pb-3">
-                                    <span className="text-xs font-bold text-gray-600">İLETİŞİM</span>
-                                    <span className="text-sm font-bold text-white">{ticket.customer.phone}</span>
+                                    <span className="text-xs  text-gray-600">İLETİŞİM</span>
+                                    <span className="text-sm  text-white">{ticket.customer.phone}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-600">TOPLAM İŞLEM</span>
-                                    <span className="text-sm font-bold text-emerald-500">{ticket.customer.loyaltyPoints} PUAN</span>
+                                    <span className="text-xs  text-gray-600">TOPLAM İŞLEM</span>
+                                    <span className="text-sm  text-emerald-500">{ticket.customer.loyaltyPoints} PUAN</span>
                                 </div>
                             </CardContent>
                         </Card>
@@ -150,7 +150,7 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         <CardHeader className="border-b border-white/[0.03] pb-6 bg-white/[0.01]">
                             <div className="flex items-center gap-3">
                                 <Activity className="h-4 w-4 text-blue-500" />
-                                <CardTitle className="text-sm font-bold text-white">Servis Yolculuğu</CardTitle>
+                                <CardTitle className="font-medium text-sm  text-white">Servis Yolculuğu</CardTitle>
                             </div>
                         </CardHeader>
                         <CardContent className="p-8">
@@ -162,8 +162,8 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                                         </div>
                                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-5 rounded-2xl whisper-border border-white/5 bg-white/[0.02] shadow-none group-hover:bg-white/[0.04] transition-all">
                                             <div className="flex items-center justify-between space-x-2 mb-1">
-                                                <div className="font-bold text-white text-xs">{statusLabels[log.status]}</div>
-                                                <time className="text-[10px] font-bold text-gray-500">{format(new Date(log.createdAt), "d MMM, HH:mm", { locale: tr })}</time>
+                                                <div className=" text-white text-xs">{statusLabels[log.status]}</div>
+                                                <time className="text-[10px]  text-gray-500">{format(new Date(log.createdAt), "d MMM, HH:mm", { locale: tr })}</time>
                                             </div>
                                             <div className="text-[11px] text-gray-400 font-medium">"{log.message}"</div>
                                         </div>
@@ -181,22 +181,22 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                             <div className="flex items-center gap-3">
                                 <CreditCard className="h-4 w-4 text-blue-500" />
-                                <CardTitle className="text-xs font-bold text-white">Finansal Özet</CardTitle>
+                                <CardTitle className="font-medium text-xs  text-white">Finansal Özet</CardTitle>
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 space-y-6">
                             <div className="text-center">
-                                <p className="text-xs font-bold text-gray-600 mb-2">TAHMİNİ ÜCRET</p>
-                                <h2 className="text-5xl font-bold text-white">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</h2>
+                                <p className="text-xs  text-gray-600 mb-2">TAHMİNİ ÜCRET</p>
+                                <h2 className="font-medium text-5xl  text-white">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</h2>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 text-center">
-                                    <p className="text-[11px] font-bold text-gray-600 mb-1">ALINAN KAPORA</p>
-                                    <p className="text-lg font-bold text-emerald-500">₺0</p>
+                                    <p className="text-[11px]  text-gray-600 mb-1">ALINAN KAPORA</p>
+                                    <p className="text-lg  text-emerald-500">₺0</p>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 text-center">
-                                    <p className="text-[11px] font-bold text-gray-600 mb-1">KALAN TUTAR</p>
-                                    <p className="text-lg font-bold text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
+                                    <p className="text-[11px]  text-gray-600 mb-1">KALAN TUTAR</p>
+                                    <p className="text-lg  text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -206,22 +206,22 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         <CardHeader className="border-b border-white/[0.03] pb-4 bg-white/[0.01]">
                             <div className="flex items-center gap-3">
                                 <UserCog className="h-4 w-4 text-blue-500" />
-                                <CardTitle className="text-xs font-bold text-white">Ekip & Operasyon</CardTitle>
+                                <CardTitle className="font-medium text-xs  text-white">Ekip & Operasyon</CardTitle>
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-6">
                             <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] whisper-border border-white/5">
-                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold text-xs">
+                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500  text-xs">
                                     {ticket.technician?.name?.charAt(0) || '?'}
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-gray-600">GÖREVLİ TEKNİSYEN</p>
-                                    <p className="text-sm font-bold text-white">{ticket.technician?.name || 'HENÜZ ATANMADI'}</p>
+                                    <p className="text-xs  text-gray-600">GÖREVLİ TEKNİSYEN</p>
+                                    <p className="text-sm  text-white">{ticket.technician?.name || 'HENÜZ ATANMADI'}</p>
                                 </div>
                             </div>
                             <div className="space-y-3 pt-2">
                                 <ServiceStatusUpdater ticketId={ticket.id} currentStatus={ticket.status} />
-                                <Button variant="outline" className="w-full h-12 rounded-2xl border-white/5 bg-white/[0.03] text-white font-bold hover:bg-white/5 transition-all">
+                                <Button variant="outline" className="w-full h-12 rounded-2xl border-white/5 bg-white/[0.03] text-white  hover:bg-white/5 transition-all">
                                     FİŞ YAZDIR
                                 </Button>
                             </div>
@@ -234,8 +234,8 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                         </div>
                         <AlertCircle className="h-8 w-8 text-rose-500 shrink-0 mt-1" />
                         <div className="relative z-10 space-y-3">
-                            <h4 className="text-sm font-bold text-rose-500 tracking-[0.2em]">Sistem Uyarısı</h4>
-                            <p className="text-lg text-rose-500/90 font-bold leading-tight animate-in fade-in slide-in-from-left-4 duration-700">
+                            <h4 className="font-medium text-sm  text-rose-500 tracking-[0.2em]">Sistem Uyarısı</h4>
+                            <p className="text-lg text-rose-500/90  leading-tight animate-in fade-in slide-in-from-left-4 duration-700">
                                 "Bu cihaz 3 günden uzun süredir işlem bekliyor. Müşteri memnuniyeti için öncelik verin."
                             </p>
                             <div className="flex gap-2 pt-2">
@@ -249,3 +249,10 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
         </div>
     );
 }
+
+
+
+
+
+
+

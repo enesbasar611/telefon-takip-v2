@@ -42,7 +42,7 @@ export function Navbar() {
             trigger={
               <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
                 <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-bold">Yeni Servis</span>
+                <span className="">Yeni Servis</span>
               </Button>
             }
           />
@@ -50,7 +50,7 @@ export function Navbar() {
             trigger={
               <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-none transition-all group">
                 <Landmark className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-                <span className="font-bold whitespace-nowrap">Gelir / Gider</span>
+                <span className=" whitespace-nowrap">Gelir / Gider</span>
               </Button>
             }
           />
@@ -82,12 +82,12 @@ export function Navbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
-              <DropdownMenuLabel className="text-xs font-bold text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem className="p-3 text-sm font-bold rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+              <DropdownMenuItem className="p-3 text-sm  rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                 <User className="h-4 w-4 text-primary" /> Profil Detayları
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="p-3 text-sm font-bold rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+              <DropdownMenuItem asChild className="p-3 text-sm  rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                 <Link href="/ayarlar" className="w-full h-full flex items-center gap-3">
                   <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
                 </Link>
@@ -95,7 +95,7 @@ export function Navbar() {
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="p-3 text-sm font-bold rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex gap-3 items-center"
+                className="p-3 text-sm  rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex gap-3 items-center"
               >
                 <LogOut className="h-4 w-4" /> Çıkış Yap
               </DropdownMenuItem>
@@ -109,3 +109,6 @@ export function Navbar() {
 
 // Fixed missing import for Settings2
 import { Settings2 } from "lucide-react";
+
+
+

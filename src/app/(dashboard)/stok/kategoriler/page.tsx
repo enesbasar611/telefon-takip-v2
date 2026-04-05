@@ -17,7 +17,7 @@ export default async function KategorilerPage() {
                         <Package className="h-8 w-8 text-indigo-400" />
                     </div>
                     <div>
-                        <h1 className="text-5xl font-extrabold text-white font-manrope">Kategori Yönetimi</h1>
+                        <h1 className="font-medium text-5xl font-extrabold text-white font-manrope">Kategori Yönetimi</h1>
                         <p className="text-sm text-slate-500 font-medium mt-1 uppercase tracking-widest">STOK VARYANT AĞACI</p>
                     </div>
                 </div>
@@ -25,7 +25,7 @@ export default async function KategorilerPage() {
 
             {/* How-To Guide */}
             <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 space-y-4">
-                <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <h2 className="font-medium text-[11px]  text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-violet-400" /> Stok Nasıl Eklenir? — 3 Yöntem
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -35,7 +35,7 @@ export default async function KategorilerPage() {
                             <div className="h-7 w-7 rounded-lg bg-violet-500/15 flex items-center justify-center border border-violet-500/20">
                                 <Sparkles className="h-3.5 w-3.5 text-violet-400" />
                             </div>
-                            <p className="text-[12px] font-bold text-violet-300">AI ile Kategori + Ürün</p>
+                            <p className="text-[12px]  text-violet-300">AI ile Kategori + Ürün</p>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                             Bu sayfada <span className="text-violet-300 font-semibold">&quot;AI ile Kategori + Ürün Ekle&quot;</span> butonuna tıklayın. Serbest metin yazın:
@@ -52,7 +52,7 @@ export default async function KategorilerPage() {
                             <div className="h-7 w-7 rounded-lg bg-blue-500/15 flex items-center justify-center border border-blue-500/20">
                                 <Layers className="h-3.5 w-3.5 text-blue-400" />
                             </div>
-                            <p className="text-[12px] font-bold text-blue-300">Toplu AI Stok Ekle</p>
+                            <p className="text-[12px]  text-blue-300">Toplu AI Stok Ekle</p>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                             <span className="text-blue-300 font-semibold">/stok</span> sayfasında <span className="text-blue-300 font-semibold">&quot;Toplu AI Stok Ekle&quot;</span> butonu:
@@ -70,7 +70,7 @@ export default async function KategorilerPage() {
                             <div className="h-7 w-7 rounded-lg bg-indigo-500/15 flex items-center justify-center border border-indigo-500/20">
                                 <PlusCircle className="h-3.5 w-3.5 text-indigo-400" />
                             </div>
-                            <p className="text-[12px] font-bold text-indigo-300">Manuel Tek Ürün</p>
+                            <p className="text-[12px]  text-indigo-300">Manuel Tek Ürün</p>
                         </div>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                             <span className="text-indigo-300 font-semibold">/stok</span> sayfasında <span className="text-indigo-300 font-semibold">&quot;Yeni Ürün Ekle&quot;</span>:
@@ -88,3 +88,8 @@ export default async function KategorilerPage() {
         </div>
     );
 }
+
+
+
+
+

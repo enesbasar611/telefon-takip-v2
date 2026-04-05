@@ -14,3 +14,6 @@ const FullScreenSplineAnimationBackground: React.FC = () => {
 };
 
 export default FullScreenSplineAnimationBackground;
+
+
+

@@ -8,3 +8,6 @@ export async function StockMetricsStream() {
 
     return <StockDashboardMetrics stats={stats} />;
 }
+
+
+

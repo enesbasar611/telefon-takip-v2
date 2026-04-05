@@ -26,3 +26,6 @@ export async function StockTableStream({ searchParams }: { searchParams?: any })
 
     return <StockListTable products={products} categories={categories} />;
 }
+
+
+

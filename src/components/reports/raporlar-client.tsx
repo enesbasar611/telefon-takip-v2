@@ -66,10 +66,10 @@ export function RaporlarClient({
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                                 </span>
-                                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Gerçek Zamanlı</span>
+                                <span className="text-[9px]  text-emerald-500 uppercase tracking-wider">Gerçek Zamanlı</span>
                             </div>
                         </div>
-                        <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">Raporlar & Analizler</h1>
+                        <h1 className="font-medium text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">Raporlar & Analizler</h1>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium">
                             {format(new Date(), "d MMMM yyyy", { locale: tr })} • Tüm veriler canlı yüklenmektedir
                         </p>
@@ -91,12 +91,12 @@ export function RaporlarClient({
                                     <Icon className="h-5 w-5" />
                                 </div>
                                 <div className="mt-4">
-                                    <p className="text-[10px] font-bold text-muted-foreground/60 tracking-[0.18em] uppercase mb-1">{cfg.label}</p>
-                                    <p className={cn("text-3xl font-bold tracking-tight", colorCls.split(" ")[0])}>
+                                    <p className="text-[10px]  text-muted-foreground/60 tracking-[0.18em] uppercase mb-1">{cfg.label}</p>
+                                    <p className={cn("text-3xl  tracking-tight", colorCls.split(" ")[0])}>
                                         {cfg.fmt === "currency" ? `₺${Number(value).toLocaleString("tr-TR")}` : value}
                                     </p>
                                     {cfg.key === "currentMonthRevenue" && (
-                                        <p className={cn("text-xs font-bold mt-1", stats?.revenueGrowth >= 0 ? "text-emerald-500" : "text-red-500")}>
+                                        <p className={cn("text-xs  mt-1", stats?.revenueGrowth >= 0 ? "text-emerald-500" : "text-red-500")}>
                                             {stats?.revenueGrowth >= 0 ? "+" : ""}{stats?.revenueGrowth}% geçen aya göre
                                         </p>
                                     )}
@@ -114,12 +114,12 @@ export function RaporlarClient({
                 <Card className="lg:col-span-2 rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-7 pb-5">
                         <div>
-                            <CardTitle className="text-lg font-bold tracking-tight uppercase">Günlük Satış Trendi</CardTitle>
-                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">Bu ayın satış performansı</p>
+                            <CardTitle className="font-medium text-lg  tracking-tight uppercase">Günlük Satış Trendi</CardTitle>
+                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-1">Bu ayın satış performansı</p>
                         </div>
                         <div className="flex items-center gap-2 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20">
                             <Activity className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
-                            <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">Canlı</span>
+                            <span className="text-[9px]  text-blue-500 uppercase tracking-tighter">Canlı</span>
                         </div>
                     </CardHeader>
                     <CardContent className="p-7 pt-4">
@@ -130,8 +130,8 @@ export function RaporlarClient({
                 {/* Servis Dağılımı - 1 col */}
                 <Card className="rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="border-b border-border/40 p-7 pb-5">
-                        <CardTitle className="text-lg font-bold tracking-tight uppercase">Servis Durum Dağılımı</CardTitle>
-                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">Statü bazlı analiz</p>
+                        <CardTitle className="font-medium text-lg  tracking-tight uppercase">Servis Durum Dağılımı</CardTitle>
+                        <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-1">Statü bazlı analiz</p>
                     </CardHeader>
                     <CardContent className="p-7 pt-4">
                         <ServiceStatusChart data={serviceMetrics} />
@@ -142,17 +142,17 @@ export function RaporlarClient({
                 <Card className="lg:col-span-2 rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-7 pb-5">
                         <div>
-                            <CardTitle className="text-lg font-bold tracking-tight uppercase">Nakit Akışı</CardTitle>
-                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">Gelir vs Gider karşılaştırması</p>
+                            <CardTitle className="font-medium text-lg  tracking-tight uppercase">Nakit Akışı</CardTitle>
+                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-1">Gelir vs Gider karşılaştırması</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase">Gelir</span>
+                                <span className="text-[9px]  text-muted-foreground uppercase">Gelir</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-red-500" />
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase">Gider</span>
+                                <span className="text-[9px]  text-muted-foreground uppercase">Gider</span>
                             </div>
                         </div>
                     </CardHeader>
@@ -169,8 +169,8 @@ export function RaporlarClient({
                                 <Smartphone className="h-4.5 w-4.5 text-violet-500" />
                             </div>
                             <div>
-                                <CardTitle className="text-lg font-bold tracking-tight uppercase">Cihaz Markaları</CardTitle>
-                                <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-0.5">Servis bazlı dağılım</p>
+                                <CardTitle className="font-medium text-lg  tracking-tight uppercase">Cihaz Markaları</CardTitle>
+                                <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-0.5">Servis bazlı dağılım</p>
                             </div>
                         </div>
                     </CardHeader>
@@ -180,7 +180,7 @@ export function RaporlarClient({
                         ) : (
                             <div className="flex flex-col items-center justify-center h-40 text-center gap-3">
                                 <Smartphone className="h-12 w-12 text-muted-foreground/20" />
-                                <p className="text-sm font-bold text-muted-foreground/50 uppercase tracking-wide">Henüz Veri Yok</p>
+                                <p className="text-sm  text-muted-foreground/50 uppercase tracking-wide">Henüz Veri Yok</p>
                             </div>
                         )}
                     </CardContent>
@@ -196,13 +196,13 @@ export function RaporlarClient({
                             <Package className="h-4.5 w-4.5 text-amber-500" />
                         </div>
                         <div>
-                            <CardTitle className="text-lg font-bold tracking-tight uppercase">En Çok Satan Ürünler</CardTitle>
-                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-0.5">Satış adedi bazlı sıralama</p>
+                            <CardTitle className="font-medium text-lg  tracking-tight uppercase">En Çok Satan Ürünler</CardTitle>
+                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-0.5">Satış adedi bazlı sıralama</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
                         <Zap className="h-3.5 w-3.5 text-amber-500" />
-                        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">Top 6</span>
+                        <span className="text-[9px]  text-amber-500 uppercase tracking-tighter">Top 6</span>
                     </div>
                 </CardHeader>
                 <CardContent className="p-7 pt-4">
@@ -211,7 +211,7 @@ export function RaporlarClient({
                     ) : (
                         <div className="flex flex-col items-center justify-center h-40 text-center gap-3">
                             <Package className="h-12 w-12 text-muted-foreground/20" />
-                            <p className="text-sm font-bold text-muted-foreground/50 uppercase tracking-wide">Satış Verisi Bulunamadı</p>
+                            <p className="text-sm  text-muted-foreground/50 uppercase tracking-wide">Satış Verisi Bulunamadı</p>
                         </div>
                     )}
                 </CardContent>
@@ -220,3 +220,8 @@ export function RaporlarClient({
         </div>
     );
 }
+
+
+
+
+

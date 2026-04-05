@@ -81,8 +81,8 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                 <ArrowRightLeft className="h-7 w-7 text-blue-500" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-bold tracking-tight">Hesaplar Arası Transfer</DialogTitle>
-                                <DialogDescription className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
+                                <DialogTitle className="font-medium text-2xl  tracking-tight">Hesaplar Arası Transfer</DialogTitle>
+                                <DialogDescription className="text-xs  text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
                                     Güvenli varlık taşıma
                                 </DialogDescription>
                             </div>
@@ -100,13 +100,13 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                         })()}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">KAYNAK HESAP</p>
-                                        <h4 className="text-lg font-bold tracking-tight">{fromAccount.name}</h4>
+                                        <p className="text-[10px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">KAYNAK HESAP</p>
+                                        <h4 className="font-medium text-lg  tracking-tight">{fromAccount.name}</h4>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">BAKİYE</p>
-                                    <p className="text-xl font-bold tracking-tight">₺{Number(fromAccount.balance).toLocaleString('tr-TR')}</p>
+                                    <p className="text-[10px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">BAKİYE</p>
+                                    <p className="text-xl  tracking-tight">₺{Number(fromAccount.balance).toLocaleString('tr-TR')}</p>
                                 </div>
                             </div>
                         </div>
@@ -114,9 +114,9 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
 
                     <div className="space-y-6">
                         <div className="space-y-4">
-                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">HEDEF HESAP</label>
+                            <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-[0.2em] ml-1">HEDEF HESAP</Label>
                             <Select onValueChange={(v) => setSelectedToId(v)} required>
-                                <SelectTrigger className="h-14 rounded-[1.5rem] border-border/40 bg-background/50 backdrop-blur-sm text-sm font-bold shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                <SelectTrigger className="h-14 rounded-[1.5rem] border-border/40 bg-background/50 backdrop-blur-sm text-sm  shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all">
                                     <SelectValue placeholder="Gönderilecek hesabı seçin" />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-[1.5rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
@@ -131,13 +131,13 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                                         </div>
                                                         <span className="font-extrabold text-xs">{a.name}</span>
                                                     </div>
-                                                    <span className="text-[11px] font-bold text-muted-foreground/60 italic">₺{Number(a.balance).toLocaleString('tr-TR')}</span>
+                                                    <span className="text-[11px]  text-muted-foreground/60 italic">₺{Number(a.balance).toLocaleString('tr-TR')}</span>
                                                 </div>
                                             </SelectItem>
                                         );
                                     })}
                                     {otherAccounts.length === 0 && (
-                                        <p className="text-[11px] font-bold text-center py-4 text-muted-foreground italic">Başka hesap bulunamadı.</p>
+                                        <p className="text-[11px]  text-center py-4 text-muted-foreground italic">Başka hesap bulunamadı.</p>
                                     )}
                                 </SelectContent>
                             </Select>
@@ -145,7 +145,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
 
                         <div className="grid grid-cols-1 gap-6">
                             <div className="space-y-4">
-                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">TRANSFER TUTARI (₺)</label>
+                                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-[0.2em] ml-1">TRANSFER TUTARI (₺)</Label>
                                 <div className="relative group">
                                     <Input
                                         id="amount"
@@ -155,20 +155,20 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                         min="1"
                                         max={fromAccount.balance}
                                         placeholder="0.00"
-                                        className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-lg font-bold pl-12 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-lg  pl-12 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
                                     />
                                     <ArrowRight className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500 opacity-50 transition-transform group-hover:translate-x-1" />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">AÇIKLAMA</label>
+                                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-[0.2em] ml-1">AÇIKLAMA</Label>
                                 <Input
                                     id="description"
                                     name="description"
                                     required
                                     placeholder="Örn: Nakit transferi, Bankaya yatırılan..."
-                                    className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-xs font-bold px-6 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-xs  px-6 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
                         </div>
@@ -179,14 +179,14 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                             type="button"
                             variant="ghost"
                             onClick={() => setOpen(false)}
-                            className="flex-1 h-14 text-xs font-bold rounded-[1.5rem] hover:bg-muted transition-colors uppercase tracking-widest border border-border/40"
+                            className="flex-1 h-14 text-xs  rounded-[1.5rem] hover:bg-muted transition-colors uppercase tracking-widest border border-border/40"
                         >
                             İPTAL
                         </Button>
                         <Button
                             type="submit"
                             disabled={loading || !selectedToId}
-                            className="flex-[2] h-14 text-xs font-bold rounded-[1.5rem] shadow-xl shadow-blue-600/20 bg-blue-600 hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all text-white uppercase tracking-widest"
+                            className="flex-[2] h-14 text-xs  rounded-[1.5rem] shadow-xl shadow-blue-600/20 bg-blue-600 hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all text-white uppercase tracking-widest"
                         >
                             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "TRANSFERİ ONAYLA"}
                         </Button>
@@ -196,3 +196,9 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
         </Dialog>
     );
 }
+
+
+
+
+
+
