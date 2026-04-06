@@ -18,6 +18,7 @@ import {
   Users,
   CreditCard,
   Smartphone,
+  Calendar,
   Truck,
   BarChart3,
   UserCog,
@@ -40,6 +41,11 @@ const menuItems = [
     icon: LayoutDashboard,
     label: "Anasayfa",
     href: "/dashboard",
+  },
+  {
+    icon: Calendar,
+    label: "Randevu Merkezi",
+    href: "/ajanda",
   },
   {
     icon: Wrench,

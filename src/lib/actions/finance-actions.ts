@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-import { format } from "date-fns";
+import { format, isAfter, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { getShopId, getUserId } from "@/lib/auth";
 
@@ -115,6 +115,27 @@ export async function createManualTransaction(data: {
       const type = data.paymentMethod === "CASH" ? "CASH" : data.paymentMethod === "CARD" ? "POS" : "BANK";
       const account = await getOrCreateAccountByType(type as any);
       targetAccountId = account.id;
+    }
+
+    const txDateStr = data.date || format(new Date(), "yyyy-MM-dd");
+    const txDate = startOfDay(new Date(txDateStr));
+    const today = startOfDay(new Date());
+
+    if (isAfter(txDate, today)) {
+      // Future date detected! Forward to agenda instead.
+      const agendaType = data.type === "INCOME" ? "COLLECTION" : "PAYMENT";
+      await prisma.agendaEvent.create({
+        data: {
+          title: data.description,
+          type: agendaType,
+          date: txDate,
+          amount: data.amount,
+          category: data.category || "Finans Planlaması",
+          shopId
+        }
+      });
+      revalidatePath("/ajanda");
+      return { success: true, isFuture: true, message: "İleri tarihli işlem, Randevu Merkezi'ne eklendi." };
     }
 
     const transaction = await prisma.$transaction(async (tx) => {

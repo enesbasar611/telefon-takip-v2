@@ -44,16 +44,21 @@ export async function globalSearchAction(query: string) {
         },
         take: 5
       }),
-      // Search Service Tickets
+      // Search Service Tickets (with customer included)
       prisma.serviceTicket.findMany({
         where: {
           shopId,
           OR: [
             { ticketNumber: { contains: query, mode: 'insensitive' } },
             { deviceModel: { contains: query, mode: 'insensitive' } },
+            { deviceBrand: { contains: query, mode: 'insensitive' } },
+            { imei: { contains: query, mode: 'insensitive' } },
+            { customer: { name: { contains: query, mode: 'insensitive' } } },
+            { customer: { phone: { contains: query, mode: 'insensitive' } } },
           ]
         },
-        take: 5
+        include: { customer: true },
+        take: 8
       })
     ]);
 
@@ -73,8 +78,8 @@ export async function globalSearchAction(query: string) {
       title: c.name,
       subtitle: `${c.phone || 'Telefon Yok'} • ${c.email || 'E-posta Yok'}`,
       type: 'Müşteri',
-      href: `/musteriler?id=${c.id}`,
-      breadcrumb: 'Müşteriler > Profil'
+      href: `/musteriler/${c.id}`,
+      breadcrumb: 'Müşteriler > Müşteri Profili'
     }));
 
     suppliers.forEach((s: any) => results.push({
@@ -86,13 +91,19 @@ export async function globalSearchAction(query: string) {
       breadcrumb: 'Tedarikçiler > Profil'
     }));
 
+    const statusLabels: Record<string, string> = {
+      PENDING: 'Beklemede', APPROVED: 'Onaylandı', REPAIRING: 'Tamirde',
+      WAITING_PART: 'Parça Bekliyor', READY: 'Hazır', DELIVERED: 'Teslim Edildi', CANCELLED: 'İptal'
+    };
+
     serviceTickets.forEach((t: any) => results.push({
       id: t.id,
       title: t.ticketNumber,
-      subtitle: `${t.deviceModel} • ${t.status}`,
+      subtitle: `${t.customer?.name || 'Bilinmiyor'} • ${t.deviceBrand || ''} ${t.deviceModel} • ${statusLabels[t.status] || t.status}`,
       type: 'Servis',
-      href: `/servis?id=${t.id}`,
-      breadcrumb: 'Servis > Teknik Servis Takibi'
+      href: `/servis/${t.id}`,
+      breadcrumb: `Servis > ${t.customer?.name || 'Teknik Servis'}`,
+      customerHref: `/musteriler/${t.customerId}`,
     }));
 
     return serializePrisma(results);

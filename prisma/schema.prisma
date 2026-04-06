@@ -46,6 +46,7 @@ model Shop {
   supplierTransactions SupplierTransaction[]
   settings            Setting[]
   receiptSettings     ReceiptSettings[]
+  agendaEvents        AgendaEvent[]
 }
 
 model RolePermission {
@@ -707,6 +708,25 @@ model ReceiptSettings {
   shop      Shop     @relation(fields: [shopId], references: [id])
 }
 
+model AgendaEvent {
+  id          String   @id @default(cuid())
+  title       String
+  type        AgendaEventType
+  date        DateTime
+  category    String?
+  amount      Decimal? @db.Decimal(12, 2)
+  assignedTo  String[]
+  notes       String?  @db.Text
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId, date])
+}
+
 enum OrderStatus {
   PENDING
   ON_WAY
@@ -768,3 +788,11 @@ enum SessionStatus {
   OPEN
   CLOSED
 }
+
+enum AgendaEventType {
+  SERVICE
+  PAYMENT
+  COLLECTION
+  TASK
+}
+

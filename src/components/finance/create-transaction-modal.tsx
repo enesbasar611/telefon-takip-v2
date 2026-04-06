@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -70,6 +71,9 @@ interface CreateTransactionModalProps {
 export function CreateTransactionModal({ trigger, initialAccounts, initialData }: CreateTransactionModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [accounts, setAccounts] = useState<any[]>(initialAccounts || []);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [summary, setSummary] = useState({ income: 0, expense: 0 });
@@ -101,6 +105,25 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
   });
 
   const transactionType = watch("type");
+
+  // Auto-open from URL query param (e.g. from global search: ?action=add-income)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add-income') {
+      setValue('type', 'INCOME');
+      setOpen(true);
+      // Clean the param from URL
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('action');
+      router.replace(`${pathname}${params.size > 0 ? '?' + params.toString() : ''}`);
+    } else if (action === 'add-expense') {
+      setValue('type', 'EXPENSE');
+      setOpen(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('action');
+      router.replace(`${pathname}${params.size > 0 ? '?' + params.toString() : ''}`);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (open) {
@@ -183,7 +206,11 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       }
 
       if (result.success) {
-        toast.success(initialData ? "İşlem güncellendi." : "İşlem başarıyla kaydedildi.");
+        if ("isFuture" in result && result.isFuture) {
+          toast.success("message" in result ? result.message : "İleri tarihli işlem, Randevu Merkezi'ne eklendi.");
+        } else {
+          toast.success(initialData ? "İşlem güncellendi." : "İşlem başarıyla kaydedildi.");
+        }
         setOpen(false);
         if (!initialData) {
           reset();

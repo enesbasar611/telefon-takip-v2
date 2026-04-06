@@ -64,8 +64,8 @@ export default async function DashboardLayout({
                                         <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
                                         <DashboardContent>
                                             <Navbar />
-                                            <main className="flex-1 p-6 lg:p-10 overflow-auto custom-scrollbar">
-                                                <div className="max-w-[1600px] mx-auto w-full pb-20 lg:pb-0">
+                                            <main className="flex-1 p-6 lg:p-10 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                                                <div className="max-w-[1600px] mx-auto w-full min-w-0 pb-20 lg:pb-0">
                                                     {children}
                                                 </div>
                                             </main>
