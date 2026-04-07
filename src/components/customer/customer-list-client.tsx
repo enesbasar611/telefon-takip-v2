@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye, MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2 } from "lucide-react";
+import {
+    Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye,
+    MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2,
+    ChevronLeft, ChevronRight, Loader2
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import {
     DropdownMenu,
@@ -28,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 const getLoyaltyTier = (points: number) => {
     if (points >= 1000) return { label: "PLATİN", color: "text-blue-400 bg-blue-400/10 border-blue-400/20", icon: Gem };
@@ -36,23 +42,40 @@ const getLoyaltyTier = (points: number) => {
     return { label: "BRONZ", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star };
 };
 
-export function CustomerListClient({ customers }: { customers: any[] }) {
-    const [search, setSearch] = useState("");
-    const [typeFilter, setTypeFilter] = useState<"all" | "VIP" | "KURUMSAL">("all");
+interface Props {
+    initialCustomers: any[];
+    totalPages: number;
+    totalCount: number;
+    currentPage: number;
+}
+
+export function CustomerListClient({ initialCustomers, totalPages, totalCount, currentPage }: Props) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const [search, setSearch] = useState(searchParams.get("search") || "");
+    const debouncedSearch = useDebounce(search, 500);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
-    const filtered = customers.filter((c) => {
-        const matchSearch =
-            c.name?.toLowerCase().includes(search.toLowerCase()) ||
-            c.phone?.includes(search) ||
-            c.email?.toLowerCase().includes(search.toLowerCase());
-        const matchType =
-            typeFilter === "all" ||
-            (typeFilter === "VIP" && c.isVip) ||
-            (typeFilter === "KURUMSAL" && c.type === "KURUMSAL");
-        return matchSearch && matchType;
-    });
+    // Sync search to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (debouncedSearch) {
+            params.set("search", debouncedSearch);
+        } else {
+            params.delete("search");
+        }
+        params.set("page", "1"); // Reset to page 1 on search
+        router.push(`${pathname}?${params.toString()}`);
+    }, [debouncedSearch]);
+
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams);
+        params.set("page", page.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     const handleDelete = async () => {
         if (!deleteId) return;
@@ -60,6 +83,7 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
             const result = await deleteCustomer(deleteId);
             if (result.success) {
                 toast.success("Müşteri başarıyla silindi.");
+                router.refresh();
             } else {
                 toast.error(result.error || "Silme işlemi başarısız.");
             }
@@ -71,11 +95,11 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
         <div className="p-8 bg-background text-foreground min-h-screen space-y-8">
             <PageHeader
                 title="Müşteri Portföyü"
-                description="Müşteri tabanını yönetin, sadakat puanlarını takip edin ve kurumsal ilişkileri güçlendirin."
+                description={`Toplam ${totalCount} müşteri kayıtlı. Müşteri bazlı işlem geçmişini ve sadakat puanlarını takip edin.`}
                 icon={Users}
                 actions={
                     <Link href="/musteriler/yeni">
-                        <Button className="bg-blue-500 hover:bg-blue-400 text-black  px-8 h-12 rounded-2xl transition-all hover:-translate-y-1 flex gap-3">
+                        <Button className="bg-blue-500 hover:bg-blue-400 text-black px-8 h-12 rounded-2xl transition-all hover:-translate-y-1 flex gap-3">
                             <Plus className="h-5 w-5 stroke-[3px]" />
                             YENİ MÜŞTERİ TANIMLA
                         </Button>
@@ -83,32 +107,21 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                 }
             />
 
-            {/* Search & Filter */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-3 relative group">
+            {/* Search */}
+            <div className="grid grid-cols-1 gap-6">
+                <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Müşteri adı, telefon veya e-posta ile ara..."
-                        className="h-16 pl-12 rounded-[1.5rem] text-sm  border-border/40 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                        className="h-16 pl-12 rounded-[1.5rem] text-sm border-border/40 focus:ring-1 focus:ring-blue-500/20 transition-all"
                     />
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant={typeFilter === "VIP" ? "default" : "ghost"}
-                        onClick={() => setTypeFilter(typeFilter === "VIP" ? "all" : "VIP")}
-                        className="h-16 flex-1 rounded-[1.5rem]  text-[10px] transition-all"
-                    >
-                        VIP ÜYELER
-                    </Button>
-                    <Button
-                        variant={typeFilter === "KURUMSAL" ? "default" : "ghost"}
-                        onClick={() => setTypeFilter(typeFilter === "KURUMSAL" ? "all" : "KURUMSAL")}
-                        className="h-16 flex-1 rounded-[1.5rem]  text-[10px] transition-all"
-                    >
-                        KURUMSAL
-                    </Button>
+                    {isPending && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -117,15 +130,15 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                 <Table>
                     <TableHeader className="font-medium bg-muted/10">
                         <TableRow className="border-b border-border/40 hover:bg-transparent">
-                            <TableHead className="font-medium px-8 py-5 text-[10px]  text-muted-foreground/60 uppercase tracking-widest">Profil Bilgisi</TableHead>
-                            <TableHead className="font-medium py-5 text-[10px]  text-muted-foreground/60 uppercase tracking-widest">Sadakat</TableHead>
-                            <TableHead className="font-medium py-5 text-[10px]  text-muted-foreground/60 uppercase tracking-widest">İletişim</TableHead>
-                            <TableHead className="font-medium py-5 text-[10px]  text-muted-foreground/60 uppercase tracking-widest text-center">İşlem Hacmi</TableHead>
-                            <TableHead className="font-medium px-8 py-5 text-[10px]  text-muted-foreground/60 uppercase tracking-widest text-right">Aksiyon</TableHead>
+                            <TableHead className="font-medium px-8 py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">Profil Bilgisi</TableHead>
+                            <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">Sadakat</TableHead>
+                            <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">İletişim</TableHead>
+                            <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest text-center">İşlem Hacmi</TableHead>
+                            <TableHead className="font-medium px-8 py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest text-right">Aksiyon</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filtered.map((customer: any) => {
+                        {initialCustomers.map((customer: any) => {
                             const tier = getLoyaltyTier(customer.loyaltyPoints || 0);
                             return (
                                 <TableRow key={customer.id} className="border-b border-border/20 group hover:bg-muted/10 transition-colors">
@@ -145,12 +158,12 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className=" text-sm text-foreground group-hover:text-blue-500 transition-colors">{customer.name}</span>
+                                                    <span className="text-sm text-foreground group-hover:text-blue-500 transition-colors">{customer.name}</span>
                                                     {customer.isVip && (
-                                                        <Badge className="bg-blue-500/10 text-blue-500 border-none  text-[8px] px-2 py-1 rounded-lg">VIP</Badge>
+                                                        <Badge className="bg-blue-500/10 text-blue-500 border-none text-[8px] px-2 py-1 rounded-lg">VIP</Badge>
                                                     )}
                                                 </div>
-                                                <div className="text-[9px] text-muted-foreground/60  flex items-center gap-1 mt-0.5">
+                                                <div className="text-[9px] text-muted-foreground/60 flex items-center gap-1 mt-0.5">
                                                     {customer.type === 'KURUMSAL' ? <Building2 className="h-3 w-3" /> : <UserCircle className="h-3 w-3" />}
                                                     {customer.type || "BİREYSEL"}
                                                 </div>
@@ -158,18 +171,18 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={`${tier.color} border-none  text-[9px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 w-fit`}>
+                                        <Badge variant="outline" className={`${tier.color} border-none text-[9px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 w-fit`}>
                                             <tier.icon className="h-3 w-3" />
                                             {tier.label} ({customer.loyaltyPoints || 0})
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5 text-xs  text-blue-500">
+                                            <div className="flex items-center gap-1.5 text-xs text-blue-500">
                                                 <Phone className="h-3 w-3" />
                                                 {customer.phone || "—"}
                                             </div>
-                                            <div className="text-[9px] text-muted-foreground/60  truncate max-w-[150px]">
+                                            <div className="text-[9px] text-muted-foreground/60 truncate max-w-[150px]">
                                                 {customer.email || "E-posta yok"}
                                             </div>
                                         </div>
@@ -200,16 +213,16 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="p-2 min-w-[200px]">
-                                                    <DropdownMenuLabel className="text-[10px]  text-muted-foreground/60 p-3 text-center uppercase tracking-widest">Profil Yönetimi</DropdownMenuLabel>
+                                                    <DropdownMenuLabel className="text-[10px] text-muted-foreground/60 p-3 text-center uppercase tracking-widest">Profil Yönetimi</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
                                                     <Link href={`/musteriler/duzenle/${customer.id}`}>
-                                                        <DropdownMenuItem className="p-3 text-[10px]  rounded-lg cursor-pointer flex gap-3 items-center">
+                                                        <DropdownMenuItem className="p-3 text-[10px] rounded-lg cursor-pointer flex gap-3 items-center text-foreground">
                                                             <UserCircle className="h-4 w-4 text-blue-500" /> Profili Düzenle
                                                         </DropdownMenuItem>
                                                     </Link>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        className="p-3 text-[10px]  rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center"
+                                                        className="p-3 text-[10px] rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center"
                                                         onClick={() => setDeleteId(customer.id)}
                                                     >
                                                         <Trash2 className="h-4 w-4" /> Kalıcı Olarak Sil
@@ -221,43 +234,104 @@ export function CustomerListClient({ customers }: { customers: any[] }) {
                                 </TableRow>
                             );
                         })}
-                        {filtered.length === 0 && (
+                        {initialCustomers.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={5} className="py-24 text-center text-muted-foreground">
                                     <div className="flex flex-col items-center gap-4">
                                         <Users className="h-16 w-16 opacity-10" />
-                                        <p className=" text-lg">{search ? "Arama kriterine uyan müşteri bulunamadı." : "Henüz kayıtlı müşteri yok."}</p>
+                                        <p className="text-lg">{search ? "Arama kriterine uyan müşteri bulunamadı." : "Henüz kayıtlı müşteri yok."}</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="p-6 border-t border-border/40 bg-muted/5 flex items-center justify-between">
+                        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">
+                            Sayfa {currentPage} / {totalPages}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="h-10 w-10 rounded-xl border-border/40 hover:bg-muted transition-all"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+
+                            <div className="flex items-center gap-1 px-2">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+
+                                    if (pageNum > 0 && pageNum <= totalPages) {
+                                        return (
+                                            <Button
+                                                key={pageNum}
+                                                variant={currentPage === pageNum ? "default" : "ghost"}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={cn(
+                                                    "h-10 w-10 rounded-xl text-[10px] font-bold transition-all",
+                                                    currentPage === pageNum ? "bg-blue-500 text-black hover:bg-blue-400" : "text-muted-foreground"
+                                                )}
+                                            >
+                                                {pageNum}
+                                            </Button>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="h-10 w-10 rounded-xl border-border/40 hover:bg-muted transition-all"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Delete Confirm Dialog */}
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
+                <AlertDialogContent className="bg-background border-border/50 rounded-[2rem]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Müşteriyi silmek istediğinizden emin misiniz?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-white">Müşteriyi silmek istediğinizden emin misiniz?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
                             Bu işlem geri alınamaz. Müşteriye ait tüm servis ve satış kayıtları etkilenebilir.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel className="bg-white/5 border-border/50 text-muted-foreground hover:bg-white/10 hover:text-white rounded-xl">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             disabled={isPending}
-                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-600/20"
                         >
-                            {isPending ? "Siliniyor..." : "Evet, Sil"}
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kalıcı Olarak Sil"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </div>
     );
+}
+
+// Re-implement cn since it was lost or not imported correctly if I missed it
+function cn(...inputs: any[]) {
+    return inputs.filter(Boolean).join(" ");
 }
 
 

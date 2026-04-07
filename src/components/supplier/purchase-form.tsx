@@ -191,7 +191,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[1000px] max-h-[95vh] overflow-y-auto bg-[#0a0f18] border-white/10 p-0 overflow-hidden rounded-3xl text-slate-200">
+            <DialogContent className="max-w-[1000px] max-h-[95vh] overflow-y-auto bg-[#0a0f18] border-border p-0 overflow-hidden rounded-3xl text-foreground/90">
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
                     {/* Main Form Area */}
                     <div className="p-8 space-y-8">
@@ -220,10 +220,10 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                 <div className="space-y-1.5">
                                     <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest px-1">Tedarikçi Seçimi</Label>
                                     <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl  text-xs">
+                                        <SelectTrigger className="h-12 bg-white/5 border-border rounded-xl  text-xs">
                                             <SelectValue placeholder="Tedarikçi seçin..." />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                                        <SelectContent className="bg-card border-border text-foreground/90">
                                             {suppliers.map(s => (
                                                 <SelectItem key={s.id} value={s.id} className=" text-xs">{s.name}</SelectItem>
                                             ))}
@@ -233,7 +233,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
                                 <div className="space-y-1.5">
                                     <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest px-1">Alım Tarihi</Label>
-                                    <div className="h-12 bg-white/5 border-white/10 rounded-xl flex items-center px-4 gap-3 text-sm font-medium">
+                                    <div className="h-12 bg-white/5 border-border rounded-xl flex items-center px-4 gap-3 text-sm font-medium">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                                         {new Date().toLocaleDateString("tr-TR")}
                                     </div>
@@ -244,7 +244,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     <Input
                                         value={orderNo}
                                         onChange={e => setOrderNo(e.target.value)}
-                                        className="h-12 bg-white/5 border-white/10 rounded-xl  text-xs"
+                                        className="h-12 bg-white/5 border-border rounded-xl  text-xs"
                                         placeholder="# TR-202"
                                     />
                                 </div>
@@ -252,7 +252,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                         </div>
 
                         {/* Ürün Listesi */}
-                        <div className="space-y-4 pt-4 border-t border-white/5">
+                        <div className="space-y-4 pt-4 border-t border-border/50">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
@@ -260,15 +260,15 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     </div>
                                     <h3 className="font-medium text-sm  text-white">Ürün / Parça Listesi</h3>
                                 </div>
-                                <Button onClick={addItem} size="sm" variant="outline" className="h-9 px-4 rounded-xl  text-[10px] gap-2 border-white/10 hover:bg-white/5">
+                                <Button onClick={addItem} size="sm" variant="outline" className="h-9 px-4 rounded-xl  text-[10px] gap-2 border-border hover:bg-white/5">
                                     <Plus className="h-3.5 w-3.5" />
                                     SATIR EKLE
                                 </Button>
                             </div>
 
-                            <div className="rounded-2xl border border-white/5 overflow-hidden">
+                            <div className="rounded-2xl border border-border/50 overflow-hidden">
                                 <table className="w-full text-left">
-                                    <thead className="bg-white/5 border-b border-white/5">
+                                    <thead className="bg-white/5 border-b border-border/50">
                                         <tr className="text-[10px]  text-muted-foreground uppercase tracking-widest">
                                             <th className="px-5 py-4">Ürün Adı / Açıklama</th>
                                             <th className="px-5 py-4 text-center">Miktar</th>
@@ -293,7 +293,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                                             placeholder="Ürün adı yazınız..."
                                                         />
                                                         {activeSearchId === item.id && searchResults[item.id]?.length > 0 && (
-                                                            <div className="absolute top-full left-0 w-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                                                            <div className="absolute top-full left-0 w-full mt-1 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden py-1">
                                                                 {searchResults[item.id].map((p) => (
                                                                     <button
                                                                         key={p.id}
@@ -359,7 +359,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                         </div>
 
                         {/* Ödeme Bilgileri */}
-                        <div className="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
+                        <div className="grid grid-cols-2 gap-8 pt-4 border-t border-border/50">
                             <div className="space-y-4">
                                 <p className="text-[10px]  text-muted-foreground uppercase tracking-widest px-1">Ödeme Durumu</p>
                                 <div className="flex bg-white/5 p-1 rounded-2xl">
@@ -379,10 +379,10 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
                                 <p className="text-[10px]  text-muted-foreground uppercase tracking-widest px-1 mt-6">Ödeme Yöntemi</p>
                                 <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                                    <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl  text-xs text-foreground">
+                                    <SelectTrigger className="h-12 bg-white/5 border-border rounded-xl  text-xs text-foreground">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                                    <SelectContent className="bg-card border-border text-foreground/90">
                                         <SelectItem value="CASH" className=" text-xs">Nakit Ödeme</SelectItem>
                                         <SelectItem value="TRANSFER" className=" text-xs">Banka Havalesi / EFT</SelectItem>
                                         <SelectItem value="CARD" className=" text-xs">Kredi Kartı</SelectItem>
@@ -400,10 +400,10 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                             } />
                                         </div>
                                         <Select value={accountId} onValueChange={setAccountId}>
-                                            <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-xs text-foreground data-[state=open]:ring-2 data-[state=open]:ring-blue-500/50">
+                                            <SelectTrigger className="h-12 bg-white/5 border-border rounded-xl text-xs text-foreground data-[state=open]:ring-2 data-[state=open]:ring-blue-500/50">
                                                 <SelectValue placeholder="Ödeme Hangi Kasadan Çıkacak?" />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-[#0B101B] border-white/10 min-w-[240px] rounded-xl">
+                                            <SelectContent className="bg-[#0B101B] border-border min-w-[240px] rounded-xl">
                                                 {accounts.map(acc => (
                                                     <SelectItem key={acc.id} value={acc.id} className="text-xs p-3">
                                                         <div className="flex items-center justify-between w-full min-w-[200px]">
@@ -446,7 +446,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                     </div>
 
                     {/* Right Sidebar - Info */}
-                    <div className="bg-[#121a28] border-l border-white/5 p-8 space-y-8">
+                    <div className="bg-[#121a28] border-l border-border/50 p-8 space-y-8">
                         <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-3xl p-6 relative overflow-hidden text-white shadow-2xl">
                             <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
                             <div className="relative z-10 space-y-4">
@@ -460,7 +460,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                 </div>
                                 <Badge className="bg-rose-500/20 text-rose-200 border-none  text-[10px] py-0.5 px-2">BORÇ BAKİYESİ</Badge>
 
-                                <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10">
+                                <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-border">
                                     <div>
                                         <p className="text-[9px]  opacity-60">VADESİ GELEN</p>
                                         <p className="text-sm  uppercase tracking-tight">
@@ -492,7 +492,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
                                     if (unpaidOrders.length === 0) {
                                         return (
-                                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col items-center justify-center text-center gap-3">
+                                            <div className="bg-white/5 rounded-2xl p-6 border border-border/50 flex flex-col items-center justify-center text-center gap-3">
                                                 <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                                                     <CheckCircle2 className="h-5 w-5" />
                                                 </div>

@@ -56,7 +56,7 @@ export function RaporlarClient({
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-5">
-                    <div className="h-14 w-14 rounded-[1.6rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_24px_theme(colors.primary/0.15)] shrink-0">
+                    <div className="h-14 w-14 rounded-[1.6rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_24px_rgba(var(--primary),0.15)] shrink-0">
                         <BarChart3 className="h-7 w-7 text-primary" />
                     </div>
                     <div>

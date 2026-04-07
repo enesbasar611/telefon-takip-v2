@@ -14,7 +14,7 @@ export async function getSettings() {
   }
 }
 
-export async function updateSetting(key: string, value: string) {
+export async function updateSetting(key: string, value: string, revalidate = true) {
   try {
     const shopId = await getShopId();
     await prisma.setting.upsert({
@@ -22,7 +22,7 @@ export async function updateSetting(key: string, value: string) {
       update: { value },
       create: { key, value, shopId }
     });
-    revalidatePath("/ayarlar");
+    if (revalidate) revalidatePath("/ayarlar");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ayar kaydedilemedi." };

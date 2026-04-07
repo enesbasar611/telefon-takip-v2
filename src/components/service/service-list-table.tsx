@@ -55,7 +55,9 @@ import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { ServiceReceiptModal } from "./service-receipt-modal";
 import { ServiceManagementModal } from "./service-management-modal";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { cn, formatPhone } from "@/lib/utils";
+import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string; icon: any }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500", icon: Clock },
@@ -91,14 +93,14 @@ export const columns: ColumnDef<any>[] = [
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className=" text-sm">{row.original.deviceBrand}</span>
-        <span className="text-sm text-slate-400 ">{row.original.deviceModel}</span>
+        <span className="text-sm text-muted-foreground ">{row.original.deviceModel}</span>
       </div>
     ),
   },
   {
     accessorKey: "problemDesc",
     header: "ARIZA TANIMI",
-    cell: ({ row }) => <div className="max-w-[150px] truncate text-xs  text-slate-500">"{row.getValue("problemDesc")}"</div>,
+    cell: ({ row }) => <div className="max-w-[150px] truncate text-xs  text-muted-foreground/80">"{row.getValue("problemDesc")}"</div>,
   },
   {
     accessorKey: "status",
@@ -116,7 +118,7 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "createdAt",
     header: "KAYIT TARİHİ",
-    cell: ({ row }) => <div className="text-xs  text-slate-500">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
+    cell: ({ row }) => <div className="text-xs  text-muted-foreground/80">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
   },
   {
     accessorKey: "estimatedCost",
@@ -137,6 +139,9 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
   const [showManagement, setShowManagement] = useState(false);
   const [isQuickDeliver, setIsQuickDeliver] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappTicket, setWhatsappTicket] = useState<any>(null);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -205,18 +210,25 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                 <UserCircle className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-blue-500/10" title="WhatsApp Mesaj">
-                <MessageCircle className="h-4 w-4" />
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-blue-500/10"
+              title="WhatsApp Mesaj"
+              onClick={() => {
+                setWhatsappTicket(ticket);
+                setWhatsappModalOpen(true);
+              }}
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-white/5">
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-border/50">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[220px] bg-slate-900 border border-white/5 text-white p-2 rounded-2xl backdrop-blur-3xl">
+              <DropdownMenuContent align="end" className="w-[220px] bg-card border border-border/50 text-white p-2 rounded-2xl backdrop-blur-3xl">
                 <DropdownMenuLabel className="text-xs  text-gray-500 p-3">Operasyon Paneli</DropdownMenuLabel>
                 <DropdownMenuItem
                   className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
@@ -286,14 +298,14 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
   return (
     <div className="w-full space-y-4">
       {/* Status Filter Bar */}
-      <div className="flex items-center gap-2 p-2 bg-slate-900/60 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar mx-8 mt-8 shadow-inner backdrop-blur-xl">
+      <div className="flex items-center gap-2 p-2 bg-card/60 border border-border/50 rounded-2xl overflow-x-auto no-scrollbar mx-8 mt-8 shadow-inner backdrop-blur-xl">
         <Button
           variant={statusFilter === "ALL" ? "default" : "ghost"}
           size="sm"
           onClick={() => setStatusFilter("ALL")}
           className={cn(
             "h-10 px-8 rounded-xl text-xs  transition-all",
-            statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
+            statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-white"
           )}
         >
           TÜMÜ
@@ -308,7 +320,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               onClick={() => setStatusFilter(key)}
               className={cn(
                 "h-10 px-8 rounded-xl text-xs  transition-all gap-3 shrink-0",
-                statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-slate-500 hover:text-white"
+                statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-white"
               )}
             >
               <div className={cn("h-2 w-2 rounded-full", config.color)} />
@@ -324,17 +336,17 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             placeholder="Müşteri, Fiş No veya IMEI Ara..."
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="pl-10 h-12 bg-white/[0.02] border-white/5 rounded-2xl text-xs  text-white focus:bg-white/[0.05] transition-all"
+            className="pl-10 h-12 bg-white/[0.02] border-border/50 rounded-2xl text-xs  text-white focus:bg-white/[0.05] transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2  text-xs h-12 bg-white/[0.02] border-white/5 px-6 rounded-2xl">
+              <Button variant="outline" className="gap-2  text-xs h-12 bg-white/[0.02] border-border/50 px-6 rounded-2xl">
                 Sütunlar <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-slate-900 border-white/5 text-slate-300">
+            <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
@@ -387,6 +399,35 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
         </>
       )}
 
+      {whatsappTicket && (
+        <WhatsAppConfirmModal
+          isOpen={whatsappModalOpen}
+          onClose={() => {
+            setWhatsappModalOpen(false);
+            setWhatsappTicket(null);
+          }}
+          phone={whatsappTicket.customer?.phone || ""}
+          customerName={whatsappTicket.customer?.name}
+          initialMessage={replacePlaceholders(
+            (() => {
+              switch (whatsappTicket.status) {
+                case "READY": return WHATSAPP_TEMPLATES.READY;
+                case "APPROVED": return WHATSAPP_TEMPLATES.APPROVED;
+                case "REPAIRING": return WHATSAPP_TEMPLATES.REPAIRING;
+                case "WAITING_PART": return WHATSAPP_TEMPLATES.WAITING_PART;
+                case "DELIVERED": return WHATSAPP_TEMPLATES.DELIVERED;
+                default: return WHATSAPP_TEMPLATES.NEW_SERVICE;
+              }
+            })(),
+            {
+              customer: whatsappTicket.customer?.name || "",
+              device: `${whatsappTicket.deviceBrand} ${whatsappTicket.deviceModel}`,
+              ticket: whatsappTicket.ticketNumber || ""
+            }
+          )}
+        />
+      )}
+
       {/* Mobile View */}
       <div className="lg:hidden space-y-4 px-6 pb-6">
         {table.getRowModel().rows?.length ? (
@@ -398,7 +439,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               <div
                 key={ticket.id}
                 className={cn(
-                  "p-8 matte-card rounded-[2.5rem] border border-white/5 bg-slate-900/40 space-y-6 relative overflow-hidden",
+                  "p-8 matte-card rounded-[2.5rem] border border-border/50 bg-card/40 space-y-6 relative overflow-hidden",
                   highlightedId === ticket.id && "animate-blink-blue"
                 )}
                 onClick={() => {
@@ -409,21 +450,21 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
               >
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs  bg-slate-900 border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
+                    <span className="text-xs  bg-card border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
                     <h3 className="font-medium  text-white text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
-                    <p className="text-xs text-slate-500 ">{ticket.customer?.name}</p>
+                    <p className="text-xs text-muted-foreground/80 ">{ticket.customer?.name}</p>
                   </div>
                   <Badge className={`${config.color} border-none text-xs  px-3 py-1`}>
                     {config.label}
                   </Badge>
                 </div>
 
-                <div className="bg-slate-900/60 p-5 rounded-2xl border border-white/[0.03]">
+                <div className="bg-card/60 p-5 rounded-2xl border border-white/[0.03]">
                   <p className="text-xs  text-slate-600 mb-2">Arıza Tanımı</p>
-                  <p className="text-xs text-slate-300 ">"{ticket.problemDesc}"</p>
+                  <p className="text-xs text-foreground ">"{ticket.problemDesc}"</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                <div className="flex items-center justify-between pt-4 border-t border-border/50">
                   <div className="flex flex-col">
                     <span className="text-xs text-slate-600 ">Tahmini Ücret</span>
                     <span className="text-xl  text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
@@ -447,7 +488,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-12 w-12 rounded-2xl bg-slate-900 border border-border/10 text-slate-400"
+                      className="h-12 w-12 rounded-2xl bg-card border border-border/10 text-muted-foreground"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedTicket(ticket);
@@ -471,17 +512,17 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             );
           })
         ) : (
-          <p className="text-center py-10 text-slate-500 ">Kayıt bulunamadı.</p>
+          <p className="text-center py-10 text-muted-foreground/80 ">Kayıt bulunamadı.</p>
         )}
       </div>
 
       <div className="hidden lg:block">
         <Table>
-          <TableHeader className="font-medium bg-slate-900/60">
+          <TableHeader className="font-medium bg-card/60">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent border-white/5">
+              <TableRow key={headerGroup.id} className="hover:bg-transparent border-border/50">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="font-medium  text-xs tracking-[0.2em] text-slate-500 py-8">
+                  <TableHead key={header.id} className="font-medium  text-xs tracking-[0.2em] text-muted-foreground/80 py-8">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -500,7 +541,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   className={cn(
-                    "hover:bg-blue-600/5 transition-colors border-white/5 last:border-0",
+                    "hover:bg-blue-600/5 transition-colors border-border/50 last:border-0",
                     highlightedId === row.original.id && "animate-blink-blue"
                   )}
                 >
@@ -528,8 +569,8 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
         </Table>
       </div>
 
-      <div className="flex items-center justify-between p-10 border-t border-white/5 bg-slate-900/40">
-        <div className="text-xs  text-slate-500">
+      <div className="flex items-center justify-between p-10 border-t border-border/50 bg-card/40">
+        <div className="text-xs  text-muted-foreground/80">
           SİSTEMDE TOPLAM {filteredData.length} İŞLEM KAYDI LİSTELENİYOR
         </div>
         <div className="flex gap-4">
@@ -538,7 +579,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className=" text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className=" text-xs bg-white/[0.02] border border-border/50 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
           >
             ÖNCEKİ
           </Button>
@@ -547,7 +588,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className=" text-xs bg-white/[0.02] border border-white/5 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className=" text-xs bg-white/[0.02] border border-border/50 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
           >
             SONRAKİ
           </Button>

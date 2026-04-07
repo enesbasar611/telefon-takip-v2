@@ -24,6 +24,7 @@ import { useSupplierOrders } from "@/lib/context/supplier-order-context";
 import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 
 interface SupplierOrderListsPanelProps {
     isOpen: boolean;
@@ -34,6 +35,8 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
     const { orders, updateQty, removeProduct, clearSupplier, totalItemCount } = useSupplierOrders();
     const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set(Object.keys(orders)));
     const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
     const supplierIds = Object.keys(orders);
 
@@ -45,7 +48,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
         });
     };
 
-    const sendWhatsApp = (supplierId: string) => {
+    const handleWhatsAppClick = (supplierId: string) => {
         const list = orders[supplierId];
         if (!list) return;
 
@@ -53,17 +56,15 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
             .map((item) => `- ${item.name} x${item.quantity}`)
             .join("\n");
 
-        const message = encodeURIComponent(
-            `*Sipariş Listesi — ${list.supplierName}*\n\n${lines}\n\n_TakipV2 sistemi üzerinden gönderildi._`
-        );
+        const initialMessage = `*Sipariş Listesi — ${list.supplierName}*\n\n${lines}\n\n_TakipV2 sistemi üzerinden gönderildi._`;
 
-        const phone = list.supplierPhone?.replace(/\D/g, "") ?? "";
-        const url = phone
-            ? `https://wa.me/${phone.startsWith("0") ? "90" + phone.slice(1) : phone}?text=${message}`
-            : `https://wa.me?text=${message}`;
-
-        window.open(url, "_blank");
-        toast.success(`${list.supplierName} için WhatsApp açılıyor...`);
+        setSelectedSupplier({
+            id: supplierId,
+            name: list.supplierName,
+            phone: list.supplierPhone,
+            message: initialMessage
+        });
+        setWhatsappModalOpen(true);
     };
 
     const handleCreateOrder = async (supplierId: string, items: any[], supplierName: string) => {
@@ -108,9 +109,9 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent side="right" className="w-full sm:w-[480px] bg-card border-l border-white/5 p-0 flex flex-col overflow-hidden">
+            <SheetContent side="right" className="w-full sm:w-[480px] bg-card border-l border-border/50 p-0 flex flex-col overflow-hidden">
                 {/* Header */}
-                <SheetHeader className="p-6 border-b border-white/5 shrink-0">
+                <SheetHeader className="p-6 border-b border-border/50 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center">
                             <ShoppingBasket className="h-5 w-5 text-blue-500" />
@@ -128,11 +129,11 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {supplierIds.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                            <div className="h-16 w-16 rounded-2xl bg-white/5 border border-border flex items-center justify-center">
                                 <Sparkles className="h-8 w-8 text-slate-600" />
                             </div>
                             <div className="text-center">
-                                <h3 className="font-medium  text-slate-500 uppercase text-sm">Liste Boş</h3>
+                                <h3 className="font-medium  text-muted-foreground/80 uppercase text-sm">Liste Boş</h3>
                                 <p className="text-xs text-slate-600 font-medium mt-1 max-w-44 leading-relaxed">
                                     Analiz modalındaki + butonuyla ürün ekleyin.
                                 </p>
@@ -145,7 +146,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                             const totalQty = list.items.reduce((s, i) => s + i.quantity, 0);
 
                             return (
-                                <div key={supplierId} className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                                <div key={supplierId} className="rounded-2xl bg-white/[0.02] border border-border/50 overflow-hidden">
                                     {/* Supplier header row */}
                                     <button
                                         onClick={() => toggleExpand(supplierId)}
@@ -174,14 +175,14 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
 
                                     {/* Expanded items */}
                                     {isExpanded && (
-                                        <div className="border-t border-white/5">
+                                        <div className="border-t border-border/50">
                                             <div className="p-3 space-y-2">
                                                 {list.items.map((item, idx) => (
                                                     <div
                                                         key={`${item.productId ?? item.name}-${idx}`}
                                                         className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] group"
                                                     >
-                                                        <div className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                                                        <div className="h-7 w-7 rounded-lg bg-white/5 border border-border flex items-center justify-center shrink-0">
                                                             <Package className="h-3.5 w-3.5 text-muted-foreground" />
                                                         </div>
                                                         <span className="flex-1 text-xs  text-foreground truncate">{item.name}</span>
@@ -190,7 +191,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                         <div className="flex items-center gap-1 shrink-0">
                                                             <button
                                                                 onClick={() => updateQty(supplierId, item.productId, item.name, item.quantity - 1)}
-                                                                className="h-6 w-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                                                                className="h-6 w-6 rounded-md bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                                                             >
                                                                 <Minus className="h-2.5 w-2.5" />
                                                             </button>
@@ -198,11 +199,11 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                                                 type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => updateQty(supplierId, item.productId, item.name, parseInt(e.target.value) || 1)}
-                                                                className="h-6 w-10 text-center bg-white/5 border-white/10 text-[11px]  text-blue-400 px-1 rounded-md focus-visible:ring-blue-500"
+                                                                className="h-6 w-10 text-center bg-white/5 border-border text-[11px]  text-blue-400 px-1 rounded-md focus-visible:ring-blue-500"
                                                             />
                                                             <button
                                                                 onClick={() => updateQty(supplierId, item.productId, item.name, item.quantity + 1)}
-                                                                className="h-6 w-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                                                                className="h-6 w-6 rounded-md bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                                                             >
                                                                 <Plus className="h-2.5 w-2.5" />
                                                             </button>
@@ -221,7 +222,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                                             {/* Actions */}
                                             <div className="px-3 pb-3 flex items-center gap-2">
                                                 <Button
-                                                    onClick={() => sendWhatsApp(supplierId)}
+                                                    onClick={() => handleWhatsAppClick(supplierId)}
                                                     className="flex-1 h-10 rounded-xl bg-[#25D366] hover:bg-[#22c55e] text-white  text-[10px] gap-2"
                                                 >
                                                     <MessageCircle className="h-4 w-4 shrink-0" />
@@ -268,6 +269,19 @@ export function SupplierOrderListsPanel({ isOpen, onClose }: SupplierOrderListsP
                     )}
                 </div>
             </SheetContent>
+
+            {selectedSupplier && (
+                <WhatsAppConfirmModal
+                    isOpen={whatsappModalOpen}
+                    onClose={() => {
+                        setWhatsappModalOpen(false);
+                        setSelectedSupplier(null);
+                    }}
+                    phone={selectedSupplier.phone || ""}
+                    customerName={selectedSupplier.name}
+                    initialMessage={selectedSupplier.message}
+                />
+            )}
         </Sheet>
     );
 }

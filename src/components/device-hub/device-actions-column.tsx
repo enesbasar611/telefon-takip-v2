@@ -82,20 +82,20 @@ export function DeviceActionsColumn({ productId, deviceName, device }: DeviceAct
                         )}
                     </button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-[#0B0F19] border-slate-800 text-slate-200 rounded-3xl p-8 max-w-[400px]">
+                <AlertDialogContent className="bg-[#0B0F19] border-border text-foreground/90 rounded-3xl p-8 max-w-[400px]">
                     <AlertDialogHeader className="space-y-4">
                         <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 mx-auto">
                             <Trash2 className="h-6 w-6 text-rose-500" />
                         </div>
                         <div className="text-center">
                             <AlertDialogTitle className="text-xl  text-white">Emin misiniz?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-slate-500  mt-2 leading-relaxed">
-                                <strong className="text-slate-300">{deviceName}</strong> kalıcı olarak silinecek. Bu cihazla ilgili tüm geçmiş (hareketler, satış kalemleri) temizlenecektir. Bu işlem geri alınamaz.
+                            <AlertDialogDescription className="text-muted-foreground/80  mt-2 leading-relaxed">
+                                <strong className="text-foreground">{deviceName}</strong> kalıcı olarak silinecek. Bu cihazla ilgili tüm geçmiş (hareketler, satış kalemleri) temizlenecektir. Bu işlem geri alınamaz.
                             </AlertDialogDescription>
                         </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-8 gap-3 sm:justify-center">
-                        <AlertDialogCancel className="bg-slate-900 border-slate-800 h-11 px-6 rounded-xl  hover:bg-slate-800">VAZGEÇ</AlertDialogCancel>
+                        <AlertDialogCancel className="bg-card border-border h-11 px-6 rounded-xl  hover:bg-muted">VAZGEÇ</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-rose-600 hover:bg-rose-700 text-white h-11 px-8 rounded-xl  shadow-lg shadow-rose-600/20"

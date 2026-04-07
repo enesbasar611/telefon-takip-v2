@@ -35,8 +35,13 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const rawPhone = formData.phone.replace(/\D/g, "");
         if (!formData.name || !formData.phone) {
             toast.error("İsim ve Telefon alanları zorunludur.");
+            return;
+        }
+        if (rawPhone.length !== 10 || !rawPhone.startsWith("5")) {
+            toast.error("Geçerli bir telefon numarası girin (5xx xxx xxxx).");
             return;
         }
 
@@ -71,17 +76,17 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-slate-900 border-white/10 text-white">
+            <DialogContent className="sm:max-w-[425px] bg-card border-border text-white">
                 <DialogHeader>
                     <DialogTitle className="font-medium text-xl ">Yeni Müşteri Ekle</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
-                        <Label className="font-medium text-xs  text-slate-400">AD SOYAD</Label>
+                        <Label className="font-medium text-xs  text-muted-foreground">AD SOYAD</Label>
                         <Input
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="bg-white/5 border-white/10 h-10"
+                            className="bg-white/5 border-border h-10"
                             placeholder="Müşteri Ad Soyad"
                         />
                     </div>
@@ -92,21 +97,21 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
                         onChange={(val: string) => setFormData({ ...formData, phone: val })}
                     />
                     <div className="space-y-2">
-                        <Label className="font-medium text-xs  text-slate-400">E-POSTA (OPSİYONEL)</Label>
+                        <Label className="font-medium text-xs  text-muted-foreground">E-POSTA (OPSİYONEL)</Label>
                         <Input
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="bg-white/5 border-white/10 h-10"
+                            className="bg-white/5 border-border h-10"
                             placeholder="ornek@mail.com"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label className="font-medium text-xs  text-slate-400">NOTLAR</Label>
+                        <Label className="font-medium text-xs  text-muted-foreground">NOTLAR</Label>
                         <Textarea
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            className="bg-white/5 border-white/10 min-h-[80px]"
+                            className="bg-white/5 border-border min-h-[80px]"
                             placeholder="Müşteri hakkında notlar..."
                         />
                     </div>

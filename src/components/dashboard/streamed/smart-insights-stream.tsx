@@ -1,9 +1,11 @@
 import { SmartInsights } from "@/components/dashboard/smart-insights";
 import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { serializePrisma } from "@/lib/utils";
+import { getShopId } from "@/lib/auth";
 
 export async function SmartInsightsStream() {
-    const statsDataRaw = await getDashboardStats();
+    const shopId = await getShopId();
+    const statsDataRaw = await getDashboardStats(shopId);
     const statsData = serializePrisma(statsDataRaw);
 
     return (

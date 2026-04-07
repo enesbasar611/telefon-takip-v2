@@ -76,7 +76,7 @@ const getAlertStyle = (type: string) => {
         case "STAGNANT":
             return { icon: History, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "HAREKETSİZ" };
         default:
-            return { icon: Package, color: "text-slate-400", bg: "bg-slate-400/10", border: "border-slate-400/20", label: "BİLGİ" };
+            return { icon: Package, color: "text-muted-foreground", bg: "bg-slate-400/10", border: "border-slate-400/20", label: "BİLGİ" };
     }
 };
 
@@ -141,12 +141,12 @@ function SupplierPickerRow({
                     <Plus className="h-4 w-4" />
                 </Button>
             ) : (
-                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10 flex-wrap">
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.03] border border-border flex-wrap">
                     <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                        <SelectTrigger className="h-8 text-xs  bg-white/5 border-white/10 rounded-lg w-36 focus:ring-blue-500">
+                        <SelectTrigger className="h-8 text-xs  bg-white/5 border-border rounded-lg w-36 focus:ring-blue-500">
                             <SelectValue placeholder="Tedarikçi seç..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-card border-white/10">
+                        <SelectContent className="bg-card border-border">
                             {suppliers.map((s) => (
                                 <SelectItem key={s.id} value={s.id} className="text-xs ">
                                     {s.name}
@@ -159,7 +159,7 @@ function SupplierPickerRow({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10"
+                            className="h-7 w-7 rounded-lg bg-white/5 border border-border text-muted-foreground hover:bg-white/10"
                             onClick={() => setQty((q) => Math.max(1, q - 1))}
                         >
                             <Minus className="h-3 w-3" />
@@ -168,7 +168,7 @@ function SupplierPickerRow({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10"
+                            className="h-7 w-7 rounded-lg bg-white/5 border border-border text-muted-foreground hover:bg-white/10"
                             onClick={() => setQty((q) => q + 1)}
                         >
                             <Plus className="h-3 w-3" />
@@ -218,9 +218,9 @@ export function SupplierAnalysisModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-3xl bg-card border border-white/5 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-3xl bg-card border border-border/50 p-0 overflow-hidden max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="relative p-8 bg-gradient-to-br from-blue-600/10 to-transparent border-b border-white/5 overflow-hidden shrink-0">
+                <div className="relative p-8 bg-gradient-to-br from-blue-600/10 to-transparent border-b border-border/50 overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 h-40 w-40 bg-blue-500/10 rounded-full blur-3xl" />
                     <div className="relative z-10 flex items-start gap-4">
                         <div className="h-14 w-14 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.2)] shrink-0">
@@ -233,7 +233,7 @@ export function SupplierAnalysisModal({
                             <DialogTitle className="font-medium text-2xl  text-white tracking-tight">
                                 Sipariş Listesi Oluştur
                             </DialogTitle>
-                            <p className="text-sm text-slate-400 font-medium mt-1">
+                            <p className="text-sm text-muted-foreground font-medium mt-1">
                                 Her ürüne <span className="text-blue-400 ">+</span> basarak tedarikçi seç ve sipariş listene ekle
                             </p>
                         </div>
@@ -249,9 +249,9 @@ export function SupplierAnalysisModal({
                             <TrendingUp className="h-3.5 w-3.5 text-blue-400" />
                             <span className="text-xs  text-blue-400">{trendingAlerts.length} Trend Ürün</span>
                         </div>
-                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-                            <ShoppingCart className="h-3.5 w-3.5 text-slate-400" />
-                            <span className="text-xs  text-slate-400">{suppliers.length} Tedarikçi</span>
+                        <div className="flex items-center gap-2 bg-white/5 border border-border rounded-xl px-4 py-2">
+                            <ShoppingCart className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs  text-muted-foreground">{suppliers.length} Tedarikçi</span>
                         </div>
                     </div>
                 </div>
@@ -261,7 +261,7 @@ export function SupplierAnalysisModal({
                     {/* Urgent: AI Critical/LowStock alerts */}
                     {urgentAlerts.length > 0 && (
                         <div className="space-y-3">
-                            <h3 className="font-medium text-xs  text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h3 className="font-medium text-xs  text-muted-foreground/80 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
                                 AI TESPİTLERİ — ACİL TEDARİK
                             </h3>
@@ -278,7 +278,7 @@ export function SupplierAnalysisModal({
                                             <div className="flex items-center gap-2 mb-1">
                                                 <Badge className={cn("text-[8px]  border-none px-2 py-0.5", style.bg, style.color)}>{style.label}</Badge>
                                                 {alert.product && (
-                                                    <span className="text-[10px]  text-slate-500">{alert.product.name} — {alert.product.stock} adet</span>
+                                                    <span className="text-[10px]  text-muted-foreground/80">{alert.product.name} — {alert.product.stock} adet</span>
                                                 )}
                                             </div>
                                             <p className="text-sm font-semibold text-foreground leading-snug">{alert.message}</p>
@@ -295,7 +295,7 @@ export function SupplierAnalysisModal({
                     {/* Additional critical products not covered by AI alerts */}
                     {additionalCritical.length > 0 && (
                         <div className="space-y-3">
-                            <h3 className="font-medium text-xs  text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h3 className="font-medium text-xs  text-muted-foreground/80 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
                                 KRİTİK / TÜKENEN TÜM ÜRÜNLER
                             </h3>
@@ -315,7 +315,7 @@ export function SupplierAnalysisModal({
                                             {p.category && <span className="text-[9px] text-slate-600 ">{p.category.name}</span>}
                                         </div>
                                         <p className="text-sm  text-foreground">{p.name}</p>
-                                        <p className="text-[10px] text-slate-500 font-medium">
+                                        <p className="text-[10px] text-muted-foreground/80 font-medium">
                                             Mevcut: <span className={cn("", p.stock <= 0 ? "text-rose-400" : "text-amber-400")}>{p.stock}</span> / Kritik Seviye: {p.criticalStock}
                                         </p>
                                     </div>
@@ -328,7 +328,7 @@ export function SupplierAnalysisModal({
                             {additionalCritical.length > 5 && !showAll && (
                                 <button
                                     onClick={() => setShowAll(true)}
-                                    className="w-full flex items-center justify-center gap-2 py-3 text-xs  text-slate-500 hover:text-blue-400 transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 py-3 text-xs  text-muted-foreground/80 hover:text-blue-400 transition-colors"
                                 >
                                     <ChevronDown className="h-4 w-4" />
                                     {additionalCritical.length - 5} ürün daha göster
@@ -340,7 +340,7 @@ export function SupplierAnalysisModal({
                     {/* Trending */}
                     {trendingAlerts.length > 0 && (
                         <div className="space-y-3">
-                            <h3 className="font-medium text-xs  text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h3 className="font-medium text-xs  text-muted-foreground/80 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                                 TREND ÜRÜNLER — STOK TAKVİYESİ
                             </h3>
@@ -369,11 +369,11 @@ export function SupplierAnalysisModal({
                     {/* Empty State */}
                     {alerts.length === 0 && additionalCritical.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-16 gap-4">
-                            <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center border border-border">
                                 <Sparkles className="h-8 w-8 text-slate-600" />
                             </div>
                             <div className="text-center">
-                                <h3 className="font-medium  text-slate-500 uppercase text-sm">Her Şey Yolunda</h3>
+                                <h3 className="font-medium  text-muted-foreground/80 uppercase text-sm">Her Şey Yolunda</h3>
                                 <p className="text-xs text-slate-600 font-medium mt-1">Kritik stok uyarısı bulunmuyor.</p>
                             </div>
                         </div>
@@ -381,10 +381,10 @@ export function SupplierAnalysisModal({
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-4 border-t border-white/5 flex justify-end shrink-0">
+                <div className="px-8 py-4 border-t border-border/50 flex justify-end shrink-0">
                     <Button
                         onClick={onClose}
-                        className="h-11 px-8 rounded-2xl bg-white/5 border border-white/10 text-foreground hover:bg-white/10 "
+                        className="h-11 px-8 rounded-2xl bg-white/5 border border-border text-foreground hover:bg-white/10 "
                     >
                         Kapat
                     </Button>

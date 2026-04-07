@@ -25,7 +25,7 @@ import { tr } from "date-fns/locale";
 export function LiveActivityFeed({ activity }: { activity: any[] }) {
   return (
     <Card className="bg-card border border-border/5 shadow-2xl shadow-slate-200/40 dark:shadow-black/40 h-full overflow-hidden rounded-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-3xl">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-white/5 p-8 pb-6 bg-muted/30">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-border/50 p-8 pb-6 bg-muted/30">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm shadow-primary/5">
             <Activity className="h-5 w-5 text-primary" />

@@ -18,7 +18,7 @@ interface ExpiringWarrantiesModalProps {
 
 function getRemainingLabel(device: any): { label: string; color: string } {
     const info = device.deviceInfo;
-    if (!info) return { label: "—", color: "text-slate-500" };
+    if (!info) return { label: "—", color: "text-muted-foreground/80" };
 
     if (info.condition === "INTERNATIONAL") {
         const now = new Date();
@@ -47,7 +47,7 @@ function getRemainingLabel(device: any): { label: string; color: string } {
         return { label: `${remDays} gün garanti`, color };
     }
 
-    return { label: "—", color: "text-slate-500" };
+    return { label: "—", color: "text-muted-foreground/80" };
 }
 
 export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesModalProps) {
@@ -56,7 +56,7 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 relative border border-slate-800/60 shadow-lg cursor-pointer hover:border-rose-500/40 transition-all group">
+                <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 relative border border-border/60 shadow-lg cursor-pointer hover:border-rose-500/40 transition-all group">
                     <div className="flex justify-between items-start">
                         <div className="p-2.5 bg-rose-500/10 rounded-xl text-rose-500 group-hover:bg-rose-500/20 transition-colors">
                             <AlertTriangle className="h-5 w-5" />
@@ -65,7 +65,7 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
                     </div>
                     <div className="mt-2">
                         <h3 className="font-medium text-[32px]  text-white leading-none">{count}</h3>
-                        <p className="text-[11px] text-slate-500  tracking-wide mt-2">Garanti/Aktiflik Bitmek Üzere</p>
+                        <p className="text-[11px] text-muted-foreground/80  tracking-wide mt-2">Garanti/Aktiflik Bitmek Üzere</p>
                     </div>
                     {count > 0 && (
                         <div className="text-[9px]  text-rose-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -75,15 +75,15 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
                 </div>
             </DialogTrigger>
 
-            <DialogContent className="max-w-[540px] p-0 bg-[#0B0F19] text-slate-200 border border-slate-800/60 shadow-2xl rounded-2xl overflow-hidden">
-                <div className="px-6 pt-5 pb-4 border-b border-slate-800/60">
+            <DialogContent className="max-w-[540px] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-2xl overflow-hidden">
+                <div className="px-6 pt-5 pb-4 border-b border-border/60">
                     <DialogTitle className="font-medium text-[18px]  text-white">Kritik Garanti / Aktiflik</DialogTitle>
-                    <p className="text-[12px] text-slate-500 font-medium mt-0.5">30 gün içinde süresi dolacak cihazlar</p>
+                    <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">30 gün içinde süresi dolacak cihazlar</p>
                 </div>
 
                 <div className="max-h-[440px] overflow-y-auto p-4 space-y-2">
                     {devices.length === 0 ? (
-                        <div className="py-12 text-center text-slate-500 text-sm ">
+                        <div className="py-12 text-center text-muted-foreground/80 text-sm ">
                             🎉 Garantisi bitmek üzere cihaz yok!
                         </div>
                     ) : devices.map((device: any) => {
@@ -96,10 +96,10 @@ export function ExpiringWarrantiesModal({ devices, count }: ExpiringWarrantiesMo
                         const cond = conditionMap[device.deviceInfo?.condition] ?? conditionMap.NEW;
 
                         return (
-                            <div key={device.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800/60 hover:border-rose-500/30 transition-all">
+                            <div key={device.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/60 hover:border-rose-500/30 transition-all">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[13px]  text-white truncate">{device.name}</p>
-                                    <p className="text-[11px] font-mono text-slate-500 mt-0.5">{device.deviceInfo?.imei ?? "—"}</p>
+                                    <p className="text-[11px] font-mono text-muted-foreground/80 mt-0.5">{device.deviceInfo?.imei ?? "—"}</p>
                                 </div>
                                 <div className={`text-[9px]  tracking-widest border rounded px-2 py-0.5 ${cond.cls}`}>
                                     {cond.text}

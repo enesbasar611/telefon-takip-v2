@@ -21,12 +21,14 @@ import {
   FileText,
   Wrench,
   Package,
-  History
+  History,
+  Lock
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ServiceStatus } from "@prisma/client";
 import { cn, formatPhone } from "@/lib/utils";
+import { PatternLock } from "@/components/ui/pattern-lock";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500" },
@@ -60,7 +62,7 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               </div>
               <div>
                 <DialogTitle className="font-medium text-2xl ">{ticket.ticketNumber}</DialogTitle>
-                <DialogDescription className="text-xs  text-slate-500">
+                <DialogDescription className="text-xs  text-muted-foreground/80">
                   {ticket.deviceBrand} {ticket.deviceModel}
                 </DialogDescription>
               </div>
@@ -80,13 +82,13 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
                   <User className="h-4 w-4 text-primary" />
                   <h4 className="font-medium text-sm ">Müşteri Bilgileri</h4>
                 </div>
-                <div className="bg-slate-900/50 rounded-3xl p-6 space-y-4 border border-white/5 shadow-inner">
+                <div className="bg-card/50 rounded-3xl p-6 space-y-4 border border-border/50 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px]  text-slate-500">Ad Soyad</span>
-                    <span className="text-sm  text-slate-200">{ticket.customer?.name}</span>
+                    <span className="text-[10px]  text-muted-foreground/80">Ad Soyad</span>
+                    <span className="text-sm  text-foreground/90">{ticket.customer?.name}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px]  text-slate-500">Telefon</span>
+                    <span className="text-[10px]  text-muted-foreground/80">Telefon</span>
                     <span className="text-sm  text-blue-400 font-mono">{formatPhone(ticket.customer?.phone)}</span>
                   </div>
                 </div>
@@ -114,6 +116,24 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
                     <span className="text-[10px]  text-muted-foreground">Kozmetik Durum</span>
                     <span className="text-xs font-medium text-right">"{ticket.cosmeticCondition || "Belirtilmedi"}"</span>
                   </div>
+                  {ticket.devicePassword && ticket.devicePassword.startsWith("DESEN:") ? (
+                    <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1.5"><Lock className="w-3 h-3" /> Cihaz Şifresi (Desen)</span>
+                      <div className="bg-background rounded-xl p-2 flex justify-center shadow-inner">
+                        <PatternLock
+                          width={120}
+                          height={120}
+                          readOnly
+                          initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
+                        />
+                      </div>
+                    </div>
+                  ) : ticket.devicePassword ? (
+                    <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1.5"><Lock className="w-3 h-3" /> Cihaz Şifresi / PIN</span>
+                      <span className="text-xs font-mono bg-background px-2 py-1 rounded select-all shadow-inner">{ticket.devicePassword}</span>
+                    </div>
+                  ) : null}
                 </div>
               </section>
             </div>

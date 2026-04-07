@@ -160,25 +160,25 @@ export function StockListTable({ products, categories }: { products: any[], cate
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 lg:p-6 border-b border-white/5 bg-transparent">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 lg:p-6 border-b border-border/50 bg-transparent">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
           <Input
             placeholder="Ürün adı, SKU veya barkod ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-white/[0.02] border-white/5 rounded-xl text-[13px] font-medium text-white h-10 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all"
+            className="pl-9 bg-white/[0.02] border-border/50 rounded-xl text-[13px] font-medium text-white h-10 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 px-4 text-[12px] font-medium text-slate-300 bg-white/[0.02] border-white/5 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
-                <Filter className="h-3.5 w-3.5 mr-2 text-slate-400" />
+              <Button variant="outline" className="h-10 px-4 text-[12px] font-medium text-foreground bg-white/[0.02] border-border/50 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+                <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                 {selectedCategory === "ALL" ? "Tüm Kategoriler" : categories.find(c => c.id === selectedCategory)?.name}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white shadow-xl shadow-black/50 min-w-[200px]">
+            <DropdownMenuContent align="end" className="bg-[#0f172a] border-border/50 text-white shadow-xl shadow-black/50 min-w-[200px]">
               <DropdownMenuItem onClick={() => setSelectedCategory("ALL")} className="text-[12px] font-medium p-2.5 cursor-pointer focus:bg-white/5">Tüm Kategoriler</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/5" />
               {categories.map(cat => (
@@ -187,8 +187,8 @@ export function StockListTable({ products, categories }: { products: any[], cate
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button onClick={handleExport} variant="outline" className="h-10 px-4 text-[12px] font-medium text-slate-300 bg-white/[0.02] border-white/5 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
-            <Download className="h-3.5 w-3.5 mr-2 text-slate-400" /> Dışa Aktar
+          <Button onClick={handleExport} variant="outline" className="h-10 px-4 text-[12px] font-medium text-foreground bg-white/[0.02] border-border/50 rounded-xl hover:bg-white/5 hover:text-white transition-colors">
+            <Download className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Dışa Aktar
           </Button>
         </div>
       </div>
@@ -196,21 +196,21 @@ export function StockListTable({ products, categories }: { products: any[], cate
       <div className="p-0">
         <div className="block lg:hidden space-y-4 p-4">
           {sortedData.length === 0 ? (
-            <p className="text-center py-10 text-slate-500 ">Ürün bulunamadı.</p>
+            <p className="text-center py-10 text-muted-foreground/80 ">Ürün bulunamadı.</p>
           ) : (
             sortedData.map((product: any) => (
-              <div key={product.id} className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 space-y-4 cursor-pointer" onClick={() => handleProductClick(product)}>
+              <div key={product.id} className="bg-white/[0.02] p-5 rounded-2xl border border-border/50 space-y-4 cursor-pointer" onClick={() => handleProductClick(product)}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium font-medium text-slate-200 text-[14px] leading-tight">{product.name}</h3>
-                    <p className="text-[11px] text-slate-500 font-medium mt-1">SKU: {product.sku || '-'}</p>
+                    <h3 className="font-medium font-medium text-foreground/90 text-[14px] leading-tight">{product.name}</h3>
+                    <p className="text-[11px] text-muted-foreground/80 font-medium mt-1">SKU: {product.sku || '-'}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
-                    <div className="text-[10px] font-medium text-slate-400 bg-white/5 px-2 py-0.5 rounded-md">
+                    <div className="text-[10px] font-medium text-muted-foreground bg-white/5 px-2 py-0.5 rounded-md">
                       {product.category.name}
                     </div>
                     {product.location && (
-                      <div className="flex items-center gap-1 text-slate-500">
+                      <div className="flex items-center gap-1 text-muted-foreground/80">
                         <MapPin className="h-3 w-3" />
                         <span className="text-[10px] font-medium">{product.location}</span>
                       </div>
@@ -219,8 +219,8 @@ export function StockListTable({ products, categories }: { products: any[], cate
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex flex-col justify-center">
-                    <p className="text-[9px] font-medium text-slate-500 mb-1.5 uppercase tracking-wider">STOK DURUMU</p>
+                  <div className="bg-black/20 p-3 rounded-xl border border-border/50 flex flex-col justify-center">
+                    <p className="text-[9px] font-medium text-muted-foreground/80 mb-1.5 uppercase tracking-wider">STOK DURUMU</p>
                     <div className="flex items-center gap-2">
                       {product.stock <= product.criticalStock ? (
                         <div className="flex items-center gap-1.5">
@@ -230,22 +230,22 @@ export function StockListTable({ products, categories }: { products: any[], cate
                       ) : (
                         <div className="flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                          <span className="text-[13px] font-medium text-slate-300">{product.stock} Adet</span>
+                          <span className="text-[13px] font-medium text-foreground">{product.stock} Adet</span>
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex flex-col justify-center text-right">
-                    <p className="text-[9px] font-medium text-slate-500 mb-1.5 uppercase tracking-wider">SATIŞ FİYATI</p>
-                    <span className="text-[14px] font-semibold text-slate-200">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                  <div className="bg-black/20 p-3 rounded-xl border border-border/50 flex flex-col justify-center text-right">
+                    <p className="text-[9px] font-medium text-muted-foreground/80 mb-1.5 uppercase tracking-wider">SATIŞ FİYATI</p>
+                    <span className="text-[14px] font-semibold text-foreground/90">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 mt-1 border-t border-white/5">
+                <div className="flex items-center justify-between pt-3 mt-1 border-t border-border/50">
                   <div className="flex flex-col items-start gap-1">
-                    <div className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-[9px] text-slate-500">MALİYET</div>
+                    <div className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-[9px] text-muted-foreground/80">MALİYET</div>
                     <div className="flex items-center gap-2">
-                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-slate-300 " />
+                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-foreground " />
                       {product.buyPriceUsd && (
                         <span className="text-[11px] text-blue-400  flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                           ${product.buyPriceUsd}
@@ -254,16 +254,16 @@ export function StockListTable({ products, categories }: { products: any[], cate
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
+                    <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all">
                       <Plus className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-all outline-none">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white w-48 shadow-xl shadow-black/50">
+                      <DropdownMenuContent align="end" className="bg-[#0f172a] border-border/50 text-white w-48 shadow-xl shadow-black/50">
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
                           <ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Hızlı Satış
                         </DropdownMenuItem>
@@ -289,7 +289,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
 
         <Table className="hidden lg:table">
           <TableHeader>
-            <TableRow className="border-b border-white/5 hover:bg-transparent">
+            <TableRow className="border-b border-border/50 hover:bg-transparent">
               <TableHead className="font-medium py-3 pl-8 h-11">
                 <SortableHeader label="Ürün Bilgisi" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
               </TableHead>
@@ -308,24 +308,24 @@ export function StockListTable({ products, categories }: { products: any[], cate
           <TableBody>
             {sortedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-[13px] font-medium text-slate-500">Kayıtlı ürün bulunamadı.</TableCell>
+                <TableCell colSpan={5} className="h-32 text-center text-[13px] font-medium text-muted-foreground/80">Kayıtlı ürün bulunamadı.</TableCell>
               </TableRow>
             ) : (
               sortedData.map((product: any) => (
                 <TableRow key={product.id} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => handleProductClick(product)}>
                   <TableCell className="py-4 pl-8">
                     <div className="flex flex-col">
-                      <span className="text-[13px] font-medium text-slate-200 group-hover:text-blue-400 transition-colors">{product.name}</span>
-                      <span className="text-[11px] text-slate-500 font-medium mt-0.5">SKU: {product.sku || 'Belirtilmedi'}</span>
+                      <span className="text-[13px] font-medium text-foreground/90 group-hover:text-blue-400 transition-colors">{product.name}</span>
+                      <span className="text-[11px] text-muted-foreground/80 font-medium mt-0.5">SKU: {product.sku || 'Belirtilmedi'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1.5 items-start">
-                      <span className="text-[12px] font-medium text-slate-400 bg-white/5 px-2 py-0.5 rounded-md">
+                      <span className="text-[12px] font-medium text-muted-foreground bg-white/5 px-2 py-0.5 rounded-md">
                         {product.category.name}
                       </span>
                       {product.location && (
-                        <div className="flex items-center gap-1.5 text-slate-500">
+                        <div className="flex items-center gap-1.5 text-muted-foreground/80">
                           <MapPin className="h-3 w-3" />
                           <span className="text-[11px] font-medium">{product.location}</span>
                         </div>
@@ -343,7 +343,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
                         ) : (
                           <div className="flex items-center gap-1.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                            <span className="text-[12px] font-medium text-slate-300">{product.stock} Adet</span>
+                            <span className="text-[12px] font-medium text-foreground">{product.stock} Adet</span>
                           </div>
                         )}
                       </div>
@@ -356,10 +356,10 @@ export function StockListTable({ products, categories }: { products: any[], cate
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
-                      <span className="text-[14px] font-semibold text-slate-200 group-hover:text-white transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      <span className="text-[14px] font-semibold text-foreground/90 group-hover:text-white transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px]  uppercase tracking-widest text-slate-500">Maliyet:</span>
-                        <RevealFinancial amount={product.buyPrice} className="text-[12px]  text-slate-400" />
+                        <span className="text-[9px]  uppercase tracking-widest text-muted-foreground/80">Maliyet:</span>
+                        <RevealFinancial amount={product.buyPrice} className="text-[12px]  text-muted-foreground" />
                         {product.buyPriceUsd && (
                           <span className="text-[10px] text-blue-400/90  bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                             ${product.buyPriceUsd}
@@ -370,16 +370,16 @@ export function StockListTable({ products, categories }: { products: any[], cate
                   </TableCell>
                   <TableCell className="text-right pr-4">
                     <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                      <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Eksik Listesine Ekle">
+                      <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Eksik Listesine Ekle">
                         <Plus className="h-4 w-4" />
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-all outline-none">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-[#0f172a] border-white/5 text-white w-48 shadow-xl shadow-black/50">
+                        <DropdownMenuContent align="end" className="bg-[#0f172a] border-border/50 text-white w-48 shadow-xl shadow-black/50">
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onQuickSell(product); }} className="text-[11px] font-medium p-3 gap-2 cursor-pointer focus:bg-white/5">
                             <ShoppingCart className="h-3.5 w-3.5 text-emerald-500" /> Hızlı Satış
                           </DropdownMenuItem>

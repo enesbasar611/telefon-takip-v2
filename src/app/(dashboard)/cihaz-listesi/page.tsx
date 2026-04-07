@@ -153,8 +153,8 @@ export default async function DeviceHubPage() {
       {/* Stock Cards Row */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <MonitorSmartphone className="h-4 w-4 text-slate-500" />
-          <h2 className="font-medium text-[10px]  text-slate-500 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
+          <MonitorSmartphone className="h-4 w-4 text-muted-foreground/80" />
+          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <MetricCard icon={MonitorSmartphone} label="TOPLAM STOK" value={devices.length.toString()} subLabel="Cihaz Adet" color="blue" />
@@ -169,8 +169,8 @@ export default async function DeviceHubPage() {
       {/* Finance Cards Row */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <Coins className="h-4 w-4 text-slate-500" />
-          <h2 className="font-medium text-[10px]  text-slate-500 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
+          <Coins className="h-4 w-4 text-muted-foreground/80" />
+          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
         </div>
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel="Toplam Alış" color="rose" />
@@ -202,7 +202,7 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
   };
 
   return (
-    <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 border border-slate-800/60 shadow-lg group transition-all duration-300">
+    <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 border border-border/60 shadow-lg group transition-all duration-300">
       <div className="flex justify-between items-start">
         <div className={`p-2.5 rounded-xl transition-colors ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           <Icon className="h-5 w-5" />
@@ -213,7 +213,7 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
       </div>
       <div className="mt-2">
         <h3 className="font-medium text-[26px]  text-white leading-none tracking-tight">{value}</h3>
-        <p className="text-[11px] text-slate-500  tracking-wide mt-2">{subLabel}</p>
+        <p className="text-[11px] text-muted-foreground/80  tracking-wide mt-2">{subLabel}</p>
       </div>
     </div>
   );

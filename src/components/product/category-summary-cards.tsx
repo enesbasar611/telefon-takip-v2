@@ -38,7 +38,7 @@ export function CategorySummaryCards({ products, categories }: CategorySummaryCa
             {categoryStats.map((stat, idx) => (
                 <div
                     key={idx}
-                    className="min-w-[280px] bg-white/[0.02] border border-white/5 p-5 rounded-2xl shrink-0 snap-center hover:bg-white/[0.04] transition-colors relative overflow-hidden group"
+                    className="min-w-[280px] bg-white/[0.02] border border-border/50 p-5 rounded-2xl shrink-0 snap-center hover:bg-white/[0.04] transition-colors relative overflow-hidden group"
                 >
                     {/* Subtle gradient hover effect */}
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -48,20 +48,20 @@ export function CategorySummaryCards({ products, categories }: CategorySummaryCa
                             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
                                 <Folder className="h-4 w-4" />
                             </div>
-                            <h3 className="font-medium text-[14px] font-semibold text-slate-200">{stat.name}</h3>
+                            <h3 className="font-medium text-[14px] font-semibold text-foreground/90">{stat.name}</h3>
                         </div>
-                        <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[11px] font-medium text-slate-300 shadow-inner">
+                        <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-border/50 text-[11px] font-medium text-foreground shadow-inner">
                             {stat.count} Adet
                         </div>
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-black/20 border border-white/5">
-                            <div className="flex items-center gap-1.5 text-slate-500">
+                        <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-black/20 border border-border/50">
+                            <div className="flex items-center gap-1.5 text-muted-foreground/80">
                                 <Coins className="h-3 w-3" />
                                 <span className="text-[9px] uppercase font-semibold tracking-wider">Maliyet</span>
                             </div>
-                            <RevealFinancial amount={stat.cost} className="text-[13px] font-medium text-slate-300" />
+                            <RevealFinancial amount={stat.cost} className="text-[13px] font-medium text-foreground" />
                         </div>
 
                         <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">

@@ -8,9 +8,11 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn, serializePrisma } from "@/lib/utils";
 import { getRecentTransactions } from "@/lib/actions/dashboard-actions";
+import { getShopId } from "@/lib/auth";
 
 export async function RecentTransactionsStream() {
-    const recentTransactionsRaw = await getRecentTransactions();
+    const shopId = await getShopId();
+    const recentTransactionsRaw = await getRecentTransactions(shopId);
     const recentTransactions = serializePrisma(recentTransactionsRaw);
 
     return (

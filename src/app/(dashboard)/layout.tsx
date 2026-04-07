@@ -37,9 +37,9 @@ export default async function DashboardLayout({
     try {
         // Parallel fetch for data needed throughout the dashboard
         const [staffRes, ratesRes, statsRes] = await Promise.all([
-            getStaff().catch(() => []),
-            getExchangeRates().catch(() => null),
-            getDashboardStats().catch(() => null),
+            getStaff(shopId).catch(() => []),
+            getExchangeRates(shopId).catch(() => null),
+            getDashboardStats(shopId).catch(() => null),
         ]);
         staff = staffRes;
         initialRates = ratesRes;

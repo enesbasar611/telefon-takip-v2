@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Store, MapPin, Phone, Wallet, GraduationCap, LogOut, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Store, MapPin, Phone, Wallet, GraduationCap, LogOut, Sparkles, ChevronRight, CheckCircle2, Globe } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
 import { signOut, useSession, SessionProvider } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +23,7 @@ function OnboardingForm() {
         phone: "",
         currency: "TRY",
         openingBalance: 0,
+        website: "",
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,19 +32,20 @@ function OnboardingForm() {
         try {
             const result = await createShopOnboarding(formData);
             if (result.success) {
-                toast.success("Dükkan başarıyla oluşturuldu! Yönlendiriliyorsunuz...");
+                toast.success("Dükkan başarıyla oluşturuldu! Kurulum tamamlanıyor...");
+
+                // Update client session
                 await update({
                     shopId: result.shopId,
-                    shopName: result.shopName
+                    shopName: result.shopName,
+                    role: "ADMIN"
                 });
 
-                // Immediate router refresh to update server-side session state for middleware
-                router.refresh();
-
-                // Force a full reload to the absolute dashboard path to bypass any root-level redirects
+                // Wait a bit for the session cookie to be persisted by the browser
                 setTimeout(() => {
+                    toast.success("Yönlendiriliyorsunuz...");
                     window.location.href = "/dashboard";
-                }, 800);
+                }, 1500);
             } else {
                 toast.error(result.error || "Bir hata oluştu.");
             }
@@ -67,20 +70,20 @@ function OnboardingForm() {
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="w-full max-w-xl relative z-10"
             >
-                <Card className="bg-[#0A0A0A]/60 border border-white/5 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] rounded-[2.5rem] overflow-hidden">
+                <Card className="bg-[#0A0A0A]/60 border border-border/50 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] rounded-[2.5rem] overflow-hidden">
                     <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-40" />
 
                     <form onSubmit={handleSubmit}>
                         <CardHeader className="p-10 pb-6 space-y-4 text-center">
                             <div className="flex justify-center">
-                                <div className="h-16 w-16 bg-[#111] rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl relative overflow-hidden group">
+                                <div className="h-16 w-16 bg-[#111] rounded-2xl flex items-center justify-center border border-border shadow-2xl relative overflow-hidden group">
                                     <div className="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors" />
                                     <GraduationCap className="w-8 h-8 text-blue-500 relative z-10" />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <CardTitle className="font-medium text-3xl  text-white tracking-tight">Dükkanınızı Kurun</CardTitle>
-                                <CardDescription className="text-slate-500 text-sm font-medium">
+                                <CardDescription className="text-muted-foreground/80 text-sm font-medium">
                                     Hoş geldiniz! Mevcut envanterinizi ve kasanızı BAŞAR AI ile yönetmek için dükkan bilgilerinizi girin.
                                 </CardDescription>
                             </div>
@@ -88,13 +91,13 @@ function OnboardingForm() {
 
                         <CardContent className="px-10 space-y-6">
                             <div className="space-y-2.5">
-                                <Label htmlFor="name" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">DÜKKAN ADI</Label>
+                                <Label htmlFor="name" className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest pl-1">DÜKKAN ADI</Label>
                                 <div className="relative group">
                                     <Store className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                     <Input
                                         id="name"
                                         placeholder="Örn: Başar Teknik"
-                                        className="h-12 pl-12 bg-[#111] border-white/5 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all"
+                                        className="h-12 pl-12 bg-[#111] border-border/50 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all"
                                         required
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -102,30 +105,25 @@ function OnboardingForm() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2.5">
-                                    <Label htmlFor="phone" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">İLETİŞİM HATTI</Label>
-                                    <div className="relative group">
-                                        <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
-                                        <Input
-                                            id="phone"
-                                            placeholder="05xx..."
-                                            className="h-12 pl-12 bg-[#111] border-white/5 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all"
-                                            required
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        />
-                                    </div>
+                                    <PhoneInput
+                                        label="İLETİŞİM HATTI"
+                                        value={formData.phone}
+                                        onChange={(val) => setFormData({ ...formData, phone: val })}
+                                        required
+                                        className="bg-[#111] border-border/50"
+                                    />
                                 </div>
                                 <div className="space-y-2.5">
-                                    <Label htmlFor="balance" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">AÇILIŞ KASASI (₺)</Label>
+                                    <Label htmlFor="balance" className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest pl-1">AÇILIŞ KASASI (₺)</Label>
                                     <div className="relative group">
                                         <Wallet className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                         <Input
                                             id="balance"
                                             type="number"
                                             placeholder="0.00"
-                                            className="h-12 pl-12 bg-[#111] border-white/5 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all"
+                                            className="h-12 pl-12 bg-[#111] border-border/50 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all font-medium"
                                             required
                                             value={formData.openingBalance}
                                             onChange={(e) => setFormData({ ...formData, openingBalance: parseFloat(e.target.value) || 0 })}
@@ -135,16 +133,30 @@ function OnboardingForm() {
                             </div>
 
                             <div className="space-y-2.5">
-                                <Label htmlFor="address" className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest pl-1">ADRES BİLGİSİ</Label>
+                                <Label htmlFor="address" className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest pl-1">ADRES BİLGİSİ</Label>
                                 <div className="relative group">
                                     <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
                                     <Input
                                         id="address"
                                         placeholder="Dükkan açık adresi..."
-                                        className="h-12 pl-12 bg-[#111] border-white/5 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all"
+                                        className="h-12 pl-12 bg-[#111] border-border/50 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all font-medium"
                                         required
                                         value={formData.address}
                                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2.5">
+                                <Label htmlFor="website" className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest pl-1">WEB SİTESİ (OPSİYONEL)</Label>
+                                <div className="relative group">
+                                    <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-blue-500" />
+                                    <Input
+                                        id="website"
+                                        placeholder="www.dukkanadresi.com"
+                                        className="h-12 pl-12 bg-[#111] border-border/50 text-white placeholder:text-slate-700 focus:border-blue-500/40 rounded-xl transition-all font-medium"
+                                        value={formData.website}
+                                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                                     />
                                 </div>
                             </div>
@@ -153,7 +165,7 @@ function OnboardingForm() {
                                 <div className="h-10 w-10 bg-blue-500/10 rounded-full flex items-center justify-center shrink-0">
                                     <CheckCircle2 className="h-5 w-5 text-blue-500" />
                                 </div>
-                                <p className="text-[12px] text-slate-400 leading-relaxed font-medium">
+                                <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">
                                     Kurulum tamamlandıktan sonra tüm sistemler, personelleriniz ve satış ekranlarınız anında kullanıma açılacaktır.
                                 </p>
                             </div>

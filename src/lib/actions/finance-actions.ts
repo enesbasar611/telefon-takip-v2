@@ -284,12 +284,12 @@ export async function deleteAttachment(id: string) {
  * Returns the default "Kasa" (cash register) account.
  * Creates one automatically if it doesn't exist yet.
  */
-export async function getOrCreateKasaAccount() {
-  return getOrCreateAccountByType("CASH");
+export async function getOrCreateKasaAccount(providedShopId?: string) {
+  return getOrCreateAccountByType("CASH", providedShopId);
 }
 
-export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "CREDIT_CARD") {
-  const shopId = await getShopId();
+export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "CREDIT_CARD", providedShopId?: string) {
+  const shopId = providedShopId || await getShopId();
   const nameMap = {
     CASH: "Merkez Kasa",
     BANK: "Banka Hesabı",

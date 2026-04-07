@@ -63,15 +63,15 @@ export function CriticalStockDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl bg-[#0a0a0a] border-white/10 text-white p-0 overflow-hidden rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.8)]">
-                <DialogHeader className="p-8 border-b border-white/5 bg-white/[0.02]">
+            <DialogContent className="max-w-3xl bg-[#0a0a0a] border-border text-white p-0 overflow-hidden rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.8)]">
+                <DialogHeader className="p-8 border-b border-border/50 bg-white/[0.02]">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
                             <AlertTriangle className="h-6 w-6 text-rose-500" />
                         </div>
                         <div>
                             <DialogTitle className="font-medium text-xl ">Kritik Stok Uyarıları</DialogTitle>
-                            <DialogDescription className="text-slate-400 font-medium tracking-tight">
+                            <DialogDescription className="text-muted-foreground font-medium tracking-tight">
                                 Stok seviyesi kritik sınırın altına düşen {products.length} ürün bulundu.
                             </DialogDescription>
                         </div>
@@ -80,18 +80,18 @@ export function CriticalStockDialog({
 
                 <div className="max-h-[60vh] overflow-y-auto p-2 custom-scrollbar">
                     {products.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/80">
                             <PackageSearch className="h-12 w-12 mb-4 opacity-20" />
                             <p className="">Kritik seviyede ürün bulunmuyor.</p>
                         </div>
                     ) : (
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-b border-white/5 hover:bg-transparent">
-                                    <TableHead className="font-medium text-[10px]  uppercase text-slate-500 px-6 tracking-widest">Ürün</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase text-slate-500 tracking-widest">Mevcut</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase text-slate-500 tracking-widest">Kritik</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase text-slate-500 text-right px-6 tracking-widest">İşlem</TableHead>
+                                <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                    <TableHead className="font-medium text-[10px]  uppercase text-muted-foreground/80 px-6 tracking-widest">Ürün</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase text-muted-foreground/80 tracking-widest">Mevcut</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase text-muted-foreground/80 tracking-widest">Kritik</TableHead>
+                                    <TableHead className="font-medium text-[10px]  uppercase text-muted-foreground/80 text-right px-6 tracking-widest">İşlem</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -99,8 +99,8 @@ export function CriticalStockDialog({
                                     <TableRow key={product.id} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group">
                                         <TableCell className="px-6 py-5">
                                             <div className="flex flex-col">
-                                                <span className=" text-sm text-slate-200 group-hover:text-white transition-colors">{product.name}</span>
-                                                <span className="text-[10px] text-slate-500  mt-1 tracking-tighter uppercase">{product.category?.name || "Kategorisiz"}</span>
+                                                <span className=" text-sm text-foreground/90 group-hover:text-white transition-colors">{product.name}</span>
+                                                <span className="text-[10px] text-muted-foreground/80  mt-1 tracking-tighter uppercase">{product.category?.name || "Kategorisiz"}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -111,7 +111,7 @@ export function CriticalStockDialog({
                                                 {product.stock} Adet
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-sm  text-slate-400">
+                                        <TableCell className="text-sm  text-muted-foreground">
                                             {product.criticalStock}
                                         </TableCell>
                                         <TableCell className="text-right px-6">
@@ -136,10 +136,10 @@ export function CriticalStockDialog({
                     )}
                 </div>
 
-                <div className="p-6 border-t border-white/5 bg-white/[0.01] flex justify-end">
+                <div className="p-6 border-t border-border/50 bg-white/[0.01] flex justify-end">
                     <Button
                         variant="ghost"
-                        className="rounded-xl  text-xs px-8 text-slate-500 hover:text-white hover:bg-white/5"
+                        className="rounded-xl  text-xs px-8 text-muted-foreground/80 hover:text-white hover:bg-white/5"
                         onClick={() => onOpenChange(false)}
                     >
                         Kapat

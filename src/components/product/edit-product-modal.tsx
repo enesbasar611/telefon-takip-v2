@@ -101,7 +101,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[550px] bg-card border-white/5 text-white p-0 overflow-hidden">
+            <DialogContent className="sm:max-w-[550px] bg-card border-border/50 text-white p-0 overflow-hidden">
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="p-8 space-y-8">
                         <DialogHeader>
@@ -119,7 +119,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                         <div className="grid gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="name" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Ürün Adı</Label>
-                                <Input id="name" {...register("name")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm " />
+                                <Input id="name" {...register("name")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
                                 {errors.name && <p className="text-[10px] text-rose-500 ">{errors.name.message}</p>}
                             </div>
 
@@ -127,10 +127,10 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                 <div className="space-y-2">
                                     <Label className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Kategori</Label>
                                     <Select onValueChange={(val) => setValue("categoryId", val)} defaultValue={product?.categoryId}>
-                                        <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm ">
+                                        <SelectTrigger className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm ">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-card border-white/5 text-white">
+                                        <SelectContent className="bg-card border-border/50 text-white">
                                             {categories.map((cat) => (
                                                 <SelectItem key={cat.id} value={cat.id} className="text-xs  py-3">{cat.name}</SelectItem>
                                             ))}
@@ -141,7 +141,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                     <Label htmlFor="barcode" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         <Barcode className="h-3 w-3" /> Barkod
                                     </Label>
-                                    <Input id="barcode" {...register("barcode")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm " />
+                                    <Input id="barcode" {...register("barcode")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
                                 </div>
                             </div>
 
@@ -152,7 +152,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                         id="buyPrice"
                                         value={watch("buyPrice")}
                                         onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
-                                        className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm "
+                                        className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -163,7 +163,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                         id="sellPrice"
                                         value={watch("sellPrice")}
                                         onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                                        className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm "
+                                        className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
                                     />
                                 </div>
                             </div>
@@ -171,13 +171,13 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="stock" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Mevcut Stok</Label>
-                                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm " />
+                                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="criticalStock" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         <AlertTriangle className="h-3 w-3 text-rose-500" /> Kritik Limit
                                     </Label>
-                                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm " />
+                                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
                                 </div>
                             </div>
 
@@ -185,12 +185,12 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                 <Label htmlFor="location" className="font-medium text-[10px]  text-gray-500 flex items-center gap-2 uppercase tracking-widest">
                                     <MapPin className="h-3 w-3 text-blue-500" /> Raf / Konum
                                 </Label>
-                                <Input id="location" {...register("location")} placeholder="Raf No, Kutu No vb." className="bg-white/[0.03] border-white/5 rounded-xl h-12 text-sm " />
+                                <Input id="location" {...register("location")} placeholder="Raf No, Kutu No vb." className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-end gap-3">
+                    <div className="p-8 border-t border-border/50 bg-white/[0.01] flex items-center justify-end gap-3">
                         <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="h-12 rounded-xl text-xs  text-gray-500 hover:text-white">
                             İptal
                         </Button>

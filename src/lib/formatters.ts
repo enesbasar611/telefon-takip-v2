@@ -101,4 +101,15 @@ export const cleanFormData = <T extends Record<string, any>>(
         }
     }
     return cleaned;
+};/**
+ * Raw Phone Number (10 digits starting with 5)
+ * Ensures consistent storage format in database.
+ * @example "+90 (533) 410 6197" -> "5334106197"
+ */
+export const formatPhoneRaw = (text: string): string => {
+    if (!text) return "";
+    let cleaned = text.replace(/\D/g, "");
+    if (cleaned.startsWith("90") && cleaned.length > 2) cleaned = cleaned.substring(2);
+    if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
+    return cleaned.substring(0, 10);
 };

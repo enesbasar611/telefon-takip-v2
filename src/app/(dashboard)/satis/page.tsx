@@ -37,7 +37,7 @@ export default async function POSPage({ searchParams }: { searchParams: { saleId
           </div>
           <div>
             <h1 className="font-medium text-3xl font-extrabold text-foreground font-manrope">Hızlı satış (POS)</h1>
-            <p className="text-[11px] text-slate-500  mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
+            <p className="text-[11px] text-muted-foreground/80  mt-0.5">Anlık perakende satış ve sepet yönetimi</p>
           </div>
         </div>
         <div className={`flex items-center gap-3 px-4 py-2 border rounded-xl  text-[10px] shadow-sm ${dbError

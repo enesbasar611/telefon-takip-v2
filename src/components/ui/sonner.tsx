@@ -71,13 +71,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
           title:
             "!text-white !font-medium !text-[13px] !leading-snug !break-words",
           description:
-            "!text-slate-400 !font-normal !text-[11px] !leading-relaxed !break-words !mt-0.5",
+            "!text-muted-foreground !font-normal !text-[11px] !leading-relaxed !break-words !mt-0.5",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
           closeButton:
-            "!bg-white/5 !border-white/10 !text-slate-500 hover:!text-white hover:!bg-white/10 !rounded-lg",
+            "!bg-white/5 !border-border !text-muted-foreground/80 hover:!text-white hover:!bg-white/10 !rounded-lg",
           icon: "!absolute !left-4 !top-1/2 !-translate-y-1/2 !m-0 !w-[42px] !h-[42px] !flex-none flex items-center justify-center",
         },
       }}

@@ -84,8 +84,10 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
               <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem className="p-3 text-sm  rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                <User className="h-4 w-4 text-primary" /> Profil Detayları
+              <DropdownMenuItem asChild className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+                <Link href="/profil" className="w-full h-full flex items-center gap-3">
+                  <User className="h-4 w-4 text-primary" /> Profil Detayları
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="p-3 text-sm  rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                 <Link href="/ayarlar" className="w-full h-full flex items-center gap-3">

@@ -46,10 +46,10 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
 
                 <div className="p-6 space-y-6">
                     {/* Date Info */}
-                    <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/50 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <Calendar className="h-4 w-4 text-slate-500" />
-                            <span className="text-[10px]  text-slate-500">OLUŞTURULMA TARİHİ</span>
+                            <Calendar className="h-4 w-4 text-muted-foreground/80" />
+                            <span className="text-[10px]  text-muted-foreground/80">OLUŞTURULMA TARİHİ</span>
                         </div>
                         <p className="text-xs font-extrabold text-foreground">{format(new Date(), "dd MMM yyyy HH:mm", { locale: tr })}</p>
                     </div>
@@ -73,7 +73,7 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                                 {items.map((item, idx) => (
                                     <div key={idx} className="grid grid-cols-12 gap-2 py-1 border-b border-black/5 last:border-0 items-center">
                                         <span className="col-span-6 truncate  leading-tight">{item.name}</span>
-                                        <span className="col-span-2 text-center  text-slate-500">{item.product?.stock || 0}</span>
+                                        <span className="col-span-2 text-center  text-muted-foreground/80">{item.product?.stock || 0}</span>
                                         <span className="col-span-2 text-center  text-black">{item.quantity || 1}</span>
                                         <span className="col-span-2 text-right opacity-50 px-1 border border-black/20 rounded-[2px] text-[7px] h-3 flex items-center justify-center"> [ ] </span>
                                     </div>
@@ -88,8 +88,8 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                     </div>
                 </div>
 
-                <DialogFooter className="p-6 bg-slate-900/50 border-t border-white/5 gap-3">
-                    <Button variant="ghost" onClick={onClose} className="h-12 rounded-xl  text-slate-500 hover:text-white hover:bg-white/5">Kapat</Button>
+                <DialogFooter className="p-6 bg-card/50 border-t border-border/50 gap-3">
+                    <Button variant="ghost" onClick={onClose} className="h-12 rounded-xl  text-muted-foreground/80 hover:text-white hover:bg-white/5">Kapat</Button>
                     <Button onClick={handlePrint} className="flex-1 h-12 rounded-xl bg-blue-500 hover:bg-blue-400 text-black  gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
                         <Printer className="h-4 w-4" />
                         LİSTEYİ YAZDIR

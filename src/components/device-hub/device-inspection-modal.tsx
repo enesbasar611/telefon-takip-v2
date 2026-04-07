@@ -67,7 +67,7 @@ export function DeviceInspectionModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-slate-900 border border-border/10 text-slate-500 hover:text-blue-500 hover:bg-blue-600/10 transition-all">
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-card border border-border/10 text-muted-foreground/80 hover:text-blue-500 hover:bg-blue-600/10 transition-all">
           <ShieldCheck className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -80,7 +80,7 @@ export function DeviceInspectionModal({
                 </div>
                 <div>
                     <DialogTitle className="font-medium text-xl ">Cihaz Ekspertiz Raporu</DialogTitle>
-                    <p className="text-[10px] text-slate-500  mt-0.5">{deviceName}</p>
+                    <p className="text-[10px] text-muted-foreground/80  mt-0.5">{deviceName}</p>
                 </div>
             </div>
           </DialogHeader>
@@ -88,18 +88,18 @@ export function DeviceInspectionModal({
           <div className="space-y-6">
             <div>
                 <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px]  text-slate-500">KOZMETİK SKORU: {cosmeticScore}/10</span>
+                    <span className="text-[10px]  text-muted-foreground/80">KOZMETİK SKORU: {cosmeticScore}/10</span>
                     <div className="flex gap-1">
                         {[...Array(10)].map((_, i) => (
                             <button
                                 key={i}
                                 onClick={() => setCosmeticScore(i + 1)}
-                                className={`h-2 w-8 rounded-full transition-all ${i < cosmeticScore ? 'bg-blue-500 ' : 'bg-slate-800 hover:bg-slate-700'}`}
+                                className={`h-2 w-8 rounded-full transition-all ${i < cosmeticScore ? 'bg-blue-500 ' : 'bg-muted hover:bg-slate-700'}`}
                             />
                         ))}
                     </div>
                 </div>
-                <Separator className="bg-slate-800/50" />
+                <Separator className="bg-muted/50" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -107,13 +107,13 @@ export function DeviceInspectionModal({
                 <div
                     key={item.id}
                     onClick={() => toggleCheck(item.id)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${ results[item.id] === "OK" ? 'bg-emerald-600/5 border-emerald-500/20' : results[item.id] === "FAIL" ? 'bg-rose-600/5 border-rose-500/20' : 'bg-slate-900/40 border-border/10/60 hover:border-slate-700' }`}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${ results[item.id] === "OK" ? 'bg-emerald-600/5 border-emerald-500/20' : results[item.id] === "FAIL" ? 'bg-rose-600/5 border-rose-500/20' : 'bg-card/40 border-border/10/60 hover:border-border/80' }`}
                 >
                   <div className="flex items-center gap-3">
-                    <item.icon className={`h-4 w-4 ${ results[item.id] === "OK" ? 'text-emerald-500' : results[item.id] === "FAIL" ? 'text-rose-500' : 'text-slate-500' }`} />
+                    <item.icon className={`h-4 w-4 ${ results[item.id] === "OK" ? 'text-emerald-500' : results[item.id] === "FAIL" ? 'text-rose-500' : 'text-muted-foreground/80' }`} />
                     <span className="text-[11px] ">{item.label}</span>
                   </div>
-                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-all ${ results[item.id] === "OK" ? 'bg-emerald-500 text-white' : results[item.id] === "FAIL" ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-600' }`}>
+                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-all ${ results[item.id] === "OK" ? 'bg-emerald-500 text-white' : results[item.id] === "FAIL" ? 'bg-rose-500 text-white' : 'bg-muted text-slate-600' }`}>
                     {results[item.id] === "OK" ? <Check className="h-3 w-3 stroke-[4px]" /> : results[item.id] === "FAIL" ? <X className="h-3 w-3 stroke-[4px]" /> : <Info className="h-3 w-3" />}
                   </div>
                 </div>
@@ -122,13 +122,13 @@ export function DeviceInspectionModal({
           </div>
         </div>
 
-        <div className="p-8 border-t border-border/10/50 bg-slate-900/20 flex items-center justify-between">
+        <div className="p-8 border-t border-border/10/50 bg-card/20 flex items-center justify-between">
            <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-[9px]  text-slate-500">Sistem Onayına Hazır</span>
+                <span className="text-[9px]  text-muted-foreground/80">Sistem Onayına Hazır</span>
            </div>
            <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={() => setOpen(false)} className="text-[10px]  text-slate-500 hover:text-white">İptal</Button>
+                <Button variant="ghost" onClick={() => setOpen(false)} className="text-[10px]  text-muted-foreground/80 hover:text-white">İptal</Button>
                 <Button onClick={handleSave} disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white  px-8 h-12 rounded-2xl">
                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "RAPORU KAYDET"}
                 </Button>

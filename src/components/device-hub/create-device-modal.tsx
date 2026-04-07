@@ -287,14 +287,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   }: { type: Condition; icon: any; title: string; desc: string; color: string }) => {
     const active = condition === type;
     const colorMap: Record<string, string> = {
-      emerald: active ? "border-emerald-500 bg-emerald-500/5" : "border-slate-800 bg-slate-900 hover:border-emerald-500/40",
-      amber: active ? "border-amber-500 bg-amber-500/5" : "border-slate-800 bg-slate-900 hover:border-amber-500/40",
-      purple: active ? "border-purple-500 bg-purple-500/5" : "border-slate-800 bg-slate-900 hover:border-purple-500/40",
+      emerald: active ? "border-emerald-500 bg-emerald-500/5" : "border-border bg-card hover:border-emerald-500/40",
+      amber: active ? "border-amber-500 bg-amber-500/5" : "border-border bg-card hover:border-amber-500/40",
+      purple: active ? "border-purple-500 bg-purple-500/5" : "border-border bg-card hover:border-purple-500/40",
     };
     const iconBg: Record<string, string> = {
-      emerald: active ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-500",
-      amber: active ? "bg-amber-500 text-white" : "bg-slate-800 text-slate-500",
-      purple: active ? "bg-purple-500 text-white" : "bg-slate-800 text-slate-500",
+      emerald: active ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground/80",
+      amber: active ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground/80",
+      purple: active ? "bg-purple-500 text-white" : "bg-muted text-muted-foreground/80",
     };
     const dotBg: Record<string, string> = {
       emerald: "bg-emerald-500", amber: "bg-amber-500", purple: "bg-purple-500",
@@ -309,17 +309,17 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <h4 className={`text-[14px]  leading-tight ${active ? "text-white" : "text-slate-500"}`}>{title}</h4>
-          <p className="text-[10px] text-slate-500 font-medium mt-0.5 leading-snug">{desc}</p>
+          <h4 className={`text-[14px]  leading-tight ${active ? "text-white" : "text-muted-foreground/80"}`}>{title}</h4>
+          <p className="text-[10px] text-muted-foreground/80 font-medium mt-0.5 leading-snug">{desc}</p>
         </div>
         {active && <div className={`absolute top-3 right-3 h-2 w-2 rounded-full ${dotBg[color]}`} />}
       </button>
     );
   };
 
-  const inputCls = "bg-slate-950 border-slate-800 rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
-  const labelCls = "text-[9px]  text-slate-500 uppercase tracking-widest pl-0.5";
-  const sectionCls = "p-5 rounded-2xl bg-slate-900 border border-slate-800/60 space-y-4";
+  const inputCls = "bg-background border-border rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
+  const labelCls = "text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-0.5";
+  const sectionCls = "p-5 rounded-2xl bg-card border border-border/60 space-y-4";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -329,12 +329,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[820px] p-0 bg-[#0B0F19] text-slate-200 border border-slate-800/60 shadow-2xl rounded-2xl overflow-hidden">
+      <DialogContent className="max-w-[820px] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-slate-800/60">
+        <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
           <div>
             <DialogTitle className="font-medium text-[21px]  text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
-            <p className="text-[12px] text-slate-500 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
+            <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
           </div>
         </div>
 
@@ -359,11 +359,11 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <SelectTrigger className={inputCls}>
                       <SelectValue placeholder="Marka Seçin" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800">
+                    <SelectContent className="bg-card border-border">
                       {POPULAR_BRANDS.map((b) => (
                         <SelectItem key={b} value={b} className="">{b}</SelectItem>
                       ))}
-                      <SelectItem value="Diğer" className=" text-slate-400">Diğer</SelectItem>
+                      <SelectItem value="Diğer" className=" text-muted-foreground">Diğer</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand.message}</p>}
@@ -401,7 +401,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       )}
                     </div>
                     {selectedBrand?.toLowerCase() === "apple" && (
-                      <div className="flex flex-wrap gap-2.5 p-3 bg-slate-950/50 rounded-2xl border border-slate-800">
+                      <div className="flex flex-wrap gap-2.5 p-3 bg-background/50 rounded-2xl border border-border">
                         {APPLE_COLORS.map((c) => (
                           <button
                             key={c.name}
@@ -410,10 +410,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                             className={`group relative flex flex-col items-center gap-1.5 transition-all outline-none`}
                           >
                             <div
-                              className={`h-8 w-8 rounded-full border-2 transition-all shadow-lg ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "border-blue-500 scale-110 shadow-blue-500/30" : "border-slate-800 hover:border-slate-600 scale-100 shadow-black/40"}`}
+                              className={`h-8 w-8 rounded-full border-2 transition-all shadow-lg ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "border-blue-500 scale-110 shadow-blue-500/30" : "border-border hover:border-slate-600 scale-100 shadow-black/40"}`}
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className={`text-[8px]  uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"}`}>
+                            <span className={`text-[8px]  uppercase tracking-tighter transition-colors ${selectedColor?.toLowerCase() === c.name.toLowerCase() ? "text-blue-400" : "text-muted-foreground/80 group-hover:text-foreground"}`}>
                               {c.name.split(" ")[0]}
                             </span>
                           </button>
@@ -427,7 +427,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>RAM</Label>
                   <Select onValueChange={(v) => setValue("ram", v)}>
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 8 GB" /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800">
+                    <SelectContent className="bg-card border-border">
                       {["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB"].map((v) => (
                         <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
@@ -438,7 +438,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>Dahili Depolama</Label>
                   <Select onValueChange={(v) => setValue("storage", v)}>
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 256 GB" /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800">
+                    <SelectContent className="bg-card border-border">
                       {["64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].map((v) => (
                         <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
@@ -454,16 +454,16 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
 
               {!isIntl && (
                 <>
-                  <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800 w-fit gap-1">
+                  <div className="flex items-center bg-background rounded-xl p-1 border border-border w-fit gap-1">
                     <button type="button" onClick={() => setWarrantyMode("months")}
-                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
                       Ay Seç
                     </button>
                     <button
                       type="button"
                       disabled={isNew}
                       onClick={() => setWarrantyMode("date")}
-                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
                       Tarih Gir
                     </button>
                   </div>
@@ -481,7 +481,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                         <SelectTrigger className={inputCls}>
                           <SelectValue placeholder={isNew ? "24 Ay (Sabit)" : "Kaç ay kaldı?"} />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900 border-slate-800">
+                        <SelectContent className="bg-card border-border">
                           {WARRANTY_MONTHS_OPTIONS.map((m) => (
                             <SelectItem key={m} value={String(m)} className="">
                               {m} Ay {isNew && m === 24 ? "✓ (Sabit)" : ""}
@@ -515,7 +515,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim1NotUsed}
                           onCheckedChange={(checked) => setValue("sim1NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim1NotUsed" className="font-medium text-[10px]  text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim1NotUsed" className="font-medium text-[10px]  text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input {...register("sim1ExpirationDate")} type="date" className={inputCls} disabled={sim1NotUsed} />
@@ -529,7 +529,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim2NotUsed}
                           onCheckedChange={(checked) => setValue("sim2NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim2NotUsed" className="font-medium text-[10px]  text-slate-500 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim2NotUsed" className="font-medium text-[10px]  text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input
@@ -554,14 +554,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>Pil Sağlığı</Label>
                   <div className="relative">
                     <Input {...register("batteryHealth")} type="number" min={1} max={100} placeholder="100" className={inputCls} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px]  text-slate-500">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px]  text-muted-foreground/80">%</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Kozmetik Durum</Label>
                   <Select onValueChange={(v) => setValue("cosmeticScore", v)} defaultValue="10">
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Seç" /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800 ">
+                    <SelectContent className="bg-card border-border ">
                       <SelectItem value="10">Kusursuz (10/10)</SelectItem>
                       <SelectItem value="9">Çok İyi (9/10)</SelectItem>
                       <SelectItem value="8">İyi – Ufak Çizikler (8/10)</SelectItem>
@@ -572,7 +572,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 </div>
                 <div className="col-span-2 space-y-1.5">
                   <Label className={labelCls}>Değiştirilen / Onarılan Parçalar</Label>
-                  <Textarea {...register("replacedParts")} placeholder="Örn: Ön cam, batarya değişimi" className="bg-slate-950 border-slate-800 rounded-xl min-h-[70px] text-[13px] font-medium placeholder:text-slate-600 resize-none p-3" />
+                  <Textarea {...register("replacedParts")} placeholder="Örn: Ön cam, batarya değişimi" className="bg-background border-border rounded-xl min-h-[70px] text-[13px] font-medium placeholder:text-slate-600 resize-none p-3" />
                 </div>
               </div>
             </div>
@@ -607,7 +607,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <button
                       type="button"
                       onClick={() => sellerIdFrontInputRef.current?.click()}
-                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
+                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
                     >
                       {sellerIdFront ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
                       <span className="text-[9px]  uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
@@ -616,7 +616,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <button
                       type="button"
                       onClick={() => sellerIdBackInputRef.current?.click()}
-                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300"}`}
+                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
                     >
                       {sellerIdBack ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
                       <span className="text-[9px]  uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
@@ -634,10 +634,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   value={watch("financeAccountId")}
                   onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
                 >
-                  <SelectTrigger className="bg-slate-950 border-slate-800 h-11 text-[13px] ">
+                  <SelectTrigger className="bg-background border-border h-11 text-[13px] ">
                     <SelectValue placeholder="Ödeme Hesabı Seçin" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800">
+                  <SelectContent className="bg-card border-border">
                     {accounts.map((acc) => (
                       <SelectItem key={acc.id} value={acc.id} className="">
                         {acc.name} - <span className="text-blue-400">{acc.balance.toLocaleString("tr-TR")} ₺</span>
@@ -655,7 +655,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input
                     {...register("buyPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px]  pl-8 dark:text-white"
+                    className="bg-background border-border rounded-xl h-11 text-[15px]  pl-8 dark:text-white"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("buyPrice", formatted, { shouldValidate: true });
@@ -671,7 +671,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input
                     {...register("sellPrice")}
                     placeholder="0"
-                    className="bg-slate-950 border-slate-800 rounded-xl h-11 text-[15px]  pl-8 text-emerald-400"
+                    className="bg-background border-border rounded-xl h-11 text-[15px]  pl-8 text-emerald-400"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("sellPrice", formatted, { shouldValidate: true });
@@ -688,17 +688,17 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <Label className={labelCls}>Cihaz Fotoğrafları (maks 5)</Label>
                 <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
                 <button type="button" onClick={() => photoInputRef.current?.click()}
-                  className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
-                  <Camera className="h-5 w-5 text-slate-500" />
-                  <span className="text-[11px]  text-slate-500">Fotoğraf Seç</span>
+                  className="w-full h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-card/50 transition-colors">
+                  <Camera className="h-5 w-5 text-muted-foreground/80" />
+                  <span className="text-[11px]  text-muted-foreground/80">Fotoğraf Seç</span>
                 </button>
                 {photoFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {photoFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-[10px]  text-slate-300">
+                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[10px]  text-foreground">
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                         {f.name.slice(0, 12)}...
-                        <button type="button" onClick={() => removePhoto(i)} className="ml-1 text-slate-500 hover:text-rose-400"><X className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => removePhoto(i)} className="ml-1 text-muted-foreground/80 hover:text-rose-400"><X className="h-3 w-3" /></button>
                       </div>
                     ))}
                   </div>
@@ -708,15 +708,15 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <Label className={labelCls}>Fatura / PDF Belgesi</Label>
                 <input ref={invoiceInputRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={handleInvoiceChange} />
                 <button type="button" onClick={() => invoiceInputRef.current?.click()}
-                  className="w-full h-24 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-slate-900/50 transition-colors">
-                  <FileText className="h-5 w-5 text-slate-500" />
-                  <span className="text-[11px]  text-slate-500">Fatura Seç</span>
+                  className="w-full h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-card/50 transition-colors">
+                  <FileText className="h-5 w-5 text-muted-foreground/80" />
+                  <span className="text-[11px]  text-muted-foreground/80">Fatura Seç</span>
                 </button>
                 {invoiceFile && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 text-[11px]  text-slate-300">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted text-[11px]  text-foreground">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     {invoiceFile.name.slice(0, 20)}
-                    <button type="button" onClick={() => setInvoiceFile(null)} className="ml-auto text-slate-500 hover:text-rose-400"><X className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => setInvoiceFile(null)} className="ml-auto text-muted-foreground/80 hover:text-rose-400"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 )}
               </div>
@@ -724,10 +724,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           {/* Footer */}
-          <div className="px-7 py-5 border-t border-slate-800/60 bg-[#0B0F19] flex justify-between items-center">
+          <div className="px-7 py-5 border-t border-border/60 bg-[#0B0F19] flex justify-between items-center">
             <p className="text-[11px] text-slate-600 font-medium">
               Otomatik kategori:{" "}
-              <span className="text-slate-400 ">
+              <span className="text-muted-foreground ">
                 Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
               </span>
             </p>

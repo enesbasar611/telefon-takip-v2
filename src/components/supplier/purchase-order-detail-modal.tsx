@@ -22,7 +22,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl bg-card border-white/10 p-0 overflow-hidden rounded-3xl" id="print-area">
+            <DialogContent className="max-w-4xl bg-card border-border p-0 overflow-hidden rounded-3xl" id="print-area">
                 <style dangerouslySetInnerHTML={{
                     __html: `
                     @media print {
@@ -77,7 +77,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
 
                 <div id="print-area-wrapper">
                     <div className="p-8 space-y-8 a4-content print:p-0 w-full" id="print-area">
-                        <DialogHeader className="flex flex-row items-center justify-between no-print border-b border-white/5 pb-6">
+                        <DialogHeader className="flex flex-row items-center justify-between no-print border-b border-border/50 pb-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
                                     <Printer className="h-6 w-6 text-blue-500" />
@@ -97,7 +97,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                         <div className="hidden print:flex justify-between border-b-2 border-black pb-4 mb-8">
                             <div>
                                 <h1 className="font-medium text-3xl  tracking-tighter mb-1">SATIN ALMA FORMU</h1>
-                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
                                     <span className=" text-black">NO: #{order.orderNo}</span>
                                     <span>•</span>
                                     <span>{format(new Date(order.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}</span>
@@ -105,13 +105,13 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                             </div>
                             <div className="text-right">
                                 <h2 className="font-medium text-xl  uppercase tracking-widest text-blue-600">TAKIPV2</h2>
-                                <p className="text-[10px]  text-slate-400">Inventory Management System</p>
+                                <p className="text-[10px]  text-muted-foreground">Inventory Management System</p>
                             </div>
                         </div>
 
                         {/* Client/Order Info Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-10">
-                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 print:p-0 print:border-none">
+                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-border/50 print:p-0 print:border-none">
                                 <div className="flex items-center gap-2 mb-4 text-blue-400 print:text-black">
                                     <Globe className="h-4 w-4" />
                                     <h4 className="font-medium text-[10px]  uppercase tracking-widest">Tedarikçi Bilgileri</h4>
@@ -133,7 +133,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                                 </div>
                             </div>
 
-                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 print:p-0 print:border-none">
+                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-border/50 print:p-0 print:border-none">
                                 <div className="flex items-center gap-2 mb-4 text-purple-400 print:text-black">
                                     <CheckCircle2 className="h-4 w-4" />
                                     <h4 className="font-medium text-[10px]  uppercase tracking-widest">Sipariş Durumu</h4>
@@ -158,9 +158,9 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                             <div className="flex items-center justify-between no-print">
                                 <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Sipariş İçeriği</h3>
                             </div>
-                            <div className="rounded-3xl border border-white/5 bg-white/[0.01] overflow-hidden print:rounded-none print:border-none">
+                            <div className="rounded-3xl border border-border/50 bg-white/[0.01] overflow-hidden print:rounded-none print:border-none">
                                 <table className="w-full text-left print-table">
-                                    <thead className="bg-white/[0.04] border-b border-white/5 print:bg-slate-100">
+                                    <thead className="bg-white/[0.04] border-b border-border/50 print:bg-slate-100">
                                         <tr>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-wider print:text-black">Ürün Adı</th>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-wider text-center print:text-black">Talep</th>
@@ -196,7 +196,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                         </div>
 
                         {/* Summary Footer */}
-                        <div className="flex flex-col items-end pt-6 border-t border-white/5 print:border-black/20">
+                        <div className="flex flex-col items-end pt-6 border-t border-border/50 print:border-black/20">
                             <div className="w-80 space-y-3">
                                 <div className="flex items-center justify-between text-muted-foreground print:text-black">
                                     <span className="text-xs  uppercase tracking-widest">Ara Toplam</span>
@@ -206,7 +206,7 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                                     <span className="text-xs  uppercase tracking-widest">KDV (%0)</span>
                                     <span className="text-sm ">₺0,00</span>
                                 </div>
-                                <div className="flex items-center justify-between pt-3 border-t border-white/10 print:border-black">
+                                <div className="flex items-center justify-between pt-3 border-t border-border print:border-black">
                                     <span className="text-sm  uppercase text-foreground print:text-black">Genel Toplam</span>
                                     <span className="text-3xl  text-blue-500 tracking-tighter print:text-black">₺{(Number(order.totalAmount) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
                                 </div>

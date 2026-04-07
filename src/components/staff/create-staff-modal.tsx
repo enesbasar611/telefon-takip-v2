@@ -115,7 +115,7 @@ export function CreateStaffModal() {
           Yeni Personel Ekle
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl bg-white dark:bg-slate-900 border-none rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
+      <DialogContent className="max-w-2xl bg-white dark:bg-card border-none rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
         <DialogHeader className="p-8 pb-4 flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -123,7 +123,7 @@ export function CreateStaffModal() {
             </div>
             <div>
               <DialogTitle className="font-medium text-xl  text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
-              <DialogDescription className="text-slate-500 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</DialogDescription>
+              <DialogDescription className="text-muted-foreground/80 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -155,15 +155,15 @@ export function CreateStaffModal() {
                 className="group relative cursor-pointer"
               >
                 <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
-                <div className="relative w-24 h-24 bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white dark:border-white/10 ring-4 ring-blue-500/10">
+                <div className="relative w-24 h-24 bg-white dark:bg-muted rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white dark:border-border ring-4 ring-blue-500/10">
                   {previewImage ? (
                     <img src={previewImage} className="w-full h-full object-cover" alt="Preview" />
                   ) : initials !== "?" ? (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl  text-slate-400 dark:text-white/20">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl  text-muted-foreground dark:text-white/20">
                       {initials}
                     </div>
                   ) : (
-                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                    <ImageIcon className="w-8 h-8 text-foreground" />
                   )}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
                     <ImageIcon className="w-6 h-6 text-white" />
@@ -182,7 +182,7 @@ export function CreateStaffModal() {
                     }}
                     className={cn(
                       "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
-                      watch("gender") === "MALE" ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                      watch("gender") === "MALE" ? "bg-blue-600 text-white shadow-lg" : "text-muted-foreground hover:text-slate-600"
                     )}
                   >
                     ERKEK
@@ -197,40 +197,40 @@ export function CreateStaffModal() {
                     }}
                     className={cn(
                       "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
-                      watch("gender") === "FEMALE" ? "bg-rose-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                      watch("gender") === "FEMALE" ? "bg-rose-600 text-white shadow-lg" : "text-muted-foreground hover:text-slate-600"
                     )}
                   >
                     KADIN
                   </button>
                 </div>
-                <p className="text-[9px]  text-center text-slate-400 uppercase tracking-widest">HIZLI AVATAR</p>
+                <p className="text-[9px]  text-center text-muted-foreground uppercase tracking-widest">HIZLI AVATAR</p>
               </div>
             </div>
 
             {/* Form Fields */}
             <div className="flex-1 grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ADI</Label>
+                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ADI</Label>
                 <Input
                   {...register("name")}
                   placeholder="Örn: Ahmet"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">SOYADI</Label>
+                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">SOYADI</Label>
                 <Input
                   {...register("surname")}
                   placeholder="Örn: Yılmaz"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">E-POSTA</Label>
+                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">E-POSTA</Label>
                 <Input
                   {...register("email")}
                   placeholder="ahmet@example.com"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-1.5">
@@ -239,7 +239,7 @@ export function CreateStaffModal() {
                   {...register("password")}
                   type="password"
                   placeholder="******"
-                  className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-rose-500/20"
+                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-rose-500/20"
                 />
               </div>
               <PhoneInput
@@ -247,7 +247,7 @@ export function CreateStaffModal() {
                 value={watch("phone") || ""}
                 onChange={(val: string) => setValue("phone", val)}
                 error={errors.phone?.message}
-                className="h-11 border-none bg-slate-50 dark:bg-slate-800/50"
+                className="h-11 border-none bg-slate-50 dark:bg-muted/50"
               />
             </div>
           </div>
@@ -255,12 +255,12 @@ export function CreateStaffModal() {
           {/* Role and Branch Selection */}
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
-              <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
+              <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("role", v as any)} defaultValue="STAFF">
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs">
+                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs">
                   <SelectValue placeholder="Bir rol seçin..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 rounded-xl">
+                <SelectContent className="bg-white dark:bg-card border-slate-200 dark:border-border/50 rounded-xl">
                   <SelectItem value="ADMIN" className="">Yönetici (Full)</SelectItem>
                   <SelectItem value="MANAGER" className="">Mağaza Müdürü</SelectItem>
                   <SelectItem value="CASHIER" className="">Kasiyer</SelectItem>
@@ -270,15 +270,15 @@ export function CreateStaffModal() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
+              <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
               <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube">
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl  text-xs">
+                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-3 h-3 text-slate-400" />
+                    <MapPin className="w-3 h-3 text-muted-foreground" />
                     <SelectValue placeholder="Bir şube seçin..." />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/5 text-white rounded-xl">
+                <SelectContent className="bg-card border-border/50 text-white rounded-xl">
                   <SelectItem value="Ana Şube">Ana Şube</SelectItem>
                   <SelectItem value="Şube 2">Şube 2</SelectItem>
                 </SelectContent>
@@ -287,18 +287,18 @@ export function CreateStaffModal() {
           </div>
 
           {/* Quick Permissions */}
-          <div className="pt-4 border-t border-white/5 mt-4">
-            <Label className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
+          <div className="pt-4 border-t border-border/50 mt-4">
+            <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setValue("canSell", !watch("canSell"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canSell") ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canSell") ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canSell") ? "border-emerald-500 bg-emerald-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canSell") ? "border-emerald-500 bg-emerald-500" : "border-border/80")}>
                   {watch("canSell") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">SATIŞ</span>
@@ -309,10 +309,10 @@ export function CreateStaffModal() {
                 onClick={() => setValue("canService", !watch("canService"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canService") ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canService") ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canService") ? "border-blue-500 bg-blue-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canService") ? "border-blue-500 bg-blue-500" : "border-border/80")}>
                   {watch("canService") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">SERVİS</span>
@@ -323,10 +323,10 @@ export function CreateStaffModal() {
                 onClick={() => setValue("canStock", !watch("canStock"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canStock") ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canStock") ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canStock") ? "border-orange-500 bg-orange-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canStock") ? "border-orange-500 bg-orange-500" : "border-border/80")}>
                   {watch("canStock") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">STOK</span>
@@ -337,10 +337,10 @@ export function CreateStaffModal() {
                 onClick={() => setValue("canFinance", !watch("canFinance"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canFinance") ? "bg-purple-500/10 border-purple-500/20 text-purple-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canFinance") ? "bg-purple-500/10 border-purple-500/20 text-purple-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canFinance") ? "border-purple-500 bg-purple-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canFinance") ? "border-purple-500 bg-purple-500" : "border-border/80")}>
                   {watch("canFinance") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">FİNANS</span>
@@ -351,10 +351,10 @@ export function CreateStaffModal() {
                 onClick={() => setValue("canEdit", !watch("canEdit"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canEdit") ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canEdit") ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canEdit") ? "border-indigo-500 bg-indigo-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canEdit") ? "border-indigo-500 bg-indigo-500" : "border-border/80")}>
                   {watch("canEdit") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">DÜZENLEME</span>
@@ -365,10 +365,10 @@ export function CreateStaffModal() {
                 onClick={() => setValue("canDelete", !watch("canDelete"))}
                 className={cn(
                   "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canDelete") ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-white/5 border-white/5 text-slate-500"
+                  watch("canDelete") ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
                 )}
               >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canDelete") ? "border-red-500 bg-red-500" : "border-slate-700")}>
+                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canDelete") ? "border-red-500 bg-red-500" : "border-border/80")}>
                   {watch("canDelete") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </div>
                 <span className="text-[10px]  uppercase tracking-wider">SİLME</span>
@@ -381,7 +381,7 @@ export function CreateStaffModal() {
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
-              className=" text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className=" text-xs uppercase tracking-widest text-muted-foreground hover:text-slate-900 dark:hover:text-white"
             >
               İptal
             </Button>

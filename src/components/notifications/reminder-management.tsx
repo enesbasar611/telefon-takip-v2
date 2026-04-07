@@ -122,7 +122,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                 <Button
                     variant="ghost"
                     onClick={onBack}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10  text-[11px] gap-2 transition-all text-slate-400 hover:text-white"
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-border hover:bg-white/10  text-[11px] gap-2 transition-all text-muted-foreground hover:text-white"
                 >
                     <ChevronLeft className="h-4 w-4" /> Geri Dön
                 </Button>
@@ -135,7 +135,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Left Panel: Create Form */}
                 <div className="lg:col-span-5 space-y-4">
-                    <div className="matte-card p-6 rounded-3xl border border-white/10 bg-white/[0.02] shadow-2xl relative overflow-hidden group">
+                    <div className="matte-card p-6 rounded-3xl border border-border bg-white/[0.02] shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                             <BellPlus className="h-24 w-24 text-blue-500" />
                         </div>
@@ -149,52 +149,52 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
 
                         <div className="space-y-4 relative z-10">
                             <div className="space-y-1.5">
-                                <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">HATIRLATICI BAŞLIĞI</Label>
+                                <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">HATIRLATICI BAŞLIĞI</Label>
                                 <Input
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Örn: iPhone 15 Ekran Stok Kontrolü"
-                                    className="bg-black/20 border-white/5 rounded-xl h-12 text-sm font-medium focus:ring-blue-500/20"
+                                    className="bg-black/20 border-border/50 rounded-xl h-12 text-sm font-medium focus:ring-blue-500/20"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">AÇIKLAMA</Label>
+                                <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">AÇIKLAMA</Label>
                                 <Textarea
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Hatırlatıcı detaylarını buraya yazın..."
-                                    className="bg-black/20 border-white/5 rounded-xl min-h-[100px] text-sm font-medium resize-none focus:ring-blue-500/20"
+                                    className="bg-black/20 border-border/50 rounded-xl min-h-[100px] text-sm font-medium resize-none focus:ring-blue-500/20"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">TARİH VE SAAT</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">TARİH VE SAAT</Label>
                                     <div className="relative">
                                         <Input
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
-                                            className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium pl-10"
+                                            className="bg-black/20 border-border/50 rounded-xl h-11 text-sm font-medium pl-10"
                                         />
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                                     </div>
                                     <Input
                                         type="time"
                                         value={time}
                                         onChange={(e) => setTime(e.target.value)}
-                                        className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium mt-2"
+                                        className="bg-black/20 border-border/50 rounded-xl h-11 text-sm font-medium mt-2"
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">KATEGORİ</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">KATEGORİ</Label>
                                     <Select value={category} onValueChange={setCategory}>
-                                        <SelectTrigger className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium">
+                                        <SelectTrigger className="bg-black/20 border-border/50 rounded-xl h-11 text-sm font-medium">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-white/10 text-white">
+                                        <SelectContent className="bg-card border-border text-white">
                                             <SelectItem value="Stok Uyarısı">Stok Uyarısı</SelectItem>
                                             <SelectItem value="Servis Teslimatı">Servis Teslimatı</SelectItem>
                                             <SelectItem value="Ödeme Vadesi">Ödeme Vadesi</SelectItem>
@@ -206,12 +206,12 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">TEKRARLAMA</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">TEKRARLAMA</Label>
                                     <Select value={recurrence} onValueChange={setRecurrence}>
-                                        <SelectTrigger className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium">
+                                        <SelectTrigger className="bg-black/20 border-border/50 rounded-xl h-11 text-sm font-medium">
                                             <SelectValue placeholder="Yok" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-900 border-white/10 text-white">
+                                        <SelectContent className="bg-card border-border text-white">
                                             <SelectItem value="Yok">Yok</SelectItem>
                                             <SelectItem value="Günlük">Günlük</SelectItem>
                                             <SelectItem value="Haftalık">Haftalık</SelectItem>
@@ -221,20 +221,20 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label className="font-medium text-[10px]  text-slate-500 uppercase tracking-widest ml-1">PERSONEL</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">PERSONEL</Label>
                                     <div className="relative">
                                         <Input
                                             placeholder="Tüm Personel"
                                             readOnly
-                                            className="bg-black/20 border-white/5 rounded-xl h-11 text-sm font-medium pl-10"
+                                            className="bg-black/20 border-border/50 rounded-xl h-11 text-sm font-medium pl-10"
                                         />
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
-                                <Button variant="ghost" onClick={() => setTitle("")} className="text-slate-500 hover:text-white  text-xs uppercase tracking-widest">İPTAL</Button>
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/50">
+                                <Button variant="ghost" onClick={() => setTitle("")} className="text-muted-foreground/80 hover:text-white  text-xs uppercase tracking-widest">İPTAL</Button>
                                 <Button
                                     onClick={handleSave}
                                     disabled={isSaving}
@@ -254,7 +254,7 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                             <h3 className="font-medium text-sm  text-white uppercase tracking-tighter">Bekleyen Hatırlatıcılar</h3>
                             <span className="px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-500 text-[9px] ">{reminders.length} AKTİF</span>
                         </div>
-                        <Button variant="ghost" className="h-8 text-[10px]  text-slate-500 gap-1 hover:text-white transition-colors">
+                        <Button variant="ghost" className="h-8 text-[10px]  text-muted-foreground/80 gap-1 hover:text-white transition-colors">
                             Tümünü Görüntüle <ChevronRight className="h-3 w-3" />
                         </Button>
                     </div>
@@ -265,14 +265,14 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                 <Loader2 className="h-8 w-8 animate-spin text-blue-500/20" />
                             </div>
                         ) : reminders.length === 0 ? (
-                            <div className="py-20 text-center matte-card rounded-3xl border-white/5 bg-white/[0.01]">
-                                <h4 className="font-medium text-slate-500  text-sm">Bekleyen hatırlatıcı bulunamadı.</h4>
+                            <div className="py-20 text-center matte-card rounded-3xl border-border/50 bg-white/[0.01]">
+                                <h4 className="font-medium text-muted-foreground/80  text-sm">Bekleyen hatırlatıcı bulunamadı.</h4>
                             </div>
                         ) : (
                             reminders.map((r, idx) => (
                                 <div
                                     key={r.id}
-                                    className="group matte-card p-4 rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all relative overflow-hidden"
+                                    className="group matte-card p-4 rounded-2xl border border-border/50 bg-white/[0.01] hover:bg-white/[0.03] transition-all relative overflow-hidden"
                                 >
                                     <div className="lex items-start gap-4">
                                         <div className={cn(
@@ -292,19 +292,19 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                                 )}>
                                                     {r.category}
                                                 </span>
-                                                <span className="text-[10px] font-medium text-slate-500">
+                                                <span className="text-[10px] font-medium text-muted-foreground/80">
                                                     {format(new Date(r.date), "PPP p", { locale: tr })}
                                                 </span>
                                             </div>
                                             <h4 className="font-medium text-sm  text-white mb-1 leading-tight group-hover:text-blue-400 transition-colors">{r.title}</h4>
-                                            {r.description && <p className="text-[12px] text-slate-400 line-clamp-2 leading-snug mb-3">{r.description}</p>}
+                                            {r.description && <p className="text-[12px] text-muted-foreground line-clamp-2 leading-snug mb-3">{r.description}</p>}
 
-                                            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                                            <div className="flex items-center justify-between pt-2 border-t border-border/50">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center border border-white/5">
-                                                        <User className="h-3 w-3 text-slate-500" />
+                                                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center border border-border/50">
+                                                        <User className="h-3 w-3 text-muted-foreground/80" />
                                                     </div>
-                                                    <span className="text-[11px] font-medium text-slate-500">{r.user?.name || "Personel"}</span>
+                                                    <span className="text-[11px] font-medium text-muted-foreground/80">{r.user?.name || "Personel"}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <Button
@@ -343,9 +343,9 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
                                     <div className="text-2xl  text-white relative z-10 leading-none my-1">{reminders.length}</div>
                                     <p className="text-[9px]  text-blue-100/70 relative z-10">Planlanan İşlem</p>
                                 </div>
-                                <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 relative overflow-hidden group">
+                                <div className="bg-card border border-border/50 rounded-2xl p-4 relative overflow-hidden group">
                                     <AlertCircle className="absolute -right-2 -bottom-2 h-12 w-12 text-white/[0.03] group-hover:rotate-12 transition-transform" />
-                                    <span className="text-[10px]  text-slate-500 uppercase tracking-widest relative z-10">GECİKEN</span>
+                                    <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest relative z-10">GECİKEN</span>
                                     <div className="text-2xl  text-white relative z-10 leading-none my-1">0</div>
                                     <p className="text-[9px]  text-rose-500 relative z-10 flex items-center gap-1">
                                         <AlertCircle className="h-2 w-2" /> Aksiyon Gerekiyor

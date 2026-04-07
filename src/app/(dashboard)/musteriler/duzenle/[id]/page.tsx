@@ -162,7 +162,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/5 text-gray-500 hover:text-white transition-all shadow-none"
+                className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-border/50 text-gray-500 hover:text-white transition-all shadow-none"
                 onClick={() => router.back()}
               >
                 <ArrowLeft className="h-6 w-6" />
@@ -187,13 +187,13 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <Tabs defaultValue="genel" className="w-full">
-                <TabsList className="bg-transparent border-b border-white/5 w-full justify-start rounded-none h-auto p-0 gap-10 mb-8">
+                <TabsList className="bg-transparent border-b border-border/50 w-full justify-start rounded-none h-auto p-0 gap-10 mb-8">
                   <TabsTrigger value="genel" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-400 px-0 py-4  text-[10px] transition-all">TEMEL VERİLER</TabsTrigger>
                   <TabsTrigger value="ek" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-400 px-0 py-4  text-[10px] transition-all">EK İLETİŞİM</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="genel" className="mt-0 outline-none">
-                  <Card className="bg-card border-white/5 shadow-none obsidian p-4">
+                  <Card className="bg-card border-border/50 shadow-none obsidian p-4">
                     <CardContent className="pt-8 space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <FormField
@@ -205,7 +205,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                               <FormControl>
                                 <div className="relative group">
                                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
-                                  <Input placeholder="Ahmet Yılmaz" {...field} className="bg-background border-white/5 h-14 pl-12 rounded-xl  focus:ring-1 focus:ring-blue-500/20" />
+                                  <Input placeholder="Ahmet Yılmaz" {...field} className="bg-background border-border/50 h-14 pl-12 rounded-xl  focus:ring-1 focus:ring-blue-500/20" />
                                 </div>
                               </FormControl>
                               <FormMessage className="text-[10px]  text-rose-500" />
@@ -219,7 +219,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                           render={({ field }) => (
                             <FormItem className="space-y-3">
                               <FormLabel className="text-gray-600  text-[10px]">MÜŞTERİ TİPİ</FormLabel>
-                              <div className="flex gap-3 p-1.5 bg-background rounded-xl border border-white/5 h-14">
+                              <div className="flex gap-3 p-1.5 bg-background rounded-xl border border-border/50 h-14">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -265,7 +265,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                     value={field.value}
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
-                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-background px-3 py-2 text-sm  ring-offset-background placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
+                                    className="flex h-14 w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm  ring-offset-background placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
                                   />
                                 </div>
                               </FormControl>
@@ -283,7 +283,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                               <FormControl>
                                 <div className="relative group">
                                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
-                                  <Input placeholder="example@domain.com" {...field} className="bg-background border-white/5 h-14 pl-12 rounded-xl  focus:ring-1 focus:ring-blue-500/20" />
+                                  <Input placeholder="example@domain.com" {...field} className="bg-background border-border/50 h-14 pl-12 rounded-xl  focus:ring-1 focus:ring-blue-500/20" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -303,7 +303,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                 <MapPin className="absolute left-4 top-6 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
                                 <Textarea
                                   placeholder="Sokak, Mahalle ve Şehir bilgileri..."
-                                  className="bg-background border-white/5 pl-12 min-h-[140px] rounded-[1.5rem]  focus:ring-1 focus:ring-blue-500/20 py-5"
+                                  className="bg-background border-border/50 pl-12 min-h-[140px] rounded-[1.5rem]  focus:ring-1 focus:ring-blue-500/20 py-5"
                                   {...field}
                                 />
                               </div>
@@ -317,7 +317,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                 </TabsContent>
 
                 <TabsContent value="ek">
-                  <Card className="bg-card border-white/5 shadow-none obsidian p-4">
+                  <Card className="bg-card border-border/50 shadow-none obsidian p-4">
                     <CardContent className="pt-8 space-y-6">
                       <FormField
                         control={form.control}
@@ -334,7 +334,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                     value={field.value}
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
-                                    className="flex h-14 w-full rounded-xl border border-white/5 bg-background px-3 py-2 text-sm  focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
+                                    className="flex h-14 w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm  focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
                                   />
                                 </div>
                             </FormControl>
@@ -351,7 +351,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
 
             <div className="space-y-8">
               {/* Profile Photo Card */}
-              <Card className="bg-card border-white/5 shadow-none obsidian overflow-hidden">
+              <Card className="bg-card border-border/50 shadow-none obsidian overflow-hidden">
                 <CardHeader className="pb-4 flex flex-row items-center justify-between px-8 border-b border-white/[0.03] bg-white/[0.01]">
                   <CardTitle className="font-medium text-gray-600  text-[10px]">PROFİL GÖRSELİ</CardTitle>
                   {photoPreview && (
@@ -375,7 +375,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                     onChange={handlePhotoChange}
                   />
                   <div
-                    className="h-40 w-40 rounded-2xl whisper-border border-white/10 flex items-center justify-center relative mb-6 group cursor-pointer hover:border-blue-500/50 transition-all overflow-hidden shadow-none"
+                    className="h-40 w-40 rounded-2xl whisper-border border-border flex items-center justify-center relative mb-6 group cursor-pointer hover:border-blue-500/50 transition-all overflow-hidden shadow-none"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {photoPreview ? (
@@ -393,7 +393,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               </Card>
 
               {/* VIP Status Card */}
-              <Card className="bg-card border-white/5 shadow-none obsidian p-2">
+              <Card className="bg-card border-border/50 shadow-none obsidian p-2">
                 <CardContent className="p-6">
                   <FormField
                     control={form.control}
@@ -426,7 +426,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               </Card>
 
               {/* Notes Card */}
-              <Card className="bg-card border-white/5 shadow-none obsidian flex-1">
+              <Card className="bg-card border-border/50 shadow-none obsidian flex-1">
                 <CardHeader className="pb-4 px-8 border-b border-white/[0.03] bg-white/[0.01]">
                    <div className="flex items-center gap-3">
                       <StickyNote className="h-4 w-4 text-blue-500" />
@@ -442,7 +442,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                         <FormControl>
                           <Textarea
                             placeholder="Teknik geçmiş, özel protokoller veya hatırlatmalar..."
-                            className="bg-background border-white/5 min-h-[160px] rounded-2xl text-xs  leading-relaxed focus:ring-1 focus:ring-blue-500/20 p-6"
+                            className="bg-background border-border/50 min-h-[160px] rounded-2xl text-xs  leading-relaxed focus:ring-1 focus:ring-blue-500/20 p-6"
                             {...field}
                           />
                         </FormControl>

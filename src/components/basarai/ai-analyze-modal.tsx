@@ -50,7 +50,7 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
                         </div>
                         <div className="flex-1 text-left">
                             <DialogTitle className="font-medium text-lg  tracking-tight">Finans & Stok Analizi</DialogTitle>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                                 BAŞAR AI: Sistemin genel sağlığını anında analiz edin.
                             </p>
                         </div>
@@ -61,8 +61,8 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
                     {!analysis ? (
                         <div className="bg-[#18181A] border border-[#222222] rounded-xl p-8 text-center">
                             <Sparkles className="h-10 w-10 text-violet-500 mx-auto mb-4 opacity-50" />
-                            <h3 className="font-medium text-sm  text-slate-300 mb-2">Dükkan Analizine Hazır</h3>
-                            <p className="text-[12px] text-slate-500 max-w-sm mx-auto leading-relaxed">
+                            <h3 className="font-medium text-sm  text-foreground mb-2">Dükkan Analizine Hazır</h3>
+                            <p className="text-[12px] text-muted-foreground/80 max-w-sm mx-auto leading-relaxed">
                                 Gemini AI tüm envanter hareketlerinizi ve kritik stok seviyelerini inceleyip size özel yönetici tavsiyeleri sunacak.
                             </p>
                         </div>
@@ -72,7 +72,7 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
                                 <CheckCircle2 className="h-3 w-3" />
                                 BAŞAR AI Analiz Raporu
                             </div>
-                            <div className="bg-[#18181A] border border-[#333] rounded-xl p-6 text-sm text-slate-300 whitespace-pre-wrap font-sans leading-relaxed shadow-inner">
+                            <div className="bg-[#18181A] border border-[#333] rounded-xl p-6 text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed shadow-inner">
                                 {analysis}
                             </div>
                             <div className="p-4 bg-violet-600/5 border border-violet-600/20 rounded-lg">

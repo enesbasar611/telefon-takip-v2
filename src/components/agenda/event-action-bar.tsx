@@ -203,7 +203,7 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
                     <Button
                         size="sm" variant="ghost"
                         onClick={() => setShowReschedule(false)}
-                        className="h-8 w-8 p-0 text-slate-500 hover:text-white"
+                        className="h-8 w-8 p-0 text-muted-foreground/80 hover:text-white"
                     >
                         ✕
                     </Button>

@@ -67,7 +67,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
               <Plus className="h-3 w-3 mr-1" /> Parça Ekle
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-white/5 text-white">
+          <DialogContent className="bg-card border-border/50 text-white">
             <DialogHeader>
               <DialogTitle className="font-medium text-sm ">Servise Parça Ekle</DialogTitle>
             </DialogHeader>
@@ -75,10 +75,10 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
               <div className="space-y-2">
                 <Label className="font-medium text-xs  text-muted-foreground">Ürün Seçin</Label>
                 <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger className="bg-white/[0.03] border-white/5 rounded-xl h-12">
+                  <SelectTrigger className="bg-white/[0.03] border-border/50 rounded-xl h-12">
                     <SelectValue placeholder="Envanterden ürün seçin..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-white/5 text-white">
+                  <SelectContent className="bg-card border-border/50 text-white">
                     {products.map((p) => (
                       <SelectItem key={p.id} value={p.id} className="text-xs  py-3">
                         {p.name} (Stok: {p.stock}) - ₺{Number(p.sellPrice).toLocaleString('tr-TR')}
@@ -93,7 +93,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="bg-white/[0.03] border-white/5 rounded-xl h-12"
+                  className="bg-white/[0.03] border-border/50 rounded-xl h-12"
                 />
               </div>
               <Button onClick={handleAdd} disabled={isPending || !selectedProductId} className="bg-blue-500 hover:bg-blue-600 text-white  h-12 rounded-xl mt-4">
@@ -106,7 +106,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
 
       <div className="space-y-2">
         {currentParts.map((part) => (
-          <div key={part.id} className="flex flex-col gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] group hover:border-white/10 transition-all">
+          <div key={part.id} className="flex flex-col gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] group hover:border-border transition-all">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-white/[0.03] flex items-center justify-center">
@@ -147,14 +147,14 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
           </div>
         ))}
         {currentParts.length === 0 && (
-          <div className="p-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
+          <div className="p-8 text-center border-2 border-dashed border-border/50 rounded-2xl">
             <p className="text-[10px]  text-gray-600">Henüz parça eklenmedi.</p>
           </div>
         )}
       </div>
 
       {currentParts.length > 0 && (
-        <div className="pt-2 flex justify-between items-center border-t border-white/5">
+        <div className="pt-2 flex justify-between items-center border-t border-border/50">
           <span className="text-xs  text-muted-foreground">TOPLAM PARÇA MALİYETİ</span>
           <span className="text-sm  text-foreground">₺{totalPartsCost.toLocaleString('tr-TR')}</span>
         </div>

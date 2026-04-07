@@ -40,10 +40,12 @@ import {
 import { updateServiceStatus, deleteServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatPhone } from "@/lib/utils";
-import { formatWhatsAppLink, WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import Link from "next/link";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { ServiceReceiptModal } from "./service-receipt-modal";
 
 interface ServiceTableProps {
   data: any[];
@@ -61,7 +63,11 @@ const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any
 
 export function ServiceTable({ data }: ServiceTableProps) {
   const [isPending, startTransition] = useTransition();
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
   const { toast } = useToast();
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappTicket, setWhatsappTicket] = useState<any>(null);
 
   const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(data, "createdAt", "desc");
 
@@ -88,20 +94,9 @@ export function ServiceTable({ data }: ServiceTableProps) {
     });
   };
 
-  const sendWhatsApp = (ticket: any, type: keyof typeof WHATSAPP_TEMPLATES) => {
-    const template = WHATSAPP_TEMPLATES[type];
-    const message = replacePlaceholders(template, {
-      customer: ticket.customer.name,
-      device: `${ticket.deviceBrand} ${ticket.deviceModel}`,
-      ticket: ticket.ticketNumber,
-    });
-
-    const link = formatWhatsAppLink(ticket.customer.phone, message);
-    window.open(link, "_blank");
-  };
 
   return (
-    <div className="rounded-xl obsidian overflow-hidden whisper-border border-white/5 shadow-none">
+    <div className="rounded-xl obsidian overflow-hidden whisper-border border-border/50 shadow-none">
       <Table>
         <TableHeader className="font-medium bg-white/[0.01]">
           <TableRow className="border-b border-white/[0.03] hover:bg-transparent transition-none">
@@ -147,7 +142,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/[0.02] whisper-border border-white/5 flex items-center justify-center group-hover:bg-white/5 transition-all">
+                    <div className="h-10 w-10 rounded-xl bg-white/[0.02] whisper-border border-border/50 flex items-center justify-center group-hover:bg-white/5 transition-all">
                       <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
@@ -173,7 +168,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
+                        className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
                         title="Detayları Görüntüle"
                       >
                         <Eye className="h-4 w-4" />
@@ -182,19 +177,22 @@ export function ServiceTable({ data }: ServiceTableProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
-                      onClick={() => sendWhatsApp(ticket, ticket.status === "READY" ? "READY" : "NEW_SERVICE")}
+                      className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
+                      onClick={() => {
+                        setWhatsappTicket(ticket);
+                        setWhatsappModalOpen(true);
+                      }}
                       title="WhatsApp Gönder"
                     >
                       <MessageCircle className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl bg-white/[0.02] whisper-border border-white/5 text-gray-600 hover:text-white hover:bg-white/5 transition-all" disabled={isPending}>
+                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-white hover:bg-white/5 transition-all" disabled={isPending}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-white/5 text-foreground p-2 min-w-[200px] shadow-none">
+                      <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground p-2 min-w-[200px] shadow-none">
                         <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/5" />
                         {Object.entries(statusMap).map(([status, info]) => (
@@ -209,10 +207,14 @@ export function ServiceTable({ data }: ServiceTableProps) {
                           </DropdownMenuItem>
                         ))}
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem asChild className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center">
-                          <Link href={`/servis/yazdir?id=${ticket.id}`} target="_blank" className="w-full flex items-center gap-3">
-                            <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
-                          </Link>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedTicket(ticket);
+                            setShowReceipt(true);
+                          }}
+                          className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
+                        >
+                          <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
                         </DropdownMenuItem>
                         <DropdownMenuItem className="p-3 text-xs font-medium rounded-lg cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 flex gap-3 items-center" onClick={() => handleDelete(ticket.id)}>
                           <Trash className="h-4 w-4" /> Kaydı Arşivle
@@ -226,10 +228,46 @@ export function ServiceTable({ data }: ServiceTableProps) {
           )}
         </TableBody>
       </Table>
+      {whatsappTicket && (
+        <WhatsAppConfirmModal
+          isOpen={whatsappModalOpen}
+          onClose={() => {
+            setWhatsappModalOpen(false);
+            setWhatsappTicket(null);
+          }}
+          phone={whatsappTicket.customer?.phone || ""}
+          customerName={whatsappTicket.customer?.name}
+          initialMessage={replacePlaceholders(
+            (() => {
+              switch (whatsappTicket.status) {
+                case "READY": return WHATSAPP_TEMPLATES.READY;
+                case "APPROVED": return WHATSAPP_TEMPLATES.APPROVED;
+                case "REPAIRING": return WHATSAPP_TEMPLATES.REPAIRING;
+                case "WAITING_PART": return WHATSAPP_TEMPLATES.WAITING_PART;
+                case "DELIVERED": return WHATSAPP_TEMPLATES.DELIVERED;
+                default: return WHATSAPP_TEMPLATES.NEW_SERVICE;
+              }
+            })(),
+            {
+              customer: whatsappTicket.customer?.name || "",
+              device: `${whatsappTicket.deviceBrand} ${whatsappTicket.deviceModel}`,
+              ticket: whatsappTicket.ticketNumber || ""
+            }
+          )}
+        />
+      )}
+      {selectedTicket && (
+        <ServiceReceiptModal
+          isOpen={showReceipt}
+          onClose={() => {
+            setShowReceipt(false);
+            setSelectedTicket(null);
+          }}
+          ticket={selectedTicket}
+        />
+      )}
     </div>
   );
 }
-
-
 
 

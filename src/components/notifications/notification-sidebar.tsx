@@ -5,6 +5,8 @@ import { SystemNotification } from "@/lib/actions/notification-actions";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 
 export function NotificationSidebar({
     notifications: incomingNotifications,
@@ -22,24 +24,26 @@ export function NotificationSidebar({
     const pendingApprovals = notifications.filter((n: any) => n.type === "PENDING_APPROVAL");
     const delayedServices = notifications.filter((n: any) => n.type === "DELIVERY_TIME");
 
-    const openWhatsApp = (phone: string, message: string) => {
-        const cleanPhone = phone.replace(/\D/g, "");
-        const url = `https://wa.me/${cleanPhone.startsWith('90') ? cleanPhone : '90' + cleanPhone}?text=${encodeURIComponent(message)}`;
-        window.open(url, "_blank");
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+    const [selectedNotification, setSelectedNotification] = useState<any>(null);
+
+    const handleWhatsAppClick = (phone: string, message: string, name?: string) => {
+        setSelectedNotification({ phone, message, name });
+        setWhatsappModalOpen(true);
     };
 
     return (
         <div className="flex flex-col gap-5 w-full lg:w-[320px] shrink-0">
             {/* Garanti Bitiş Uyarısı Widget */}
             {warrantyAlerts.length > 0 && (
-                <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-5 border border-white/10 shadow-xl relative overflow-hidden group">
+                <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-5 border border-border shadow-xl relative overflow-hidden group">
                     <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
 
                     <div className="flex items-center justify-between mb-3 relative z-10">
                         <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md">
-                            <Shield className="h-4 w-4 text-slate-200" />
+                            <Shield className="h-4 w-4 text-foreground/90" />
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[9px]  text-slate-300 uppercase tracking-widest backdrop-blur-md border border-white/5">
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[9px]  text-foreground uppercase tracking-widest backdrop-blur-md border border-border/50">
                             GARANTİ
                         </span>
                     </div>
@@ -48,7 +52,7 @@ export function NotificationSidebar({
                         <h3 className="font-medium text-lg  text-white mb-1.5 leading-tight">
                             Garanti Uyarısı
                         </h3>
-                        <p className="text-[12px] font-medium text-slate-400 leading-snug mb-4">
+                        <p className="text-[12px] font-medium text-muted-foreground leading-snug mb-4">
                             {warrantyAlerts[0].message}
                         </p>
                         <Button
@@ -62,11 +66,11 @@ export function NotificationSidebar({
             )}
 
             {/* Onay Bekleyenler & Gecikmiş Servis Widget */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 relative overflow-hidden">
+            <div className="bg-white/[0.02] border border-border/50 rounded-2xl p-5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
 
                 <div className="flex items-center justify-between mb-5 relative z-10">
-                    <h3 className="font-medium text-[10px]  text-slate-400 uppercase tracking-widest">
+                    <h3 className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">
                         ONAY BEKLEYENLER
                     </h3>
                     <div className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[9px]  shadow-[0_0_10px_rgba(59,130,246,0.3)]">
@@ -76,12 +80,12 @@ export function NotificationSidebar({
 
                 <div className="flex flex-col gap-6 relative z-10">
                     {pendingApprovals.length === 0 ? (
-                        <p className="text-xs text-slate-500 font-medium">Şu an bekleyen işlem yok.</p>
+                        <p className="text-xs text-muted-foreground/80 font-medium">Şu an bekleyen işlem yok.</p>
                     ) : (
                         pendingApprovals.slice(0, 3).map((pending: SystemNotification) => (
                             <div key={pending.id} className="flex gap-3 animate-in fade-in slide-in-from-right-2 duration-500">
-                                <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5 relative group/avatar">
-                                    <User className="h-4 w-4 text-slate-400 group-hover/avatar:text-blue-400 transition-colors" />
+                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50 relative group/avatar">
+                                    <User className="h-4 w-4 text-muted-foreground group-hover/avatar:text-blue-400 transition-colors" />
                                     <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-[#0B1120] flex items-center justify-center">
                                         <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                                     </div>
@@ -91,13 +95,16 @@ export function NotificationSidebar({
                                         <h4 className="font-medium text-[13px]  text-white leading-none truncate tracking-tight">
                                             {pending.message.split('-')[0].trim().replace('Müşteri:', '').trim()}
                                         </h4>
-                                        <p className="text-[11px] font-medium text-slate-500 leading-tight">
+                                        <p className="text-[11px] font-medium text-muted-foreground/80 leading-tight">
                                             Maliyet onayı bekleniyor ({pending.metadata?.cost?.toLocaleString('tr-TR')} TL)
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Button
-                                            onClick={() => openWhatsApp(pending.metadata?.phone || "", "Merhaba, cihazınızın onarım onayı hakkında görüşmek istemiştik.")}
+                                            onClick={() => {
+                                                const name = pending.message.split('-')[0].trim().replace('Müşteri:', '').trim();
+                                                handleWhatsAppClick(pending.metadata?.phone || "", "Merhaba, cihazınızın onarım onayı hakkında görüşmek istemiştik.", name);
+                                            }}
                                             className="h-8 px-4 rounded-lg bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white text-[10px]  transition-all gap-1.5 border border-emerald-500/20"
                                         >
                                             <MessageSquare className="h-3 w-3 fill-current" /> WhatsApp
@@ -105,7 +112,7 @@ export function NotificationSidebar({
                                         <Button
                                             variant="ghost"
                                             onClick={() => router.push(`/servis?highlight=${pending.referenceId}`)}
-                                            className="h-8 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 text-[10px]  gap-1.5 border border-white/5 transition-all"
+                                            className="h-8 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground text-[10px]  gap-1.5 border border-border/50 transition-all"
                                         >
                                             <ExternalLink className="h-3 w-3" /> Detay
                                         </Button>
@@ -118,7 +125,7 @@ export function NotificationSidebar({
 
                 {/* Gecikmiş Servis Alert - Real Data */}
                 {delayedServices.length > 0 && (
-                    <div className="mt-6 pt-5 border-t border-white/5 space-y-4 relative z-10">
+                    <div className="mt-6 pt-5 border-t border-border/50 space-y-4 relative z-10">
                         {delayedServices.slice(0, 2).map((delayed: SystemNotification) => (
                             <div key={delayed.id} className="flex gap-3 transition-all hover:translate-x-1">
                                 <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
@@ -128,7 +135,7 @@ export function NotificationSidebar({
                                     <h4 className="font-medium text-[12px]  text-white leading-none">
                                         {delayed.title}
                                     </h4>
-                                    <p className="text-[10px] font-medium text-slate-400 leading-tight">
+                                    <p className="text-[10px] font-medium text-muted-foreground leading-tight">
                                         {delayed.message}
                                     </p>
                                     <Button
@@ -147,18 +154,18 @@ export function NotificationSidebar({
             {/* Cihaz Takibi Widget - Real Data */}
             <div
                 onClick={() => router.push('/servis')}
-                className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all cursor-pointer"
+                className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-border/50 relative overflow-hidden group hover:border-border transition-all cursor-pointer"
             >
                 <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
                 <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">
-                    <h3 className="font-medium text-[9px]  text-slate-500 uppercase tracking-widest mb-1.5 ml-0.5">
+                    <h3 className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest mb-1.5 ml-0.5">
                         CİHAZ TAKİBİ
                     </h3>
                     <div className="flex items-end justify-between mb-4">
                         <span className="text-xl  text-white leading-none tracking-tight">
                             {serviceStats?.active || 0} Cihaz Onarımda
                         </span>
-                        <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-all group-hover:translate-x-1" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/80 group-hover:text-white transition-all group-hover:translate-x-1" />
                     </div>
                     <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
                         <div
@@ -168,6 +175,19 @@ export function NotificationSidebar({
                     </div>
                 </div>
             </div>
+
+            {selectedNotification && (
+                <WhatsAppConfirmModal
+                    isOpen={whatsappModalOpen}
+                    onClose={() => {
+                        setWhatsappModalOpen(false);
+                        setSelectedNotification(null);
+                    }}
+                    phone={selectedNotification.phone}
+                    customerName={selectedNotification.name || "Müşteri"}
+                    initialMessage={selectedNotification.message}
+                />
+            )}
         </div>
     );
 }

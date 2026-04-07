@@ -29,7 +29,7 @@ export function SortableHeader({
         <div
             className={cn(
                 "flex items-center gap-2 cursor-pointer select-none group transition-colors",
-                isActive ? "text-primary" : "text-slate-500 hover:text-slate-300",
+                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground",
                 align === "center" && "justify-center",
                 align === "right" && "justify-end",
                 className

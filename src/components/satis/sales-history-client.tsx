@@ -172,7 +172,7 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                     </div>
                     <div>
                         <h1 className="font-medium text-3xl font-extrabold text-foreground font-manrope">Satış Arşivi</h1>
-                        <p className="text-[11px] text-slate-500  mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
+                        <p className="text-[11px] text-muted-foreground/80  mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
                     </div>
                 </div>
 

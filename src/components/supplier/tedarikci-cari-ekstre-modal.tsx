@@ -91,13 +91,13 @@ export function TedarikciCariEkstreModal({ isOpen, onClose, supplier }: Tedarikc
 
                     <div className="mt-8 flex justify-between w-full text-left">
                         <div className="flex-1">
-                            <h3 className="font-medium text-[10px]  uppercase text-slate-500 mb-1">TEDARİKÇİ BİLGİLERİ</h3>
+                            <h3 className="font-medium text-[10px]  uppercase text-muted-foreground/80 mb-1">TEDARİKÇİ BİLGİLERİ</h3>
                             <p className="text-sm  text-black">{supplier.name}</p>
                             <p className="text-xs font-medium text-slate-800">{supplier.phone || "-"}</p>
                             <p className="text-xs font-medium text-slate-800 max-w-[300px]">{supplier.address || "-"}</p>
                         </div>
                         <div className="text-right flex-1">
-                            <h3 className="font-medium text-[10px]  uppercase text-slate-500 mb-1">HESAP ÖZETİ</h3>
+                            <h3 className="font-medium text-[10px]  uppercase text-muted-foreground/80 mb-1">HESAP ÖZETİ</h3>
                             <div className="space-y-1">
                                 <p className="text-xs font-medium text-slate-800">Toplam Shopping: ₺{Number(supplier.totalShopping || 0).toLocaleString("tr-TR")}</p>
                                 <p className="text-sm  text-black">Güncel Bakiye: ₺{Number(supplier.balance).toLocaleString("tr-TR")}</p>

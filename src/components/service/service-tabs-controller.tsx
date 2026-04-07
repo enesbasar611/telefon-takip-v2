@@ -27,7 +27,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
     return (
         <div className="flex flex-col gap-8 w-full mt-6">
             <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="flex items-center w-full h-14 bg-white/[0.02] border border-white/5 rounded-2xl p-1 gap-1 shadow-2xl overflow-x-auto no-scrollbar">
+                <TabsList className="flex items-center w-full h-14 bg-white/[0.02] border border-border/50 rounded-2xl p-1 gap-1 shadow-2xl overflow-x-auto no-scrollbar">
                     <TabsTrigger value="active" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
                         <Activity className="h-3.5 w-3.5" /> Devam Edenler ({activeTickets.length})
                     </TabsTrigger>
@@ -47,7 +47,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
 
                 {/* 1. DEVAM EDENLER */}
                 <TabsContent value="active" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={activeTickets}
                             allowedStatuses={["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"]}
@@ -57,7 +57,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
 
                 {/* 2. HAZIR */}
                 <TabsContent value="ready" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={readyTickets}
                             allowedStatuses={["READY"]}
@@ -67,7 +67,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
 
                 {/* 3. TESLİMATLAR */}
                 <TabsContent value="delivered" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={deliveredTickets}
                             allowedStatuses={["DELIVERED"]}
@@ -77,7 +77,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
 
                 {/* 4. İPTALLER */}
                 <TabsContent value="cancelled" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-white/5 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={cancelledTickets}
                             allowedStatuses={["CANCELLED"]}
@@ -123,7 +123,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         </div>
 
                         {/* Yeni Garanti İşlemi */}
-                        <div className="matte-card p-10 rounded-[2.5rem] border border-white/5">
+                        <div className="matte-card p-10 rounded-[2.5rem] border border-border/50">
                             <h2 className="font-medium text-lg  mb-6 text-white flex items-center gap-3">
                                 <Activity className="h-5 w-5 text-blue-500" />
                                 Yeni İade veya Garanti Süreci Başlat
@@ -132,25 +132,25 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         </div>
 
                         {/* Son İade Hareketleri */}
-                        <div className="matte-card px-0 py-6 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden">
-                            <div className="px-10 pb-6 border-b border-white/5">
+                        <div className="matte-card px-0 py-6 rounded-[2.5rem] border border-border/50 shadow-2xl overflow-hidden">
+                            <div className="px-10 pb-6 border-b border-border/50">
                                 <h2 className="font-medium text-xl font-extrabold text-white">Son İade Hareketleri</h2>
-                                <p className="text-sm font-medium text-slate-500 mt-1">Sisteme girilen son garanti/iade kayıtları</p>
+                                <p className="text-sm font-medium text-muted-foreground/80 mt-1">Sisteme girilen son garanti/iade kayıtları</p>
                             </div>
                             <Table>
                                 <TableHeader className="font-medium bg-white/[0.01]">
                                     <TableRow className="border-b border-white/[0.03] hover:bg-transparent">
-                                        <TableHead className="font-medium px-10 py-6 text-xs  text-slate-500">İade Fişi</TableHead>
-                                        <TableHead className="font-medium px-6 py-6 text-xs  text-slate-500">Servis Fişi</TableHead>
-                                        <TableHead className="font-medium px-6 py-6 text-xs  text-slate-500">Arızalı Parça</TableHead>
-                                        <TableHead className="font-medium px-6 py-6 text-xs  text-slate-500">İade Sebebi</TableHead>
-                                        <TableHead className="font-medium px-10 py-6 text-xs  text-slate-500">Tarih</TableHead>
+                                        <TableHead className="font-medium px-10 py-6 text-xs  text-muted-foreground/80">İade Fişi</TableHead>
+                                        <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Servis Fişi</TableHead>
+                                        <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Arızalı Parça</TableHead>
+                                        <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">İade Sebebi</TableHead>
+                                        <TableHead className="font-medium px-10 py-6 text-xs  text-muted-foreground/80">Tarih</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {warrantyStats.recentReturns.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-40 text-center text-slate-500 ">Henüz iade işlemi bulunmuyor</TableCell>
+                                            <TableCell colSpan={5} className="h-40 text-center text-muted-foreground/80 ">Henüz iade işlemi bulunmuyor</TableCell>
                                         </TableRow>
                                     ) : (
                                         warrantyStats.recentReturns.map((ticket: any) => {
@@ -166,13 +166,13 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                                 <TableRow key={ticket.id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors">
                                                     <TableCell className="px-10 py-6  text-sm text-purple-400">#{ticket.ticketNumber}</TableCell>
                                                     <TableCell className="px-6 py-6 font-medium text-xs">
-                                                        <Badge variant="outline" className="font-mono bg-white/[0.02] border-white/10 text-slate-300">
+                                                        <Badge variant="outline" className="font-mono bg-white/[0.02] border-border text-foreground">
                                                             {ticket.serviceTicket?.ticketNumber || 'Silinmiş Fiş'}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="px-6 py-6">
-                                                        <div className="flex items-center gap-3 font-medium text-slate-300">
-                                                            <Cpu className="h-4 w-4 text-slate-500" />
+                                                        <div className="flex items-center gap-3 font-medium text-foreground">
+                                                            <Cpu className="h-4 w-4 text-muted-foreground/80" />
                                                             {ticket.product?.name || "Bilinmeyen Parça"}
                                                         </div>
                                                     </TableCell>
@@ -181,7 +181,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                                             {getReasonText(ticket.returnReason)}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell className="px-10 py-6 font-medium text-xs text-slate-500">
+                                                    <TableCell className="px-10 py-6 font-medium text-xs text-muted-foreground/80">
                                                         {format(new Date(ticket.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
                                                     </TableCell>
                                                 </TableRow>

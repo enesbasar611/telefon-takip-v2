@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Package } from "lucide-react";
 import { serializePrisma } from "@/lib/utils";
-import { getTopSellingProducts } from "@/lib/actions/dashboard-actions";
+import { getTopProducts } from "@/lib/actions/dashboard-actions";
+import { getShopId } from "@/lib/auth";
 
 export async function TopProductsStream() {
-    const topProductsRaw = await getTopSellingProducts();
+    const shopId = await getShopId();
+    const topProductsRaw = await getTopProducts(shopId, 5);
     const topProducts = serializePrisma(topProductsRaw);
 
     return (

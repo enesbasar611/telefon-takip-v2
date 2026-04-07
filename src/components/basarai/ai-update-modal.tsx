@@ -77,7 +77,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </div>
                         <div className="flex-1 text-left">
                             <DialogTitle className="font-medium text-lg  tracking-tight">Akıllı Güncelleme</DialogTitle>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                                 BAŞAR AI: Mevcut stokları yapay zeka ile topluca güncelleyin.
                             </p>
                         </div>
@@ -88,7 +88,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     {!updates ? (
                         <>
                             <div className="space-y-2">
-                                <Label className="font-medium text-[11px]  text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Ne yapmak istiyorsunuz?
                                 </Label>
                                 <textarea
@@ -105,7 +105,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                         triggerAura("idle");
                                     }}
                                     placeholder="Örn: Tüm şarj aletlerinin satış fiyatını %10 artır."
-                                    className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed h-32"
+                                    className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-muted-foreground/80 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed h-32"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleParse(); }}
                                     autoFocus
                                 />
@@ -154,13 +154,13 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             )}
 
                             <div className="space-y-1">
-                                <h3 className="font-medium text-sm  text-slate-200">Etkilenecek Ürünler ({aiResponse?.affectedCount})</h3>
-                                <p className="text-[11px] text-slate-500 italic">Lütfen yapılacak değişiklikleri onaylayın.</p>
+                                <h3 className="font-medium text-sm  text-foreground/90">Etkilenecek Ürünler ({aiResponse?.affectedCount})</h3>
+                                <p className="text-[11px] text-muted-foreground/80 italic">Lütfen yapılacak değişiklikleri onaylayın.</p>
                             </div>
 
                             <div className="bg-[#18181A] border border-[#222] rounded-xl overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar">
                                 <table className="w-full text-[12px]">
-                                    <thead className="bg-[#111] sticky top-0 border-b border-[#222] text-slate-500  tracking-wider uppercase text-[9px]">
+                                    <thead className="bg-[#111] sticky top-0 border-b border-[#222] text-muted-foreground/80  tracking-wider uppercase text-[9px]">
                                         <tr>
                                             <th className="px-4 py-3 text-left">Ürün</th>
                                             <th className="px-4 py-3 text-right">Eski Durum</th>
@@ -173,14 +173,14 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                             <tr key={up.id} className="hover:bg-white/5 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="font-medium text-slate-300">{up.name}</span>
+                                                        <span className="font-medium text-foreground">{up.name}</span>
                                                         <span className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit  uppercase ${up.status === 'Halledildi' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
                                                             }`}>
                                                             {up.status}
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-right text-slate-500 italic">
+                                                <td className="px-4 py-3 text-right text-muted-foreground/80 italic">
                                                     Güncellenecek...
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
@@ -192,7 +192,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                                         {up.location && <span className="text-cyan-400 ">Raf: {up.location}</span>}
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 text-[11px] leading-tight max-w-[150px]">{up.reason}</td>
+                                                <td className="px-4 py-3 text-muted-foreground/80 text-[11px] leading-tight max-w-[150px]">{up.reason}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -211,7 +211,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     variant="outline"
                                     onClick={() => setAiResponse(null)}
                                     disabled={isPending}
-                                    className="flex-1 h-11 border-[#333] hover:bg-[#222] text-slate-400 "
+                                    className="flex-1 h-11 border-[#333] hover:bg-[#222] text-muted-foreground "
                                 >
                                     <ArrowLeft className="h-4 w-4 mr-2" /> Geri Dön
                                 </Button>

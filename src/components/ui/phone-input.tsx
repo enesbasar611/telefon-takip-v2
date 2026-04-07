@@ -19,19 +19,36 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
     ({ className, value, onChange, error, isLookingUp, label, required, ...props }, ref) => {
         const formatPhoneNumber = (value: string) => {
             let raw = value.replace(/[^0-9]/g, "");
-            if (raw.startsWith("90") && raw.length > 2) raw = raw.substring(2);
-            if (raw.startsWith("0")) raw = raw.substring(1);
 
-            const trimmed = raw.substring(0, 10);
-            let formatted = trimmed;
-            if (trimmed.length > 3 && trimmed.length <= 6) {
-                formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3);
-            } else if (trimmed.length > 6 && trimmed.length <= 8) {
-                formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6);
-            } else if (trimmed.length > 8) {
-                formatted = trimmed.slice(0, 3) + " " + trimmed.slice(3, 6) + " " + trimmed.slice(6, 8) + " " + trimmed.slice(8);
+            // Remove 90 if it exists at the start
+            if (raw.startsWith("90") && raw.length > 2) raw = raw.slice(2);
+            // Remove 0 if it exists at the start
+            if (raw.startsWith("0")) raw = raw.slice(1);
+
+            // Re-enforce starting with 5 (per user rule)
+            if (raw.length > 0 && raw[0] !== '5') {
+                const firstFive = raw.indexOf('5');
+                if (firstFive !== -1) {
+                    raw = raw.slice(firstFive);
+                } else {
+                    raw = "";
+                }
             }
-            return formatted;
+
+            const d = raw.slice(0, 10);
+            if (d.length === 0) return "";
+
+            let f = "(" + d.slice(0, 3);
+            if (d.length >= 3) {
+                f += ") ";
+                if (d.length > 3) {
+                    f += d.slice(3, 6);
+                }
+                if (d.length > 6) {
+                    f += " " + d.slice(6, 10);
+                }
+            }
+            return f;
         };
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +78,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                         type="tel"
                         inputMode="numeric"
                         maxLength={14}
-                        placeholder="5xx xxx xx xx"
+                        placeholder="(5xx) xxx xxxx"
                         className="flex-1 bg-transparent border-none outline-none px-4 text-sm  text-foreground placeholder:text-muted-foreground/40 h-full w-full"
                         value={value}
                         onChange={handleChange}

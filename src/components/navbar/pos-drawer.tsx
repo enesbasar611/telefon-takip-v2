@@ -47,9 +47,9 @@ export function POSDrawer() {
           <span>Hızlı Satış</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-[500px] bg-[#0F172A] border-slate-700/50 p-0 overflow-hidden shadow-2xl">
+      <SheetContent side="right" className="w-full sm:max-w-[500px] bg-[#0F172A] border-border/80/50 p-0 overflow-hidden shadow-2xl">
         <div className="h-full flex flex-col">
-          <SheetHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-slate-700/30">
+          <SheetHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-border/80/30">
             <div className="flex flex-col">
               <SheetTitle className="text-2xl  text-foreground leading-none">Hızlı Satış</SheetTitle>
               <SheetDescription className="text-muted-foreground font-medium text-xs mt-1.5">
@@ -59,7 +59,7 @@ export function POSDrawer() {
           </SheetHeader>
           <div className="flex-1 overflow-hidden relative">
             {loading ? (
-              <div className="h-full flex items-center justify-center text-slate-500  animate-pulse">
+              <div className="h-full flex items-center justify-center text-muted-foreground/80  animate-pulse">
                 Veriler Yükleniyor...
               </div>
             ) : (

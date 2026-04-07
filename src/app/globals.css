@@ -8,14 +8,15 @@
 @layer base {
   :root {
     /* Nexus Design Tokens — Light Mode */
-    --background: 0 0% 98%;
-    --foreground: 240 10% 8%;
+    --background: 210 40% 98%;
+    /* Soft off-white */
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 8%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 8%;
+    --popover-foreground: 222.2 84% 4.9%;
 
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
@@ -26,34 +27,33 @@
     --tertiary: 38 92% 50%;
     --tertiary-foreground: 210 40% 98%;
 
-    --muted: 240 5% 94%;
-    --muted-foreground: 240 4% 40%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 221.2 83.2% 96%;
-    --accent-foreground: 221.2 83.2% 53.3%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 240 6% 88%;
-    --input: 240 6% 88%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 1rem;
   }
 
   .dark {
-    /* Nexus Dark Mode — Zinc-950 Base */
-    --background: 240 10% 3.9%;
-    /* #09090b — Zinc-950 */
+    /* Nexus Dark Mode — Dynamic Modern (Navy/Slate) Base */
+    --background: 222.2 47.4% 10%;
+    /* Modern deep navy/slate, not pure black */
     --foreground: 214 32% 91%;
-    /* #e2e8f0 — Slate-200, gözü yormayan */
 
-    --card: 240 6% 5.5%;
-    /* #0c0c0e — Kart yüzeyi */
+    --card: 215 28% 14%;
+    /* Slightly lighter than background to stand out */
     --card-foreground: 214 32% 91%;
 
-    --popover: 240 6% 5.5%;
+    --popover: 215 28% 14%;
     --popover-foreground: 214 32% 91%;
 
     --primary: 217.2 91.2% 59.8%;
@@ -65,26 +65,30 @@
     --tertiary: 38 92% 60%;
     --tertiary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 240 5% 10%;
-    /* Hafif kart tonu */
-    --muted-foreground: 215 20% 60%;
-    /* Okunabilir gri text */
+    --muted: 215 28% 15%;
+    /* Muted background */
+    --muted-foreground: 215 20% 65%;
+    /* Readable gray */
 
-    --accent: 240 5% 10%;
+    --accent: 215 28% 18%;
+    /* Hover background state */
     --accent-foreground: 214 32% 91%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 240 5% 20%;
-    /* zinc-800 tonu — Nefes alan border */
-    --input: 240 5% 18%;
+    --border: 215 28% 22%;
+    /* Clearer borders */
+    --input: 215 28% 20%;
+    /* Clearer inputs */
     --ring: 217.2 91.2% 59.8%;
   }
 }
 
 @layer base {
-  html, body {
+
+  html,
+  body {
     max-width: 100%;
     overflow-x: hidden;
     height: 100%;
@@ -92,11 +96,12 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 overflow-hidden;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--app-font, 'Inter', system-ui, -apple-system, sans-serif) !important;
     color: hsl(var(--foreground));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    position: fixed; /* prevent rubber banding on iOS/MacOS */
+    position: fixed;
+    /* prevent rubber banding on iOS/MacOS */
     width: 100%;
   }
 

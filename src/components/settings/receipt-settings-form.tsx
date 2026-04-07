@@ -54,16 +54,16 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
         <div className="space-y-10">
             {/* Category Selector */}
             <Tabs value={activeType} onValueChange={setActiveType} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-900/50 p-1.5 rounded-2xl h-16 border border-white/5">
-                    <TabsTrigger value="pos" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                <TabsList className="grid w-full grid-cols-3 bg-slate-100 dark:bg-card/50 p-1.5 rounded-2xl h-16 border border-slate-200 dark:border-border/50 shadow-sm">
+                    <TabsTrigger value="pos" className="gap-3 text-xs rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all text-slate-600 dark:text-muted-foreground">
                         <ShoppingCart className="h-4 w-4" />
                         Hızlı Satış Fişi
                     </TabsTrigger>
-                    <TabsTrigger value="service" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="service" className="gap-3 text-xs rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all text-slate-600 dark:text-muted-foreground">
                         <Wrench className="h-4 w-4" />
                         Servis Kabul Fişi
                     </TabsTrigger>
-                    <TabsTrigger value="stock" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="stock" className="gap-3 text-xs rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all text-slate-600 dark:text-muted-foreground">
                         <Package className="h-4 w-4" />
                         Eksik Listesi
                     </TabsTrigger>
@@ -73,7 +73,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {/* Configuration Form */}
                 <div className="space-y-8 animate-in slide-in-from-left duration-700">
-                    <div className="bg-slate-900/40 p-10 rounded-[2.5rem] border border-white/5 space-y-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+                    <div className="bg-white dark:bg-card/40 p-10 rounded-[2.5rem] border border-slate-200 dark:border-border/50 space-y-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                             {activeType === "pos" ? <ShoppingCart className="h-32 w-32 text-blue-500 rotate-12" /> :
                                 activeType === "service" ? <Wrench className="h-32 w-32 text-blue-500 rotate-12" /> :
@@ -84,26 +84,26 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3">
                                     <div className="h-6 w-1 bg-blue-500 rounded-full" />
-                                    <h2 className="font-medium text-xl  text-white">ÜST BİLGİ ALANI</h2>
+                                    <h2 className="font-bold text-xl text-slate-900 dark:text-white">ÜST BİLGİ ALANI</h2>
                                 </div>
-                                <p className="text-[10px]  text-slate-500 tracking-wider">FİRMA ÜNVANI VE SLOGAN YAPILANDIRMASI</p>
+                                <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground tracking-wider font-bold">FİRMA ÜNVANI VE SLOGAN YAPILANDIRMASI</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Firma Ünvanı</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Firma Ünvanı</Label>
                                     <Input
                                         value={localSettings.title || ""}
                                         onChange={(e) => setLocalSettings({ ...localSettings, title: e.target.value })}
-                                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-sm  text-white focus:bg-white/[0.05] transition-all"
+                                        className="h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all"
                                     />
                                 </div>
                                 <div className="space-y-3">
-                                    <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Alt Başlık / Slogan</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Alt Başlık / Slogan</Label>
                                     <Input
                                         value={localSettings.subtitle || ""}
                                         onChange={(e) => setLocalSettings({ ...localSettings, subtitle: e.target.value })}
-                                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-sm  text-blue-400 focus:bg-white/[0.05] transition-all"
+                                        className="h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-sm font-semibold text-blue-600 dark:text-blue-400 focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all"
                                     />
                                 </div>
                             </div>
@@ -115,21 +115,21 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                                     onChange={(val: string) => setLocalSettings({ ...localSettings, phone: val })}
                                 />
                                 <div className="space-y-3">
-                                    <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Web Adresi</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Web Adresi</Label>
                                     <Input
                                         value={localSettings.website || ""}
                                         onChange={(e) => setLocalSettings({ ...localSettings, website: e.target.value })}
-                                        className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-sm  text-white focus:bg-white/[0.05] transition-all"
+                                        className="h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-3">
-                                <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Adres Bilgisi</Label>
+                                <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Adres Bilgisi</Label>
                                 <Textarea
                                     value={localSettings.address || ""}
                                     onChange={(e) => setLocalSettings({ ...localSettings, address: e.target.value })}
-                                    className="bg-white/[0.03] border-white/5 rounded-2xl text-sm  text-white min-h-[80px] focus:bg-white/[0.05] transition-all py-4"
+                                    className="bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white min-h-[80px] focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all py-4"
                                 />
                             </div>
 
@@ -137,24 +137,24 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                                 <div className="space-y-3 animate-in fade-in duration-500">
                                     <div className="flex items-center gap-3">
                                         <div className="h-6 w-1 bg-amber-500 rounded-full" />
-                                        <h2 className="font-medium text-xl  text-white">SERVİS ŞARTLARI</h2>
+                                        <h2 className="font-bold text-xl text-slate-900 dark:text-white">SERVİS ŞARTLARI</h2>
                                     </div>
-                                    <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Önemli Maddeler</Label>
+                                    <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Önemli Maddeler</Label>
                                     <Textarea
                                         value={localSettings.terms || ""}
                                         onChange={(e) => setLocalSettings({ ...localSettings, terms: e.target.value })}
-                                        className="bg-white/[0.03] border-white/5 rounded-2xl text-[11px] font-medium text-amber-200/80 min-h-[120px] focus:bg-white/[0.05] transition-all py-4 leading-relaxed"
+                                        className="bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-[11px] font-bold text-amber-700 dark:text-amber-200/80 min-h-[120px] focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all py-4 leading-relaxed"
                                         placeholder="Her satıra bir madde ekleyin..."
                                     />
                                 </div>
                             )}
 
-                            <div className="space-y-3 pt-6 border-t border-white/5">
-                                <Label className="font-medium text-[10px]  text-slate-400 tracking-[0.2em] ml-1">Kapanış Notu / Footer</Label>
+                            <div className="space-y-3 pt-6 border-t border-border/50">
+                                <Label className="font-medium text-[10px]  text-muted-foreground tracking-[0.2em] ml-1">Kapanış Notu / Footer</Label>
                                 <Input
                                     value={localSettings.footer || ""}
                                     onChange={(e) => setLocalSettings({ ...localSettings, footer: e.target.value })}
-                                    className="h-14 bg-white/[0.03] border-white/5 rounded-2xl text-sm  text-emerald-500 focus:bg-white/[0.05] transition-all"
+                                    className="h-14 bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-border/50 rounded-2xl text-sm font-semibold text-emerald-600 dark:text-emerald-500 focus:bg-slate-100 dark:focus:bg-white/[0.05] transition-all"
                                 />
                             </div>
 
@@ -176,7 +176,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                         <div className="flex items-center justify-between px-4">
                             <div className="flex items-center gap-3">
                                 <Eye className="h-5 w-5 text-blue-500" />
-                                <span className="text-[10px]  text-slate-400 tracking-[0.2em]">GERÇEK ZAMANLI ÖNİZLEME</span>
+                                <span className="text-[10px]  text-muted-foreground tracking-[0.2em]">GERÇEK ZAMANLI ÖNİZLEME</span>
                             </div>
                             <div className="p-2 h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50" />
                         </div>
@@ -255,7 +255,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <div className="flex justify-center items-center bg-slate-900 text-white px-2 py-1 mb-4">
+                                        <div className="flex justify-center items-center bg-card text-white px-2 py-1 mb-4">
                                             <span className=" text-[9px]">EKSİK LİSTESİ</span>
                                         </div>
                                         <div className="space-y-3 py-4">

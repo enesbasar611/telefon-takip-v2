@@ -46,7 +46,7 @@ export function StatsClientWrapper({ stats, statTypes, statsData }: any) {
 
                                 <div className="flex items-start justify-between relative">
                                     <div className={cn(
-                                        "p-3.5 rounded-2xl border border-white/5 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
+                                        "p-3.5 rounded-2xl border border-border/50 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
                                         stat.bgClass
                                     )}>
                                         <Icon className={cn("h-7 w-7", stat.colorClass)} />

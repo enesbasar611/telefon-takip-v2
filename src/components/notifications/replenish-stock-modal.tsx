@@ -113,28 +113,28 @@ export function ReplenishStockModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[480px] bg-slate-900 border-white/5 text-white p-0 overflow-hidden rounded-[2rem]">
+            <DialogContent className="sm:max-w-[480px] bg-card border-border/50 text-white p-0 overflow-hidden rounded-[2rem]">
                 <div className="p-8 space-y-6">
                     <DialogHeader>
                         <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
                             <ShoppingCart className="h-7 w-7 text-blue-500" />
                         </div>
                         <DialogTitle className="font-medium text-2xl  tracking-tight">Sipariş Oluştur</DialogTitle>
-                        <DialogDescription className="text-slate-400 font-medium pt-2">
+                        <DialogDescription className="text-muted-foreground font-medium pt-2">
                             <span className="text-white ">{productName}</span> ürünü için tedarik süreci başlatın.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label className="font-medium text-[10px]  uppercase tracking-widest text-slate-500 ml-1">
+                            <Label className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80 ml-1">
                                 TEDARİKÇİ SEÇİMİ
                             </Label>
                             <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                                <SelectTrigger className="h-14 bg-white/[0.03] border-white/5 rounded-2xl  text-sm focus:ring-blue-500 transition-all">
+                                <SelectTrigger className="h-14 bg-white/[0.03] border-border/50 rounded-2xl  text-sm focus:ring-blue-500 transition-all">
                                     <SelectValue placeholder="Tedarikçi Seçin" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-slate-900 border-white/5 text-white rounded-xl">
+                                <SelectContent className="bg-card border-border/50 text-white rounded-xl">
                                     <SelectItem value="NONE" className=" py-3">
                                         <div className="flex items-center gap-2">
                                             <AlertCircle className="h-4 w-4 text-orange-400" />
@@ -158,7 +158,7 @@ export function ReplenishStockModal({
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="flex-1 h-14 rounded-2xl  text-xs hover:bg-white/5 border border-white/5"
+                            className="flex-1 h-14 rounded-2xl  text-xs hover:bg-white/5 border border-border/50"
                         >
                             İPTAL
                         </Button>

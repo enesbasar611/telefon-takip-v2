@@ -51,7 +51,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                         </div>
                         <div className="flex-1">
                             <DialogTitle className="font-medium text-lg  tracking-tight">Akıllı Arama</DialogTitle>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                                 BAŞAR AI: Doğal dilde arama yapın. (Örn: Alış fiyatı 10 dolar altındaki Type-C kablolar)
                             </p>
                         </div>
@@ -74,7 +74,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 triggerAura("idle");
                             }}
                             placeholder="Aramak istediğiniz şeyi yazın..."
-                            className="bg-[#18181A] border-[#333333] text-white placeholder:text-slate-500 h-12 text-sm"
+                            className="bg-[#18181A] border-[#333333] text-white placeholder:text-muted-foreground/80 h-12 text-sm"
                             onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
                             autoFocus
                         />

@@ -106,6 +106,23 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
   const [aiAnalyzeOpen, setAiAnalyzeOpen] = useState(false);
   const [isAiHovered, setIsAiHovered] = useState(false);
   const [localActivePath, setLocalActivePath] = useState(pathname);
+  const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");
+        const res = await getWhatsAppStatusAction();
+        setWhatsappStatus(res.status);
+      } catch (error) {
+        console.error("WhatsApp status check failed", error);
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setLocalActivePath(pathname);
@@ -131,17 +148,26 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
-      {/* Logo / Brand */}
-      <div className="flex h-16 items-center px-6 border-b border-border/50 flex-shrink-0">
-        <button onClick={() => handleNavigation("/")} className="flex items-center gap-3 group outline-none">
-          <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25 flex-shrink-0">
-            <Zap className="h-4 w-4 text-white fill-white" strokeWidth={1.5} />
+      {/* Logo / Brand Area - Refined Premium Design */}
+      <div className="flex h-28 items-center px-7 border-b border-border/50 flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-transparent relative overflow-hidden group">
+        {/* Subtle Decorative Background Glow */}
+        <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
+
+        <button onClick={() => handleNavigation("/")} className="flex items-center gap-4.5 group outline-none relative z-10">
+          <div className="h-14 w-14 rounded-[1.25rem] bg-[#0A0A0A] border border-border flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-all duration-500 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
+            <Zap className="h-7 w-7 text-primary fill-primary animate-pulse shadow-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={1} />
           </div>
-          <div className="flex flex-col overflow-hidden">
-            <span className=" text-sm text-foreground leading-tight truncate max-w-[160px]">
-              Başar <span className="text-primary">Teknik</span>
-            </span>
-            <span className="text-[11px] font-medium text-muted-foreground leading-tight mt-0.5">Yönetim Paneli v2</span>
+          <div className="flex flex-col">
+            <h1 className="text-[22px] font-black tracking-tighter text-white leading-none uppercase group-hover:text-primary transition-colors duration-300">
+              BAŞAR<span className="text-primary not-italic font-extrabold ml-1">TEKNİK</span>
+            </h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] leading-none">
+                YÖNETİM PANELİ
+              </span>
+              <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+            </div>
           </div>
         </button>
       </div>
@@ -205,6 +231,9 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
                       strokeWidth={1.5}
                     />
                     <span className="flex-1 text-left leading-none">{item.label}</span>
+                    {item.label === "Ayarlar" && whatsappStatus === "DISCONNECTED" && (
+                      <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)] flex-shrink-0" />
+                    )}
                     {isActive && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
                   </button>
                 )}

@@ -108,7 +108,7 @@ export default function StockAIPage() {
             default:
                 return {
                     icon: Info,
-                    color: "text-slate-400",
+                    color: "text-muted-foreground",
                     bg: "bg-slate-400/10",
                     border: "border-slate-400/20",
                     glow: "",
@@ -120,7 +120,7 @@ export default function StockAIPage() {
     return (
         <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-700">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative overflow-hidden p-12 rounded-[3.5rem] bg-gradient-to-br from-blue-600/[0.05] to-transparent border border-white/5">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative overflow-hidden p-12 rounded-[3.5rem] bg-gradient-to-br from-blue-600/[0.05] to-transparent border border-border/50">
                 <div className="absolute top-[-50%] left-[-10%] h-[200%] w-[50%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none rotate-45" />
 
                 <div className="relative z-10 space-y-4">
@@ -133,7 +133,7 @@ export default function StockAIPage() {
                     <h1 className="font-medium text-5xl  text-white tracking-tighter leading-none">
                         AI <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent opacity-90 pb-2 pr-2">Önerileri</span>
                     </h1>
-                    <p className="text-slate-400 font-medium max-w-xl text-lg leading-relaxed">
+                    <p className="text-muted-foreground font-medium max-w-xl text-lg leading-relaxed">
                         Sistemimiz stok hareketlerini, satış trendlerini ve kritik seviyeleri analiz ederek dükkanınız için en kârlı kararları almanıza yardımcı olur.
                     </p>
                 </div>
@@ -161,7 +161,7 @@ export default function StockAIPage() {
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between px-4">
                         <h2 className="font-medium text-xl  text-white uppercase tracking-widest">AKTİF ÖNERİLER</h2>
-                        <span className="text-[10px]  text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                        <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-border/50">
                             {alerts.length} KAYIT BULUNDU
                         </span>
                     </div>
@@ -173,11 +173,11 @@ export default function StockAIPage() {
                             ))}
                         </div>
                     ) : alerts.length === 0 ? (
-                        <Card className="rounded-[3rem] border-dashed border-white/10 bg-transparent py-20">
+                        <Card className="rounded-[3rem] border-dashed border-border bg-transparent py-20">
                             <CardContent className="flex flex-col items-center justify-center text-center gap-4">
                                 <Zap className="h-16 w-16 text-slate-700 animate-pulse" />
                                 <div>
-                                    <h3 className="font-medium text-lg  text-slate-500 uppercase">Her Şey Yolunda</h3>
+                                    <h3 className="font-medium text-lg  text-muted-foreground/80 uppercase">Her Şey Yolunda</h3>
                                     <p className="text-sm text-slate-600 font-medium mt-1">Şu an için kritik bir stok uyarısı veya sistem önerisi bulunmuyor.</p>
                                 </div>
                             </CardContent>
@@ -187,7 +187,7 @@ export default function StockAIPage() {
                             const style = getTypeStyles(alert.type);
                             return (
                                 <Card key={alert.id} className={cn(
-                                    "rounded-[2.5rem] bg-white/[0.02] border-white/5 overflow-hidden group hover:bg-white/[0.04] transition-all duration-500",
+                                    "rounded-[2.5rem] bg-white/[0.02] border-border/50 overflow-hidden group hover:bg-white/[0.04] transition-all duration-500",
                                     style.glow,
                                     style.border
                                 )}>
@@ -207,7 +207,7 @@ export default function StockAIPage() {
                                                         {style.label}
                                                     </span>
                                                     <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                                    <span className="text-[9px]  text-slate-500 uppercase">
+                                                    <span className="text-[9px]  text-muted-foreground/80 uppercase">
                                                         {format(new Date(alert.createdAt), "dd MMMM HH:mm", { locale: tr })}
                                                     </span>
                                                 </div>
@@ -215,7 +215,7 @@ export default function StockAIPage() {
                                                     {alert.message}
                                                 </h3>
                                                 {alert.product && (
-                                                    <p className="text-xs  text-slate-500 uppercase tracking-widest">
+                                                    <p className="text-xs  text-muted-foreground/80 uppercase tracking-widest">
                                                         REF: {alert.product.name} ({alert.product.stock} Adet)
                                                     </p>
                                                 )}
@@ -225,13 +225,13 @@ export default function StockAIPage() {
                                         <div className="flex items-center gap-3 w-full md:w-auto">
                                             <Button
                                                 variant="ghost"
-                                                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
+                                                className="h-12 w-12 rounded-2xl bg-white/5 border border-border/50 text-muted-foreground/80 hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
                                                 onClick={() => handleDelete(alert.id)}
                                             >
                                                 <Trash2 className="h-5 w-5" />
                                             </Button>
                                             <Button
-                                                className="h-12 px-6 rounded-2xl bg-white border border-white/10 text-black hover:bg-white/90  text-[11px] uppercase tracking-widest flex-1 md:flex-none gap-2"
+                                                className="h-12 px-6 rounded-2xl bg-white border border-border text-black hover:bg-white/90  text-[11px] uppercase tracking-widest flex-1 md:flex-none gap-2"
                                                 onClick={async () => {
                                                     if (!alert.product) return;
 
@@ -292,7 +292,7 @@ export default function StockAIPage() {
                                 { icon: Clock, title: "Durgunluk", desc: "Sirkülasyonu duran stokları bildirir." },
                                 { icon: Package, title: "Kritik Seviye", desc: "Minimum stok sınırına yaklaşanlar." }
                             ].map((item, i) => (
-                                <div key={i} className="flex gap-4 p-4 rounded-3xl bg-white/10 border border-white/10">
+                                <div key={i} className="flex gap-4 p-4 rounded-3xl bg-white/10 border border-border">
                                     <item.icon className="h-5 w-5 mt-1 shrink-0" />
                                     <div>
                                         <h4 className="font-medium  text-sm uppercase tracking-wider">{item.title}</h4>
@@ -303,14 +303,14 @@ export default function StockAIPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="rounded-[2.5rem] bg-white/[0.01] border border-white/5 overflow-hidden">
-                        <CardHeader className="p-8 border-b border-white/5">
-                            <CardTitle className="font-medium text-sm  text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Card className="rounded-[2.5rem] bg-white/[0.01] border border-border/50 overflow-hidden">
+                        <CardHeader className="p-8 border-b border-border/50">
+                            <CardTitle className="font-medium text-sm  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-blue-500" /> SİSTEM BİLGİSİ
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 space-y-4">
-                            <div className="flex justify-between items-center text-[10px]  text-slate-500 uppercase tracking-widest">
+                            <div className="flex justify-between items-center text-[10px]  text-muted-foreground/80 uppercase tracking-widest">
                                 <span>BİLDİRİM SÜRESİ</span>
                                 <span className="text-white">48 SAAT (2 GÜN)</span>
                             </div>

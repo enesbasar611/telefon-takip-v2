@@ -1,5 +1,6 @@
 "use server";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
@@ -93,62 +94,57 @@ export async function syncAllRates() {
   }
 }
 
-export const getExchangeRates = cache(async function getExchangeRatesInternal() {
-  try {
-    const shopId = await getShopId();
-    let settings = await prisma.setting.findMany({
-      where: {
-        shopId,
-        key: {
-          in: [
-            "exchange_rate_usd",
-            "exchange_rate_eur",
-            "exchange_rate_ga",
-            "currency_last_refresh",
-            "currency_refresh_count"
-          ]
+export const getExchangeRates = async (shopId: string) => {
+  return unstable_cache(
+    async () => {
+      try {
+        let settings = await prisma.setting.findMany({
+          where: {
+            shopId,
+            key: {
+              in: [
+                "exchange_rate_usd",
+                "exchange_rate_eur",
+                "exchange_rate_ga",
+                "currency_last_refresh",
+                "currency_refresh_count"
+              ]
+            }
+          }
+        });
+
+        const now = new Date();
+        const lastRefreshStr = settings.find(s => s.key === "currency_last_refresh")?.value;
+        const lastRefresh = lastRefreshStr ? new Date(lastRefreshStr) : new Date(0);
+        const refreshCount = parseInt(settings.find(s => s.key === "currency_refresh_count")?.value || "0");
+
+        // Auto-sync if rates are older than 12 hours
+        if (settings.length === 0 || (now.getTime() - lastRefresh.getTime() > 12 * 60 * 60 * 1000)) {
+          await syncAllRates().catch(() => { });
+          settings = await prisma.setting.findMany({
+            where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_refresh", "currency_refresh_count"] } }
+          });
         }
+
+        const isLocked = (now.getTime() - lastRefresh.getTime() < 10 * 60 * 1000) && refreshCount >= 3;
+
+        return {
+          usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
+          eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
+          ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
+          lastRefresh,
+          refreshCount,
+          isLocked,
+          remainingMinutes: isLocked ? Math.ceil((10 * 60 * 1000 - (now.getTime() - lastRefresh.getTime())) / 60000) : 0
+        };
+      } catch (error) {
+        return { usd: 1, eur: 1, ga: 1, lastRefresh: new Date(), refreshCount: 0, isLocked: false, remainingMinutes: 0 };
       }
-    });
-
-    const now = new Date();
-    const lastRefreshStr = settings.find(s => s.key === "currency_last_refresh")?.value;
-    const lastRefresh = lastRefreshStr ? new Date(lastRefreshStr) : new Date(0);
-    const refreshCount = parseInt(settings.find(s => s.key === "currency_refresh_count")?.value || "0");
-
-    // Auto-sync if rates are completely missing or older than 12 hours
-    if (settings.length === 0 || (now.getTime() - lastRefresh.getTime() > 12 * 60 * 60 * 1000)) {
-      // Don't block the UI if API is down, just ignore failures
-      await syncAllRates().catch(() => { });
-      // Re-fetch the updated settings silently
-      settings = await prisma.setting.findMany({
-        where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_refresh", "currency_refresh_count"] } }
-      });
-    }
-
-    const isLocked = (now.getTime() - lastRefresh.getTime() < 10 * 60 * 1000) && refreshCount >= 3;
-
-    return {
-      usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
-      eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
-      ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
-      lastRefresh,
-      refreshCount,
-      isLocked,
-      remainingMinutes: isLocked ? Math.ceil((10 * 60 * 1000 - (now.getTime() - lastRefresh.getTime())) / 60000) : 0
-    };
-  } catch (error) {
-    return {
-      usd: 1,
-      eur: 1,
-      ga: 1,
-      lastRefresh: new Date(),
-      refreshCount: 0,
-      isLocked: false,
-      remainingMinutes: 0
-    };
-  }
-});
+    },
+    [`exchange-rates-${shopId}`],
+    { tags: [`rates-${shopId}`], revalidate: 3600 } // Cache for 1 hour by default
+  )();
+};
 
 // Keeping this for backward compatibility if used elsewhere, but updating it to use the new ga field
 export async function updateExchangeRates(rates: { usd: number; eur: number; ga?: number }) {

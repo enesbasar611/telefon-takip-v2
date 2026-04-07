@@ -8,13 +8,17 @@ import * as z from "zod";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
 import { getOrCreateKasaAccount } from "./finance-actions";
+import { sendWhatsAppAction } from "./data-management-actions";
+import { getSettings } from "./setting-actions";
 
 const serviceSchema = z.object({
   customerName: z.string()
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
-    .regex(/^5\d{9}$/, "Geçerli bir Türkiye telefon numarası giriniz (5xxxxxxxxx)"),
+    .min(1, "Telefon numarası gereklidir")
+    .transform(val => val.replace(/\D/g, "").slice(-10))
+    .refine((val) => val.length === 10 && val.startsWith("5"), "Geçerli bir numara girin (5xx xxx xxxx)"),
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
@@ -127,11 +131,33 @@ export async function createServiceTicket(rawData: any) {
       });
     }
 
+    // --- WhatsApp Integration ---
+    let whatsappPending = null;
+    try {
+      const settings = await getSettings();
+      const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+
+      if (config.whatsappEnabled === "true" && config.whatsappNewService) {
+        const message = config.whatsappNewService
+          .replace("{musteri_adi}", validatedData.customerName)
+          .replace("{cihaz}", `${validatedData.deviceBrand} ${validatedData.deviceModel}`)
+          .replace("{servis_no}", ticketNumber);
+
+        if (config.whatsappConfirmBeforeSend === "true") {
+          whatsappPending = { phone: validatedData.customerPhone, message };
+        } else {
+          await sendWhatsAppAction(validatedData.customerPhone, message);
+        }
+      }
+    } catch (e) {
+      console.error("WhatsApp notification error:", e);
+    }
+
     revalidatePath("/servis");
     revalidatePath("/servis/liste");
     revalidatePath("/satis/kasa");
     revalidatePath("/");
-    return { success: true, data: serializePrisma(ticket) };
+    return { success: true, data: serializePrisma(ticket), whatsappPending };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message };
@@ -149,7 +175,10 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     // Fetch current ticket to calculate costs if delivering
     const currentTicket = await prisma.serviceTicket.findUnique({
       where: { id: ticketId, shopId },
-      include: { usedParts: { include: { product: true } } }
+      include: {
+        customer: true,
+        usedParts: { include: { product: true } }
+      }
     });
 
     if (!currentTicket) throw new Error("Servis kaydı bulunamadı.");
@@ -231,6 +260,31 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       }
     }
 
+    // --- WhatsApp Integration for 'READY' ---
+    let whatsappPending = null;
+    if (status === ServiceStatus.READY) {
+      try {
+        const settings = await getSettings();
+        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+
+        if (config.whatsappEnabled === "true" && config.whatsappReady) {
+          const message = config.whatsappReady
+            .replace("{musteri_adi}", currentTicket.customer.name)
+            .replace("{cihaz}", `${currentTicket.deviceBrand} ${currentTicket.deviceModel}`);
+
+          const phone = currentTicket.customer.phone || "";
+
+          if (config.whatsappConfirmBeforeSend === "true") {
+            whatsappPending = { phone, message };
+          } else {
+            await sendWhatsAppAction(phone, message);
+          }
+        }
+      } catch (e) {
+        console.error("WhatsApp Ready notification error:", e);
+      }
+    }
+
     const ticket = await prisma.serviceTicket.update({
       where: { id: ticketId, shopId },
       data: updateData,
@@ -240,7 +294,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     revalidatePath("/stok");
     revalidatePath("/satis/kasa");
     revalidatePath("/");
-    return { success: true, data: serializePrisma(ticket) };
+    return { success: true, data: serializePrisma(ticket), whatsappPending };
   } catch (error) {
     console.error("Error updating service status:", error);
     return { success: false, error: "Durum güncellenirken bir hata oluştu." };
@@ -677,11 +731,24 @@ export async function getServiceTickets(options: {
       where,
       skip,
       take: pageSize,
-      include: {
-        customer: true,
-        technician: true,
-        logs: { orderBy: { createdAt: "desc" } },
-        usedParts: { include: { product: true } },
+      select: {
+        id: true,
+        ticketNumber: true,
+        customerId: true,
+        deviceBrand: true,
+        deviceModel: true,
+        imei: true,
+        problemDesc: true,
+        status: true,
+        createdAt: true,
+        estimatedCost: true,
+        customer: {
+          select: {
+            name: true,
+            phone: true,
+          }
+        },
+        // technician and other heavy fields dropped, UI will fetch if needed via modal.
       },
       orderBy: {
         createdAt: "desc",

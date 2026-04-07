@@ -150,7 +150,7 @@ export default function NewCustomerPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Tabs defaultValue="genel" className="w-full">
-                <TabsList className="bg-card border border-white/5 p-1 mb-6">
+                <TabsList className="bg-card border border-border/50 p-1 mb-6">
                   <TabsTrigger value="genel" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Genel Bilgiler</TabsTrigger>
                   <TabsTrigger value="ek" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">Ek Detaylar</TabsTrigger>
                 </TabsList>
@@ -168,7 +168,7 @@ export default function NewCustomerPage() {
                               <FormControl>
                                 <div className="relative">
                                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                  <Input placeholder="Örn: Ahmet Yılmaz" {...field} className="bg-background border-white/5 pl-10 focus:ring-blue-600" />
+                                  <Input placeholder="Örn: Ahmet Yılmaz" {...field} className="bg-background border-border/50 pl-10 focus:ring-blue-600" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -182,7 +182,7 @@ export default function NewCustomerPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-gray-500  text-[10px]">MÜŞTERİ TİPİ</FormLabel>
-                              <div className="flex gap-2 p-1 bg-background rounded-lg border border-white/5">
+                              <div className="flex gap-2 p-1 bg-background rounded-lg border border-border/50">
                                 <Button
                                   type="button"
                                   variant={field.value === "BIREYSEL" ? "secondary" : "ghost"}
@@ -225,7 +225,7 @@ export default function NewCustomerPage() {
                                     unmask={false}
                                     onAccept={(value) => field.onChange(value)}
                                     placeholder="+90 (5__) ___ __ __"
-                                    className="flex h-10 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                                    className="flex h-10 w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
                                   />
                                 </div>
                               </FormControl>
@@ -243,7 +243,7 @@ export default function NewCustomerPage() {
                               <FormControl>
                                 <div className="relative">
                                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                  <Input placeholder="example@domain.com" {...field} className="bg-background border-white/5 pl-10 focus:ring-blue-600" />
+                                  <Input placeholder="example@domain.com" {...field} className="bg-background border-border/50 pl-10 focus:ring-blue-600" />
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -263,7 +263,7 @@ export default function NewCustomerPage() {
                                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                 <Textarea
                                   placeholder="Sokak, Mahalle, Kat/Daire ve Şehir bilgileri..."
-                                  className="bg-background border-white/5 pl-10 min-h-[100px] focus:ring-blue-600"
+                                  className="bg-background border-border/50 pl-10 min-h-[100px] focus:ring-blue-600"
                                   {...field}
                                 />
                               </div>
@@ -301,7 +301,7 @@ export default function NewCustomerPage() {
                                     field.onChange(pure);
                                   }}
                                   placeholder="+90 (5__) ___ __ __"
-                                  className="flex h-11 w-full rounded-md border border-white/5 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
+                                  className="flex h-11 w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
                                 />
                               </div>
                             </FormControl>
@@ -342,7 +342,7 @@ export default function NewCustomerPage() {
                     onChange={handlePhotoChange}
                   />
                   <div
-                    className="h-32 w-32 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center relative mb-4 group cursor-pointer hover:border-blue-500/50 transition-colors overflow-hidden"
+                    className="h-32 w-32 rounded-full border-2 border-dashed border-border flex items-center justify-center relative mb-4 group cursor-pointer hover:border-blue-500/50 transition-colors overflow-hidden"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {photoPreview ? (
@@ -405,7 +405,7 @@ export default function NewCustomerPage() {
                         <FormControl>
                           <Textarea
                             placeholder="Teknik geçmiş, özel istekler veya hatırlatmalar..."
-                            className="bg-background border-white/5 min-h-[150px] text-sm focus:ring-blue-600"
+                            className="bg-background border-border/50 min-h-[150px] text-sm focus:ring-blue-600"
                             {...field}
                           />
                         </FormControl>

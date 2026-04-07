@@ -123,7 +123,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
             case 'PAYMENT': return <Receipt className="h-4 w-4 text-red-500" />;
             case 'COLLECTION': return <DollarSign className="h-4 w-4 text-emerald-500" />;
             case 'TASK': return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
-            default: return <Activity className="h-4 w-4 text-slate-500" />;
+            default: return <Activity className="h-4 w-4 text-muted-foreground/80" />;
         }
     };
 
@@ -138,7 +138,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-                                className="h-8 w-8 text-slate-400 hover:text-white"
+                                className="h-8 w-8 text-muted-foreground hover:text-white"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
@@ -148,7 +148,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-                                className="h-8 w-8 text-slate-400 hover:text-white"
+                                className="h-8 w-8 text-muted-foreground hover:text-white"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -156,7 +156,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         <Button
                             onClick={() => handleMonthChange(new Date())}
                             variant="outline"
-                            className="h-10 border-[#333] bg-transparent hover:bg-[#222] text-slate-300 rounded-xl px-4 text-xs tracking-wider"
+                            className="h-10 border-[#333] bg-transparent hover:bg-[#222] text-foreground rounded-xl px-4 text-xs tracking-wider"
                         >
                             BUGÜN
                         </Button>
@@ -164,7 +164,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
 
                     <div className="flex items-center gap-3">
                         {/* Legend */}
-                        <div className="hidden md:flex items-center gap-4 text-xs font-medium text-slate-400">
+                        <div className="hidden md:flex items-center gap-4 text-xs font-medium text-muted-foreground">
                             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500" /> Servis</span>
                             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Gelir</span>
                             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500" /> Ödeme</span>
@@ -176,7 +176,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                             onClick={refreshEvents}
                             variant="ghost"
                             size="icon"
-                            className={cn("h-10 w-10 text-slate-500 hover:text-white rounded-xl", isRefreshing && "animate-spin")}
+                            className={cn("h-10 w-10 text-muted-foreground/80 hover:text-white rounded-xl", isRefreshing && "animate-spin")}
                         >
                             <RefreshCw className="h-4 w-4" />
                         </Button>
@@ -227,7 +227,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                     </div>
                     <div className="mb-4 space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-[11px] text-slate-500 font-medium tracking-tight">Toplam {todaysEvents.length} işlem / {todaysEvents.filter(e => e.isCompleted).length} tamamlandı</p>
+                            <p className="text-[11px] text-muted-foreground/80 font-medium tracking-tight">Toplam {todaysEvents.length} işlem / {todaysEvents.filter(e => e.isCompleted).length} tamamlandı</p>
                             {todaysEvents.length > 0 && (
                                 <button
                                     onClick={() => {
@@ -259,7 +259,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                 <Button
                                     onClick={() => setSelectedIds([])}
                                     variant="ghost"
-                                    className="h-9 px-3 text-slate-500 hover:text-white bg-[#1a1a1a] border border-[#2a2a2a] text-[10px] font-bold"
+                                    className="h-9 px-3 text-muted-foreground/80 hover:text-white bg-[#1a1a1a] border border-[#2a2a2a] text-[10px] font-bold"
                                 >
                                     VAZGEÇ
                                 </Button>
@@ -271,7 +271,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         {todaysEvents.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
                                 <CheckCircle2 className="h-12 w-12 text-slate-700 mb-3" />
-                                <p className="text-slate-400 text-sm">Bugün için planlanmış bir<br />işlem veya görev yok.</p>
+                                <p className="text-muted-foreground text-sm">Bugün için planlanmış bir<br />işlem veya görev yok.</p>
                             </div>
                         ) : (
                             <div className="space-y-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
@@ -287,7 +287,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                                     onClick={() => toggleSelect(event.id)}
                                                     className={cn(
                                                         "transition-all duration-200 shrink-0",
-                                                        selectedIds.includes(event.id) ? "text-blue-500 scale-110" : "text-slate-600 hover:text-slate-400"
+                                                        selectedIds.includes(event.id) ? "text-blue-500 scale-110" : "text-slate-600 hover:text-muted-foreground"
                                                     )}
                                                 >
                                                     {selectedIds.includes(event.id) ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
@@ -306,7 +306,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                                     )}>
                                                         <div className="flex items-center justify-between mb-1">
                                                             <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className={cn("font-medium text-sm text-slate-200", event.isCompleted && "line-through opacity-50")}>
+                                                                <span className={cn("font-medium text-sm text-foreground/90", event.isCompleted && "line-through opacity-50")}>
                                                                     {event.title}
                                                                 </span>
                                                                 {event.isCompleted && (
@@ -325,15 +325,15 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <span className="text-[10px] text-slate-500">{format(new Date(event.date), "HH:mm")}</span>
+                                                            <span className="text-[10px] text-muted-foreground/80">{format(new Date(event.date), "HH:mm")}</span>
                                                         </div>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-xs text-slate-400">{event.category || "Genel"}</span>
+                                                            <span className="text-xs text-muted-foreground">{event.category || "Genel"}</span>
                                                             {event.amount && event.amount > 0 && (
                                                                 <span className={cn(
                                                                     "text-[11px] font-medium tracking-wide",
                                                                     event.type === 'PAYMENT' ? 'text-red-400' :
-                                                                        event.type === 'COLLECTION' ? 'text-emerald-400' : 'text-slate-400'
+                                                                        event.type === 'COLLECTION' ? 'text-emerald-400' : 'text-muted-foreground'
                                                                 )}>
                                                                     {event.type === 'PAYMENT' ? '-' : ''}₺{event.amount}
                                                                 </span>

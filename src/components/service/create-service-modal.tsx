@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, ReactNode } from "react";
+import { useState, useTransition, ReactNode, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,6 +24,9 @@ import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
 import { formatCurrency } from "@/lib/utils";
+import { findCustomerByPhone } from "@/lib/actions/customer-lookup-actions";
+import { Mail } from "lucide-react";
+import { ServiceReceiptModal } from "./service-receipt-modal";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -33,11 +36,9 @@ const serviceSchema = z.object({
     .min(1, "Telefon numarası gereklidir")
     .refine((val) => {
       const d = val.replace(/\D/g, "");
-      if (d.length === 10 && d.startsWith("5")) return true;
-      if (d.length === 11 && d.startsWith("05")) return true;
-      if (d.length === 12 && d.startsWith("905")) return true;
-      return false;
-    }, "Geçerli Türkiye numarası giriniz (5xx xxx xx xx)"),
+      return d.length === 10 && d.startsWith("5");
+    }, "Geçerli bir numara girin (5xx xxx xxxx)"),
+  customerEmail: z.string().email("Geçerli bir mail adresi girin").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
   imei: z.string()
@@ -60,6 +61,9 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [phoneValue, setPhoneValue] = useState("");
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [createdTicket, setCreatedTicket] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -74,8 +78,40 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       estimatedCost: "0",
+      customerEmail: "",
     }
   });
+
+  // Auto-lookup customer when phone is entered
+  useEffect(() => {
+    const checkPhone = async () => {
+      const sanitized = phoneValue.replace(/\D/g, "");
+      if (sanitized.length === 10) {
+        setIsLookingUp(true);
+        try {
+          const customer = await findCustomerByPhone(sanitized);
+          if (customer) {
+            setValue("customerName", customer.name);
+            if (customer.email) {
+              setValue("customerEmail", customer.email);
+            }
+            toast({
+              title: "Müşteri Bulundu",
+              description: `${customer.name} bilgileri otomatik dolduruldu.`,
+              duration: 3000,
+            });
+          }
+        } catch (error) {
+          console.error("Lookup error:", error);
+        } finally {
+          setIsLookingUp(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(checkPhone, 500);
+    return () => clearTimeout(timeoutId);
+  }, [phoneValue, setValue, toast]);
 
   const onSubmit = async (data: ServiceFormValues) => {
     startTransition(async () => {
@@ -89,6 +125,8 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           title: "Başarılı",
           description: "Servis kaydı başarıyla oluşturuldu.",
         });
+        setCreatedTicket(result.data);
+        setShowReceipt(true);
         setOpen(false);
         reset();
         router.refresh();
@@ -112,9 +150,9 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-slate-950 border-white/5 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+      <DialogContent className="sm:max-w-[600px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
-          <div className="p-8 bg-slate-900/50 border-b border-white/5">
+          <div className="p-8 bg-card/50 border-b border-border/50">
             <DialogHeader>
               <DialogTitle className="font-medium text-2xl ">Yeni Servis Kaydı</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
@@ -129,7 +167,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                 <Label htmlFor="customerName" className="font-medium text-xs  text-muted-foreground">Müşteri Ad Soyad</Label>
                 <div className="relative group">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
+                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
                 </div>
                 {errors.customerName && <p className="text-[10px] text-red-500  ml-1">{errors.customerName.message}</p>}
               </div>
@@ -138,6 +176,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                 label="Telefon Numarası"
                 required
                 value={phoneValue}
+                isLookingUp={isLookingUp}
                 error={errors.customerPhone?.message}
                 onChange={(val: string) => {
                   setPhoneValue(val);
@@ -146,19 +185,28 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
               />
             </div>
 
+            <div className="space-y-3">
+              <Label htmlFor="customerEmail" className="font-medium text-xs  text-muted-foreground">E-Posta Adresi (İsteğe Bağlı)</Label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="customerEmail" type="email" {...register("customerEmail")} placeholder="ornek@mail.com" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
+              </div>
+              {errors.customerEmail && <p className="text-[10px] text-red-500  ml-1">{errors.customerEmail.message}</p>}
+            </div>
+
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="deviceBrand" className="font-medium text-xs  text-muted-foreground">Cihaz Markası</Label>
                 <div className="relative group">
                   <SmartphoneIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
+                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
                 </div>
                 {errors.deviceBrand && <p className="text-[10px] text-red-500  ml-1">{errors.deviceBrand.message}</p>}
               </div>
 
               <div className="space-y-3">
                 <Label htmlFor="deviceModel" className="font-medium text-xs  text-muted-foreground">Cihaz Modeli</Label>
-                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-slate-900 border-white/5 rounded-2xl px-6 text-sm " />
+                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-card border-border/50 rounded-2xl px-6 text-sm " />
                 {errors.deviceModel && <p className="text-[10px] text-red-500  ml-1">{errors.deviceModel.message}</p>}
               </div>
             </div>
@@ -168,7 +216,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                 <Label htmlFor="imei" className="font-medium text-xs  text-muted-foreground">IMEI / Seri No</Label>
                 <div className="relative group">
                   <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
+                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
                 </div>
                 {errors.imei && <p className="text-[10px] text-red-500  ml-1">{errors.imei.message}</p>}
               </div>
@@ -180,7 +228,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                   value={watch("estimatedCost")}
                   onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
                   placeholder="0,00"
-                  className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500"
+                  className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500"
                 />
                 {errors.estimatedCost && <p className="text-[10px] text-red-500  ml-1">{errors.estimatedCost.message}</p>}
               </div>
@@ -190,15 +238,15 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
               <Label htmlFor="problemDesc" className="font-medium text-xs  text-muted-foreground">Arıza Tanımı</Label>
               <div className="relative group">
                 <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
-                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-slate-900 border-white/5 rounded-2xl pl-12 text-sm " />
+                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
               </div>
               {errors.problemDesc && <p className="text-[10px] text-red-500  ml-1">{errors.problemDesc.message}</p>}
             </div>
           </div>
 
-          <div className="p-8 bg-slate-900/50 border-t border-white/5">
+          <div className="p-8 bg-card/50 border-t border-border/50">
             <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-slate-400">Vazgeç</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-muted-foreground">Vazgeç</Button>
               <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white  text-sm rounded-2xl gap-3 transition-all active:scale-95">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Kaydı Tamamla
@@ -207,6 +255,17 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           </div>
         </form>
       </DialogContent>
+
+      {createdTicket && (
+        <ServiceReceiptModal
+          isOpen={showReceipt}
+          onClose={() => {
+            setShowReceipt(false);
+            setCreatedTicket(null);
+          }}
+          ticket={createdTicket}
+        />
+      )}
     </Dialog>
   );
 }

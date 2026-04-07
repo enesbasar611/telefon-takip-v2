@@ -47,7 +47,7 @@ export default function SorgulaPage() {
                         <ShieldCheck className="h-8 w-8 text-blue-500" />
                     </div>
                     <h1 className="font-medium text-4xl ">CİHAZ <span className="text-blue-500">DURUMU</span> SORGULA</h1>
-                    <p className="text-slate-500  text-[10px] mt-3">Orgelux Güvencesiyle 7/24 Şeffaf Takip</p>
+                    <p className="text-muted-foreground/80  text-[10px] mt-3">Orgelux Güvencesiyle 7/24 Şeffaf Takip</p>
                 </div>
 
                 {/* Search Form */}
@@ -55,12 +55,12 @@ export default function SorgulaPage() {
                     <CardContent className="p-8">
                         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="font-medium text-[10px]  text-slate-500 ml-1">Servis No (Örn: SRV-1001)</Label>
+                                <Label className="font-medium text-[10px]  text-muted-foreground/80 ml-1">Servis No (Örn: SRV-1001)</Label>
                                 <Input
                                     value={ticketNumber}
                                     onChange={(e) => setTicketNumber(e.target.value)}
                                     placeholder="Fiş üzerindeki no"
-                                    className="bg-slate-900/60 border-border/10 h-14 rounded-2xl text-sm "
+                                    className="bg-card/60 border-border/10 h-14 rounded-2xl text-sm "
                                     required
                                 />
                             </div>
@@ -89,7 +89,7 @@ export default function SorgulaPage() {
                     <div className="matte-card border-rose-500/20 bg-rose-500/5 p-8 rounded-xl text-center">
                         <AlertCircle className="h-8 w-8 text-rose-500 mx-auto mb-4" />
                         <p className="text-sm  text-rose-500">Kayıt Bulunamadı</p>
-                        <p className="text-xs text-slate-500 mt-2 font-medium">Lütfen servis numarasını ve telefonunuzu kontrol ediniz.</p>
+                        <p className="text-xs text-muted-foreground/80 mt-2 font-medium">Lütfen servis numarasını ve telefonunuzu kontrol ediniz.</p>
                     </div>
                 )}
 
@@ -103,10 +103,10 @@ export default function SorgulaPage() {
                                             {statusConfig[ticket.status].label}
                                         </Badge>
                                         <h2 className="font-medium text-3xl  text-white">{ticket.deviceBrand} {ticket.deviceModel}</h2>
-                                        <p className="text-slate-500  text-[10px] mt-2">IMEI: {ticket.imei || "BELİRTİLMEDİ"}</p>
+                                        <p className="text-muted-foreground/80  text-[10px] mt-2">IMEI: {ticket.imei || "BELİRTİLMEDİ"}</p>
                                     </div>
                                     <div className="text-left md:text-right">
-                                        <p className="text-[10px]  text-slate-500 mb-1">Müşteri</p>
+                                        <p className="text-[10px]  text-muted-foreground/80 mb-1">Müşteri</p>
                                         <p className="text-xl  text-white">{ticket.customer.name}</p>
                                     </div>
                                 </div>
@@ -117,27 +117,27 @@ export default function SorgulaPage() {
                                         <div className="h-2 w-2 rounded-full bg-blue-500" />
                                         <h3 className="font-medium text-xs  text-white">GÜNCEL DURUM ANALİZİ</h3>
                                     </div>
-                                    <div className="p-6 rounded-3xl bg-slate-900/60 border border-border/10">
-                                        <p className="text-sm font-medium text-slate-200 leading-relaxed">
+                                    <div className="p-6 rounded-3xl bg-card/60 border border-border/10">
+                                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
                                             "{statusConfig[ticket.status].desc}"
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                    <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
+                                    <div className="p-6 rounded-3xl bg-card/40 border border-border/10/50">
                                         <Calendar className="h-4 w-4 text-blue-500 mb-4" />
-                                        <p className="text-[9px]  text-slate-500 mb-1">Kayıt Tarihi</p>
+                                        <p className="text-[9px]  text-muted-foreground/80 mb-1">Kayıt Tarihi</p>
                                         <p className="text-xs  text-white">{format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
                                     </div>
-                                    <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
+                                    <div className="p-6 rounded-3xl bg-card/40 border border-border/10/50">
                                         <Clock className="h-4 w-4 text-blue-500 mb-4" />
-                                        <p className="text-[9px]  text-slate-500 mb-1">Teslim Tarihi</p>
+                                        <p className="text-[9px]  text-muted-foreground/80 mb-1">Teslim Tarihi</p>
                                         <p className="text-xs  text-white">{ticket.estimatedDeliveryDate ? format(new Date(ticket.estimatedDeliveryDate), "dd MMMM yyyy", { locale: tr }) : "BELİRSİZ"}</p>
                                     </div>
-                                    <div className="p-6 rounded-3xl bg-slate-900/40 border border-border/10/50">
+                                    <div className="p-6 rounded-3xl bg-card/40 border border-border/10/50">
                                         <p className="text-blue-500  text-lg mb-2">₺</p>
-                                        <p className="text-[9px]  text-slate-500 mb-1">Tahmini Tutar</p>
+                                        <p className="text-[9px]  text-muted-foreground/80 mb-1">Tahmini Tutar</p>
                                         <p className="text-xs  text-white">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</p>
                                     </div>
                                 </div>
@@ -150,10 +150,10 @@ export default function SorgulaPage() {
                                     <div className="space-y-4">
                                         {ticket.logs.map((log: any, i: number) => (
                                             <div key={log.id} className="flex gap-4 relative">
-                                                {i !== ticket.logs.length - 1 && <div className="absolute left-2.5 top-6 bottom-0 w-[1px] bg-slate-800" />}
-                                                <div className={`h-5 w-5 rounded-full border-2 ${i === 0 ? 'bg-blue-600 border-blue-400 ' : 'bg-slate-900 border-border/10'} shrink-0`} />
+                                                {i !== ticket.logs.length - 1 && <div className="absolute left-2.5 top-6 bottom-0 w-[1px] bg-muted" />}
+                                                <div className={`h-5 w-5 rounded-full border-2 ${i === 0 ? 'bg-blue-600 border-blue-400 ' : 'bg-card border-border/10'} shrink-0`} />
                                                 <div className="pb-4">
-                                                    <p className={`text-xs  ${i === 0 ? 'text-white' : 'text-slate-500'}`}>{log.message}</p>
+                                                    <p className={`text-xs  ${i === 0 ? 'text-white' : 'text-muted-foreground/80'}`}>{log.message}</p>
                                                     <p className="text-[9px]  text-slate-600 mt-1">{format(new Date(log.createdAt), "dd MMM yyyy - HH:mm", { locale: tr })}</p>
                                                 </div>
                                             </div>
@@ -168,7 +168,7 @@ export default function SorgulaPage() {
                                 <Smartphone className="h-3 w-3" />
                                 <span>TELEFON TAKİP V2</span>
                             </div>
-                            <p className="text-[8px]  text-slate-500">Orgelux Professional Service Infrastructure</p>
+                            <p className="text-[8px]  text-muted-foreground/80">Orgelux Professional Service Infrastructure</p>
                         </div>
                     </div>
                 )}

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { cn, serializePrisma } from "@/lib/utils";
-import { getRecentServiceTickets } from "@/lib/actions/dashboard-actions";
+import { getRecentSales } from "@/lib/actions/dashboard-actions";
+import { getShopId } from "@/lib/auth";
 
 const statusColors: Record<string, string> = {
     PENDING: "#94a3b8",      // Grey
@@ -27,7 +28,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export async function ServiceQueueStream() {
-    const recentTicketsRaw = await getRecentServiceTickets();
+    const shopId = await getShopId();
+    const recentTicketsRaw = await getRecentSales(shopId, 5);
     const recentTickets = serializePrisma(recentTicketsRaw);
 
     return (

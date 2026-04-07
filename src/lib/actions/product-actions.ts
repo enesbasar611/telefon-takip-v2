@@ -468,9 +468,9 @@ export async function quickSellProduct(productId: string, quantity: number) {
   }
 }
 
-export async function getDeadStockCount() {
+export async function getDeadStockCount(providedShopId?: string) {
   try {
-    const shopId = await getShopId();
+    const shopId = providedShopId || await getShopId();
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 

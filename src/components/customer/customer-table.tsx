@@ -53,15 +53,15 @@ export function CustomerTable({ data }: CustomerTableProps) {
   return (
     <div className="rounded-md border bg-card">
       <Table>
-        <TableHeader className="font-medium bg-slate-900/50">
-          <TableRow className="hover:bg-transparent border-white/5">
+        <TableHeader className="font-medium bg-card/50">
+          <TableRow className="hover:bg-transparent border-border/50">
             <TableHead className="font-medium py-3 pl-4">
               <SortableHeader label="Ad Soyad" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
             <TableHead className="font-medium py-3">
               <SortableHeader label="Telefon" field="phone" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
-            <TableHead className="font-medium py-3 text-xs  text-slate-500">E-posta</TableHead>
+            <TableHead className="font-medium py-3 text-xs  text-muted-foreground/80">E-posta</TableHead>
             <TableHead className="font-medium py-3">
               <SortableHeader label="Kayıt Tarihi" field="createdAt" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
@@ -77,11 +77,11 @@ export function CustomerTable({ data }: CustomerTableProps) {
             </TableRow>
           ) : (
             sortedData.map((customer) => (
-              <TableRow key={customer.id} className="hover:bg-white/[0.02] border-white/5">
+              <TableRow key={customer.id} className="hover:bg-white/[0.02] border-border/50">
                 <TableCell className=" text-sm">{customer.name}</TableCell>
                 <TableCell className=" text-xs text-blue-500">{formatPhone(customer.phone)}</TableCell>
-                <TableCell className="text-xs  text-slate-400">{customer.email || "-"}</TableCell>
-                <TableCell className="text-xs  text-slate-500">
+                <TableCell className="text-xs  text-muted-foreground">{customer.email || "-"}</TableCell>
+                <TableCell className="text-xs  text-muted-foreground/80">
                   {format(new Date(customer.createdAt), "dd MMM yyyy", { locale: tr })}
                 </TableCell>
                 <TableCell>

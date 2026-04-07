@@ -44,7 +44,7 @@ export function CalendarGrid({ currentDate, events, onDayClick }: CalendarGridPr
             case 'PAYMENT': return "bg-red-500/15 text-red-500 border-red-500/30";
             case 'COLLECTION': return "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
             case 'TASK': return "bg-purple-500/15 text-purple-500 border-purple-500/30";
-            default: return "bg-slate-500/15 text-slate-500 border-slate-500/30";
+            default: return "bg-slate-500/15 text-muted-foreground/80 border-slate-500/30";
         }
     };
 

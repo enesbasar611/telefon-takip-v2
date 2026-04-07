@@ -8,13 +8,15 @@ import {
     DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, CheckCircle2, ShoppingBag, Calendar, User, CreditCard, Smartphone, ShieldCheck } from "lucide-react";
+import { Printer, CheckCircle2, ShoppingBag, Calendar, User, CreditCard, Smartphone, ShieldCheck, MessageCircle, Edit3, Check } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { getReceiptSettings } from "@/lib/actions/receipt-settings";
 import { useEffect, useState } from "react";
 import { Barcode } from "@/components/barcode/barcode";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 
 interface ServiceReceiptModalProps {
     isOpen: boolean;
@@ -24,23 +26,35 @@ interface ServiceReceiptModalProps {
 
 export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptModalProps) {
     const [settings, setSettings] = useState<any>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editableTicket, setEditableTicket] = useState(ticket);
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             getReceiptSettings("service").then(setSettings);
+            setEditableTicket(ticket);
         }
-    }, [isOpen]);
+    }, [isOpen, ticket]);
 
-    if (!ticket) return null;
+    if (!ticket || !editableTicket) return null;
 
     const handlePrint = () => {
         window.print();
     };
 
+    const handleWhatsApp = () => {
+        setWhatsappModalOpen(true);
+    };
+
+    const updateField = (field: string, value: any) => {
+        setEditableTicket((prev: any) => ({ ...prev, [field]: value }));
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-card border-none p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-8 bg-blue-500/10 border-b border-blue-500/10 flex flex-col items-center text-center relative overflow-hidden">
+            <DialogContent className="max-w-md bg-card border-none p-0 shadow-2xl flex flex-col max-h-[90vh]">
+                <DialogHeader className="p-8 bg-blue-500/10 border-b border-blue-500/10 flex flex-col items-center text-center relative overflow-hidden shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
 
                     <div className="h-16 w-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 relative z-10">
@@ -48,10 +62,26 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                     </div>
 
                     <DialogTitle className="font-medium text-2xl  text-white leading-none z-10">Servis Fişi Önizleme</DialogTitle>
-                    <p className="text-[10px]  text-blue-400 mt-2 z-10">{ticket.ticketNumber} Hazırlandı</p>
+                    <div className="flex gap-2 mt-3 z-10">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditing(!isEditing)}
+                            className={cn(
+                                "h-8 px-4 rounded-xl text-[10px] border-white/10 gap-2 transition-all",
+                                isEditing ? "bg-emerald-500 text-white border-none" : "bg-white/5 text-white hover:bg-white/10"
+                            )}
+                        >
+                            {isEditing ? <Check className="h-3 w-3" /> : <Edit3 className="h-3 w-3" />}
+                            {isEditing ? "Tamam" : "Düzenle"}
+                        </Button>
+                        <p className="text-[10px] text-blue-400 font-medium bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20">
+                            {editableTicket.ticketNumber} Hazırlandı
+                        </p>
+                    </div>
                 </DialogHeader>
 
-                <div className="p-8 space-y-6">
+                <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
                     {/* Receipt Preview (Thermal Layout) */}
                     <div className="receipt-preview bg-white text-black p-8 rounded-2xl shadow-inner border border-slate-200 font-sans text-[10px] leading-snug">
                         <div className="text-center border-b-2 border-black pb-4 mb-4">
@@ -71,13 +101,21 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                         <div className="grid grid-cols-2 gap-2 mb-4 border-b border-black border-dashed pb-3">
                             <div>
                                 <p className="text-[7px]  text-gray-500 mb-0.5">Müşteri</p>
-                                <p className=" text-[10px]">{ticket.customer?.name}</p>
-                                <p className="text-[8px]  mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
+                                {isEditing ? (
+                                    <input
+                                        className="w-full border-b border-blue-500 text-[10px] focus:outline-none"
+                                        value={editableTicket.customer?.name}
+                                        onChange={(e) => setEditableTicket((prev: any) => ({ ...prev, customer: { ...prev.customer, name: e.target.value } }))}
+                                    />
+                                ) : (
+                                    <p className=" text-[10px]">{editableTicket.customer?.name}</p>
+                                )}
+                                <p className="text-[8px]  mt-0.5">{formatPhone(editableTicket.customer?.phone)}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-[7px]  text-gray-500 mb-0.5">Tarih</p>
-                                <p className=" text-[9px]">{format(new Date(ticket.createdAt), "dd.MM.yyyy")}</p>
-                                <p className="text-[7px] opacity-60">{format(new Date(ticket.createdAt), "HH:mm")}</p>
+                                <p className=" text-[9px]">{format(new Date(editableTicket.createdAt), "dd.MM.yyyy")}</p>
+                                <p className="text-[7px] opacity-60">{format(new Date(editableTicket.createdAt), "HH:mm")}</p>
                             </div>
                         </div>
 
@@ -85,21 +123,75 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                             <div className="bg-gray-100 px-2 py-1 mb-2  text-[8px] text-center shadow-sm border border-gray-200">CİHAZ VE ARIZA BİLGİLERİ</div>
                             <div className="flex justify-between border-b border-gray-100 pb-1">
                                 <span className="text-gray-500 text-[8px] ">MARKA / MODEL:</span>
-                                <span className="">{ticket.deviceBrand} {ticket.deviceModel}</span>
+                                {isEditing ? (
+                                    <div className="flex gap-1 text-[9px]">
+                                        <input className="w-16 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceBrand} onChange={(e) => updateField("deviceBrand", e.target.value)} />
+                                        <input className="w-20 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceModel} onChange={(e) => updateField("deviceModel", e.target.value)} />
+                                    </div>
+                                ) : (
+                                    <span className="">{editableTicket.deviceBrand} {editableTicket.deviceModel}</span>
+                                )}
                             </div>
                             <div className="flex justify-between border-b border-gray-100 pb-1">
                                 <span className="text-gray-500 text-[8px] ">IMEI / SERİ NO:</span>
-                                <span className="">{ticket.imei || ticket.serialNumber || "Belirtilmedi"}</span>
+                                {isEditing ? (
+                                    <input className="text-right border-b border-blue-500 text-[9px] focus:outline-none" value={editableTicket.imei || ""} onChange={(e) => updateField("imei", e.target.value)} />
+                                ) : (
+                                    <span className="">{editableTicket.imei || editableTicket.serialNumber || "Belirtilmedi"}</span>
+                                )}
                             </div>
-                            <div className="mt-2">
-                                <p className="text-[8px]  text-gray-500 mb-1">ARIZA TANIMI:</p>
-                                <p className="bg-gray-50 p-2 border border-gray-200 rounded text-[9px] font-medium leading-tight select-all">{ticket.problemDesc}</p>
+                            <div className="mt-2 text-center py-1.5 bg-black text-white font-bold text-[8px] uppercase tracking-tighter">Arıza Tanımı</div>
+                            <div className="mt-1">
+                                {isEditing ? (
+                                    <textarea
+                                        className="w-full bg-gray-50 p-2 border border-blue-500 rounded text-[9px] focus:outline-none h-12"
+                                        value={editableTicket.problemDesc}
+                                        onChange={(e) => updateField("problemDesc", e.target.value)}
+                                    />
+                                ) : (
+                                    <p className="p-2 border border-black/10 rounded text-[9px] leading-tight select-all">{editableTicket.problemDesc}</p>
+                                )}
                             </div>
                         </div>
 
+                        {(editableTicket.accessories?.length > 0 || editableTicket.cosmeticConditions?.length > 0) && (
+                            <div className="mb-4 space-y-3">
+                                <div className="bg-gray-100 px-2 py-1 mb-2 text-[8px] text-center shadow-sm border border-gray-200 uppercase tracking-wider font-semibold">Cihaz Durumu & Aksesuarlar</div>
+
+                                {editableTicket.accessories?.length > 0 && (
+                                    <div className="flex flex-col gap-1 border-b border-gray-100 pb-2">
+                                        <span className="text-gray-500 text-[8px] uppercase font-bold">Aksesuarlar:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {editableTicket.accessories.map((item: string, i: number) => (
+                                                <span key={item} className="text-[9px] bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-sm">
+                                                    {item}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(editableTicket.cosmeticConditions?.length > 0 || editableTicket.cosmeticNotes) && (
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-gray-500 text-[8px] uppercase font-bold">Kozmetik Durum:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {editableTicket.cosmeticConditions?.map((item: string) => (
+                                                <span key={item} className="text-[9px] bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-sm">{item}</span>
+                                            ))}
+                                        </div>
+                                        {editableTicket.cosmeticNotes && (
+                                            <p className="text-[9px] mt-1 text-slate-700 italic border-l-2 border-slate-200 pl-2">
+                                                {editableTicket.cosmeticNotes}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Barcode */}
                         <div className="flex flex-col items-center justify-center my-6 py-4 border-y border-black/5 bg-gray-50/50">
-                            <Barcode value={ticket.ticketNumber} height={35} fontSize={9} />
+                            <Barcode value={editableTicket.ticketNumber} height={35} fontSize={9} />
                             <p className="text-[7px]  text-gray-400 mt-1">{settings?.website || "basarteknik.com"}</p>
                         </div>
 
@@ -114,19 +206,21 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
 
                         <div className="flex justify-between border-t-2 border-black pt-3 items-center">
                             <span className=" text-[9px]">TAHMİNİ ÜCRET:</span>
-                            <span className="text-lg ">₺{formatCurrency(ticket.estimatedCost)}</span>
+                            {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                    <span className="text-lg">₺</span>
+                                    <input
+                                        type="number"
+                                        className="w-20 border-b border-blue-500 text-lg focus:outline-none text-right font-medium"
+                                        value={editableTicket.estimatedCost}
+                                        onChange={(e) => updateField("estimatedCost", e.target.value)}
+                                    />
+                                </div>
+                            ) : (
+                                <span className="text-lg ">₺{formatCurrency(editableTicket.estimatedCost)}</span>
+                            )}
                         </div>
 
-                        <div className="flex justify-between items-end px-3 mt-8 pb-4 opacity-40">
-                            <div className="text-center">
-                                <p className="text-[6px]  mb-6">MÜŞTERİ İMZA</p>
-                                <div className="w-14 border-t border-black"></div>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[6px]  mb-6">TEKNİSYEN İMZA</p>
-                                <div className="w-14 border-t border-black"></div>
-                            </div>
-                        </div>
 
                         <div className="text-center mt-6 pt-4 border-t border-black border-dashed opacity-70">
                             <p className=" text-[9px]">{settings?.footer || "Cihazınız güvenli ellerde."}</p>
@@ -135,8 +229,15 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                     </div>
                 </div>
 
-                <DialogFooter className="p-6 bg-slate-900/50 border-t border-white/5 gap-3">
-                    <Button variant="ghost" onClick={onClose} className="h-14 rounded-2xl  text-slate-500 hover:text-white hover:bg-white/5">İptal</Button>
+                <DialogFooter className="p-6 bg-card/50 border-t border-border/50 gap-3 shrink-0">
+                    <Button variant="ghost" onClick={onClose} className="h-14 rounded-2xl  text-muted-foreground/80 hover:text-white hover:bg-white/5">Kapat</Button>
+                    <Button
+                        onClick={handleWhatsApp}
+                        className="h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white gap-3 active:scale-95 transition-all px-6"
+                    >
+                        <MessageCircle className="h-5 w-5" />
+                        WhatsApp
+                    </Button>
                     <Button onClick={handlePrint} className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white  gap-3 shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
                         <Printer className="h-5 w-5" />
                         Hemen Yazdır
@@ -164,6 +265,22 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
           }
         `}} />
             </DialogContent>
+            <WhatsAppConfirmModal
+                isOpen={whatsappModalOpen}
+                onClose={() => setWhatsappModalOpen(false)}
+                phone={editableTicket.customer?.phone || ""}
+                customerName={editableTicket.customer?.name}
+                initialMessage={replacePlaceholders(
+                    WHATSAPP_TEMPLATES.SERVICE_RECEIPT,
+                    {
+                        customer: editableTicket.customer?.name || "",
+                        device: `${editableTicket.deviceBrand} ${editableTicket.deviceModel}`,
+                        ticket: editableTicket.ticketNumber || "",
+                        problem: editableTicket.problemDesc || "",
+                        price: formatCurrency(editableTicket.estimatedCost)
+                    }
+                )}
+            />
         </Dialog>
     );
 }

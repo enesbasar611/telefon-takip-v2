@@ -37,7 +37,7 @@ export default async function StokHareketleriPage({ searchParams }: { searchPara
                             </div>
                         </div>
                         <h1 className="font-medium text-5xl lg:text-7xl  text-white tracking-tighter shadow-sm">Hareket Analizi</h1>
-                        <p className="text-base text-slate-500 font-medium mt-3 max-w-xl">Envanterdeki tüm değişimleri izleyin, kritik seviyeleri kontrol edin ve ikmal listesini yönetin.</p>
+                        <p className="text-base text-muted-foreground/80 font-medium mt-3 max-w-xl">Envanterdeki tüm değişimleri izleyin, kritik seviyeleri kontrol edin ve ikmal listesini yönetin.</p>
                     </div>
                 </div>
             </div>

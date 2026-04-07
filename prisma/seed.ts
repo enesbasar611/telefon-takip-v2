@@ -29,7 +29,7 @@ async function main() {
     create: {
       email: "admin@takipv2.com",
       name: "Admin Kullanıcı",
-      password: "secure_password_hash", // In a real app, this would be hashed
+      password: "$2a$10$7vjT.FjP4S2I2F6Zq6rS6.fXg8vGj9r6r6r6r6r6r6r6r6r6r6r6", // BCrypt for "123456"
       role: Role.ADMIN,
       shopId: shop.id,
     },

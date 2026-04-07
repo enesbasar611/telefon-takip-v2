@@ -53,16 +53,16 @@ export function GlobalSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => query.length >= 2 && setIsOpen(true)}
-        className="w-full bg-slate-900/40 border-border/10/50 pl-10 h-10 rounded-xl text-[10px]  text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-slate-900/60 transition-all"
+        className="w-full bg-card/40 border-border/10/50 pl-10 h-10 rounded-xl text-[10px]  text-foreground/90 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/30 focus:bg-card/60 transition-all"
       />
       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/10 backdrop-blur-md">
-          <span className="text-[8px]  text-slate-500">CTRL + SHIFT + S</span>
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-border backdrop-blur-md">
+          <span className="text-[8px]  text-muted-foreground/80">CTRL + SHIFT + S</span>
         </div>
       </div>
 
       {isOpen && results && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#0F172A]/95 border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-2xl">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-[#0F172A]/95 border border-border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-2xl">
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
             <div className="p-3 mb-2 bg-blue-500/5 rounded-xl border border-blue-500/10 flex items-center justify-center gap-2">
               <Sparkles className="h-3 w-3 text-blue-400" />
@@ -82,12 +82,12 @@ export function GlobalSearch() {
                   >
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[8px]  text-slate-500 uppercase tracking-tighter">{r.breadcrumb}</span>
-                        <Badge className="h-3 text-[7px]  px-1 pb-0 border-none bg-white/10 text-slate-300">
+                        <span className="text-[8px]  text-muted-foreground/80 uppercase tracking-tighter">{r.breadcrumb}</span>
+                        <Badge className="h-3 text-[7px]  px-1 pb-0 border-none bg-white/10 text-foreground">
                           {r.type}
                         </Badge>
                       </div>
-                      <span className="text-xs  text-slate-200 group-hover:text-blue-400">{r.title}</span>
+                      <span className="text-xs  text-foreground/90 group-hover:text-blue-400">{r.title}</span>
                       <span className="text-[9px] text-slate-600  truncate max-w-[250px]">{r.subtitle}</span>
                     </div>
                     <ArrowRight className="h-3 w-3 text-slate-800 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />

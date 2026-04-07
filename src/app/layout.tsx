@@ -25,7 +25,7 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning className="antialiased">
-      <body className="bg-background text-foreground antialiased flex min-h-screen flex-col" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      <body className="bg-background text-foreground antialiased flex min-h-screen flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

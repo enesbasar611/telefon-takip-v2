@@ -145,7 +145,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-white/10 p-0 overflow-hidden rounded-3xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border p-0 overflow-hidden rounded-3xl">
                 <div className="p-8 space-y-8">
                     <DialogHeader>
                         <div className="flex items-center gap-3 mb-2">
@@ -207,9 +207,9 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                             )}
                         </div>
 
-                        <Card className="bg-white/[0.02] border-white/5 rounded-2xl overflow-hidden">
+                        <Card className="bg-white/[0.02] border-border/50 rounded-2xl overflow-hidden">
                             <table className="w-full text-left">
-                                <thead className="bg-white/[0.02] border-b border-white/5">
+                                <thead className="bg-white/[0.02] border-b border-border/50">
                                     <tr>
                                         <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase">Ürün Adı</th>
                                         <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-28">Stok Durumu</th>
@@ -237,7 +237,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-sm  text-slate-400">{item.product?.stock || 0}</span>
+                                                        <span className="text-sm  text-muted-foreground">{item.product?.stock || 0}</span>
                                                         <span className="text-slate-600">→</span>
                                                         <span className="text-sm  text-emerald-400">{(item.product?.stock || 0) + received}</span>
                                                     </div>
@@ -250,7 +250,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         type="number"
                                                         value={received}
                                                         onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                                        className="h-10 rounded-xl bg-white/5 border-white/10 text-center  text-sm"
+                                                        className="h-10 rounded-xl bg-white/5 border-border text-center  text-sm"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-4 w-32 align-top">
@@ -259,7 +259,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCurrencies(prev => ({ ...prev, [item.id]: prev[item.id] === 'USD' ? 'TRY' : 'USD' }))}
-                                                                className="h-full px-2 text-xs  text-blue-400 bg-blue-500/10 border-r border-white/10 rounded-l-xl hover:bg-blue-500/20 transition-colors"
+                                                                className="h-full px-2 text-xs  text-blue-400 bg-blue-500/10 border-r border-border rounded-l-xl hover:bg-blue-500/20 transition-colors"
                                                             >
                                                                 {currencies[item.id] === 'USD' ? '$' : '₺'}
                                                             </button>
@@ -269,7 +269,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                             step="0.01"
                                                             value={buyPrices[item.id] !== undefined ? buyPrices[item.id] : ""}
                                                             onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                                            className="w-full h-10 bg-white/5 border-white/10 text-xs  rounded-xl pl-8 text-right pr-2"
+                                                            className="w-full h-10 bg-white/5 border-border text-xs  rounded-xl pl-8 text-right pr-2"
                                                         />
                                                     </div>
                                                     {currencies[item.id] === 'USD' && buyPrices[item.id] > 0 && (
@@ -311,7 +311,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                     </div>
                 </div>
 
-                <div className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                <div className="p-8 border-t border-border/50 bg-white/[0.01] flex items-center justify-between">
                     <div className="space-y-1">
                         <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Genel Toplam</p>
                         <p className="text-3xl  text-blue-500 tracking-tighter">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
@@ -342,7 +342,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 }
 
 function Card({ children, className }: { children: React.ReactNode, className?: string }) {
-    return <div className={cn("bg-card border border-white/5", className)}>{children}</div>;
+    return <div className={cn("bg-card border border-border/50", className)}>{children}</div>;
 }
 
 

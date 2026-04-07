@@ -82,7 +82,7 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                 <DialogHeader className="px-6 pt-6 pb-2">
                     <p className="text-[11px] font-medium text-blue-500 uppercase tracking-widest mb-1">OPERASYONEL PLANLAMA</p>
                     <DialogTitle className="text-2xl text-white font-semibold">Yeni İşlem / Randevu Oluştur</DialogTitle>
-                    <DialogDescription className="text-slate-400">
+                    <DialogDescription className="text-muted-foreground">
                         Takvime yeni bir servis işlemi, ödeme veya görev ekleyin.
                     </DialogDescription>
                 </DialogHeader>
@@ -90,7 +90,7 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                 <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
                     {/* Types */}
                     <div className="space-y-3">
-                        <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">İŞLEM TÜRÜ SEÇİN</Label>
+                        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">İŞLEM TÜRÜ SEÇİN</Label>
                         <div className="grid grid-cols-4 gap-2 bg-[#1a1a1a] p-1.5 rounded-2xl border border-[#222]">
                             {types.map(t => {
                                 const isSelected = selectedType === t.id;
@@ -104,7 +104,7 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                                             "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all",
                                             isSelected
                                                 ? "bg-[#222] shadow-sm text-white"
-                                                : "text-slate-500 hover:text-slate-300 hover:bg-[#222]/50"
+                                                : "text-muted-foreground/80 hover:text-foreground hover:bg-[#222]/50"
                                         )}
                                     >
                                         <Icon className={cn("h-5 w-5", isSelected && `text-${t.color}-400`)} />
@@ -118,7 +118,7 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                     <div className="space-y-4">
                         {/* Title */}
                         <div className="space-y-2">
-                            <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">İŞLEM BAŞLIĞI</Label>
+                            <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">İŞLEM BAŞLIĞI</Label>
                             <Input
                                 required
                                 name="title"
@@ -130,16 +130,16 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                         {/* Date & Time */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">TARİH</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">TARİH</Label>
                                 <div className="relative">
-                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                                     <Input required type="date" name="date" className="bg-[#151515] border-[#222] text-white h-12 pl-10 rounded-xl" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">SAAT</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">SAAT</Label>
                                 <div className="relative">
-                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                                     <Input type="time" name="time" defaultValue="12:00" className="bg-[#151515] border-[#222] text-white h-12 pl-10 rounded-xl" />
                                 </div>
                             </div>
@@ -148,11 +148,11 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                         {/* Category & Amount */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">KATEGORİ</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">KATEGORİ</Label>
                                 <Input name="category" placeholder="Örn: Ekran Tamiri" className="bg-[#151515] border-[#222] text-white h-12 rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">TUTAR (TRY)</Label>
+                                <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">TUTAR (TRY)</Label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 font-medium">₺</span>
                                     <Input name="amount" type="number" step="0.01" placeholder="0.00" className="bg-[#151515] border-[#222] text-white h-12 pl-8 rounded-xl" />
@@ -162,14 +162,14 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
 
                         {/* Notes */}
                         <div className="space-y-2">
-                            <Label className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">NOTLAR / AÇIKLAMA</Label>
+                            <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-widest">NOTLAR / AÇIKLAMA</Label>
                             <Textarea name="notes" placeholder="İşlem hakkında özel notlar..." className="bg-[#151515] border-[#222] text-white min-h-[80px] resize-none rounded-xl" />
                         </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#222]">
-                        <Button type="button" variant="ghost" onClick={onClose} className="hover:bg-[#222] text-slate-300">
+                        <Button type="button" variant="ghost" onClick={onClose} className="hover:bg-[#222] text-foreground">
                             İptal Et
                         </Button>
                         <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px] h-10 rounded-xl">

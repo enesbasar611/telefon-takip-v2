@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { StockReceiptModal } from "./stock-receipt-modal";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { useSupplierOrders } from "@/lib/context/supplier-order-context";
 import { useShortage } from "@/lib/context/shortage-context";
 
@@ -52,6 +53,8 @@ export function ShortageList() {
   const supplierIds = Object.keys(orders);
 
   const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -136,18 +139,19 @@ export function ShortageList() {
     }
   };
 
-  const sendWhatsApp = (supplierId: string) => {
+  const handleWhatsAppClick = (supplierId: string) => {
     const list = orders[supplierId];
     if (!list) return;
     const lines = list.items.map((item) => `- ${item.name} x${item.quantity}`).join("\n");
-    const message = encodeURIComponent(`*Sipariş Listesi — ${list.supplierName}*\n\n${lines}\n\n_TakipV2 üzerinden gönderildi._`);
-    const phone = list.supplierPhone?.replace(/\D/g, "") ?? "";
-    const url = phone
-      ? `https://wa.me/${phone.startsWith("0") ? "90" + phone.slice(1) : phone}?text=${message}`
-      : `https://wa.me?text=${message}`;
+    const initialMessage = `*Sipariş Listesi — ${list.supplierName}*\n\n${lines}\n\n_TakipV2 üzerinden gönderildi._`;
 
-    window.open(url, "_blank");
-    toast.success(`${list.supplierName} için WhatsApp açılıyor...`);
+    setSelectedSupplier({
+      id: supplierId,
+      name: list.supplierName,
+      phone: list.supplierPhone,
+      message: initialMessage
+    });
+    setWhatsappModalOpen(true);
   };
 
   const handleCreateOrder = async (supplierId: string, items: any[], supplierName: string) => {
@@ -194,7 +198,7 @@ export function ShortageList() {
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-slate-900/40 border border-border/10 text-slate-500 hover:text-blue-500 transition-all">
+          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-card/40 border border-border/10 text-muted-foreground/80 hover:text-blue-500 transition-all">
             <ClipboardList className={cn("h-5 w-5", totalBadge > 0 && "text-red-600 fill-red-600/10")} />
             {totalBadge > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px]  text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
@@ -205,7 +209,7 @@ export function ShortageList() {
         </PopoverTrigger>
         <PopoverContent align="end" className="w-96 bg-card border-2 border-red-600 p-0 shadow-none animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
           {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-white/5 bg-white/[0.01]">
+          <div className="flex overflow-x-auto border-b border-border/50 bg-white/[0.01]">
             <button
               onClick={() => setActiveTab("main")}
               className={cn(
@@ -261,7 +265,7 @@ export function ShortageList() {
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onFocus={() => newName.length >= 2 && setShowResults(true)}
-                      className="h-8 bg-white/[0.03] border-white/5 text-[10px] rounded-lg pl-8"
+                      className="h-8 bg-white/[0.03] border-border/50 text-[10px] rounded-lg pl-8"
                     />
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
                     {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />}
@@ -284,7 +288,7 @@ export function ShortageList() {
                             <span className="text-[10px]  text-blue-400">{p.name}</span>
                             <span className="text-[8px] text-gray-500 ">{p.sku || 'SKU YOK'}</span>
                           </div>
-                          <span className={cn("text-[10px]  bg-slate-900/50 px-3 py-1 rounded-lg border border-white/5", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                          <span className={cn("text-[10px]  bg-card/50 px-3 py-1 rounded-lg border border-border/50", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
                             {p.stock}
                           </span>
                         </button>
@@ -315,9 +319,9 @@ export function ShortageList() {
                               <UserPlus2 className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent side="left" align="start" className="w-48 p-1 bg-slate-900 border-white/10 shadow-2xl">
+                          <PopoverContent side="left" align="start" className="w-48 p-1 bg-card border-border shadow-2xl">
                             <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                              <p className="text-[8px]  text-slate-500 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
+                              <p className="text-[8px]  text-muted-foreground/80 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
                               {suppliers.length === 0 ? (
                                 <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
                               ) : (
@@ -351,12 +355,12 @@ export function ShortageList() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[8px]  text-slate-500 uppercase">Alınacak</span>
-                          <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-slate-900 border-white/5 text-[10px] px-2  text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
+                          <span className="text-[8px]  text-muted-foreground/80 uppercase">Alınacak</span>
+                          <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-card border-border/50 text-[10px] px-2  text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
                         </div>
                         <div className="flex flex-col gap-1 items-end">
-                          <span className="text-[8px]  text-slate-500 uppercase">Mevcut</span>
-                          <div className="h-8 flex items-center justify-end px-3 bg-slate-900/50 rounded-lg border border-white/5 w-full">
+                          <span className="text-[8px]  text-muted-foreground/80 uppercase">Mevcut</span>
+                          <div className="h-8 flex items-center justify-end px-3 bg-card/50 rounded-lg border border-border/50 w-full">
                             <span className={cn("text-[11px] ", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
                           </div>
                         </div>
@@ -396,21 +400,21 @@ export function ShortageList() {
                   ) : (
                     list.items.map((item, idx) => (
                       <div key={`${item.productId ?? item.name}-${idx}`} className="group flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-emerald-500/20 transition-all">
-                        <div className="h-7 w-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                        <div className="h-7 w-7 rounded-lg bg-white/5 border border-border flex items-center justify-center shrink-0">
                           <Package className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
                         <span className="flex-1 text-[10px]  text-foreground truncate">{item.name}</span>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => updateSupplierQty(supplierId, item.productId, item.name, item.quantity - 1)}
-                            className="h-5 w-5 rounded bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:bg-white/10"
+                            className="h-5 w-5 rounded bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:bg-white/10"
                           >
                             <Minus className="h-2.5 w-2.5" />
                           </button>
                           <span className="text-[11px]  text-blue-400 w-5 text-center">{item.quantity}</span>
                           <button
                             onClick={() => updateSupplierQty(supplierId, item.productId, item.name, item.quantity + 1)}
-                            className="h-5 w-5 rounded bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:bg-white/10"
+                            className="h-5 w-5 rounded bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:bg-white/10"
                           >
                             <Plus className="h-2.5 w-2.5" />
                           </button>
@@ -431,7 +435,7 @@ export function ShortageList() {
                     <Separator className="my-2 bg-white/5" />
                     <div className="flex items-center gap-2">
                       <Button
-                        onClick={() => sendWhatsApp(supplierId)}
+                        onClick={() => handleWhatsAppClick(supplierId)}
                         className="flex-1 bg-[#25D366] hover:bg-[#22c55e] text-white  text-[10px] h-10 rounded-xl gap-2"
                       >
                         <MessageCircle className="h-4 w-4 shrink-0" />
@@ -473,6 +477,19 @@ export function ShortageList() {
         onClose={() => setShowPrintModal(false)}
         items={items}
       />
+
+      {selectedSupplier && (
+        <WhatsAppConfirmModal
+          isOpen={whatsappModalOpen}
+          onClose={() => {
+            setWhatsappModalOpen(false);
+            setSelectedSupplier(null);
+          }}
+          phone={selectedSupplier.phone || ""}
+          customerName={selectedSupplier.name}
+          initialMessage={selectedSupplier.message}
+        />
+      )}
     </>
   );
 }

@@ -1,4 +1,5 @@
 "use server";
+import { unstable_cache } from "next/cache";
 import { Role } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { serializePrisma, formatName } from "@/lib/utils";
@@ -6,25 +7,67 @@ import { revalidatePath } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
-export async function getStaff() {
+export const getStaff = async (shopId?: string) => {
+  const finalShopId = shopId || await getShopId();
+  return unstable_cache(
+    async () => {
+      try {
+        const staff = await prisma.user.findMany({
+          where: { shopId: finalShopId },
+          include: {
+            assignedTickets: {
+              where: { status: "DELIVERED", shopId: finalShopId }
+            },
+            sales: {
+              where: { shopId: finalShopId }
+            }
+          },
+          orderBy: { createdAt: "desc" }
+        });
+        return serializePrisma(staff);
+      } catch (error) {
+        console.error("Error fetching staff:", error);
+        return [];
+      }
+    },
+    [`staff-list-${finalShopId}`],
+    { tags: [`staff-${finalShopId}`], revalidate: 3600 }
+  )();
+};
+
+export async function getProfile() {
   try {
+    const userId = await getUserId();
     const shopId = await getShopId();
-    const staff = await prisma.user.findMany({
-      where: { shopId },
+    const user = await prisma.user.findUnique({
+      where: { id: userId, shopId },
       include: {
-        assignedTickets: {
-          where: { status: "DELIVERED", shopId }
+        shop: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+          }
         },
-        sales: {
-          where: { shopId }
+        assignedTickets: {
+          where: { shopId },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            customer: {
+              select: { name: true }
+            }
+          }
         }
-      },
-      orderBy: { createdAt: "desc" }
+      }
     });
-    return serializePrisma(staff);
+
+    if (!user) return null;
+    return serializePrisma(user);
   } catch (error) {
-    console.error("Error fetching staff:", error);
-    return [];
+    console.error("Error fetching profile:", error);
+    return null;
   }
 }
 
@@ -149,11 +192,13 @@ export async function deleteStaff(userId: string) {
   }
 }
 
-export async function getStaffPerformance(userId: string) {
+export async function getStaffPerformance(userId?: string) {
   try {
     const shopId = await getShopId();
+    const finalUserId = userId === "current" || !userId ? await getUserId() : userId;
+
     const user = await prisma.user.findUnique({
-      where: { id: userId, shopId },
+      where: { id: finalUserId, shopId },
       include: {
         assignedTickets: {
           where: { status: "DELIVERED", shopId }
@@ -308,5 +353,54 @@ export async function getAllLogs() {
   } catch (error) {
     console.error("Error fetching all logs:", error);
     return [];
+  }
+}
+
+export async function updateProfile(data: {
+  name: string;
+  surname?: string;
+  phone?: string;
+  image?: string;
+}) {
+  try {
+    const userId = await getUserId();
+    const shopId = await getShopId();
+
+    const updated = await prisma.user.update({
+      where: { id: userId, shopId },
+      data: {
+        name: data.name,
+        surname: data.surname,
+        phone: data.phone,
+        image: data.image
+      }
+    });
+
+    revalidatePath("/(dashboard)/profil");
+    return { success: true, user: serializePrisma(updated) };
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return { success: false, error: "Profil güncellenirken bir hata oluştu." };
+  }
+}
+
+export async function updatePassword(data: { old: string, new: string }) {
+  try {
+    const userId = await getUserId();
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.password) return { success: false, error: "Kullanıcı bulunamadı." };
+
+    const isMatch = await bcrypt.compare(data.old, user.password);
+    if (!isMatch) return { success: false, error: "Mevcut şifre hatalı." };
+
+    const hashedPassword = await bcrypt.hash(data.new, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Şifre güncellenirken bir hata oluştu." };
   }
 }

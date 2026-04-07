@@ -61,7 +61,7 @@ export function ServiceStats({ tickets }: ServiceStatsProps) {
                             <div className={cn("p-4 rounded-2xl border shadow-inner transition-transform group-hover:scale-110", stat.bg, stat.border)}>
                                 <stat.icon className={cn("h-6 w-6", stat.color)} />
                             </div>
-                            <TrendingUp className="h-4 w-4 text-slate-200" />
+                            <TrendingUp className="h-4 w-4 text-foreground/90" />
                         </div>
                         <div className="mt-6">
                             <p className="text-[10px]  text-muted-foreground tracking-wider mb-1">{stat.label}</p>

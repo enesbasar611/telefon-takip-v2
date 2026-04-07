@@ -126,7 +126,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                     Tedarikçi Listesine Dön
                 </button>
 
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-card border border-white/5 rounded-3xl p-8 relative overflow-hidden backdrop-blur-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-card border border-border/50 rounded-3xl p-8 relative overflow-hidden backdrop-blur-xl">
                     <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                         <Truck className="h-32 w-32 rotate-12" />
                     </div>
@@ -168,7 +168,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                     </div>
 
                     <div className="flex items-center gap-3 relative z-10">
-                        <div className="hidden xl:flex flex-col items-end mr-6 pr-6 border-r border-white/5 space-y-3">
+                        <div className="hidden xl:flex flex-col items-end mr-6 pr-6 border-r border-border/50 space-y-3">
                             <div className="flex flex-col items-end">
                                 <p className="text-[10px]  text-muted-foreground uppercase tracking-widest mb-1">Güven Skoru</p>
                                 <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                 ].map((item, i) => (
                                     <div key={i} className="space-y-1">
                                         <div className="flex items-center justify-between text-[8px]  uppercase tracking-tighter">
-                                            <span className="text-slate-500">{item.label}</span>
+                                            <span className="text-muted-foreground/80">{item.label}</span>
                                             <span className={item.value >= 80 ? "text-emerald-500" : "text-amber-500"}>%{item.value}</span>
                                         </div>
                                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -208,7 +208,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                         <Button
                             variant="outline"
                             onClick={() => setIsEditOpen(true)}
-                            className="h-11 rounded-xl  text-xs gap-2 border-white/5 hover:bg-white/5"
+                            className="h-11 rounded-xl  text-xs gap-2 border-border/50 hover:bg-white/5"
                         >
                             <Edit3 className="h-4 w-4" />
                             Düzenle
@@ -237,7 +237,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                         <Button
                             variant="outline"
                             onClick={() => setIsPaymentOpen(true)}
-                            className="h-11 rounded-xl  text-xs gap-2 border-white/5 hover:bg-white/5 px-4 bg-white/5"
+                            className="h-11 rounded-xl  text-xs gap-2 border-border/50 hover:bg-white/5 px-4 bg-white/5"
                         >
                             <CreditCard className="h-4 w-4" />
                             Ödeme Yap
@@ -253,7 +253,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
-                    <Card key={i} className="bg-card border-white/5 overflow-hidden group hover:border-white/10 transition-all">
+                    <Card key={i} className="bg-card border-border/50 overflow-hidden group hover:border-border transition-all">
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                                 <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", stat.bg)}>
@@ -274,7 +274,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
 
             {/* Tabs Section */}
             <Tabs defaultValue="orders" className="w-full">
-                <TabsList className="bg-transparent border-b border-white/5 w-full justify-start rounded-none h-auto p-0 gap-8">
+                <TabsList className="bg-transparent border-b border-border/50 w-full justify-start rounded-none h-auto p-0 gap-8">
                     {[
                         { id: "orders", label: "Sipariş Listeleri", icon: Truck },
                         { id: "history", label: "Satın Alma Geçmişi", icon: History },
@@ -294,14 +294,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
 
                 <div className="py-6">
                     <TabsContent value="orders" className="m-0 focus-visible:outline-none">
-                        <Card className="bg-card border-white/5 overflow-hidden">
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <Card className="bg-card border-border/50 overflow-hidden">
+                            <div className="p-6 border-b border-border/50 flex items-center justify-between">
                                 <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Aktif ve Bekleyen Siparişler</h3>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-white/5 text-left bg-white/[0.01]">
+                                        <tr className="border-b border-border/50 text-left bg-white/[0.01]">
                                             {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
                                                 <th key={h} className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
@@ -333,7 +333,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                                         <Badge className={cn(
                                                             "text-[10px]  border-none px-2 rounded-xl",
                                                             order.status === "PENDING" ? "bg-amber-500/10 text-amber-500" :
-                                                                order.status === "ON_WAY" ? "bg-blue-500/10 text-blue-500" : "bg-slate-500/10 text-slate-400"
+                                                                order.status === "ON_WAY" ? "bg-blue-500/10 text-blue-500" : "bg-slate-500/10 text-muted-foreground"
                                                         )}>
                                                             {order.status === "PENDING" ? "Beklemede" : order.status === "ON_WAY" ? "Yolda" : order.status}
                                                         </Badge>
@@ -368,14 +368,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                     </TabsContent>
 
                     <TabsContent value="history" className="m-0">
-                        <Card className="bg-card border-white/5 overflow-hidden">
-                            <div className="p-6 border-b border-white/5">
+                        <Card className="bg-card border-border/50 overflow-hidden">
+                            <div className="p-6 border-b border-border/50">
                                 <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-white/5 text-left bg-white/[0.01]">
+                                        <tr className="border-b border-border/50 text-left bg-white/[0.01]">
                                             {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
                                                 <th key={h} className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
@@ -430,8 +430,8 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                     </TabsContent>
 
                     <TabsContent value="cari" className="m-0">
-                        <Card className="bg-card border-white/5 overflow-hidden">
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <Card className="bg-card border-border/50 overflow-hidden">
+                            <div className="p-6 border-b border-border/50 flex items-center justify-between">
                                 <div className="flex flex-col gap-1">
                                     <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Cari Hesap Ekstresi (Banka Tipi)</h3>
                                     <p className="text-[10px] font-medium text-muted-foreground">Tüm alım ve ödeme hareketlerinin kümülatif bakiye dökümü.</p>
@@ -439,7 +439,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 rounded-xl text-[10px]  uppercase gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+                                    className="h-9 rounded-xl text-[10px]  uppercase gap-2 border-border hover:bg-white/5 bg-white/5"
                                     onClick={() => setIsEkstreOpen(true)}
                                 >
                                     <Printer className="h-3.5 w-3.5" />
@@ -449,7 +449,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-white/5 text-left bg-white/[0.01]">
+                                        <tr className="border-b border-border/50 text-left bg-white/[0.01]">
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">Tarih</th>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">İşlem Tipi</th>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">Açıklama</th>
@@ -494,7 +494,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                                         <td className="px-6 py-4 text-sm  text-foreground">
                                                             {t.description}
                                                         </td>
-                                                        <td className="px-4 py-4 text-xs  text-slate-500 text-right">
+                                                        <td className="px-4 py-4 text-xs  text-muted-foreground/80 text-right">
                                                             ₺{Math.round(prevBalance).toLocaleString("tr-TR")}
                                                         </td>
                                                         <td className={cn(
@@ -551,7 +551,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             />
 
             <Dialog open={isIbanOpen} onOpenChange={setIsIbanOpen}>
-                <DialogContent className="max-w-md w-11/12 sm:w-full bg-[#0F172A] border-white/10 p-8 flex flex-col items-center justify-center text-center rounded-3xl">
+                <DialogContent className="max-w-md w-11/12 sm:w-full bg-[#0F172A] border-border p-8 flex flex-col items-center justify-center text-center rounded-3xl">
                     <DialogTitle className="font-medium sr-only">IBAN Bilgisi</DialogTitle>
                     <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 shadow-inner shadow-indigo-500/20 border border-indigo-500/20">
                         <Landmark className="h-8 w-8 text-indigo-400" />
@@ -559,8 +559,8 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                     <h2 className="font-medium text-2xl  text-white mb-2">{supplier.name}</h2>
                     <p className="text-sm  text-indigo-400 mb-8">{supplier.bankName || "Banka Adı Girilmemiş"}</p>
 
-                    <div className="bg-[#0B101B] border border-white/10 rounded-2xl py-8 px-4 sm:px-8 w-full">
-                        <p className="text-[10px]  text-slate-500 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
+                    <div className="bg-[#0B101B] border border-border rounded-2xl py-8 px-4 sm:px-8 w-full">
+                        <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
                         <p className="text-[17px] sm:text-2xl font-mono  text-white tracking-widest break-all">
                             {supplier.iban}
                         </p>
@@ -599,16 +599,16 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             />
 
             <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-                <AlertDialogContent className="bg-[#0F172A] border-white/10 rounded-3xl">
+                <AlertDialogContent className="bg-[#0F172A] border-border rounded-3xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-xl  text-white">Tedarikçiyi Sil</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-400 font-medium">
+                        <AlertDialogDescription className="text-muted-foreground font-medium">
                             <span className=" text-white">"{supplier.name}"</span> isimli tedarikçiyi silmek istediğinize emin misiniz?
                             Bu işlem geri alınamaz ve tedarikçiye ait tüm geçmiş veriler silinecektir.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="bg-white/5 border-white/5 text-white  rounded-xl hover:bg-white/10 hover:text-white">
+                        <AlertDialogCancel className="bg-white/5 border-border/50 text-white  rounded-xl hover:bg-white/10 hover:text-white">
                             Vazgeç
                         </AlertDialogCancel>
                         <AlertDialogAction
@@ -627,13 +627,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             </AlertDialog>
 
             <Dialog open={isPendingOrdersModalOpen} onOpenChange={setIsPendingOrdersModalOpen}>
-                <DialogContent className="max-w-xl bg-[#0F172A] border-white/10 rounded-3xl p-8">
+                <DialogContent className="max-w-xl bg-[#0F172A] border-border rounded-3xl p-8">
                     <DialogHeader>
                         <DialogTitle className="font-medium text-2xl  text-white flex items-center gap-3">
                             <Clock className="text-amber-500 h-6 w-6" />
                             Bekleyen İşlemler Var!
                         </DialogTitle>
-                        <p className="text-slate-400 font-medium pt-2">
+                        <p className="text-muted-foreground font-medium pt-2">
                             Bu tedarikçiye ait henüz tamamlanmamış <span className="text-white ">{pendingOrdersToDelete.length}</span> adet sipariş bulunuyor.
                             Tedarikçiyi silmek için bu siparişlerdeki ürünleri ne yapmak istersiniz?
                         </p>
@@ -641,14 +641,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
 
                     <div className="my-6 space-y-3 max-h-[300px] overflow-y-auto pr-2">
                         {pendingOrdersToDelete.map((order) => (
-                            <div key={order.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                            <div key={order.id} className="bg-white/5 border border-border/50 rounded-2xl p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs  text-white">#{order.orderNo}</p>
-                                    <p className="text-[10px]  text-slate-500">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
+                                    <p className="text-[10px]  text-muted-foreground/80">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-xs  text-amber-500">₺{Number(order.totalAmount).toLocaleString("tr-TR")}</p>
-                                    <p className="text-[10px]  text-slate-500">{order.items?.length || 0} Kalem Ürün</p>
+                                    <p className="text-[10px]  text-muted-foreground/80">{order.items?.length || 0} Kalem Ürün</p>
                                 </div>
                             </div>
                         ))}
@@ -666,7 +666,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                         <Button
                             variant="ghost"
                             onClick={() => setIsPendingOrdersModalOpen(false)}
-                            className="w-full h-12 text-slate-400 hover:text-white  bg-white/5 rounded-xl transition-all"
+                            className="w-full h-12 text-muted-foreground hover:text-white  bg-white/5 rounded-xl transition-all"
                         >
                             Vazgeç
                         </Button>

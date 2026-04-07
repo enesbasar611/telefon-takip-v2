@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { formatProperCase, formatPhoneRaw } from "@/lib/formatters";
 import { toTitleCase } from "@/lib/utils";
 
 export async function createShopOnboarding(formData: {
@@ -11,6 +12,7 @@ export async function createShopOnboarding(formData: {
     phone: string;
     currency: string;
     openingBalance: number;
+    website?: string;
 }) {
     const session = await auth();
 
@@ -24,9 +26,7 @@ export async function createShopOnboarding(formData: {
             data: {
                 name: toTitleCase(formData.name),
                 address: toTitleCase(formData.address),
-                phone: formData.phone,
-                // We could add currency to shop model if we update the schema again, 
-                // but for now let's assume it's stored in settings or just used in UI.
+                phone: formatPhoneRaw(formData.phone),
             },
         });
 
@@ -68,30 +68,52 @@ export async function createShopOnboarding(formData: {
             });
         }
 
-        // 5. Create default Receipt Settings
-        await prisma.receiptSettings.create({
-            data: {
-                id: `rcpt_${shop.id}`,
-                title: shop.name.toUpperCase(),
-                subtitle: "TEKNİK SERVİS & SATIŞ",
-                phone: shop.phone || "",
-                address: shop.address || "",
-                shopId: shop.id
-            }
-        });
+        // 5. Create default Receipt Settings for all types
+        const receiptTypes = [
+            { id: "pos", subtitle: "PROFESYONEL TEKNİK SERVİS" },
+            { id: "service", subtitle: "MOBİL SERVİS & TEKNİK DESTEK" },
+            { id: "stock", subtitle: "EKSİK / SİPARİŞ LİSTESİ" }
+        ];
 
-        // 6. Initialize Global Settings (for general settings page)
+        await Promise.all(receiptTypes.map(type =>
+            prisma.receiptSettings.create({
+                data: {
+                    id: `${shop.id}_${type.id}`,
+                    title: shop.name.toUpperCase(),
+                    subtitle: type.subtitle,
+                    phone: shop.phone || "",
+                    address: shop.address || "",
+                    footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
+                    website: formData.website || "",
+                    shopId: shop.id,
+                    terms: type.id === "service" ? "• Arıza tespit ücreti 150 TL'dir. İptal edilen cihazlarda bu ücret tahsil edilir.\n• 30 gün içinde teslim alınmayan cihazlardan işletmemiz sorumlu değildir.\n• Yedekleme sorumluluğu müşteriye aittir. Veri kaybından firmamız sorumlu tutulamaz." : null
+                }
+            })
+        ));
+
+        // 6. Initialize Global Settings (WhatsApp Templates, Company Info, etc.)
         const globalSettings = [
             { key: "companyName", value: shop.name },
             { key: "companyPhone", value: shop.phone || "" },
             { key: "companyAddress", value: shop.address || "" },
-            { key: "whatsappNewService", value: `Sayın {customer}, {device} cihazınız {ticket} numarası ile servisimize kabul edilmiştir.` },
-            { key: "whatsappReady", value: `Sayın {customer}, {device} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz.` },
+            { key: "companyWebsite", value: formData.website || "" },
+            // WhatsApp Templates
+            { key: "whatsappNewService", value: "Sayın {musteri_adi}, {cihaz} cihazınız {servis_no} numarası ile servisimize kabul edilmiştir." },
+            { key: "whatsappReady", value: "Sayın {musteri_adi}, {cihaz} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz." },
+            { key: "whatsappAppointment", value: "Sayın {musteri_adi}, {tarih} tarihinde randevunuz oluşturulmuştur. Sizi bekliyoruz!" },
+            { key: "whatsappPaymentReminder", value: "Sayın {musteri_adi}, {tutar} tutarındaki ödemeniz hakkında hatırlatma. Ödeme için bize ulaşabilirsiniz." },
+            { key: "whatsappConfirmBeforeSend", value: "true" },
+            // Barcode & Printing
+            { key: "barcodeAutoPrint", value: "true" },
+            { key: "receiptAutoPrint", value: "true" },
+            { key: "currencySymbol", value: "₺" },
         ];
 
         await Promise.all(globalSettings.map(s =>
-            prisma.setting.create({
-                data: { ...s, shopId: shop.id }
+            prisma.setting.upsert({
+                where: { shopId_key: { shopId: shop.id, key: s.key } },
+                update: { value: s.value },
+                create: { ...s, shopId: shop.id }
             })
         ));
 

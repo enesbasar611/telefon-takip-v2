@@ -47,7 +47,7 @@ export default async function KasaRaporuPage() {
                     </div>
                     <div>
                         <h1 className="font-medium text-5xl font-extrabold text-foreground tracking-tight font-sans">Kasa & Finans</h1>
-                        <p className="text-sm text-slate-500  mt-1 uppercase tracking-widest">NAKİT AKIŞI VE GÜNLÜK RAPOR</p>
+                        <p className="text-sm text-muted-foreground/80  mt-1 uppercase tracking-widest">NAKİT AKIŞI VE GÜNLÜK RAPOR</p>
                     </div>
                 </div>
 

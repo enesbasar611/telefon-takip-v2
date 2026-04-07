@@ -28,7 +28,9 @@ import {
     ArrowUpRight,
     TrendingUp,
     Zap,
-    Package
+    Package,
+    Hash,
+    AlertCircle
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -296,6 +298,19 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                     <p className="text-xs text-muted-foreground  mt-1">
                                                         {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold">#{item.ticketNumber || item.saleNumber}</span>
                                                     </p>
+                                                    {item.ticketNumber && (
+                                                        <div className="flex flex-wrap gap-2 mt-3">
+                                                            {item.imei && (
+                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><Hash className="h-3 w-3 mr-1" /> {item.imei}</Badge>
+                                                            )}
+                                                            {item.problemDesc && (
+                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><AlertCircle className="h-3 w-3 mr-1 text-orange-500" /> {item.problemDesc}</Badge>
+                                                            )}
+                                                            {item.devicePassword && (
+                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><ShieldCheck className="h-3 w-3 mr-1 text-indigo-500" /> Şifre: {item.devicePassword}</Badge>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-12">

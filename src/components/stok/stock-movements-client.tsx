@@ -99,7 +99,7 @@ export function StockMovementsClient({
             case "ADJUSTMENT":
                 return <ArrowRightLeft className="h-4 w-4 text-amber-500" />;
             default:
-                return <Package className="h-4 w-4 text-slate-400" />;
+                return <Package className="h-4 w-4 text-muted-foreground" />;
         }
     };
 
@@ -130,15 +130,15 @@ export function StockMovementsClient({
                             <div className="flex items-center gap-3 mt-2">
                                 <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1  text-[9px] uppercase tracking-[2px]">İSTATİSTİKSEL ANALİZ</Badge>
                                 <div className="h-1 w-1 rounded-full bg-slate-700" />
-                                <span className="text-slate-500  text-[10px] uppercase tracking-widest opacity-60">Gerçek Zamanlı Takip</span>
+                                <span className="text-muted-foreground/80  text-[10px] uppercase tracking-widest opacity-60">Gerçek Zamanlı Takip</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex flex-col items-end gap-1 px-6 py-3 bg-white/5 rounded-2xl border border-white/10 group cursor-default hover:bg-white/10 transition-all">
-                        <span className="text-[9px]  text-slate-500 uppercase tracking-[2px]">TOPLAM KAYIT</span>
+                    <div className="flex flex-col items-end gap-1 px-6 py-3 bg-white/5 rounded-2xl border border-border group cursor-default hover:bg-white/10 transition-all">
+                        <span className="text-[9px]  text-muted-foreground/80 uppercase tracking-[2px]">TOPLAM KAYIT</span>
                         <span className="text-xl  text-white tabular-nums tracking-tighter">{stats.totalMovements} <span className="text-xs text-slate-600 ml-1">Kayıt</span></span>
                     </div>
 
@@ -148,7 +148,7 @@ export function StockMovementsClient({
                             "h-14 px-8 rounded-2xl  text-xs uppercase tracking-widest gap-3 transition-all active:scale-95 shadow-2xl",
                             stats.criticalCount > 0
                                 ? "bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/20 animate-pulse"
-                                : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"
+                                : "bg-white/5 text-muted-foreground border border-border hover:bg-white/10"
                         )}
                     >
                         <AlertTriangle className="w-4 h-4" />
@@ -164,9 +164,9 @@ export function StockMovementsClient({
                     { label: "GİRİŞ HACMİ", value: "₺24,500", icon: TrendingUp, color: "emerald", trend: "+5.2%" },
                     { label: "KRİTİK ÜRÜN", value: stats.criticalCount.toString(), icon: AlertTriangle, color: "rose", trend: "%32 Azalma" }
                 ].map((stat, i) => (
-                    <Card key={i} className="border-none bg-white/[0.03] backdrop-blur-3xl shadow-2xl overflow-hidden rounded-[2.5rem] border border-white/5 group hover:bg-white/[0.05] transition-all duration-500">
+                    <Card key={i} className="border-none bg-white/[0.03] backdrop-blur-3xl shadow-2xl overflow-hidden rounded-[2.5rem] border border-border/50 group hover:bg-white/[0.05] transition-all duration-500">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 px-8 pt-8">
-                            <span className="text-[10px]  text-slate-500 uppercase tracking-[3px]">{stat.label}</span>
+                            <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-[3px]">{stat.label}</span>
                             <div className={cn("p-3 rounded-2xl bg-white/5", stat.color === 'rose' && stats.criticalCount > 0 ? "animate-bounce" : "")}>
                                 <stat.icon className={cn("w-4 h-4", `text-${stat.color}-500`)} />
                             </div>
@@ -186,17 +186,17 @@ export function StockMovementsClient({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 px-2">
                     <div className="space-y-2">
                         <h2 className="font-medium text-2xl  text-white tracking-tighter uppercase">Hareket Akışı</h2>
-                        <span className="text-[10px]  text-slate-500 uppercase tracking-[3px] opacity-80">Envanter Değişim Logları</span>
+                        <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-[3px] opacity-80">Envanter Değişim Logları</span>
                     </div>
 
                     <div className="relative group w-full md:w-96">
                         <div className="absolute inset-0 bg-blue-500/10 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors z-20" />
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/80 group-focus-within:text-blue-400 transition-colors z-20" />
                         <Input
                             placeholder="Ürün adı veya işlem kodu ara..."
                             value={searchTerm}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="pl-16 h-14 bg-white/[0.03] border-white/10 shadow-2xl rounded-2xl focus-visible:ring-blue-500/20 focus-visible:bg-white/[0.06] transition-all  text-sm text-white relative z-10"
+                            className="pl-16 h-14 bg-white/[0.03] border-border shadow-2xl rounded-2xl focus-visible:ring-blue-500/20 focus-visible:bg-white/[0.06] transition-all  text-sm text-white relative z-10"
                         />
                         {isPending && (
                             <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20">
@@ -208,17 +208,17 @@ export function StockMovementsClient({
 
                 <CardContent className="p-0">
                     <div className={cn(
-                        "bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden transition-all duration-500",
+                        "bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] border border-border shadow-2xl overflow-hidden transition-all duration-500",
                         isPending ? "opacity-30 blur-md grayscale scale-[0.99]" : "opacity-100"
                     )}>
                         <Table>
-                            <TableHeader className="font-medium bg-white/[0.03] border-b border-white/5">
+                            <TableHeader className="font-medium bg-white/[0.03] border-b border-border/50">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="font-medium py-8 px-10  text-[10px] uppercase tracking-[3px] text-slate-500">Ürün & Bilgi</TableHead>
-                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-slate-500">Tarih / Zaman</TableHead>
-                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-slate-500">İşlem Türü</TableHead>
-                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-slate-500">Miktar</TableHead>
-                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-slate-500 px-10 text-right">Detaylar</TableHead>
+                                    <TableHead className="font-medium py-8 px-10  text-[10px] uppercase tracking-[3px] text-muted-foreground/80">Ürün & Bilgi</TableHead>
+                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-muted-foreground/80">Tarih / Zaman</TableHead>
+                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-muted-foreground/80">İşlem Türü</TableHead>
+                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-muted-foreground/80">Miktar</TableHead>
+                                    <TableHead className="font-medium  text-[10px] uppercase tracking-[3px] text-muted-foreground/80 px-10 text-right">Detaylar</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -231,7 +231,7 @@ export function StockMovementsClient({
                                         >
                                             <TableCell colSpan={5} className="py-40 text-center">
                                                 <div className="flex flex-col items-center gap-6 grayscale opacity-30">
-                                                    <Package className="w-16 h-16 text-slate-500" />
+                                                    <Package className="w-16 h-16 text-muted-foreground/80" />
                                                     <span className="text-[10px]  uppercase tracking-[4px]">Eşleşen Hareket Bulunamadı</span>
                                                 </div>
                                             </TableCell>
@@ -247,21 +247,21 @@ export function StockMovementsClient({
                                             >
                                                 <TableCell className="py-7 px-10">
                                                     <div className="flex items-center gap-6">
-                                                        <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center p-2 group-hover/row:scale-110 transition-transform shadow-2xl relative overflow-hidden">
+                                                        <div className="w-14 h-14 rounded-2xl bg-white/5 border border-border flex items-center justify-center p-2 group-hover/row:scale-110 transition-transform shadow-2xl relative overflow-hidden">
                                                             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover/row:opacity-100 transition-all" />
-                                                            <Package className="w-6 h-6 text-slate-400 group-hover/row:text-blue-400" />
+                                                            <Package className="w-6 h-6 text-muted-foreground group-hover/row:text-blue-400" />
                                                         </div>
                                                         <div className="flex flex-col gap-1.5">
                                                             <span className=" text-[15px] text-white capitalize group-hover/row:text-blue-400 transition-colors">
                                                                 {m.product.name}
                                                             </span>
-                                                            <Badge variant="outline" className="w-fit text-[9px]  px-2 py-0.5 bg-white/5 border-white/5 text-slate-500 group-hover/row:border-white/10 group-hover/row:text-slate-300">
+                                                            <Badge variant="outline" className="w-fit text-[9px]  px-2 py-0.5 bg-white/5 border-border/50 text-muted-foreground/80 group-hover/row:border-border group-hover/row:text-foreground">
                                                                 #{m.id.substring(0, 8).toUpperCase()}
                                                             </Badge>
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="py-6 font-mono  text-xs text-slate-400 tabular-nums">
+                                                <TableCell className="py-6 font-mono  text-xs text-muted-foreground tabular-nums">
                                                     <div className="flex flex-col gap-1">
                                                         <span>{format(new Date(m.createdAt), "dd MMM yyyy", { locale: tr })}</span>
                                                         <span className="opacity-40 text-[10px]">{format(new Date(m.createdAt), "HH:mm")}</span>
@@ -277,7 +277,7 @@ export function StockMovementsClient({
                                                         )}>
                                                             {getTypeIcon(m.type)}
                                                         </div>
-                                                        <span className="text-[10px]  text-slate-400 uppercase tracking-widest">
+                                                        <span className="text-[10px]  text-muted-foreground uppercase tracking-widest">
                                                             {getTypeLabel(m.type)}
                                                         </span>
                                                     </div>
@@ -292,7 +292,7 @@ export function StockMovementsClient({
                                                 </TableCell>
                                                 <TableCell className="px-10 py-6 text-right">
                                                     <div className="flex flex-col items-end gap-3">
-                                                        <span className="text-[11px]  text-slate-400 line-clamp-1 italic max-w-xs group-hover/row:text-slate-200 transition-all">
+                                                        <span className="text-[11px]  text-muted-foreground line-clamp-1 italic max-w-xs group-hover/row:text-foreground/90 transition-all">
                                                             {m.notes || "Sistem tarafından otomatik oluşturuldu."}
                                                         </span>
                                                         <div className="flex gap-2">
@@ -319,15 +319,15 @@ export function StockMovementsClient({
                 </CardContent>
 
                 {/* Fancy Pagination Footer */}
-                <div className="p-10 border-t border-white/5 mt-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-20 bg-white/[0.01]">
+                <div className="p-10 border-t border-border/50 mt-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-20 bg-white/[0.01]">
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px]  text-slate-500 uppercase tracking-[3px]">Sayfa Başı Kayıt</span>
+                            <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-[3px]">Sayfa Başı Kayıt</span>
                             <span className="text-white  text-sm">{movements.length} <span className="text-slate-700 mx-1">/</span> {stats.totalMovements}</span>
                         </div>
                         <div className="h-8 w-[1px] bg-white/5 hidden md:block" />
                         <div className="flex flex-col gap-1 hidden md:flex">
-                            <span className="text-[10px]  text-slate-500 uppercase tracking-[3px]">Toplam Sayfa</span>
+                            <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-[3px]">Toplam Sayfa</span>
                             <span className="text-white  text-sm">{pagination.totalPages} Seviye</span>
                         </div>
                     </div>
@@ -337,13 +337,13 @@ export function StockMovementsClient({
                             variant="outline"
                             onClick={() => handlePageChange(pagination.page - 1)}
                             disabled={pagination.page <= 1 || isPending}
-                            className="bg-white/5 hover:bg-white/10 border-white/5 text-white/50 hover:text-white h-12 px-6 rounded-2xl shadow-none transition-all flex items-center gap-2 group/btn"
+                            className="bg-white/5 hover:bg-white/10 border-border/50 text-white/50 hover:text-white h-12 px-6 rounded-2xl shadow-none transition-all flex items-center gap-2 group/btn"
                         >
                             <ChevronLeft className="h-4 w-4 group-hover/btn:-translate-x-1 transition-transform" />
                             <span className="text-[10px]  uppercase tracking-widest pr-1">Önceki</span>
                         </Button>
 
-                        <div className="flex items-center px-6 h-12 rounded-2xl bg-white/5 border border-white/5 text-white/40 tracking-widest text-[11px] ">
+                        <div className="flex items-center px-6 h-12 rounded-2xl bg-white/5 border border-border/50 text-white/40 tracking-widest text-[11px] ">
                             <span className="text-white">{pagination.page}</span>
                             <span className="mx-2 opacity-30">/</span>
                             <span>{pagination.totalPages}</span>
@@ -353,7 +353,7 @@ export function StockMovementsClient({
                             variant="outline"
                             onClick={() => handlePageChange(pagination.page + 1)}
                             disabled={pagination.page >= pagination.totalPages || isPending}
-                            className="bg-white/5 hover:bg-white/10 border-white/5 text-white/50 hover:text-white h-12 px-6 rounded-2xl shadow-none transition-all flex items-center gap-2 group/btn"
+                            className="bg-white/5 hover:bg-white/10 border-border/50 text-white/50 hover:text-white h-12 px-6 rounded-2xl shadow-none transition-all flex items-center gap-2 group/btn"
                         >
                             <span className="text-[10px]  uppercase tracking-widest pl-1">Sonraki</span>
                             <ChevronRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />

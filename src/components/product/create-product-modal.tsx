@@ -204,7 +204,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[820px] bg-[#0a0a0a] border border-white/10 text-white p-0 overflow-hidden shadow-2xl shadow-black/80">
+      <DialogContent className="sm:max-w-[820px] bg-[#0a0a0a] border border-border text-white p-0 overflow-hidden shadow-2xl shadow-black/80">
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="p-8 space-y-6 max-h-[88vh] overflow-y-auto custom-scrollbar">
 
@@ -216,7 +216,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                   </div>
                   <div>
                     <DialogTitle className="font-medium text-xl  tracking-tight">Akıllı Envanter Tanımlama</DialogTitle>
-                    <DialogDescription className="text-[13px] font-medium text-slate-400 mt-1">
+                    <DialogDescription className="text-[13px] font-medium text-muted-foreground mt-1">
                       Sisteme yeni bir yedek parça, aksesuar veya cihaz kaydedin. <br />
                       <span className="text-indigo-400 opacity-80">Alt kategorileri sırayla seçerek ilerleyin.</span>
                     </DialogDescription>
@@ -231,7 +231,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     "flex items-center gap-2 px-4 py-2.5 rounded-xl border  text-[11px] tracking-wider uppercase transition-all",
                     aiExpanded
                       ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-[0_0_16px_theme(colors.violet.500/0.2)]"
-                      : "bg-white/[0.03] border-white/10 text-slate-400 hover:bg-white/[0.07] hover:text-white"
+                      : "bg-white/[0.03] border-border text-muted-foreground hover:bg-white/[0.07] hover:text-white"
                   )}
                 >
                   <Sparkles className={cn("h-4 w-4", aiExpanded && "text-violet-400 animate-pulse")} />
@@ -250,7 +250,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                   </div>
                   <div>
                     <p className="text-[11px]  text-violet-400 uppercase tracking-widest">Gemini AI Asistan</p>
-                    <p className="text-[10px] text-slate-500 font-medium">Ürünü serbest metin olarak tarif edin, AI formu otomatik dolduracak</p>
+                    <p className="text-[10px] text-muted-foreground/80 font-medium">Ürünü serbest metin olarak tarif edin, AI formu otomatik dolduracak</p>
                   </div>
                   {aiStatus === "success" && (
                     <div className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -271,7 +271,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                   onChange={e => setAiDescription(e.target.value)}
                   placeholder={`Örnek: "iPhone 14 Pro ön cam 3 adet alış 850 TL satış 1200 TL, ekranlar kategorisinde, raf: A-2"\nVeya: "Samsung Galaxy Tab S9 batarya değişimi 5 adet, alış fiyatı 620, satış 900"`}
                   rows={4}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none transition-all leading-relaxed"
+                  className="w-full bg-black/40 border border-border rounded-xl px-4 py-3 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none transition-all leading-relaxed"
                   onKeyDown={e => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAIAnalyze();
                   }}
@@ -314,17 +314,17 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <div key={idx} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 flex-1 min-w-[200px]">
                       {idx > 0 && <ChevronRight className="h-4 w-4 text-indigo-500/50 hidden md:block" />}
                       <div className="space-y-1.5 flex-1">
-                        <Label className="font-medium text-[10px] font-semibold text-slate-500 uppercase">
+                        <Label className="font-medium text-[10px] font-semibold text-muted-foreground/80 uppercase">
                           {idx === 0 ? "Ana Kategori" : `${idx}. Alt Kategori`}
                         </Label>
                         <Select
                           value={dropdown.selectedValue}
                           onValueChange={(val) => handleCategorySelect(dropdown.level, val)}
                         >
-                          <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-11 text-[13px] font-semibold text-white focus:ring-1 focus:ring-indigo-500/50 hover:bg-white/10 transition-colors w-full">
+                          <SelectTrigger className="bg-white/5 border-border rounded-xl h-11 text-[13px] font-semibold text-white focus:ring-1 focus:ring-indigo-500/50 hover:bg-white/10 transition-colors w-full">
                             <SelectValue placeholder="Seçim Yapın..." />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#0f172a] border-white/10 text-white shadow-2xl">
+                          <SelectContent className="bg-[#0f172a] border-border text-white shadow-2xl">
                             {dropdown.options.map((cat) => (
                               <SelectItem key={cat.id} value={cat.id} className="text-[13px] font-medium py-2.5 cursor-pointer focus:bg-white/10 transition-colors">
                                 {cat.name}
@@ -341,31 +341,31 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
               {/* Temel Bilgiler */}
               <div className="space-y-5">
-                <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Temel Kimlik
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-8 space-y-2">
-                    <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-slate-400">Ürün Adı &amp; Kesin Tanımı</Label>
-                    <Input id="name" {...register("name")} placeholder="Örn: iPhone 13 Pro Max Ön Cam" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-muted-foreground">Ürün Adı &amp; Kesin Tanımı</Label>
+                    <Input id="name" {...register("name")} placeholder="Örn: iPhone 13 Pro Max Ön Cam" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                     {errors.name && <p className="text-[11px] text-rose-500 font-medium">{errors.name.message}</p>}
                   </div>
                   <div className="md:col-span-4 space-y-2">
-                    <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
-                    <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                   </div>
                 </div>
               </div>
 
               {/* Finansal Parametreler */}
-              <div className="space-y-5 bg-stone-900/30 p-5 rounded-2xl border border-white/5">
+              <div className="space-y-5 bg-stone-900/30 p-5 rounded-2xl border border-border/50">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                  <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <h4 className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
                     <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Finansal Parametreler
                   </h4>
-                  <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                  <div className="flex bg-black/40 p-1 rounded-xl border border-border/50">
                     {(["TRY", "USD", "EUR"] as const).map((c) => (
                       <Button key={c} type="button" size="sm" variant={currency === c ? "default" : "ghost"}
                         onClick={() => setCurrency(c)}
@@ -373,7 +373,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                           ? c === "TRY" ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                             : c === "USD" ? "bg-emerald-500 hover:bg-emerald-400 text-black"
                               : "bg-blue-500 hover:bg-blue-400 text-black"
-                          : "text-slate-500 hover:text-white"}`}
+                          : "text-muted-foreground/80 hover:text-white"}`}
                       >
                         {c === "TRY" ? "₺ TRY" : c === "USD" ? "$ USD" : "€ EUR"}
                       </Button>
@@ -382,7 +382,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <div className="p-1.5 rounded-md bg-stone-800 border border-stone-700">
                         <DollarSign className="h-3.5 w-3.5 text-amber-400" />
                       </div>
@@ -400,12 +400,12 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     {currency !== "TRY" && (
                       <div className="flex items-center gap-1.5 mt-2 px-1 opacity-90">
                         <ArrowRightLeft className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="text-[11px]  text-slate-400">≈ {calculateTryPrice(watchBuyPrice)} ₺ (Günün Kuruyla)</span>
+                        <span className="text-[11px]  text-muted-foreground">≈ {calculateTryPrice(watchBuyPrice)} ₺ (Günün Kuruyla)</span>
                       </div>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="sellPrice" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="sellPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
                         <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
                       </div>
@@ -425,37 +425,37 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
 
               {/* Stok ve Konum */}
               <div className="space-y-5">
-                <h4 className="font-medium text-[11px]  text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Envanter Konumlandırması
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-3 space-y-2">
-                    <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-slate-400">Başlangıç Stoğu</Label>
-                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-white/10 rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
+                    <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-muted-foreground">Başlangıç Stoğu</Label>
+                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-3 space-y-2">
-                    <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                     </Label>
                     <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-6 space-y-2">
-                    <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                    <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-blue-400" /> Raf / Konum
                     </Label>
-                    <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-white/[0.03] border-white/10 rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-6 border-t border-white/5 bg-black/40 flex items-center justify-between rounded-b-2xl">
-            <p className="text-[11px] font-medium text-slate-500 hidden md:block max-w-[300px]">
+          <div className="p-6 border-t border-border/50 bg-black/40 flex items-center justify-between rounded-b-2xl">
+            <p className="text-[11px] font-medium text-muted-foreground/80 hidden md:block max-w-[300px]">
               * Kayıt tamamlandıktan sonra modal kapanmaz, seri varyant hızlıca ekleyebilirsiniz.
             </p>
             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px]  text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px]  text-muted-foreground hover:text-white hover:bg-white/5 transition-all">
                 İptal Et
               </Button>
               <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-blue-500 hover:bg-blue-400 text-black font-extrabold px-8 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">

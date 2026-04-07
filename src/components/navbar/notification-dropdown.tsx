@@ -190,7 +190,7 @@ export function NotificationDropdown() {
                                         </div>
                                         <p className={cn(
                                             "text-[12px] font-medium leading-relaxed line-clamp-2",
-                                            n.isRead ? "text-muted-foreground/60" : "text-slate-500"
+                                            n.isRead ? "text-muted-foreground/60" : "text-muted-foreground/80"
                                         )}>
                                             {n.message}
                                         </p>

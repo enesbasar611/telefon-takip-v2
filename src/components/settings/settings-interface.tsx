@@ -1,164 +1,191 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Bell, Printer, Smartphone, Loader2 } from "lucide-react";
-import { bulkUpdateSettings } from "@/lib/actions/setting-actions";
-import { useToast } from "@/hooks/use-toast";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { ReceiptSettingsForm } from "@/components/settings/receipt-settings-form";
+import { useState, useCallback, useMemo, useTransition } from "react";
+import { cn } from "@/lib/utils";
+import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap } from "lucide-react";
+import { bulkUpdateSettings, updateSetting } from "@/lib/actions/setting-actions";
+import { toast } from "sonner";
+
+// Tab Components
+import { AppearanceTab } from "./tabs/appearance-tab";
+import { WhatsAppTab } from "./tabs/whatsapp-tab";
+import { PrinterTab } from "./tabs/printer-tab";
+import { DataTab } from "./tabs/data-tab";
+import { AutomationTab } from "./tabs/automation-tab";
+import { FloatingSaveBar } from "./floating-save-bar";
 
 interface SettingsProps {
   initialSettings: any[];
   receiptSettings: any[];
 }
 
+const tabs = [
+  { id: "appearance", label: "Görünüm", icon: Palette, desc: "Tema ve renkler" },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, desc: "Mesaj şablonları" },
+  { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
+  { id: "data", label: "Veri", icon: Database, desc: "Yedek ve export" },
+  { id: "automation", label: "Otomasyon", icon: Zap, desc: "Kurallar ve onaylar" },
+];
+
 export function SettingsInterface({ initialSettings, receiptSettings }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState("appearance");
   const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
+  const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
 
-  const getSettingValue = (key: string) =>
-    initialSettings.find(s => s.key === key)?.value || "";
+  // Build initial formData from settings array
+  const initialFormData = useMemo(() => {
+    const data: Record<string, string> = {};
+    initialSettings.forEach((s: any) => {
+      data[s.key] = s.value;
+    });
+    return data;
+  }, [initialSettings]);
 
-  const [formData, setFormData] = useState({
-    companyName: getSettingValue("companyName") || "BAŞAR TEKNİK",
-    companyPhone: getSettingValue("companyPhone") || "05XX XXX XX XX",
-    companyAddress: getSettingValue("companyAddress") || "Mobil Çarşısı, No: 123",
-    whatsappNewService: getSettingValue("whatsappNewService") || "Sayın {customer}, {device} cihazınız {ticket} numarası ile servisimize kabul edilmiştir.",
-    whatsappReady: getSettingValue("whatsappReady") || "Sayın {customer}, {device} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz.",
-  });
+  const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
+  const [savedData, setSavedData] = useState<Record<string, string>>(initialFormData);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.id]: e.target.value }));
-  };
+  // Dirty state tracking
+  const hasChanges = useMemo(() => {
+    return JSON.stringify(formData) !== JSON.stringify(savedData);
+  }, [formData, savedData]);
 
-  const handleSave = async () => {
+  const handleChange = useCallback((key: string, value: string, isAutoSave = false) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+
+    if (isAutoSave) {
+      setSavingKeys(prev => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+
+      startTransition(async () => {
+        try {
+          // Pass false to skip revalidatePath and prevent page flicker
+          const result = await updateSetting(key, value, false);
+          if (result.success) {
+            setSavedData(prev => ({ ...prev, [key]: value }));
+          } else {
+            toast.error("Ayar otomatik kaydedilemedi.");
+          }
+        } finally {
+          setSavingKeys(prev => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        }
+      });
+    }
+  }, []);
+
+  const handleSave = () => {
     startTransition(async () => {
       const result = await bulkUpdateSettings(formData);
       if (result.success) {
-        toast({ title: "Başarılı", description: "Ayarlar kaydedildi." });
+        setSavedData({ ...formData });
+        toast.success("Ayarlar başarıyla kaydedildi.");
       } else {
-        toast({ title: "Hata", description: "Ayarlar kaydedilemedi.", variant: "destructive" });
+        toast.error("Ayarlar kaydedilirken hata oluştu.");
       }
     });
   };
 
+  const handleCancel = () => {
+    setFormData({ ...savedData });
+  };
+
   return (
-    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
-      <div className="flex items-center gap-6 mb-4">
-        <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-          <SettingsIcon className="h-8 w-8 text-primary" />
+    <div className="flex flex-col gap-8 pb-24">
+      {/* Page Header ... (lines 73-138) */}
+      {/* ... skipping header ... */}
+      <div className="flex items-center gap-5">
+        <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+          <SettingsIcon className="h-7 w-7 text-blue-500" />
         </div>
-        <div className="flex-1 space-y-2">
-          <h1 className="font-medium text-5xl  text-foreground">Sistem Ayarları</h1>
-          <p className="text-muted-foreground font-medium">Platform parametrelerini ve işletme bilgilerini özelleştirin.</p>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Sistem Ayarları</h1>
+          <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground">Platform parametrelerini ve işletme tercihlerini yönetin.</p>
         </div>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[800px] bg-slate-100 dark:bg-white/5 p-1.5 rounded-2xl h-16 shadow-inner">
-          <TabsTrigger value="general" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
-            <SettingsIcon className="h-4.5 w-4.5" />
-            Genel yapı
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
-            <Bell className="h-4.5 w-4.5" />
-            Bildirimler
-          </TabsTrigger>
-          <TabsTrigger value="printing" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
-            <Printer className="h-4.5 w-4.5" />
-            Yazdırma
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-3 text-xs  rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
-            <Smartphone className="h-4.5 w-4.5" />
-            Entegrasyonlar
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 border-none rounded-2xl bg-card overflow-hidden">
-            <CardHeader className="p-10 border-b border-slate-100 dark:border-white/5 bg-muted/20">
-              <CardTitle className="font-medium text-2xl ">Firma bilgileri</CardTitle>
-              <CardDescription className="text-slate-500 font-medium mt-1">Sistem genelinde ve fişlerde kullanılacak kurumsal kimlik verileri</CardDescription>
-            </CardHeader>
-            <CardContent className="p-10 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label htmlFor="companyName" className="font-medium text-xs  text-slate-400 ml-1">Firma adı</Label>
-                  <Input id="companyName" value={formData.companyName} onChange={handleChange} className="h-14 text-base  px-6 shadow-sm" />
-                </div>
-                <PhoneInput
-                  label="İletişim hattı"
-                  id="companyPhone"
-                  value={formData.companyPhone}
-                  onChange={(val: string) => setFormData(prev => ({ ...prev, companyPhone: val }))}
-                />
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="companyAddress" className="font-medium text-xs  text-slate-400 ml-1">Global adres bilgisi</Label>
-                <Input id="companyAddress" value={formData.companyAddress} onChange={handleChange} className="h-14 text-base  px-6 shadow-sm" />
-              </div>
-              <div className="pt-4">
-                <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-extrabold text-base shadow-xl shadow-primary/20 transition-all active:scale-95">
-                  {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <SettingsIcon className="mr-3 h-5 w-5" />}
-                  Değişiklikleri güvenli kaydet
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="shadow-2xl shadow-slate-200/40 dark:shadow-black/40 border-none rounded-2xl bg-card overflow-hidden">
-            <CardHeader className="p-10 border-b border-slate-100 dark:border-white/5 bg-muted/20">
-              <CardTitle className="font-medium text-2xl font-extrabold font-manrope">Bildirim şablonları</CardTitle>
-              <CardDescription className="text-slate-500 font-medium mt-1">Müşteri deneyimini optimize eden otomatik WhatsApp mesaj yapılandırması</CardDescription>
-            </CardHeader>
-            <CardContent className="p-10 space-y-10">
-              <div className="space-y-4">
-                <Label htmlFor="whatsappNewService" className="font-medium text-xs  text-slate-400 ml-1">Yeni servis kabul mesajı</Label>
-                <div className="relative">
-                  <Input id="whatsappNewService" value={formData.whatsappNewService} onChange={handleChange} className="h-20 text-sm  px-6 pt-2 shadow-sm" />
-                  <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/10">
-                    <span className="text-[10px]  text-blue-500">PARAMETRELER:</span>
-                    <span className="text-[10px] font-medium text-blue-400">{' {customer}, {device}, {ticket}'}</span>
+      <div className="flex gap-6 min-h-[600px]">
+        <nav className="w-[220px] shrink-0 sticky top-6 self-start will-change-transform">
+          <div className="bg-white dark:bg-[#111] border border-slate-200 dark:border-[#222] rounded-2xl p-2 space-y-1 shadow-sm">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-[background-color,border-color,color,box-shadow] duration-200 transform-gpu",
+                    isActive
+                      ? "bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-muted-foreground/80 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1a1a1a] border border-transparent"
+                  )}
+                >
+                  <Icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? "text-blue-400" : "text-slate-600")} />
+                  <div className="min-w-0">
+                    <span className="text-sm font-semibold block leading-tight">{tab.label}</span>
+                    <span className={cn("text-[10px] block leading-tight mt-0.5", isActive ? "text-blue-400/60" : "text-slate-600")}>
+                      {tab.desc}
+                    </span>
                   </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <Label htmlFor="whatsappReady" className="font-medium text-xs  text-slate-400 ml-1">Cihaz onarım tamamlandı mesajı</Label>
-                <div className="relative">
-                  <Input id="whatsappReady" value={formData.whatsappReady} onChange={handleChange} className="h-20 text-sm  px-6 pt-2 shadow-sm" />
-                  <div className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
-                    <span className="text-[10px]  text-emerald-500">PARAMETRELER:</span>
-                    <span className="text-[10px] font-medium text-emerald-400">{' {customer}, {device}'}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-4">
-                <Button onClick={handleSave} disabled={isPending} className="h-14 px-10 rounded-2xl bg-secondary hover:bg-secondary/90 text-white font-extrabold text-base shadow-xl shadow-secondary/20 transition-all active:scale-95">
-                  {isPending ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Bell className="mr-3 h-5 w-5" />}
-                  Şablonları yayına al
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-        <TabsContent value="printing" className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <ReceiptSettingsForm initialSettings={receiptSettings} />
-        </TabsContent>
-      </Tabs>
+        <div className="flex-1 min-w-0">
+          <div className="bg-white dark:bg-[#111] border border-slate-200 dark:border-[#222] rounded-2xl p-8 min-h-[600px] shadow-sm">
+            <div className="mb-8 pb-6 border-b border-slate-200 dark:border-[#222]">
+              {tabs.map((tab) => {
+                if (tab.id !== activeTab) return null;
+                const Icon = tab.icon;
+                return (
+                  <div key={tab.id} className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">{tab.label}</h2>
+                      <p className="text-xs text-muted-foreground/80 dark:text-muted-foreground">{tab.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="animate-in fade-in duration-300">
+              {activeTab === "appearance" && (
+                <AppearanceTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "whatsapp" && (
+                <WhatsAppTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "printing" && (
+                <PrinterTab receiptSettings={receiptSettings} />
+              )}
+              {activeTab === "data" && (
+                <DataTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "automation" && (
+                <AutomationTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <FloatingSaveBar
+        hasChanges={hasChanges}
+        isSaving={isPending}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }
-
-
-
-
-
-

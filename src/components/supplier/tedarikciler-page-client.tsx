@@ -148,7 +148,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     <Button
                         variant="outline"
                         onClick={() => setIsOrderPanelOpen(true)}
-                        className="relative h-10 px-4 rounded-xl  text-xs gap-2 border-white/10 hover:bg-white/5"
+                        className="relative h-10 px-4 rounded-xl  text-xs gap-2 border-border hover:bg-white/5"
                     >
                         <ShoppingBasket className="h-4 w-4" />
                         Sipariş Listeleri
@@ -164,7 +164,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             "h-10 px-4 rounded-xl  text-xs gap-2 transition-all",
                             hasCritical
                                 ? "bg-rose-600/10 border border-rose-500/30 text-rose-400 hover:bg-rose-600/20"
-                                : "bg-white/5 border border-white/10 text-foreground hover:bg-white/10"
+                                : "bg-white/5 border border-border text-foreground hover:bg-white/10"
                         )}
                     >
                         <Brain className="h-4 w-4" />
@@ -219,7 +219,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         badgeColor: "bg-emerald-500/10 text-emerald-400",
                     },
                 ].map((stat, i) => (
-                    <Card key={i} className="bg-card border-white/5 hover:border-white/10 transition-all duration-300 group overflow-hidden">
+                    <Card key={i} className="bg-card border-border/50 hover:border-border transition-all duration-300 group overflow-hidden">
                         <CardContent className="p-6 relative">
                             <div className="flex items-start justify-between mb-4">
                                 <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", stat.bg)}>
@@ -243,8 +243,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 {/* LEFT */}
                 <div className="space-y-6">
                     {/* Suppliers Table */}
-                    <Card className="bg-card border-white/5 overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                    <Card className="bg-card border-border/50 overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-border/50">
                             <div>
                                 <h2 className="font-medium text-sm  text-foreground">Öne Çıkan Tedarikçiler</h2>
                                 <p className="text-xs text-muted-foreground font-medium">En sık işlem yaptığınız tedarik ortakları</p>
@@ -252,7 +252,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         </div>
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                                <TableRow className="border-b border-border/50 hover:bg-transparent">
                                     {["Tedarikçi Adı", "İletişim", "Aktif Sipariş", "Son Alım", "Güvenilirlik", ""].map((h) => (
                                         <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                     ))}
@@ -319,8 +319,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     </Card>
 
                     {/* Purchase Orders Table */}
-                    <Card className="bg-card border-white/5 overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+                    <Card className="bg-card border-border/50 overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-border/50">
                             <div>
                                 <h2 className="font-medium text-sm  text-foreground">Son Satın Alma İşlemleri</h2>
                                 <p className="text-xs text-muted-foreground font-medium">Tüm tedarikçilerle gerçekleştirilen son işlemler</p>
@@ -328,7 +328,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                         </div>
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                                <TableRow className="border-b border-border/50 hover:bg-transparent">
                                     {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
                                         <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                     ))}
@@ -343,7 +343,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                     </TableRow>
                                 ) : (
                                     purchaseOrders.slice(0, 8).map((order: any, idx: number) => {
-                                        const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-slate-400 border-slate-500/20" };
+                                        const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
                                         const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
                                         return (
                                             <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
@@ -412,8 +412,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
 
                 {/* RIGHT Sidebar */}
                 <div className="space-y-5">
-                    <Card className="bg-card border-white/5 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-white/5">
+                    <Card className="bg-card border-border/50 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-border/50">
                             <h2 className="font-medium text-sm  text-foreground">Hızlı Aksiyonlar</h2>
                         </div>
                         <CardContent className="p-4 space-y-2">
@@ -448,8 +448,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     </Card>
 
                     {/* Analytics */}
-                    <Card className="bg-card border-white/5 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-white/5">
+                    <Card className="bg-card border-border/50 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-border/50">
                             <h2 className="font-medium text-xs  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Zap className="h-3.5 w-3.5 text-blue-500" />
                                 Analiz Özeti
@@ -488,8 +488,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     </Card>
 
                     {/* Activity */}
-                    <Card className="bg-card border-white/5 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-white/5">
+                    <Card className="bg-card border-border/50 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-border/50">
                             <h2 className="font-medium text-xs  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                 <Activity className="h-3.5 w-3.5 text-blue-500" />
                                 Son Hareketler

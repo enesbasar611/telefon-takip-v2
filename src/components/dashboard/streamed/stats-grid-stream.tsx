@@ -2,9 +2,11 @@ import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { serializePrisma } from "@/lib/utils";
 import { StatType } from "../modals/stat-detail-modal";
 import { StatsClientWrapper } from "./stats-client-wrapper";
+import { getShopId } from "@/lib/auth";
 
 export async function StatsGridStream() {
-    const statsDataRaw = await getDashboardStats();
+    const shopId = await getShopId();
+    const statsDataRaw = await getDashboardStats(shopId);
     const statsData = serializePrisma(statsDataRaw);
 
     const stats = [

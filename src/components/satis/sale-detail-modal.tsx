@@ -168,16 +168,16 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                     </div>
 
                     {/* Totals & Payment */}
-                    <div className="bg-slate-950 text-white rounded-[2.25rem] p-8 space-y-6 relative overflow-hidden shadow-2xl shadow-slate-950/20">
+                    <div className="bg-background text-white rounded-[2.25rem] p-8 space-y-6 relative overflow-hidden shadow-2xl shadow-slate-950/20">
                         {/* Background Decoration */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-[60px] pointer-events-none opacity-50" />
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-[40px] pointer-events-none opacity-50" />
 
-                        <div className="flex justify-between items-center pb-6 border-b border-white/5 relative z-10">
+                        <div className="flex justify-between items-center pb-6 border-b border-border/50 relative z-10">
                             <div className="flex flex-col gap-1.5">
                                 <span className="text-[10px]  text-white/30 uppercase tracking-widest">ÖDEME YÖNTEMİ</span>
                                 <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <div className="h-9 w-9 rounded-xl bg-white/5 flex items-center justify-center border border-border">
                                         {getPaymentIcon(sale.paymentMethod)}
                                     </div>
                                     <span className="text-[13px]  uppercase tracking-tight">{getPaymentLabel(sale.paymentMethod)}</span>

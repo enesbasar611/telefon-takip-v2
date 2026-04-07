@@ -134,10 +134,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
             {/* Search Bar for Products */}
             <div className="p-6 pb-4">
                 <div className="relative group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                     <Input
                         placeholder="Ürün veya seri no ara..."
-                        className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base  text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                        className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                     />
@@ -153,7 +153,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             "flex items-center gap-2.5 h-11 px-6 rounded-full border transition-all",
                             selectedCategory === "ALL"
                                 ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/30 text-white"
-                                : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400"
+                                : "bg-muted/40 border-border/80/40 hover:bg-muted text-muted-foreground"
                         )}
                     >
                         <ShoppingBag className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                     "flex items-center gap-2.5 h-11 px-6 rounded-full border transition-all",
                                     selectedCategory === cat.id
                                         ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/30 text-white"
-                                        : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400"
+                                        : "bg-muted/40 border-border/80/40 hover:bg-muted text-muted-foreground"
                                 )}
                             >
                                 <Icon className="h-4 w-4" />
@@ -185,11 +185,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 {filteredProducts.map((product) => (
                     <div
                         key={product.id}
-                        className="flex items-center justify-between p-5 bg-slate-800/30 border border-slate-700/30 rounded-2xl hover:bg-white/[0.03] hover:border-blue-500/20 transition-all group active:scale-[0.99]"
+                        className="flex items-center justify-between p-5 bg-muted/30 border border-border/80/30 rounded-2xl hover:bg-white/[0.03] hover:border-blue-500/20 transition-all group active:scale-[0.99]"
                     >
                         <div className="flex items-center gap-5">
-                            <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden">
-                                <Package className="h-9 w-9 text-slate-500 opacity-20" />
+                            <div className="h-16 w-16 rounded-2xl bg-card border border-border/80 flex items-center justify-center overflow-hidden">
+                                <Package className="h-9 w-9 text-muted-foreground/80 opacity-20" />
                             </div>
                             <div className="flex flex-col">
                                 <h4 className="font-medium text-base  text-white leading-tight">{product.name}</h4>
@@ -212,10 +212,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Cart Summary Section - Fixed at bottom */}
-            <div className="p-10 bg-slate-900 border-t border-slate-700/50 backdrop-blur-3xl space-y-8">
+            <div className="p-10 bg-card border-t border-border/80/50 backdrop-blur-3xl space-y-8">
                 <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                        <Label className="font-medium text-xs  text-slate-500 tracking-[0.2em]">Operasyonel Müşteri Seçimi</Label>
+                        <Label className="font-medium text-xs  text-muted-foreground/80 tracking-[0.2em]">Operasyonel Müşteri Seçimi</Label>
                         {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
                             <button
                                 onClick={async () => {
@@ -237,7 +237,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     </div>
 
                     <div className="relative group">
-                        <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                         <Input
                             placeholder="Müşteri adı veya telefon ile ara..."
                             value={activeCustomer ? activeCustomer.name : customerSearch}
@@ -245,11 +245,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 setCustomerSearch(e.target.value);
                                 if (selectedCustomerId) setSelectedCustomerId(undefined);
                             }}
-                            className="pl-14 h-16 bg-slate-800/50 border-slate-700/50 rounded-2xl text-base  text-white focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
                         />
 
                         {(customerSearch.length > 0 && !selectedCustomerId) && (
-                            <div className="absolute bottom-full left-0 w-full mb-4 bg-slate-900 border border-white/5 rounded-[2rem] shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 backdrop-blur-3xl">
+                            <div className="absolute bottom-full left-0 w-full mb-4 bg-card border border-border/50 rounded-[2rem] shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 backdrop-blur-3xl">
                                 <div className="max-h-80 overflow-y-auto p-4 custom-scrollbar-dark">
                                     {/* Quick Add Option - Always at top if name is new */}
                                     {!customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
@@ -286,11 +286,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                         }}
                                         className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/[0.03] transition-colors flex items-center justify-between group mb-2"
                                     >
-                                        <span className="text-xs  text-slate-500">HIZLI SATIŞ (İSİMSİZ)</span>
+                                        <span className="text-xs  text-muted-foreground/80">HIZLI SATIŞ (İSİMSİZ)</span>
                                         <CheckCircle className={cn("h-5 w-5 text-emerald-500", !selectedCustomerId ? "opacity-100" : "opacity-0")} />
                                     </button>
 
-                                    <div className="my-3 border-t border-white/5" />
+                                    <div className="my-3 border-t border-border/50" />
 
                                     {customers
                                         .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone && c.phone.includes(customerSearch)))
@@ -323,15 +323,15 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 </div>
 
                 <div className="space-y-4 pt-2">
-                    <div className="flex justify-between items-center text-sm  text-slate-500">
+                    <div className="flex justify-between items-center text-sm  text-muted-foreground/80">
                         <span>Ara Toplam</span>
                         <span className="text-white">₺{subtotal.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm  text-slate-500">
+                    <div className="flex justify-between items-center text-sm  text-muted-foreground/80">
                         <span>KDV (%20)</span>
                         <span className="text-white">₺{tax.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-end pt-4 border-t border-white/5">
+                    <div className="flex justify-between items-end pt-4 border-t border-border/50">
                         <span className="text-xl  text-white">Tahsilat Tutarı</span>
                         <div className="flex flex-col items-end">
                             <span className="text-4xl  text-blue-500 animate-pulse-slow">₺{total.toLocaleString('tr-TR')}</span>
@@ -354,10 +354,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border transition-all",
                                 paymentMethod === method.id
                                     ? "bg-blue-600 border-blue-500 shadow-lg shadow-blue-600/20 text-white"
-                                    : "bg-slate-800/40 border-slate-700/40 text-slate-500 hover:bg-slate-800"
+                                    : "bg-muted/40 border-border/80/40 text-muted-foreground/80 hover:bg-muted"
                             )}
                         >
-                            <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-slate-500")} />
+                            <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-muted-foreground/80")} />
                             <span className="text-[8px] ">{method.label}</span>
                         </button>
                     ))}
@@ -379,7 +379,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-20 w-20 rounded-[1.5rem] bg-slate-800/40 border-slate-700/40 hover:bg-slate-800 text-slate-400 transition-all p-0 flex items-center justify-center"
+                        className="h-20 w-20 rounded-[1.5rem] bg-muted/40 border-border/80/40 hover:bg-muted text-muted-foreground transition-all p-0 flex items-center justify-center"
                     >
                         <Printer className="h-8 w-8" />
                     </Button>

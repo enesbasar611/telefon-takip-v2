@@ -24,19 +24,25 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
     const [loading, setLoading] = useState(false);
     const formatInputPhone = (val: string = "") => {
         let raw = val.replace(/[^0-9]/g, "");
-        if (raw.startsWith("90")) raw = raw.substring(2);
-        if (raw.startsWith("0")) raw = raw.substring(1);
-        const trimmed = raw.substring(0, 10);
+        if (raw.startsWith("90") && raw.length > 2) raw = raw.slice(2);
+        if (raw.startsWith("0")) raw = raw.slice(1);
 
-        let formatted = trimmed;
-        if (trimmed.length > 3 && trimmed.length <= 6) {
-            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3)}`;
-        } else if (trimmed.length > 6 && trimmed.length <= 8) {
-            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3, 6)} ${trimmed.slice(6)}`;
-        } else if (trimmed.length > 8) {
-            formatted = `${trimmed.slice(0, 3)} ${trimmed.slice(3, 6)} ${trimmed.slice(6, 8)} ${trimmed.slice(8)}`;
+        if (raw.length > 0 && raw[0] !== '5') {
+            const firstFive = raw.indexOf('5');
+            if (firstFive !== -1) raw = raw.slice(firstFive);
+            else raw = "";
         }
-        return formatted;
+
+        const d = raw.slice(0, 10);
+        if (d.length === 0) return "";
+
+        let f = "(" + d.slice(0, 3);
+        if (d.length >= 3) {
+            f += ") ";
+            if (d.length > 3) f += d.slice(3, 6);
+            if (d.length > 6) f += " " + d.slice(6, 10);
+        }
+        return f;
     };
 
     const [formData, setFormData] = useState({

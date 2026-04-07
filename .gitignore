@@ -1,3 +1,7 @@
+# WhatsApp Session Data
+.whatsapp-auth/
+.wwebjs_cache/
+
 # dependencies
 /node_modules
 /.pnp

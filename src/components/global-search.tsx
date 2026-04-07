@@ -203,11 +203,11 @@ export function GlobalSearch() {
     return (
         <>
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-2xl bg-[#0A0F1C]/97 border-white/10 p-0 overflow-hidden rounded-3xl backdrop-blur-2xl shadow-2xl shadow-blue-500/10 focus-visible:outline-none">
+                <DialogContent className="max-w-2xl bg-[#0A0F1C]/97 border-border p-0 overflow-hidden rounded-3xl backdrop-blur-2xl shadow-2xl shadow-blue-500/10 focus-visible:outline-none">
                     <div className="flex flex-col h-full">
 
                         {/* Search Input */}
-                        <div className="flex items-center gap-3 p-5 border-b border-white/5 relative">
+                        <div className="flex items-center gap-3 p-5 border-b border-border/50 relative">
                             <div className={cn("transition-colors", isCommandMode && query.length > 0 ? "text-purple-400" : "text-blue-500")}>
                                 {isCommandMode && query.length > 0
                                     ? <Terminal className="h-5 w-5" />
@@ -221,7 +221,7 @@ export function GlobalSearch() {
                                 placeholder="Ne yapmak istiyorsun? 'gelir ekle', 'yeni servis' ya da ürün ismi yaz..."
                                 className="bg-transparent border-none h-10 text-lg font-medium text-white focus-visible:ring-0 placeholder:text-slate-600 p-0 shadow-none"
                             />
-                            <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-500 font-mono shrink-0">
+                            <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-border/50 text-[10px] text-muted-foreground/80 font-mono shrink-0">
                                 CTRL+⇧+S
                             </kbd>
                         </div>
@@ -232,11 +232,11 @@ export function GlobalSearch() {
                                 /* Empty State: show shortcut hints */
                                 <div className="space-y-4 p-4">
                                     <div className="text-center py-6">
-                                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/10 mx-auto flex items-center justify-center mb-4 border border-white/5">
+                                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/10 mx-auto flex items-center justify-center mb-4 border border-border/50">
                                             <Zap className="h-8 w-8 text-blue-500" />
                                         </div>
-                                        <p className="text-sm font-semibold text-slate-200">Evrensel Komut Merkezi</p>
-                                        <p className="text-xs text-slate-500 mt-1">Arama yap veya doğal dilde komut ver</p>
+                                        <p className="text-sm font-semibold text-foreground/90">Evrensel Komut Merkezi</p>
+                                        <p className="text-xs text-muted-foreground/80 mt-1">Arama yap veya doğal dilde komut ver</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 px-2 mb-2">Hızlı Komutlar</p>
@@ -249,7 +249,7 @@ export function GlobalSearch() {
                                                         onClick={() => runCommand(cmd)}
                                                         className={cn(
                                                             "flex items-center gap-3 p-3 rounded-2xl border text-left transition-all hover:opacity-90 group",
-                                                            "bg-white/3 border-white/5 hover:bg-white/6"
+                                                            "bg-white/3 border-border/50 hover:bg-white/6"
                                                         )}
                                                     >
                                                         <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border", COLOR_MAP[cmd.color])}>
@@ -257,7 +257,7 @@ export function GlobalSearch() {
                                                         </div>
                                                         <div className="min-w-0">
                                                             <p className="text-xs font-semibold text-white truncate">{cmd.label}</p>
-                                                            <p className="text-[10px] text-slate-500 truncate">{cmd.description}</p>
+                                                            <p className="text-[10px] text-muted-foreground/80 truncate">{cmd.description}</p>
                                                         </div>
                                                     </button>
                                                 );
@@ -268,11 +268,11 @@ export function GlobalSearch() {
                             ) : loading ? (
                                 <div className="p-16 flex flex-col items-center justify-center gap-3 text-blue-500">
                                     <Loader2 className="h-7 w-7 animate-spin" />
-                                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">Sorgulanıyor...</span>
+                                    <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">Sorgulanıyor...</span>
                                 </div>
                             ) : allItems.length === 0 ? (
-                                <div className="p-12 text-center text-slate-500 text-sm font-medium">
-                                    "<span className="text-slate-400">{query}</span>" için sonuç bulunamadı.
+                                <div className="p-12 text-center text-muted-foreground/80 text-sm font-medium">
+                                    "<span className="text-muted-foreground">{query}</span>" için sonuç bulunamadı.
                                 </div>
                             ) : (
                                 <div className="space-y-1">
@@ -302,13 +302,13 @@ export function GlobalSearch() {
                                                 >
                                                     <div className={cn(
                                                         "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border transition-all",
-                                                        isSelected ? COLOR_MAP[item.color] : "bg-white/5 text-slate-400 border-white/5"
+                                                        isSelected ? COLOR_MAP[item.color] : "bg-white/5 text-muted-foreground border-border/50"
                                                     )}>
                                                         <Icon className="h-5 w-5" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-semibold text-white">{item.label}</p>
-                                                        <p className="text-xs text-slate-400 mt-0.5">{item.description}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
                                                     </div>
                                                     <ArrowRight className={cn("h-4 w-4 transition-transform shrink-0", isSelected ? "text-white translate-x-0.5" : "text-slate-600")} />
                                                 </button>
@@ -339,7 +339,7 @@ export function GlobalSearch() {
                                                 >
                                                     <div className={cn(
                                                         "h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border transition-colors",
-                                                        isSelected ? "bg-blue-600 text-white border-blue-400/50" : "bg-white/5 text-slate-400 border-white/5"
+                                                        isSelected ? "bg-blue-600 text-white border-blue-400/50" : "bg-white/5 text-muted-foreground border-border/50"
                                                     )}>
                                                         {getTypeIcon(item.type)}
                                                     </div>
@@ -348,14 +348,14 @@ export function GlobalSearch() {
                                                             <span className="text-[9px] font-semibold uppercase tracking-widest text-blue-400/70">
                                                                 {item.breadcrumb}
                                                             </span>
-                                                            <Badge className="bg-white/8 text-slate-400 border-none text-[8px] h-4 px-1.5 rounded-md">
+                                                            <Badge className="bg-white/8 text-muted-foreground border-none text-[8px] h-4 px-1.5 rounded-md">
                                                                 {item.type}
                                                             </Badge>
                                                         </div>
                                                         <h4 className="font-semibold text-sm text-white group-hover:text-blue-300 truncate">
                                                             {item.title}
                                                         </h4>
-                                                        <p className="text-xs text-slate-400 truncate mt-0.5">{item.subtitle}</p>
+                                                        <p className="text-xs text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
                                                         {item.customerHref && (
                                                             <button
                                                                 type="button"
@@ -379,16 +379,16 @@ export function GlobalSearch() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-4 py-3 border-t border-white/5 bg-black/20 flex items-center justify-between">
+                        <div className="px-4 py-3 border-t border-border/50 bg-black/20 flex items-center justify-between">
                             <div className="flex items-center gap-3 text-[10px] text-slate-600">
                                 <span className="flex items-center gap-1">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-slate-500">↑↓</kbd> Seç
+                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/80">↑↓</kbd> Seç
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-slate-500">ENTER</kbd> Çalıştır
+                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/80">ENTER</kbd> Çalıştır
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-slate-500">ESC</kbd> Kapat
+                                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/80">ESC</kbd> Kapat
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5 text-[10px] text-blue-500/40">

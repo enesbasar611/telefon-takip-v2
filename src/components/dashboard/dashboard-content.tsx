@@ -17,7 +17,7 @@ export function DashboardContent({ children }: { children: React.ReactNode }) {
             }}
             transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
             className="flex-1 flex flex-col overflow-hidden h-full relative"
-            style={{ transform: "translateZ(0)" }}
+            style={{ transform: isNavigation ? "translateZ(0)" : "none" }}
         >
             {isNavigation && <BorderBeam duration={4} size={300} borderWidth={1.5} className="z-[99]" />}
             {children}

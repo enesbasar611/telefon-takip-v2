@@ -27,7 +27,7 @@ export function PageHeader({
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
             <div className="flex items-center gap-5">
-                <div className={`h-16 w-16 rounded-[2rem] ${iconBgColor} flex items-center justify-center border border-white/5 shadow-2xl transition-all hover:scale-105 duration-500`}>
+                <div className={`h-16 w-16 rounded-[2rem] ${iconBgColor} flex items-center justify-center border border-border/50 shadow-2xl transition-all hover:scale-105 duration-500`}>
                     <Icon className={`h-8 w-8 ${iconColor}`} />
                 </div>
                 <div>
@@ -35,7 +35,7 @@ export function PageHeader({
                     <h1 className="font-medium text-4xl lg:text-5xl  text-white tracking-tight leading-tight">
                         {title}
                     </h1>
-                    <p className="text-sm text-slate-400  mt-1 max-w-2xl leading-relaxed">
+                    <p className="text-sm text-muted-foreground  mt-1 max-w-2xl leading-relaxed">
                         {description}
                     </p>
                 </div>

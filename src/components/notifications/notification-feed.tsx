@@ -170,7 +170,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                             <h1 className="font-medium text-3xl  text-white tracking-tighter">
                                 Bildirimler <span className="text-blue-500 font-serif italic text-2xl">&</span> Hatırlatmalar
                             </h1>
-                            <p className="text-slate-400 font-medium text-[13px] flex items-center gap-2">
+                            <p className="text-muted-foreground font-medium text-[13px] flex items-center gap-2">
                                 <span className={cn("h-1.5 w-1.5 rounded-full", unreadCount > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-600")} />
                                 Şu an {unreadCount} adet okunmamış işleminiz var.
                             </p>
@@ -180,7 +180,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                             <Button
                                 variant="ghost"
                                 onClick={handleMarkAllRead}
-                                className="h-10 px-4 rounded-xl bg-white/[0.03] border border-white/5  text-[11px] gap-2 hover:bg-white/10 transition-all text-slate-400 hover:text-white"
+                                className="h-10 px-4 rounded-xl bg-white/[0.03] border border-border/50  text-[11px] gap-2 hover:bg-white/10 transition-all text-muted-foreground hover:text-white"
                             >
                                 <CheckCheck className="h-3.5 w-3.5 text-blue-500" /> Tümünü Okundu İşaretle
                             </Button>
@@ -193,7 +193,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-1.5 bg-white/[0.02] border border-white/5 rounded-2xl backdrop-blur-3xl overflow-x-auto no-scrollbar scroll-smooth">
+                    <div className="flex items-center gap-2 p-1.5 bg-white/[0.02] border border-border/50 rounded-2xl backdrop-blur-3xl overflow-x-auto no-scrollbar scroll-smooth">
                         {(Object.keys(categoryConfigs) as NotificationCategory[]).map((cat) => {
                             const isActive = activeTab === cat;
                             const config = categoryConfigs[cat];
@@ -207,16 +207,16 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                         "h-10 px-5 rounded-xl text-[11px]  uppercase tracking-tighter transition-all flex items-center gap-3 whitespace-nowrap group relative",
                                         isActive
                                             ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30  scale-[1.02]"
-                                            : "text-slate-500 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/20"
+                                            : "text-muted-foreground/80 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/20"
                                     )}
                                 >
-                                    <config.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
+                                    <config.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-muted-foreground/80 group-hover:text-blue-400")} />
                                     {cat}
                                     <div className={cn(
                                         "px-2.5 py-0.5 rounded-full text-[9px]  transition-all",
                                         isActive
                                             ? "bg-white/20 text-white shadow-inner"
-                                            : "bg-white/5 text-slate-500 group-hover:bg-blue-500/20 group-hover:text-blue-400"
+                                            : "bg-white/5 text-muted-foreground/80 group-hover:bg-blue-500/20 group-hover:text-blue-400"
                                     )}>
                                         {count}
                                     </div>
@@ -231,14 +231,14 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                     {/* Feed List */}
                     <div className="space-y-2.5">
                         {notifications.length === 0 && !isLoading ? (
-                            <div className="py-24 flex flex-col items-center justify-center text-center space-y-4 matte-card rounded-3xl border-white/5 bg-white/[0.01]">
-                                <div className="h-16 w-16 rounded-full bg-slate-900 flex items-center justify-center relative">
+                            <div className="py-24 flex flex-col items-center justify-center text-center space-y-4 matte-card rounded-3xl border-border/50 bg-white/[0.01]">
+                                <div className="h-16 w-16 rounded-full bg-card flex items-center justify-center relative">
                                     <Bell className="h-6 w-6 text-slate-700" />
                                     <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full" />
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-lg  text-white mb-1">Her Şey Yolunda!</h3>
-                                    <p className="text-slate-500 text-[13px] font-medium max-w-xs mx-auto">Şu an müdahale etmeniz gereken herhangi bir bildirim bulunmuyor.</p>
+                                    <p className="text-muted-foreground/80 text-[13px] font-medium max-w-xs mx-auto">Şu an müdahale etmeniz gereken herhangi bir bildirim bulunmuyor.</p>
                                 </div>
                             </div>
                         ) : (
@@ -250,7 +250,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                         style={{ animationDelay: `${idx * 40}ms` }}
                                         onClick={() => handleAction(n)}
                                         className={cn(
-                                            "group relative p-4 matte-card rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer overflow-hidden animate-in slide-in-from-bottom-2 duration-500",
+                                            "group relative p-4 matte-card rounded-2xl border border-border/50 bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer overflow-hidden animate-in slide-in-from-bottom-2 duration-500",
                                             !n.isRead && "border-blue-500/20 bg-blue-500/[0.02]",
                                             "hover:translate-x-1"
                                         )}
@@ -271,17 +271,17 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                                 <div className="flex items-center gap-2">
                                                     <h3 className={cn(
                                                         "text-sm  tracking-tight transition-colors truncate",
-                                                        n.isRead ? "text-slate-400" : "text-white group-hover:text-blue-400 "
+                                                        n.isRead ? "text-muted-foreground" : "text-white group-hover:text-blue-400 "
                                                     )}>
                                                         {n.title}
                                                     </h3>
-                                                    <span className="text-[10px]  text-slate-500 shrink-0">
+                                                    <span className="text-[10px]  text-muted-foreground/80 shrink-0">
                                                         {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr }).replace('yaklaşık ', '')}
                                                     </span>
                                                 </div>
                                                 <p className={cn(
                                                     "text-[12px] font-medium leading-tight truncate max-w-md",
-                                                    n.isRead ? "text-slate-500" : "text-slate-400"
+                                                    n.isRead ? "text-muted-foreground/80" : "text-muted-foreground"
                                                 )}>
                                                     {n.message}
                                                 </p>
@@ -302,7 +302,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={(e) => handleDismiss(e, n.id)}
-                                                    className="h-8 w-8 rounded-lg bg-white/5 hover:bg-rose-500/20 hover:text-rose-500 transition-all border border-white/5"
+                                                    className="h-8 w-8 rounded-lg bg-white/5 hover:bg-rose-500/20 hover:text-rose-500 transition-all border border-border/50"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -325,7 +325,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                         <div className="flex justify-center pt-4">
                             <Button
                                 onClick={() => loadNotifications(page + 1, activeTab)}
-                                className="h-10 px-8 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/5  text-[10px] text-blue-500 gap-2 transition-all active:scale-95 tracking-widest"
+                                className="h-10 px-8 rounded-xl bg-white/[0.03] border border-border hover:bg-white/5  text-[10px] text-blue-500 gap-2 transition-all active:scale-95 tracking-widest"
                             >
                                 DAHA FAZLA GÖR <ChevronRight className="h-3 w-3" />
                             </Button>

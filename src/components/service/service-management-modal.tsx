@@ -41,8 +41,11 @@ import {
     Activity,
     Box,
     ArrowRightCircle,
-    ArrowRight
+    ArrowRight,
+    Lock,
+    Grid3x3
 } from "lucide-react";
+import { PatternLock } from "@/components/ui/pattern-lock";
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -67,6 +70,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formatCurrency, parseCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 
 interface ServiceManagementModalProps {
     ticket: any;
@@ -76,7 +81,7 @@ interface ServiceManagementModalProps {
 }
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: string; bg: string }> = {
-    PENDING: { label: "Beklemede", color: "text-slate-400", dot: "bg-slate-400", bg: "bg-slate-400/10" },
+    PENDING: { label: "Beklemede", color: "text-muted-foreground", dot: "bg-slate-400", bg: "bg-slate-400/10" },
     APPROVED: { label: "Onaylandı", color: "text-blue-400", dot: "bg-blue-400", bg: "bg-blue-400/10" },
     REPAIRING: { label: "Tamirde", color: "text-amber-400", dot: "bg-amber-400", bg: "bg-amber-400/10" },
     WAITING_PART: { label: "Parça Bekliyor", color: "text-purple-400", dot: "bg-purple-400", bg: "bg-purple-400/10" },
@@ -112,6 +117,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [staff, setStaff] = useState<any[]>([]);
 
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+
     useEffect(() => {
         fetchRates();
         loadCategories();
@@ -126,7 +133,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     }, []);
 
     const loadStaff = async () => {
-        const s = await getStaff();
+        if (!ticket?.shopId) return;
+        const s = await getStaff(ticket.shopId);
         setStaff(s);
     };
 
@@ -141,7 +149,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     };
 
     const fetchRates = async () => {
-        const r = await getExchangeRates();
+        if (!ticket?.shopId) return;
+        const r = await getExchangeRates(ticket.shopId);
         setRates({ usd: r.usd });
     };
 
@@ -382,21 +391,21 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[98vw] w-[1400px] h-[95vh] bg-[#020617] border-white/5 p-0 overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                <div className="relative h-24 flex items-center justify-between px-10 bg-slate-950/50 backdrop-blur-xl border-b border-white/5 shrink-0 z-50">
+            <DialogContent className="max-w-[98vw] w-[1400px] h-[95vh] bg-[#020617] border-border/50 p-0 overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                <div className="relative h-24 flex items-center justify-between px-10 bg-background/50 backdrop-blur-xl border-b border-border/50 shrink-0 z-50">
                     <div className="flex items-center gap-8">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-3 mb-1">
                                 <span className="text-xs  text-blue-500">Servis Kaydı</span>
                                 <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                <span className="text-xs font-medium text-slate-500">#{ticket.ticketNumber}</span>
+                                <span className="text-xs font-medium text-muted-foreground/80">#{ticket.ticketNumber}</span>
                             </div>
                             <h2 className="font-medium text-3xl  text-white flex items-center gap-3">
                                 {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
                             </h2>
                         </div>
                         <div className={cn(
-                            "px-6 py-2.5 rounded-2xl border border-white/5 flex items-center gap-3 transition-all",
+                            "px-6 py-2.5 rounded-2xl border border-border/50 flex items-center gap-3 transition-all",
                             statusConfig[ticket.status as ServiceStatus]?.bg
                         )}>
                             <div className={cn("h-3 w-3 rounded-full shadow-[0_0_15px_currentColor]", statusConfig[ticket.status as ServiceStatus]?.dot)} />
@@ -418,7 +427,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="h-12 w-12 rounded-2xl hover:bg-white/5 text-slate-400"
+                            className="h-12 w-12 rounded-2xl hover:bg-white/5 text-muted-foreground"
                         >
                             <X className="h-6 w-6" />
                         </Button>
@@ -428,17 +437,61 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 <div className="flex-1 grid grid-cols-[300px_1fr_380px] overflow-hidden p-6 gap-6 bg-[#020617]">
 
                     <div className="w-[300px] flex flex-col gap-4 overflow-hidden shrink-0">
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-6">
+                        <div className="bg-white/[0.02] border border-border/50 rounded-[2rem] p-6 space-y-6">
                             <div className="flex items-center gap-2 mb-2">
                                 <ScanLine className="h-3.5 w-3.5 text-blue-500" />
-                                <h3 className="font-medium text-[10px]  uppercase tracking-widest text-slate-500">Müşteri & Cihaz</h3>
+                                <h3 className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">Müşteri & Cihaz</h3>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                                    <p className="text-[10px]  text-slate-500 uppercase mb-1">Cihaz</p>
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-border/50">
+                                    <p className="text-[10px]  text-muted-foreground/80 uppercase mb-1">Cihaz</p>
                                     <p className="text-sm  text-white leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</p>
                                     <p className="text-xs text-slate-600 mt-1 font-medium italic">{ticket.imei || "IMEI Yok"}</p>
+
+                                    {ticket.devicePassword && (
+                                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <Lock className="h-3 w-3 text-amber-500" />
+                                                <span className="text-[10px] uppercase tracking-widest text-slate-500">Cihaz Erişimi</span>
+                                            </div>
+
+                                            {ticket.devicePassword.startsWith("DESEN:") ? (
+                                                <div className="space-y-3">
+                                                    <div className="bg-black/40 rounded-2xl p-2 border border-blue-500/10 inline-block">
+                                                        <PatternLock
+                                                            readOnly
+                                                            width={120}
+                                                            height={120}
+                                                            initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
+                                                            className="opacity-80"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2 p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                                                        <Grid3x3 className="h-3.5 w-3.5 text-blue-500" />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[9px] text-blue-500/60 uppercase">Ekran Deseni</span>
+                                                            <span className="text-xs font-bold tracking-[0.2em] text-blue-400">
+                                                                {ticket.devicePassword.replace("DESEN:", "").split(",").join("-")}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-3 p-3 bg-amber-500/5 rounded-xl border border-amber-500/10">
+                                                    <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                                        <Hash className="h-4 w-4 text-amber-500" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[9px] text-amber-500/60 uppercase">Kilit Şifresi</span>
+                                                        <span className="text-sm font-bold text-amber-200 tracking-wider">
+                                                            {ticket.devicePassword}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
@@ -447,11 +500,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         <p className="text-sm  text-emerald-400 truncate">{ticket.customer?.name}</p>
                                         <p className="text-xs  text-emerald-600 mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
                                     </div>
-                                    <Link href={`https://wa.me/${ticket.customer?.phone?.replace(/\s+/g, '')}`} target="_blank">
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/10">
-                                            <MessageCircle className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/10"
+                                        onClick={() => setWhatsappModalOpen(true)}
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                    </Button>
                                 </div>
 
                                 <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
@@ -460,10 +516,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         value={ticket.technician?.id || ""}
                                         onValueChange={handleAssignTech}
                                     >
-                                        <SelectTrigger className="h-10 bg-slate-900 border-white/5 text-xs  text-slate-300 rounded-xl px-4">
+                                        <SelectTrigger className="h-10 bg-card border-border/50 text-xs  text-foreground rounded-xl px-4">
                                             <SelectValue placeholder="Teknisyen Seçin" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-950 border-white/10 text-white rounded-xl">
+                                        <SelectContent className="bg-background border-border text-white rounded-xl">
                                             {staff.map(s => (
                                                 <SelectItem key={s.id} value={s.id} className="text-xs  py-2.5">
                                                     {s.name} {s.surname}
@@ -487,25 +543,25 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </div>
 
                     <div className="flex-1 flex flex-col gap-6 min-w-0 overflow-hidden">
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 flex flex-col gap-8 shrink-0">
+                        <div className="bg-white/[0.02] border border-border/50 rounded-[2.5rem] p-8 flex flex-col gap-8 shrink-0">
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <p className="text-[10px]  text-slate-500 uppercase tracking-widest ml-1">Parça Ekle</p>
+                                    <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">Parça Ekle</p>
                                     <div className="relative group">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
                                         <Input
                                             placeholder="Ürün adı veya SKU..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="h-12 bg-slate-950 border-white/5 pl-12 pr-6 rounded-2xl text-xs font-medium focus:border-blue-500/30"
+                                            className="h-12 bg-background border-border/50 pl-12 pr-6 rounded-2xl text-xs font-medium focus:border-blue-500/30"
                                         />
                                         {searchQuery && (
-                                            <div className="absolute top-full left-0 right-0 mt-3 bg-[#0c0c0e] border border-white/10 rounded-3xl shadow-2xl z-[100] max-h-[400px] overflow-y-auto p-2 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="absolute top-full left-0 right-0 mt-3 bg-[#0c0c0e] border border-border rounded-3xl shadow-2xl z-[100] max-h-[400px] overflow-y-auto p-2 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
                                                 {searchResults.length > 0 ? (
                                                     <div className="space-y-1">
                                                         <p className="text-[9px]  text-slate-600 uppercase tracking-widest px-4 py-2">Eşleşen Ürünler</p>
                                                         {searchResults.map(p => (
-                                                            <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-4 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.05] rounded-2xl transition-all group/item border border-transparent hover:border-white/5">
+                                                            <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-4 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.05] rounded-2xl transition-all group/item border border-transparent hover:border-border/50">
                                                                 <div className="flex flex-col text-left gap-1">
                                                                     <span className="text-sm  text-slate-100 group-hover/item:text-blue-400 transition-colors">{p.name}</span>
                                                                     <div className="flex items-center gap-2">
@@ -515,7 +571,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                         )}>
                                                                             Stok: {p.stock}
                                                                         </span>
-                                                                        <span className="text-[10px] text-slate-500 font-medium">{p.sku}</span>
+                                                                        <span className="text-[10px] text-muted-foreground/80 font-medium">{p.sku}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex flex-col items-end gap-1">
@@ -528,11 +584,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 ) : (
                                                     <div className="p-8 text-center space-y-2">
                                                         <Box className="h-8 w-8 text-slate-700 mx-auto opacity-20" />
-                                                        <p className="text-[11px]  text-slate-500">Ürün bulunamadı</p>
+                                                        <p className="text-[11px]  text-muted-foreground/80">Ürün bulunamadı</p>
                                                     </div>
                                                 )}
 
-                                                <div className="mt-2 pt-2 border-t border-white/5">
+                                                <div className="mt-2 pt-2 border-t border-border/50">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedProduct(null);
@@ -546,7 +602,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-xs  text-blue-400 uppercase tracking-widest">Yeni Parça Olarak Ekle</span>
-                                                            <span className="text-[10px] text-slate-500 font-medium">"{searchQuery}" ürününü tedarikçiden borç ile ekle</span>
+                                                            <span className="text-[10px] text-muted-foreground/80 font-medium">"{searchQuery}" ürününü tedarikçiden borç ile ekle</span>
                                                         </div>
                                                     </button>
                                                 </div>
@@ -558,7 +614,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <Dialog open={isAddingManual} onOpenChange={(val) => { if (!val) { setIsAddingManual(false); setSelectedProduct(null); } }}>
                                     <DialogContent
                                         overlayClassName="bg-black/0 backdrop-blur-[2px]"
-                                        className="max-w-xl bg-[#09090b]/90 border-white/5 p-0 overflow-hidden shadow-[0_0_100px_rgba(59,130,246,0.1)] rounded-[2.5rem] backdrop-blur-3xl"
+                                        className="max-w-xl bg-[#09090b]/90 border-border/50 p-0 overflow-hidden shadow-[0_0_100px_rgba(59,130,246,0.1)] rounded-[2.5rem] backdrop-blur-3xl"
                                     >
                                         <div className="p-10 space-y-8">
                                             <div className="flex items-center justify-between">
@@ -569,9 +625,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         </div>
                                                         <h2 className="font-medium text-xl  text-white tracking-tight">Tedarikçiden Parça Temini</h2>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-500 font-medium ml-1">Stokta olmayan veya yeni bir parçayı borç ile sisteme ekleyin.</p>
+                                                    <p className="text-[11px] text-muted-foreground/80 font-medium ml-1">Stokta olmayan veya yeni bir parçayı borç ile sisteme ekleyin.</p>
                                                 </div>
-                                                <Button variant="ghost" size="icon" onClick={() => { setIsAddingManual(false); setSelectedProduct(null); }} className="rounded-2xl hover:bg-white/5 text-slate-500">
+                                                <Button variant="ghost" size="icon" onClick={() => { setIsAddingManual(false); setSelectedProduct(null); }} className="rounded-2xl hover:bg-white/5 text-muted-foreground/80">
                                                     <X className="h-5 w-5" />
                                                 </Button>
                                             </div>
@@ -585,7 +641,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             placeholder="Ürün adı..."
                                                             value={manualPart.name}
                                                             onChange={(e) => setManualPart({ ...manualPart, name: e.target.value })}
-                                                            className="h-14 bg-black/40 border-white/5 pl-12 pr-6 rounded-2xl text-sm  text-white transition-all focus:border-blue-500/30"
+                                                            className="h-14 bg-black/40 border-border/50 pl-12 pr-6 rounded-2xl text-sm  text-white transition-all focus:border-blue-500/30"
                                                         />
                                                     </div>
                                                 </div>
@@ -603,15 +659,15 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             </Link>
                                                         </div>
                                                         <Select value={manualPart.supplierId} onValueChange={(v) => setManualPart({ ...manualPart, supplierId: v })}>
-                                                            <SelectTrigger className="h-14 bg-black/40 border-white/5 text-sm  text-slate-200 rounded-2xl px-6">
+                                                            <SelectTrigger className="h-14 bg-black/40 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
                                                                 <SelectValue placeholder="Tedarikçi Seçin" />
                                                             </SelectTrigger>
-                                                            <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl overflow-hidden">
+                                                            <SelectContent className="bg-card border-border text-white rounded-2xl overflow-hidden">
                                                                 {suppliers.map(s => (
                                                                     <SelectItem key={s.id} value={s.id} className="p-4 focus:bg-white/5 transition-colors cursor-pointer border-b border-white/[0.02] last:border-0">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span className="">{s.name}</span>
-                                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
                                                                                 <span>₺{Number(s.balance).toLocaleString()}</span>
                                                                                 <span className="h-1 w-1 rounded-full bg-slate-700" />
                                                                                 <span>${Number(s.balanceUsd || 0).toLocaleString()}</span>
@@ -625,12 +681,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                                                     <div className="space-y-2">
                                                         <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Para Birimi</p>
-                                                        <div className="grid grid-cols-2 p-1 bg-black/40 border border-white/5 rounded-2xl h-14">
+                                                        <div className="grid grid-cols-2 p-1 bg-black/40 border border-border/50 rounded-2xl h-14">
                                                             <button
                                                                 onClick={() => setManualPart({ ...manualPart, currency: "TRY" })}
                                                                 className={cn(
                                                                     "rounded-xl text-[10px]  uppercase tracking-widest transition-all",
-                                                                    manualPart.currency === "TRY" ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-slate-600 hover:text-slate-400"
+                                                                    manualPart.currency === "TRY" ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-slate-600 hover:text-muted-foreground"
                                                                 )}
                                                             >
                                                                 TL (₺)
@@ -639,7 +695,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                 onClick={() => setManualPart({ ...manualPart, currency: "USD" })}
                                                                 className={cn(
                                                                     "rounded-xl text-[10px]  uppercase tracking-widest transition-all",
-                                                                    manualPart.currency === "USD" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "text-slate-600 hover:text-slate-400"
+                                                                    manualPart.currency === "USD" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "text-slate-600 hover:text-muted-foreground"
                                                                 )}
                                                             >
                                                                 USD ($)
@@ -667,7 +723,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                         setManualPart({ ...manualPart, buyPrice: val, buyPriceUsd: String(Number(val) / rates.usd) });
                                                                     }
                                                                 }}
-                                                                className="h-14 bg-black/40 border-white/5 pl-12 pr-6 rounded-2xl text-sm  text-white transition-all focus:border-blue-500/30 tabular-nums"
+                                                                className="h-14 bg-black/40 border-border/50 pl-12 pr-6 rounded-2xl text-sm  text-white transition-all focus:border-blue-500/30 tabular-nums"
                                                             />
                                                         </div>
                                                         {manualPart.currency === "USD" && (
@@ -680,10 +736,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     <div className="space-y-2">
                                                         <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Garanti Süresi</p>
                                                         <Select value={manualPart.warrantyType} onValueChange={(v) => setManualPart({ ...manualPart, warrantyType: v })}>
-                                                            <SelectTrigger className="h-14 bg-black/40 border-white/5 text-sm  text-slate-200 rounded-2xl px-6">
+                                                            <SelectTrigger className="h-14 bg-black/40 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
                                                                 <SelectValue />
                                                             </SelectTrigger>
-                                                            <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
+                                                            <SelectContent className="bg-card border-border text-white rounded-2xl">
                                                                 <SelectItem value="15_DAYS" className="p-4">15 Gün</SelectItem>
                                                                 <SelectItem value="1_MONTH" className="p-4">1 Ay</SelectItem>
                                                                 <SelectItem value="3_MONTHS" className="p-4">3 Ay</SelectItem>
@@ -702,7 +758,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             placeholder="Örn: 90"
                                                             value={manualPart.warrantyValue}
                                                             onChange={(e) => setManualPart({ ...manualPart, warrantyValue: e.target.value })}
-                                                            className="h-14 bg-black/40 border-white/5 px-6 rounded-2xl text-sm  text-white focus:border-blue-500/30"
+                                                            className="h-14 bg-black/40 border-border/50 px-6 rounded-2xl text-sm  text-white focus:border-blue-500/30"
                                                         />
                                                     </div>
                                                 )}
@@ -730,12 +786,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 </Dialog>
 
                                 <div className="space-y-3">
-                                    <p className="text-[10px]  text-slate-500 uppercase tracking-widest ml-1">Durumu Güncelle</p>
+                                    <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">Durumu Güncelle</p>
                                     <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val as ServiceStatus)}>
-                                        <SelectTrigger className="h-12 bg-slate-950 border-white/5 rounded-2xl text-xs  text-slate-300">
+                                        <SelectTrigger className="h-12 bg-background border-border/50 rounded-2xl text-xs  text-foreground">
                                             <SelectValue placeholder="Durum seçin..." />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-950 border-white/10 text-white rounded-2xl p-1 z-[100]">
+                                        <SelectContent className="bg-background border-border text-white rounded-2xl p-1 z-[100]">
                                             {Object.entries(statusConfig).map(([key, config]) => (
                                                 <SelectItem key={key} value={key} className="text-[10px]  py-3 focus:bg-white/5 rounded-xl">
                                                     <div className="flex items-center gap-3">
@@ -754,7 +810,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     placeholder="İşlem notu veya teknik detay giriniz..."
                                     value={techNote}
                                     onChange={(e) => setTechNote(e.target.value)}
-                                    className="h-20 bg-slate-950 border-white/5 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-slate-800"
+                                    className="h-20 bg-background border-border/50 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-slate-800"
                                 />
                                 {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
                                     <Button
@@ -768,11 +824,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-white/[0.01] border border-white/5 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
+                        <div className="flex-1 bg-white/[0.01] border border-border/50 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <ShoppingBag className="h-3.5 w-3.5 text-blue-500" />
-                                    <h3 className="font-medium text-[10px]  uppercase tracking-widest text-slate-500">Parça Listesi</h3>
+                                    <h3 className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">Parça Listesi</h3>
                                 </div>
                                 <span className="text-xs  text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/10">₺{formatCurrency(partsTotal)}</span>
                             </div>
@@ -785,12 +841,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     </div>
                                 ) : (
                                     ticket.usedParts?.map((p: any) => (
-                                        <div key={p.id} className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                                        <div key={p.id} className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-border/50 group hover:bg-white/[0.04] transition-all">
                                             <div className="h-10 w-10 rounded-xl bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10 text-blue-500">
                                                 <Box className="h-5 w-5" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-xs  text-slate-200 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
+                                                <p className="text-xs  text-foreground/90 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
                                                 <p className="text-[9px]  text-slate-600 uppercase tracking-tighter mt-0.5">{p.product?.sku || "SKU-NONE"}</p>
                                             </div>
 
@@ -801,7 +857,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         <PriceInput
                                                             value={Number(p.costPrice)}
                                                             onChange={(v) => handleUpdatePart(p.id, { costPrice: v })}
-                                                            className="h-8 bg-black/40 border-white/5 text-right  text-[11px] text-amber-500/60 rounded-lg pr-3 pl-8"
+                                                            className="h-8 bg-black/40 border-border/50 text-right  text-[11px] text-amber-500/60 rounded-lg pr-3 pl-8"
                                                         />
                                                     </div>
                                                 </div>
@@ -812,7 +868,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         <PriceInput
                                                             value={Number(p.unitPrice)}
                                                             onChange={(v) => handleUpdatePart(p.id, { unitPrice: v })}
-                                                            className="h-8 bg-black border-white/5 text-right  text-[11px] text-emerald-500 rounded-lg pr-3 pl-8"
+                                                            className="h-8 bg-black border-border/50 text-right  text-[11px] text-emerald-500 rounded-lg pr-3 pl-8"
                                                         />
                                                     </div>
                                                 </div>
@@ -826,10 +882,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             else handleUpdatePart(p.id, { warrantyMonths: Number(v.slice(1)), warrantyDays: 0 as any });
                                                         }}
                                                     >
-                                                        <SelectTrigger className="h-8 bg-black border-white/5 text-[10px]  text-blue-400 px-3 w-24 rounded-lg">
+                                                        <SelectTrigger className="h-8 bg-black border-border/50 text-[10px]  text-blue-400 px-3 w-24 rounded-lg">
                                                             <SelectValue />
                                                         </SelectTrigger>
-                                                        <SelectContent className="bg-slate-950 border-white/10 text-white">
+                                                        <SelectContent className="bg-background border-border text-white">
                                                             <SelectItem value="D15">15 Gün</SelectItem>
                                                             <SelectItem value="M1">1 Ay</SelectItem>
                                                             <SelectItem value="M3">3 Ay</SelectItem>
@@ -848,11 +904,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
                         </div>
 
-                        {/* Financial Area (Compact & Stable) */}
-                        <div className="bg-slate-950 border border-white/5 rounded-[2.3rem] p-6 grid grid-cols-[1fr_auto] items-center gap-8 shrink-0 shadow-2xl">
-                            <div className="flex items-center gap-6 min-w-0">
-                                <div className="flex flex-col gap-1.5 shrink-0">
-                                    <p className="text-[9px]  text-slate-600 uppercase tracking-widest">İşçilik Ücreti</p>
+                        {/* Financial Area - Improved Layout to prevent overlapping */}
+                        <div className="bg-[#0c0c0e] border border-border/40 rounded-[2.5rem] p-6 flex items-center justify-between gap-4 shrink-0 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="flex flex-col gap-1 shrink-0">
+                                    <p className="text-[8px]  text-slate-600 uppercase tracking-[0.2em] ml-1">İşçilik Ücreti</p>
                                     <div className="relative">
                                         <PriceInput
                                             value={laborCost}
@@ -860,40 +916,46 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 setLaborCost(v);
                                                 updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
                                             }}
-                                            className="h-10 w-32 bg-white/5 border-transparent rounded-xl pl-8 pr-3 text-sm  text-emerald-500"
+                                            className="h-10 w-28 bg-white/[0.03] border-border/20 rounded-xl pl-8 pr-3 text-xs  text-emerald-500 hover:bg-white/[0.05] transition-colors"
                                         />
                                     </div>
                                 </div>
-                                <div className="h-10 w-px bg-white/5 shrink-0" />
-                                <div className="flex flex-col gap-0.5 shrink-0">
-                                    <p className="text-[9px]  text-blue-500 uppercase tracking-widest">Tahmini</p>
-                                    <p className="text-sm  text-slate-600">₺{formatCurrency(ticket.estimatedCost)}</p>
+                                <div className="h-8 w-px bg-white/5 shrink-0" />
+                                <div className="flex flex-col gap-0.5 shrink-0 px-2">
+                                    <p className="text-[8px]  text-blue-500/60 uppercase tracking-[0.2em]">Tahmini</p>
+                                    <p className="text-xs  text-slate-600 font-medium whitespace-nowrap">₺{formatCurrency(ticket.estimatedCost)}</p>
                                 </div>
-                                <div className="h-10 w-px bg-white/5 shrink-0" />
-                                <div className="flex flex-col gap-0.5 min-w-[120px]">
-                                    <p className="text-[10px]  text-blue-500 uppercase tracking-[0.2em]">GENEL TOPLAM</p>
-                                    <p className="text-3xl  text-white leading-none">₺{formatCurrency(grandTotal)}</p>
+                                <div className="h-8 w-px bg-white/5 shrink-0" />
+                                <div className="flex flex-col gap-0.5 min-w-[100px] px-2">
+                                    <p className="text-[9px]  text-blue-500 uppercase tracking-[0.2em]">GENEL TOPLAM</p>
+                                    <p className="text-2xl  text-white leading-none font-bold tabular-nums">₺{formatCurrency(grandTotal)}</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0">
                                 {(ticket.status === "READY" || ticket.status === "DELIVERED" || selectedStatus === "READY" || selectedStatus === "DELIVERED") ? (
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleStatusUpdate("DELIVERED", "CASH")} className="h-12 bg-emerald-500 text-black  text-[10px] uppercase px-5 rounded-2xl gap-2 shadow-lg shadow-emerald-500/20 whitespace-nowrap group hover:bg-emerald-400 transition-all">
-                                            <CreditCard className="h-4 w-4 group-hover:scale-110 transition-transform" /> Tahsil & Teslim
+                                        <Button
+                                            onClick={() => handleStatusUpdate("DELIVERED", "CASH")}
+                                            className="h-11 bg-emerald-500 text-black  text-[9px] uppercase px-4 rounded-xl gap-2 shadow-lg shadow-emerald-500/10 whitespace-nowrap group hover:bg-emerald-400 active:scale-95 transition-all"
+                                        >
+                                            <CreditCard className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" /> Tahsil & Teslim
                                         </Button>
                                         <Button
                                             onClick={() => handleStatusUpdate("DELIVERED", "DEBT")}
                                             variant="outline"
-                                            className="h-12 bg-white/5 border-white/10 text-white  text-[10px] uppercase px-5 rounded-2xl gap-2 hover:bg-amber-500 hover:text-black hover:border-amber-500 transition-all group"
+                                            className="h-11 bg-white/[0.02] border-border/50 text-white  text-[9px] uppercase px-4 rounded-xl gap-2 hover:bg-amber-500 hover:text-black hover:border-amber-500 active:scale-95 transition-all group"
                                         >
-                                            <Wallet className="h-4 w-4 text-amber-500 group-hover:text-black transition-colors" /> Veresiye
+                                            <Wallet className="h-3.5 w-3.5 text-amber-500 group-hover:text-black transition-colors" /> Veresiye
                                         </Button>
                                     </div>
                                 ) : (
-                                    <p className="text-[9px]  text-blue-500/60 leading-tight max-w-[120px] text-right italic">
-                                        * Tahsilat için "Hazır" yapın.
-                                    </p>
+                                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                        <Clock className="h-3 w-3 text-blue-500/50" />
+                                        <p className="text-[9px]  text-blue-500/60 leading-tight italic">
+                                            Tahsilat için "Hazır" yapın.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -901,11 +963,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                     {/* Right Column: Workflow Timeline (Detailed) */}
                     <div className="w-[380px] flex flex-col gap-4 overflow-hidden shrink-0">
-                        <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
+                        <div className="flex-1 bg-white/[0.02] border border-border/50 rounded-[2.5rem] p-8 flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
                                     <Activity className="h-4 w-4 text-blue-500" />
-                                    <h3 className="font-medium text-xs  uppercase tracking-[0.2em] text-slate-500">Servis Akışı</h3>
+                                    <h3 className="font-medium text-xs  uppercase tracking-[0.2em] text-muted-foreground/80">Servis Akışı</h3>
                                 </div>
                                 <span className="text-[10px]  text-slate-700 bg-white/5 px-2 py-1 rounded-md">{ticket.logs?.length || 0} ADIM</span>
                             </div>
@@ -924,7 +986,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         <div key={log.id} className="relative pl-12 group">
                                             <div className={cn(
                                                 "absolute left-2.5 top-1.5 h-3.5 w-3.5 rounded-full border-[3px] border-slate-950 z-10 transition-all",
-                                                i === 0 ? "bg-blue-500 scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-slate-800",
+                                                i === 0 ? "bg-blue-500 scale-125 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-muted",
                                                 isStatusLog && i !== 0 ? "bg-amber-500" : "",
                                                 (isPartAdd || isPartRemove || isPriceUpdate) && "bg-purple-500"
                                             )} />
@@ -940,13 +1002,13 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 </div>
                                                 <div className={cn(
                                                     "p-4 rounded-2xl border transition-all",
-                                                    i === 0 ? "bg-blue-500/5 border-blue-500/10" : "bg-white/[0.02] border-white/5 group-hover:bg-white/[0.04]",
+                                                    i === 0 ? "bg-blue-500/5 border-blue-500/10" : "bg-white/[0.02] border-border/50 group-hover:bg-white/[0.04]",
                                                     isStatusLog && "border-amber-500/10",
                                                     (isPartAdd || isPartRemove || isPriceUpdate) && "border-purple-500/10"
                                                 )}>
                                                     <p className={cn(
                                                         "text-[11px]  leading-relaxed tracking-tight",
-                                                        i === 0 ? "text-slate-100" : "text-slate-400",
+                                                        i === 0 ? "text-slate-100" : "text-muted-foreground",
                                                         isStatusLog && "text-amber-200/60",
                                                         (isPartAdd || isPartRemove || isPriceUpdate) && "text-purple-200/60"
                                                     )}>
@@ -962,6 +1024,31 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </div>
                 </div>
             </DialogContent>
+            {/* WhatsApp Confirm Modal explicitly nested inside or outside? Better to place outside DialogContent but inside modal tree or completely separated. Actually Dialogs shouldn't be nested too deeply but it's fine. */}
+            <WhatsAppConfirmModal
+                isOpen={whatsappModalOpen}
+                onClose={() => setWhatsappModalOpen(false)}
+                phone={ticket.customer?.phone || ""}
+                customerName={ticket.customer?.name}
+                initialMessage={replacePlaceholders(
+                    (() => {
+                        const status = (selectedStatus as ServiceStatus) || ticket.status;
+                        switch (status) {
+                            case "READY": return WHATSAPP_TEMPLATES.READY;
+                            case "APPROVED": return WHATSAPP_TEMPLATES.APPROVED;
+                            case "REPAIRING": return WHATSAPP_TEMPLATES.REPAIRING;
+                            case "WAITING_PART": return WHATSAPP_TEMPLATES.WAITING_PART;
+                            case "DELIVERED": return WHATSAPP_TEMPLATES.DELIVERED;
+                            default: return WHATSAPP_TEMPLATES.NEW_SERVICE;
+                        }
+                    })(),
+                    {
+                        customer: ticket.customer?.name || "",
+                        device: `${ticket.deviceBrand} ${ticket.deviceModel}`,
+                        ticket: ticket.ticketNumber || ""
+                    }
+                )}
+            />
         </Dialog>
     );
 }

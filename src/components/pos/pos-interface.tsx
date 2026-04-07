@@ -121,8 +121,13 @@ export function POSInterface({ products: initialProducts, customers, categories,
   };
 
   const handleCreateCustomer = async () => {
+    const rawPhone = newCustomer.phone.replace(/\D/g, "");
     if (!newCustomer.name || newCustomer.name.length < 2) {
       toast({ title: "Eksik Bilgi", description: "Lütfen müşteri adı ve soyadı girin.", variant: "destructive" });
+      return;
+    }
+    if (rawPhone.length !== 10 || !rawPhone.startsWith("5")) {
+      toast({ title: "Hatalı Numara", description: "Geçerli bir telefon numarası girin (5xx xxx xxxx).", variant: "destructive" });
       return;
     }
 
@@ -378,22 +383,22 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     <UserPlus className="h-3 w-3" /> YENİ EKLE
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-[#0a0a0a] border border-white/10 text-white shadow-2xl p-0 overflow-hidden">
-                  <div className="px-6 py-5 border-b border-white/10 flex flex-col gap-1.5 bg-white/[0.02]">
+                <DialogContent className="sm:max-w-[425px] bg-[#0a0a0a] border border-border text-white shadow-2xl p-0 overflow-hidden">
+                  <div className="px-6 py-5 border-b border-border flex flex-col gap-1.5 bg-white/[0.02]">
                     <DialogTitle className="font-medium text-lg ">Hızlı Müşteri Kaydı</DialogTitle>
-                    <DialogDescription className="text-xs text-slate-400 font-medium">
+                    <DialogDescription className="text-xs text-muted-foreground font-medium">
                       Aktif sepete atamak için sisteme anında müşteri tanımlayın.
                     </DialogDescription>
                   </div>
                   <div className="p-6 space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="c-name" className="font-medium text-xs font-semibold text-slate-400">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
+                      <Label htmlFor="c-name" className="font-medium text-xs font-semibold text-muted-foreground">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
                       <Input
                         id="c-name"
                         placeholder="Örn: Ahmet Yılmaz"
                         value={newCustomer.name}
                         onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                        className="bg-white/[0.03] border-white/10 rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
+                        className="bg-white/[0.03] border-border rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
                       />
                     </div>
                     <PhoneInput
@@ -401,11 +406,11 @@ export function POSInterface({ products: initialProducts, customers, categories,
                       id="c-phone"
                       value={newCustomer.phone}
                       onChange={(val: string) => setNewCustomer({ ...newCustomer, phone: val })}
-                      className="bg-white/[0.03] border-white/10 h-11"
+                      className="bg-white/[0.03] border-border h-11"
                     />
                   </div>
-                  <div className="px-6 py-4 bg-white/[0.02] border-t border-white/10 flex justify-end gap-3">
-                    <Button type="button" variant="ghost" className="h-10 px-5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white" onClick={() => setIsNewCustomerOpen(false)}>
+                  <div className="px-6 py-4 bg-white/[0.02] border-t border-border flex justify-end gap-3">
+                    <Button type="button" variant="ghost" className="h-10 px-5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-white" onClick={() => setIsNewCustomerOpen(false)}>
                       İptal
                     </Button>
                     <Button
@@ -430,7 +435,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={c.id} className="text-[13px]  py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
                     <div className="flex flex-col gap-1">
-                      <span className=" leading-none text-slate-200">{c.name}</span>
+                      <span className=" leading-none text-foreground/90">{c.name}</span>
                       <span className="text-[10px] text-blue-500  leading-none mt-1">
                         {formatPhone(c.phone)}
                       </span>
@@ -446,7 +451,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
           <div className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">
             <div className="divide-y divide-white/5">
               {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 p-10 text-center">
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/80 p-10 text-center">
                   <div className="relative">
                     <ShoppingCart className="h-16 w-16 mb-4 opacity-[0.03] text-foreground" />
                     <ShoppingCart className="h-8 w-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 text-primary" />

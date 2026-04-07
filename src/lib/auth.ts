@@ -77,7 +77,8 @@ export const authOptions: NextAuthOptions = {
                         canFinance: true,
                     }
                 });
-                if (dbUser) {
+
+                if (dbUser?.shopId) {
                     token.shopId = dbUser.shopId;
                     token.role = dbUser.role;
                     token.canSell = dbUser.canSell;
