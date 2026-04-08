@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { ServiceStatus } from "@prisma/client";
 import { serializePrisma, formatName, toTitleCase } from "@/lib/utils";
+import { getLoyaltyTier, generateLoyaltyWhatsAppMessage } from "@/lib/loyalty-utils";
 import * as z from "zod";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
@@ -167,7 +168,7 @@ export async function createServiceTicket(rawData: any) {
   }
 }
 
-export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH", message?: string) {
+export async function updateServiceStatus(ticketId: string, status: ServiceStatus, paymentMethod: string = "CASH", message?: string, discountAmount: number = 0, usedPoints: number = 0) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -221,7 +222,38 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       // Calculate total revenue from this service
       const partsTotal = currentTicket.usedParts.reduce((acc, part) => acc + (Number(part.unitPrice) * part.quantity), 0);
       const laborTotal = Number(currentTicket.actualCost) || Number(currentTicket.estimatedCost);
-      const totalRevenue = partsTotal + laborTotal;
+      const totalRevenue = Math.max(0, (partsTotal + laborTotal) - discountAmount);
+
+      // Calculate and Increment Loyalty Points dynamically
+      let earnedPoints = 20; // Default fallback
+      try {
+        const settings = await getSettings();
+        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+        const loyaltyEnabled = config.loyalty_enabled !== "false";
+
+        if (loyaltyEnabled && totalRevenue > 0) {
+          const spendThreshold = Number(config.loyalty_service_spend_threshold) || 1000;
+          const pointsRate = Number(config.loyalty_service_points_earned) || 20;
+          earnedPoints = Math.floor((totalRevenue / spendThreshold) * pointsRate);
+        } else {
+          earnedPoints = 0;
+        }
+      } catch (err) {
+        console.error("Loyalty calculation error:", err);
+      }
+
+      let updatedCustomer = currentTicket.customer as any;
+      if (earnedPoints > 0 || usedPoints > 0) {
+        updatedCustomer = await prisma.customer.update({
+          where: { id: currentTicket.customerId },
+          data: {
+            loyaltyPoints: {
+              increment: earnedPoints,
+              decrement: usedPoints > 0 ? usedPoints : 0
+            }
+          }
+        });
+      }
 
       if (totalRevenue > 0) {
         if (paymentMethod === "DEBT") {
@@ -231,7 +263,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
               customerId: currentTicket.customerId,
               amount: totalRevenue,
               remainingAmount: totalRevenue,
-              notes: `SERVIS BORÇ - ${currentTicket.ticketNumber}`,
+              notes: `SERVIS BORÇ - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
               dueDate: new Date(new Date().setDate(new Date().getDate() + 15)), // Default 15 days due date
               shopId
             }
@@ -243,7 +275,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
             data: {
               type: "INCOME",
               amount: totalRevenue,
-              description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}`,
+              description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
               paymentMethod: paymentMethod as any,
               userId,
               shopId,
@@ -257,6 +289,18 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
             data: { balance: { increment: totalRevenue } }
           });
         }
+      }
+
+      // Send Delivery WhatsApp with Loyalty Info
+      try {
+        const settings = await getSettings();
+        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+        if (config.whatsappEnabled === "true" && earnedPoints > 0) {
+          const wsMsg = generateLoyaltyWhatsAppMessage(updatedCustomer.name, earnedPoints, updatedCustomer.loyaltyPoints);
+          await sendWhatsAppAction(updatedCustomer.phone || "", wsMsg);
+        }
+      } catch (wsErr) {
+        console.error("WhatsApp delivery loyalty notification failed:", wsErr);
       }
     }
 

@@ -49,6 +49,9 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sparkles } from "lucide-react";
+import { getSettings } from "@/lib/actions/setting-actions";
 
 export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
   products: any[];
@@ -80,6 +83,24 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
+  const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
+
+  const [pointValueTl, setPointValueTl] = useState<number>(5);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+
+  // Load points config
+  useEffect(() => {
+    async function fetchPointsSettings() {
+      try {
+        const settings = await getSettings();
+        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+        setPointValueTl(Number(config.loyalty_point_value_tl) || 5);
+        setLoyaltyEnabled(config.loyalty_enabled !== "false");
+      } catch (err) {
+      }
+    }
+    fetchPointsSettings();
+  }, []);
 
   // Yeni Müşteri Ekleme State'leri
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
@@ -185,9 +206,26 @@ export function POSInterface({ products: initialProducts, customers, categories,
     setCart(cart.filter((item) => item.id !== id));
   };
 
-  const total = useMemo(() => {
+  const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
   }, [cart]);
+
+  const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId || selectedCustomerId === "null") return null;
+    return customers.find(c => c.id === selectedCustomerId);
+  }, [selectedCustomerId, customers]);
+
+  const totalPoints = selectedCustomer?.loyaltyPoints || 0;
+
+  const loyaltyDiscountAmount = useMemo(() => {
+    if (!applyLoyaltyDiscount || totalPoints <= 0 || !loyaltyEnabled) return 0;
+    const maxPointsDiscount = totalPoints * pointValueTl;
+    return Math.min(maxPointsDiscount, subtotal);
+  }, [applyLoyaltyDiscount, totalPoints, subtotal, pointValueTl, loyaltyEnabled]);
+
+  const usedPoints = Math.ceil(loyaltyDiscountAmount / pointValueTl);
+
+  const finalTotal = subtotal - loyaltyDiscountAmount;
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -205,8 +243,10 @@ export function POSInterface({ products: initialProducts, customers, categories,
             quantity: item.quantity,
             unitPrice: item.sellPrice
           })),
-          totalAmount: total,
-          paymentMethod
+          totalAmount: subtotal,
+          paymentMethod,
+          discountAmount: loyaltyDiscountAmount,
+          usedPoints
         });
 
         if (result.success) {
@@ -526,11 +566,42 @@ export function POSInterface({ products: initialProducts, customers, categories,
               ))}
             </div>
 
+            {loyaltyEnabled && totalPoints > 0 && (
+              <div className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-primary flex items-center gap-2">
+                      CÜZDAN BAKİYESİ KULLAN
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-0.5">
+                      Müşterinin {totalPoints} Puanı ({formatCurrency(totalPoints * pointValueTl)} TL değeri) var.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {applyLoyaltyDiscount && (
+                    <span className="text-[10px] font-bold text-emerald-500">- ₺{formatCurrency(loyaltyDiscountAmount)}</span>
+                  )}
+                  <Checkbox
+                    checked={applyLoyaltyDiscount}
+                    onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
+                    className="h-6 w-6 rounded-lg border-primary/50 data-[state=checked]:bg-primary"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between px-2">
                 <span className="text-[11px]  text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl  text-foreground drop-shadow-sm">₺{formatCurrency(total)}</span>
+                <div className="flex flex-col items-end">
+                  {loyaltyDiscountAmount > 0 && (
+                    <span className="text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
+                  )}
+                  <span className="text-5xl  text-foreground drop-shadow-sm">₺{formatCurrency(finalTotal)}</span>
                 </div>
               </div>
 

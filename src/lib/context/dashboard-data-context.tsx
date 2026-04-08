@@ -17,14 +17,16 @@ export function DashboardDataProvider({
     children,
     initialRates,
     initialStats,
+    shopId,
 }: {
     children: React.ReactNode;
     initialRates: any;
     initialStats: any;
+    shopId?: string;
 }) {
     const { data, isLoading, refetch: refresh } = useQuery({
-        queryKey: ["dashboard-init"],
-        queryFn: () => getDashboardInit(),
+        queryKey: ["dashboard-init", shopId],
+        queryFn: () => getDashboardInit(shopId || ""),
         initialData: { rates: initialRates, stats: initialStats },
         staleTime: 60000, // 1 minute
         refetchOnWindowFocus: true,

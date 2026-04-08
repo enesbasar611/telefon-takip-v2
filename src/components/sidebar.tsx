@@ -148,26 +148,22 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
-      {/* Logo / Brand Area - Refined Premium Design */}
-      <div className="flex h-28 items-center px-7 border-b border-border/50 flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-transparent relative overflow-hidden group">
+      <div className="flex h-28 items-center px-4 border-b border-border/50 flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-transparent relative overflow-hidden group">
         {/* Subtle Decorative Background Glow */}
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
 
-        <button onClick={() => handleNavigation("/")} className="flex items-center gap-4.5 group outline-none relative z-10">
-          <div className="h-14 w-14 rounded-[1.25rem] bg-[#0A0A0A] border border-border flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-all duration-500 relative overflow-hidden">
+        <button onClick={() => handleNavigation("/")} className="flex items-center gap-4 group outline-none relative z-10 w-full overflow-hidden">
+          <div className="h-12 w-12 shrink-0 rounded-2xl bg-black dark:bg-[#0A0A0A] border border-border flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-all duration-500 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
-            <Zap className="h-7 w-7 text-primary fill-primary animate-pulse shadow-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={1} />
+            <Zap className="h-6 w-6 text-primary fill-primary animate-pulse shadow-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={1} />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-[22px] font-black tracking-tighter text-white leading-none uppercase group-hover:text-primary transition-colors duration-300">
+          <div className="flex flex-col flex-1 min-w-0 items-start text-left">
+            <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
               BAŞAR<span className="text-primary not-italic font-extrabold ml-1">TEKNİK</span>
             </h1>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] leading-none">
-                YÖNETİM PANELİ
-              </span>
-              <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-            </div>
+            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate">
+              YÖNETİM PANELİ
+            </span>
           </div>
         </button>
       </div>
@@ -308,17 +304,24 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
 
       {/* User Profile */}
       <div className="px-4 pb-4 border-t border-border/50 pt-4">
-        <div className="flex items-center gap-3 rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-xs text-primary border border-primary/20 flex-shrink-0">
-            {(user?.name || "A").charAt(0).toUpperCase()}
+        <button
+          onClick={() => handleNavigation("/profil")}
+          className="w-full flex items-center gap-3 rounded-xl bg-muted/30 border border-border/40 px-3 py-2.5 outline-none hover:bg-muted/50 transition-colors group cursor-pointer"
+        >
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-xs text-primary border border-primary/20 flex-shrink-0 overflow-hidden group-hover:border-primary/40 transition-colors">
+            {session?.user?.image ? (
+              <img src={session.user.image} alt={session.user.name || "User"} className="w-full h-full object-cover" />
+            ) : (
+              (session?.user?.name || "A").charAt(0).toUpperCase()
+            )}
           </div>
-          <div className="flex flex-col overflow-hidden flex-1 min-w-0">
-            <span className="text-[14px]  text-foreground truncate leading-tight">{user?.name || "Yönetici"}</span>
-            <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-              {user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}
+          <div className="flex flex-col overflow-hidden flex-1 min-w-0 text-left">
+            <span className="text-[14px] text-foreground truncate leading-tight group-hover:text-primary transition-colors">{session?.user?.name || "Yönetici"}</span>
+            <span className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
+              {session?.user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}
             </span>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );

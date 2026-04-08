@@ -102,6 +102,8 @@ export const authOptions: NextAuthOptions = {
                 session.user.canService = token.canService;
                 session.user.canStock = token.canStock;
                 session.user.canFinance = token.canFinance;
+                if (token.picture) session.user.image = token.picture;
+                if (token.image) session.user.image = token.image;
             }
             return session;
         },

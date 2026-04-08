@@ -34,7 +34,7 @@ export function ServiceDetailActions({ ticket }: ServiceDetailActionsProps) {
     return (
         <div className="space-y-4">
             <div className="space-y-3 pt-2">
-                <ServiceStatusUpdater ticketId={ticket.id} currentStatus={ticket.status} />
+                <ServiceStatusUpdater ticket={ticket} />
 
                 <div className="grid grid-cols-2 gap-3">
                     <Button

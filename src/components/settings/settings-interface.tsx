@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap } from "lucide-react";
+import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users } from "lucide-react";
 import { bulkUpdateSettings, updateSetting } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import { WhatsAppTab } from "./tabs/whatsapp-tab";
 import { PrinterTab } from "./tabs/printer-tab";
 import { DataTab } from "./tabs/data-tab";
 import { AutomationTab } from "./tabs/automation-tab";
+import { CustomersTab } from "./tabs/customers-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
 
 interface SettingsProps {
@@ -23,6 +24,7 @@ const tabs = [
   { id: "appearance", label: "Görünüm", icon: Palette, desc: "Tema ve renkler" },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, desc: "Mesaj şablonları" },
   { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
+  { id: "customers", label: "Müşteriler", icon: Users, desc: "Sadakat modülü" },
   { id: "data", label: "Veri", icon: Database, desc: "Yedek ve export" },
   { id: "automation", label: "Otomasyon", icon: Zap, desc: "Kurallar ve onaylar" },
 ];
@@ -168,6 +170,9 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
               )}
               {activeTab === "printing" && (
                 <PrinterTab receiptSettings={receiptSettings} />
+              )}
+              {activeTab === "customers" && (
+                <CustomersTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
               )}
               {activeTab === "data" && (
                 <DataTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />

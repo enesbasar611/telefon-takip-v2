@@ -6,6 +6,7 @@ import { PaymentMethod, TransactionType } from "@prisma/client";
 import { addShortageItem } from "./shortage-actions";
 import { getOrCreateAccountByType } from "./finance-actions";
 import { getShopId, getUserId } from "@/lib/auth";
+import { getSettings } from "./setting-actions";
 
 // getOrCreateDevUser removed.
 
@@ -14,6 +15,8 @@ export async function createSale(data: {
   items: { productId: string; quantity: number; unitPrice: number }[];
   totalAmount: number;
   paymentMethod: string;
+  discountAmount?: number;
+  usedPoints?: number;
 }) {
   try {
     const shopId = await getShopId();
@@ -28,7 +31,7 @@ export async function createSale(data: {
         userId,
         shopId,
         totalAmount: data.totalAmount,
-        finalAmount: data.totalAmount,
+        finalAmount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
         paymentMethod: (
           data.paymentMethod === "CASH" ? PaymentMethod.CASH :
             data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
@@ -55,6 +58,36 @@ export async function createSale(data: {
         customer: true
       }
     });
+
+    // Increment Loyalty Points if any dynamically
+    let earnedPoints = 20;
+    try {
+      const settings = await getSettings();
+      const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+      const loyaltyEnabled = config.loyalty_enabled !== "false";
+
+      if (loyaltyEnabled && data.totalAmount > 0) {
+        const spendThreshold = Number(config.loyalty_sale_spend_threshold) || 1000;
+        const pointsRate = Number(config.loyalty_sale_points_earned) || 20;
+        earnedPoints = Math.floor((data.totalAmount / spendThreshold) * pointsRate);
+      } else {
+        earnedPoints = 0;
+      }
+    } catch (err) {
+      console.error("Loyalty calculation error:", err);
+    }
+
+    if (data.customerId && (earnedPoints > 0 || (data.usedPoints && data.usedPoints > 0))) {
+      await prisma.customer.update({
+        where: { id: data.customerId },
+        data: {
+          loyaltyPoints: {
+            increment: earnedPoints,
+            decrement: data.usedPoints || 0
+          }
+        }
+      });
+    }
 
     // Update stock and create movements
     for (const item of data.items) {
@@ -106,9 +139,9 @@ export async function createSale(data: {
       // 1. Financial transaction
       await tx.transaction.create({
         data: {
-          amount: data.totalAmount,
+          amount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
           type: TransactionType.INCOME,
-          description: `SATIŞ - ${sale.saleNumber}${isDebt ? ' (VERESİYE)' : ''}`,
+          description: `SATIŞ - ${sale.saleNumber}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
           paymentMethod: isDebt ? PaymentMethod.DEBT : sale.paymentMethod,
           userId,
           shopId,

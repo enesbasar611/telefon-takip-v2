@@ -64,7 +64,10 @@ export async function getProfile() {
     });
 
     if (!user) return null;
-    return serializePrisma(user);
+    return serializePrisma({
+      ...user,
+      hasPassword: !!user.password
+    });
   } catch (error) {
     console.error("Error fetching profile:", error);
     return null;
@@ -388,10 +391,13 @@ export async function updatePassword(data: { old: string, new: string }) {
   try {
     const userId = await getUserId();
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.password) return { success: false, error: "Kullanıcı bulunamadı." };
+    if (!user) return { success: false, error: "Kullanıcı bulunamadı." };
 
-    const isMatch = await bcrypt.compare(data.old, user.password);
-    if (!isMatch) return { success: false, error: "Mevcut şifre hatalı." };
+    // If user has a password, verify the old one
+    if (user.password) {
+      const isMatch = await bcrypt.compare(data.old, user.password);
+      if (!isMatch) return { success: false, error: "Mevcut şifre hatalı." };
+    }
 
     const hashedPassword = await bcrypt.hash(data.new, 10);
     await prisma.user.update({

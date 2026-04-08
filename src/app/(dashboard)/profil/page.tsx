@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { getProfile, getStaffPerformance, updateProfile, updatePassword } from "@/lib/actions/staff-actions";
 import { User, Mail, Phone, Calendar, Briefcase, MapPin, Building2, TrendingUp, CheckCircle2, History, Loader2, ExternalLink, Settings, ShieldCheck, Camera, Save, X, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,10 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 export default function ProfilePage() {
+    const router = useRouter();
+    const { data: session, update } = useSession();
     const [profile, setProfile] = useState<any>(null);
     const [performance, setPerformance] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Edit Form State
     const [editData, setEditData] = useState({ name: "", surname: "", phone: "", image: "" });
@@ -85,6 +90,41 @@ export default function ProfilePage() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handlePhotoClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error("Dosya boyutu 2MB'den küçük olmalıdır.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const base64 = event.target?.result as string;
+            setIsSaving(true);
+            try {
+                const res = await updateProfile({ ...editData, image: base64 });
+                if (res.success) {
+                    setProfile({ ...profile, image: base64 });
+                    await update({ image: base64 });
+                    toast.success("Profil fotoğrafı başarıyla güncellendi.");
+                } else {
+                    toast.error(res.error || "Fotoğraf güncellenirken hata oluştu.");
+                }
+            } catch (error) {
+                toast.error("Bilinmeyen bir hata oluştu.");
+            } finally {
+                setIsSaving(false);
+            }
+        };
+        reader.readAsDataURL(file);
     };
 
     if (loading) {
@@ -184,14 +224,22 @@ export default function ProfilePage() {
                         <DialogContent className="bg-white dark:bg-[#0f0f0f] border-slate-200 dark:border-white/10 rounded-2xl max-w-sm">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
-                                    <Lock className="w-5 h-5 text-orange-500" /> Güvenlik Ayarları
+                                    <Lock className="w-5 h-5 text-orange-500" />
+                                    {profile.hasPassword ? "Güvenlik Ayarları" : "Şifre Belirle"}
                                 </DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-bold uppercase opacity-60">Mevcut Şifre</Label>
-                                    <Input type="password" value={pwdData.old} onChange={(e) => setPwdData({ ...pwdData, old: e.target.value })} className="rounded-xl" />
-                                </div>
+                                {!profile.hasPassword && (
+                                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 font-medium leading-relaxed">
+                                        Google ile giriş yaptığınız için henüz bir şifreniz bulunmuyor. Burada bir şifre belirleyerek e-posta/şifre ile de giriş yapabilirsiniz.
+                                    </div>
+                                )}
+                                {profile.hasPassword && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase opacity-60">Mevcut Şifre</Label>
+                                        <Input type="password" value={pwdData.old} onChange={(e) => setPwdData({ ...pwdData, old: e.target.value })} className="rounded-xl" />
+                                    </div>
+                                )}
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-bold uppercase opacity-60">Yeni Şifre</Label>
                                     <Input type="password" value={pwdData.new} onChange={(e) => setPwdData({ ...pwdData, new: e.target.value })} className="rounded-xl" />
@@ -203,7 +251,7 @@ export default function ProfilePage() {
                             </div>
                             <DialogFooter>
                                 <Button onClick={handleUpdatePassword} disabled={isSaving} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20">
-                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Şifreyi Güncelle"}
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (profile.hasPassword ? "Şifreyi Güncelle" : "Şifre Belirle")}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -211,7 +259,17 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-8 flex items-end gap-6 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="w-28 h-28 rounded-2xl relative group overflow-hidden border-2 border-white/20 shadow-2xl">
+                    <div
+                        className="w-28 h-28 rounded-2xl relative group overflow-hidden border-2 border-white/20 shadow-2xl cursor-pointer"
+                        onClick={handlePhotoClick}
+                    >
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                        />
                         {profile.image ? (
                             <img src={profile.image} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
@@ -219,7 +277,7 @@ export default function ProfilePage() {
                                 {profile.name?.charAt(0)}{profile.surname?.charAt(0)}
                             </div>
                         )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onClick={() => setIsEditModalOpen(true)}>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
                             <Camera className="w-8 h-8 text-white" />
                         </div>
                     </div>
@@ -231,6 +289,12 @@ export default function ProfilePage() {
                             <Badge variant="secondary" className="bg-blue-500 text-white border-0 font-bold px-3 py-1">
                                 {profile.role}
                             </Badge>
+                            {!profile.hasPassword && (
+                                <Badge variant="outline" className="bg-slate-500/10 text-slate-400 border-slate-500/20 font-bold px-3 py-1 flex gap-1.5 items-center">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                    GOOGLE İLE BAĞLANDI
+                                </Badge>
+                            )}
                         </div>
                         <div className="flex items-center gap-4 mt-2">
                             <p className="text-blue-50/70 text-sm flex items-center gap-1.5 font-medium">

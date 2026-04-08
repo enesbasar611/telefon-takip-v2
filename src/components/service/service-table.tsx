@@ -136,14 +136,14 @@ export function ServiceTable({ data }: ServiceTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{ticket.customer.name}</span>
+                    <span className=" text-sm text-foreground group-hover:text-blue-500 transition-colors">{ticket.customer.name}</span>
                     <span className="text-xs text-muted-foreground font-medium">{formatPhone(ticket.customer.phone)}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/[0.02] whisper-border border-border/50 flex items-center justify-center group-hover:bg-white/5 transition-all">
-                      <Smartphone className="h-5 w-5 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                    <div className="h-10 w-10 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center group-hover:bg-muted/50 transition-all">
+                      <Smartphone className="h-5 w-5 text-muted-foreground group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div className="flex flex-col">
                       <span className=" text-sm text-foreground">{ticket.deviceBrand} {ticket.deviceModel}</span>
@@ -168,7 +168,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
+                        className="h-9 w-9 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/5 transition-all"
                         title="Detayları Görüntüle"
                       >
                         <Eye className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
+                      className="h-9 w-9 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
                       onClick={() => {
                         setWhatsappTicket(ticket);
                         setWhatsappModalOpen(true);
@@ -188,31 +188,31 @@ export function ServiceTable({ data }: ServiceTableProps) {
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl bg-white/[0.02] whisper-border border-border/50 text-gray-600 hover:text-white hover:bg-white/5 transition-all" disabled={isPending}>
+                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all" disabled={isPending}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground p-2 min-w-[200px] shadow-none">
                         <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Operasyonel Aksiyonlar</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuSeparator className="bg-border/50" />
                         {Object.entries(statusMap).map(([status, info]) => (
                           <DropdownMenuItem
                             key={status}
                             onClick={() => handleStatusUpdate(ticket.id, status as ServiceStatus)}
                             disabled={ticket.status === status}
-                            className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
+                            className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-muted/50 flex gap-3 items-center group"
                           >
                             <div className={cn("w-2 h-2 rounded-full", info.color.split(' ')[0])} />
                             {info.label} Yap
                           </DropdownMenuItem>
                         ))}
-                        <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuSeparator className="bg-border/50" />
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedTicket(ticket);
                             setShowReceipt(true);
                           }}
-                          className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-white/5 flex gap-3 items-center group"
+                          className="p-3 text-xs font-medium rounded-lg cursor-pointer focus:bg-muted/50 flex gap-3 items-center group"
                         >
                           <Printer className="h-4 w-4 text-blue-500" /> Formu Yazdır
                         </DropdownMenuItem>

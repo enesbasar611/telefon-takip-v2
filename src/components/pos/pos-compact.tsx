@@ -34,8 +34,12 @@ import {
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
-import { cn, formatPhone } from "@/lib/utils";
+import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { Sparkles } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getSettings } from "@/lib/actions/setting-actions";
+import { useEffect } from "react";
 
 export function POSCompact({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
     const [productSearch, setProductSearch] = useState("");
@@ -47,6 +51,24 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [lastSale, setLastSale] = useState<any>(null);
+    const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
+
+    const [pointValueTl, setPointValueTl] = useState<number>(5);
+    const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+
+    // Load points config
+    useEffect(() => {
+        async function fetchPointsSettings() {
+            try {
+                const settings = await getSettings();
+                const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+                setPointValueTl(Number(config.loyalty_point_value_tl) || 5);
+                setLoyaltyEnabled(config.loyalty_enabled !== "false");
+            } catch (err) {
+            }
+        }
+        fetchPointsSettings();
+    }, []);
 
     const { toast } = useToast();
 
@@ -79,9 +101,24 @@ export function POSCompact({ products, customers, categories }: { products: any[
         setCart(cart.filter(item => item.id !== id));
     };
 
-    const total = cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
-    const tax = total * 0.20;
-    const subtotal = total - tax;
+    const totalItemsAmount = cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
+    const tax = totalItemsAmount * 0.20;
+    const subtotal = totalItemsAmount - tax;
+
+    const activeCustomer = useMemo(() => {
+        return customers.find(c => c.id === selectedCustomerId);
+    }, [customers, selectedCustomerId]);
+
+    const totalPoints = activeCustomer?.loyaltyPoints || 0;
+
+    const loyaltyDiscountAmount = useMemo(() => {
+        if (!applyLoyaltyDiscount || totalPoints <= 0 || !loyaltyEnabled) return 0;
+        const maxPointsDiscount = totalPoints * pointValueTl;
+        return Math.min(maxPointsDiscount, totalItemsAmount);
+    }, [applyLoyaltyDiscount, totalPoints, totalItemsAmount, pointValueTl, loyaltyEnabled]);
+
+    const usedPoints = Math.ceil(loyaltyDiscountAmount / pointValueTl);
+    const total = totalItemsAmount - loyaltyDiscountAmount;
 
     const handleCheckout = async () => {
         if (cart.length === 0) return;
@@ -102,7 +139,9 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     unitPrice: item.sellPrice
                 })),
                 totalAmount: total,
-                paymentMethod
+                paymentMethod,
+                discountAmount: loyaltyDiscountAmount,
+                usedPoints
             });
 
             if (result.success) {
@@ -124,10 +163,6 @@ export function POSCompact({ products, customers, categories }: { products: any[
     };
 
     const isDebtBlocked = paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null");
-
-    const activeCustomer = useMemo(() => {
-        return customers.find(c => c.id === selectedCustomerId);
-    }, [customers, selectedCustomerId]);
 
     return (
         <div className="flex flex-col h-full bg-[#0F172A] text-white font-sans overflow-hidden">
@@ -334,10 +369,41 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     <div className="flex justify-between items-end pt-4 border-t border-border/50">
                         <span className="text-xl  text-white">Tahsilat Tutarı</span>
                         <div className="flex flex-col items-end">
+                            {loyaltyDiscountAmount > 0 && (
+                                <span className="text-sm text-muted-foreground line-through opacity-50 mb-1">₺{totalItemsAmount.toLocaleString('tr-TR')}</span>
+                            )}
                             <span className="text-4xl  text-blue-500 animate-pulse-slow">₺{total.toLocaleString('tr-TR')}</span>
                         </div>
                     </div>
                 </div>
+
+                {loyaltyEnabled && totalPoints > 0 && (
+                    <div className="mb-2 p-4 rounded-2xl bg-blue-600/5 border border-blue-500/20 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-blue-600/10 flex items-center justify-center">
+                                <Sparkles className="h-5 w-5 text-blue-500" />
+                            </div>
+                            <div>
+                                <div className="text-[11px] font-bold text-blue-500 flex items-center gap-2">
+                                    CÜZDAN BAKİYESİ KULLAN
+                                </div>
+                                <div className="text-[9px] text-muted-foreground mt-0.5">
+                                    {totalPoints} Puan ({formatCurrency(totalPoints * pointValueTl)} TL)
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {applyLoyaltyDiscount && (
+                                <span className="text-[10px] font-bold text-emerald-500">- ₺{formatCurrency(loyaltyDiscountAmount)}</span>
+                            )}
+                            <Checkbox
+                                checked={applyLoyaltyDiscount}
+                                onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
+                                className="h-6 w-6 rounded-lg border-blue-500/50 data-[state=checked]:bg-blue-500"
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Ödeme Yöntemi Seçimi */}
                 <div className="grid grid-cols-4 gap-2 pb-2">

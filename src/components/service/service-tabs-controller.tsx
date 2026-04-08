@@ -124,7 +124,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
 
                         {/* Yeni Garanti İşlemi */}
                         <div className="matte-card p-10 rounded-[2.5rem] border border-border/50">
-                            <h2 className="font-medium text-lg  mb-6 text-white flex items-center gap-3">
+                            <h2 className="font-medium text-lg mb-6 text-foreground flex items-center gap-3">
                                 <Activity className="h-5 w-5 text-blue-500" />
                                 Yeni İade veya Garanti Süreci Başlat
                             </h2>
@@ -134,13 +134,13 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         {/* Son İade Hareketleri */}
                         <div className="matte-card px-0 py-6 rounded-[2.5rem] border border-border/50 shadow-2xl overflow-hidden">
                             <div className="px-10 pb-6 border-b border-border/50">
-                                <h2 className="font-medium text-xl font-extrabold text-white">Son İade Hareketleri</h2>
+                                <h2 className="font-medium text-xl font-extrabold text-foreground">Son İade Hareketleri</h2>
                                 <p className="text-sm font-medium text-muted-foreground/80 mt-1">Sisteme girilen son garanti/iade kayıtları</p>
                             </div>
                             <Table>
-                                <TableHeader className="font-medium bg-white/[0.01]">
-                                    <TableRow className="border-b border-white/[0.03] hover:bg-transparent">
-                                        <TableHead className="font-medium px-10 py-6 text-xs  text-muted-foreground/80">İade Fişi</TableHead>
+                                <TableHeader className="font-medium bg-muted/30">
+                                    <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                        <TableHead className="font-medium px-10 py-6 text-xs text-muted-foreground/80">İade Fişi</TableHead>
                                         <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Servis Fişi</TableHead>
                                         <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Arızalı Parça</TableHead>
                                         <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">İade Sebebi</TableHead>
@@ -163,10 +163,10 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                             };
 
                                             return (
-                                                <TableRow key={ticket.id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors">
-                                                    <TableCell className="px-10 py-6  text-sm text-purple-400">#{ticket.ticketNumber}</TableCell>
+                                                <TableRow key={ticket.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                                                    <TableCell className="px-10 py-6 text-sm text-purple-400">#{ticket.ticketNumber}</TableCell>
                                                     <TableCell className="px-6 py-6 font-medium text-xs">
-                                                        <Badge variant="outline" className="font-mono bg-white/[0.02] border-border text-foreground">
+                                                        <Badge variant="outline" className="font-mono bg-muted/30 border-border text-foreground">
                                                             {ticket.serviceTicket?.ticketNumber || 'Silinmiş Fiş'}
                                                         </Badge>
                                                     </TableCell>

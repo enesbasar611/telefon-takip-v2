@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import {
     Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye,
     MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2,
-    ChevronLeft, ChevronRight, Loader2
+    ChevronLeft, ChevronRight, Loader2, Sparkles
 } from "lucide-react";
+import { getLoyaltyTier } from "@/lib/loyalty-utils";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
@@ -35,11 +36,14 @@ import { deleteCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 
-const getLoyaltyTier = (points: number) => {
-    if (points >= 1000) return { label: "PLATİN", color: "text-blue-400 bg-blue-400/10 border-blue-400/20", icon: Gem };
-    if (points >= 500) return { label: "ALTIN", color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20", icon: Crown };
-    if (points >= 200) return { label: "GÜMÜŞ", color: "text-gray-300 bg-gray-300/10 border-gray-300/20", icon: ShieldCheck };
-    return { label: "BRONZ", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star };
+const getTierColor = (color: string) => {
+    switch (color) {
+        case "slate": return "text-slate-400 bg-slate-400/10 border-slate-400/20";
+        case "zinc": return "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
+        case "amber": return "text-amber-500 bg-amber-500/10 border-amber-500/20";
+        case "purple": return "text-purple-400 bg-purple-400/10 border-purple-400/20";
+        default: return "text-slate-400 bg-slate-400/10 border-slate-400/20";
+    }
 };
 
 interface Props {
@@ -171,9 +175,9 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={`${tier.color} border-none text-[9px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 w-fit`}>
-                                            <tier.icon className="h-3 w-3" />
-                                            {tier.label} ({customer.loyaltyPoints || 0})
+                                        <Badge variant="outline" className={`${getTierColor(tier.color)} border-none text-[9px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 w-fit`}>
+                                            <Sparkles className="h-3 w-3" />
+                                            {tier.name} ({customer.loyaltyPoints || 0})
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -329,7 +333,7 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
     );
 }
 
-// Re-implement cn since it was lost or not imported correctly if I missed it
+// cn is already imported or defined elsewhere if needed, but we keep it here if it's the only one
 function cn(...inputs: any[]) {
     return inputs.filter(Boolean).join(" ");
 }
