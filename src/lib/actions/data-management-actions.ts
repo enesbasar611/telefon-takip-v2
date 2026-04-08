@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 async function getShopId() {
     const session = await auth();
@@ -154,6 +155,7 @@ export async function softResetAction(): Promise<{ success: boolean; deleted: Re
     deleted.aiAlerts = alerts.count;
     deleted.agendaEvents = agenda.count;
 
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, deleted };
 }
 
@@ -184,46 +186,120 @@ export async function transactionResetAction(): Promise<{ success: boolean; dele
     deleted.transactions = transactions.count;
     deleted.debts = debts.count;
 
+    revalidateTag(`dashboard-${shopId}`);
+    revalidatePath("/(dashboard)", "layout");
+
     return { success: true, deleted };
 }
 
-/** Full Reset: Everything except categories that start with system defaults */
+/** Full Reset: Everything except WhatsApp settings and categories that start with system defaults */
 export async function fullResetAction(): Promise<{ success: boolean; deleted: Record<string, number> }> {
     const shopId = await getShopId();
 
-    // First run transaction reset
-    const txResult = await transactionResetAction();
+    try {
+        return await prisma.$transaction(async (tx) => {
+            const deleted: Record<string, number> = {};
 
-    // Define potential default categories to protect
-    const protectedCategoryNames = ["Aksesuar", "Yedek Parça", "Cihaz", "Hizmet", "Genel"];
+            // 1. Delete Transactional Data (Order of deletion matters for FK constraints)
+            const attachments = await tx.attachment.deleteMany({ where: { shopId } });
+            const saleItems = await tx.saleItem.deleteMany({ where: { shopId } });
+            const serviceParts = await tx.serviceUsedPart.deleteMany({ where: { shopId } });
+            const serviceLogs = await tx.serviceLog.deleteMany({ where: { shopId } });
+            const returns = await tx.returnTicket.deleteMany({ where: { shopId } });
+            const movements = await tx.inventoryMovement.deleteMany({ where: { shopId } });
+            const invLogs = await tx.inventoryLog.deleteMany({ where: { shopId } });
+            const saleTransactions = await tx.transaction.deleteMany({ where: { shopId } });
+            const sales = await tx.sale.deleteMany({ where: { shopId } });
+            const tickets = await tx.serviceTicket.deleteMany({ where: { shopId } });
+            const dailySessions = await tx.dailySession.deleteMany({ where: { shopId } });
+            const debts = await tx.debt.deleteMany({ where: { shopId } });
 
-    const [products, customers, suppliers, agenda, purchaseItems, purchaseOrders, supplierTx, categories] = await Promise.all([
-        prisma.product.deleteMany({ where: { shopId } }),
-        prisma.customer.deleteMany({ where: { shopId } }),
-        prisma.purchaseOrderItem.deleteMany({ where: { shopId } }),
-        prisma.purchaseOrder.deleteMany({ where: { shopId } }),
-        prisma.supplierTransaction.deleteMany({ where: { shopId } }),
-        prisma.agendaEvent.deleteMany({ where: { shopId } }),
-        prisma.inventoryLog.deleteMany({ where: { shopId } }),
-        prisma.category.deleteMany({ where: { shopId, name: { notIn: protectedCategoryNames } } }),
-    ]);
+            // 2. Delete Master Data
+            const devices = await tx.deviceHubInfo.deleteMany({ where: { shopId } });
+            const products = await tx.product.deleteMany({ where: { shopId } });
+            const shortage = await tx.shortageItem.deleteMany({ where: { shopId } });
+            const customers = await tx.customer.deleteMany({ where: { shopId, type: { not: "ANONIM" } } });
+            const supplierTx = await tx.supplierTransaction.deleteMany({ where: { shopId } });
+            const purchaseItems = await tx.purchaseOrderItem.deleteMany({ where: { shopId } });
+            const purchaseOrders = await tx.purchaseOrder.deleteMany({ where: { shopId } });
+            const suppliers = await tx.supplier.deleteMany({ where: { shopId } });
 
-    const [suppDel, agendaDel] = await Promise.all([
-        prisma.supplier.deleteMany({ where: { shopId } }),
-        prisma.notification.deleteMany({ where: { shopId } }),
-    ]);
+            // 3. Delete Utility Data
+            const alerts = await tx.stockAIAlert.deleteMany({ where: { shopId } });
+            const notifs = await tx.notification.deleteMany({ where: { shopId } });
+            const reminders = await tx.reminder.deleteMany({ where: { shopId } });
+            const agenda = await (tx as any).agendaEvent.deleteMany({ where: { shopId } });
 
-    return {
-        success: true,
-        deleted: {
-            ...txResult.deleted,
-            products: products.count,
-            customers: customers.count,
-            suppliers: suppDel.count,
-            categories: categories.count,
-            agenda: agendaDel.count,
-        },
-    };
+            // 4. Handle Settings (Preserve WhatsApp)
+            // We delete all settings EXCEPT those starting with 'whatsapp' (case insensitive-ish)
+            const settingsDel = await tx.setting.deleteMany({
+                where: {
+                    shopId,
+                    NOT: {
+                        OR: [
+                            { key: { startsWith: "whatsapp" } },
+                            { key: { startsWith: "WhatsApp" } }
+                        ]
+                    }
+                }
+            });
+
+            // 5. Reset Receipt Settings to default
+            try {
+                await tx.receiptSettings.update({
+                    where: { id: shopId },
+                    data: {
+                        title: "BAŞAR TEKNİK",
+                        subtitle: "PROFESYONEL TEKNİK SERVİS",
+                        footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
+                        phone: "+90 (5xx) xxx xx xx",
+                        website: "v2.basarteknik.com"
+                    }
+                });
+            } catch (e) {
+                // If doesn't exist, we can ignore or create
+            }
+
+            // 6. Handle Finance Accounts (Delete all and create default 'Nakit Kasa')
+            await tx.financeAccount.deleteMany({ where: { shopId } });
+            await tx.financeAccount.create({
+                data: {
+                    name: "Nakit Kasa",
+                    type: "CASH",
+                    balance: 0,
+                    isDefault: true,
+                    isActive: true,
+                    shopId
+                }
+            });
+
+            // 7. Handle Categories (Clean and Re-seed defaults)
+            await tx.category.deleteMany({ where: { shopId } });
+            const defaultCategories = ["Aksesuar", "Yedek Parça", "Cihaz", "Hizmet", "Genel"];
+            for (const name of defaultCategories) {
+                await tx.category.create({
+                    data: { name, shopId, order: 0 }
+                });
+            }
+
+            // Revalidate all caches
+            revalidateTag(`dashboard-${shopId}`);
+            revalidatePath("/", "layout");
+
+            return {
+                success: true,
+                deleted: {
+                    transactions: sales.count + tickets.count,
+                    products: products.count,
+                    customers: customers.count,
+                    finance: 1
+                }
+            };
+        });
+    } catch (error: any) {
+        console.error("Full reset error:", error);
+        return { success: false, deleted: {} };
+    }
 }
 
 // ────────── INTEGRATIONS ──────────────────────────────────────────────────

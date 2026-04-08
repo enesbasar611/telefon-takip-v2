@@ -47,6 +47,46 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
     const [isSavePending, startSaveTransition] = useTransition();
     const [savedCount, setSavedCount] = useState(0);
 
+    const categorySuggestions: Record<string, string> = {
+        "ekran": "Ekranlar > iPhone > iPhone 11 asy ekran 5 adet, iPhone 12 Pro orijinal 2 adet, alış 450 satış 950 TL",
+        "batarya": "Bataryalar > Deji > iPhone X deji batarya 10 adet, 11 Pro yüksek kapasite 5 adet, alış 220 satış 480 TL",
+        "şarj": "Şarj Aletleri > Type-C > Apple 20W Type-C hızlı şarj başlığı 20 adet, alış 135 satış 350 TL",
+        "kılıf": "Aksesuarlar > Kılıflar > iPhone 13-14-15 lansman kılıf karışık 50 adet, alış 40 satış 150 TL",
+        "modem": "Ağ Ürünleri > Modem > TP-Link TD-W9970 2 adet, alış 450 satış 850 TL",
+        "aksesuar": "Aksesuarlar > Bluetooth > Airpod 3. nesil 5 adet, Watch 8 Ultra kordon 10 adet, alış 450 satış 850 TL"
+    };
+
+    const getDynamicSuggestions = () => {
+        const found = categories
+            .filter(c => !c.parentId && c.name.toLowerCase() !== "telefonlar")
+            .map(c => {
+                const key = Object.keys(categorySuggestions).find(k => c.name.toLowerCase().includes(k));
+                if (key) return { id: c.id, name: c.name, text: categorySuggestions[key] };
+                return null;
+            }).filter(Boolean);
+
+        return found.length > 0 ? found : [
+            { id: "s1", name: "Şarj Aletleri", text: "Şarj Aletleri > Type-C > Samsung 25W Süper Hızlı Şarj 10 adet, alış 180 satış 450 TL" },
+            { id: "s2", name: "Ekranlar", text: "Ekranlar > iPhone > iPhone 11 ASY Ekran 5 adet, alış 450 satış 950 TL" },
+            { id: "s3", name: "Bataryalar", text: "Bataryalar > iPhone > iPhone 11 Deji Batarya 10 adet, alış 250 satış 550 TL" }
+        ];
+    };
+
+    const dynamicSuggestions = getDynamicSuggestions();
+
+    const EXAMPLES = [
+        "Şarj Aletleri > Type-C > 27W şarj aleti 10 adet, alış 85 satış 150 TL",
+        "Aksesuarlar > Kılıflar > iPhone 11-15 şeffaf kılıf 20'şer adet, alış 35 satış 120 TL",
+        "Bataryalar > Samsung > S22, S23 Batarya 5'er adet, alış 220 satış 450 TL",
+    ];
+
+    const resolveCategoryIdFromPath = (path: string[]) => {
+        if (!path || path.length === 0) return null;
+        const lastName = path[path.length - 1];
+        const found = categories.find(c => c.name.toLowerCase() === lastName.toLowerCase());
+        return found ? found.id : null;
+    };
+
     const handleAnalyze = () => {
         if (!description.trim()) { toast.warning("Açıklama boş olamaz."); return; }
         startAITransition(async () => {
@@ -57,6 +97,7 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
             }
             const newRows: ProductRow[] = result.data.map((item, i) => ({
                 ...item,
+                categoryId: resolveCategoryIdFromPath(item.categoryPath) || item.categoryId,
                 _id: `row-${Date.now()}-${i}`,
                 _status: "pending"
             }));
@@ -85,7 +126,8 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                 try {
                     const result = await createProduct({
                         name: row.name,
-                        categoryId: row.categoryId || "",
+                        categoryId: row.categoryId,
+                        categoryPath: row.categoryPath,
                         buyPrice: row.buyPrice,
                         buyPriceUsd: row.buyPriceUsd ?? null,
                         sellPrice: row.sellPrice,
@@ -100,8 +142,8 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                     } else {
                         setRows(prev => prev.map(r => r._id === row._id ? { ...r, _status: "error", _error: result.message || "Hata" } : r));
                     }
-                } catch {
-                    setRows(prev => prev.map(r => r._id === row._id ? { ...r, _status: "error", _error: "Sunucu hatası" } : r));
+                } catch (err: any) {
+                    setRows(prev => prev.map(r => r._id === row._id ? { ...r, _status: "error", _error: err.message || "Sunucu hatası" } : r));
                 }
             }
             setSavedCount(s => s + saved);
@@ -119,37 +161,6 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
     const pendingCount = rows.filter(r => r._status === "pending").length;
     const savedRowCount = rows.filter(r => r._status === "saved").length;
     const errorCount = rows.filter(r => r._status === "error").length;
-
-    const categorySuggestions: Record<string, string> = {
-        "telefon": "Samsung S23 Ultra 2 adet, iPhone 15 Pro 128GB 3 adet, alış 35000 satış 42000 TL",
-        "ekran": "iPhone 11 asy ekran 5 adet, Samsung A54 orijinal ekran 3 adet, alış 450 satış 950 TL",
-        "batarya": "iPhone X deji batarya 10 adet, iPhone 11 yüksek kapasite 5 adet, alış 220 satış 480 TL",
-        "şarj": "Apple 20W Type-C hızlı şarj başlığı 20 adet, alış 135 satış 350 TL",
-        "kılıf": "iPhone 13-14-15 lansman kılıf karışık renklerden 50 adet, alış 40 satış 150 TL",
-        "aksesuar": "Airpod 3. nesil 5 adet, Watch 8 Ultra kordon 10 adet, alış 450 satış 850 TL"
-    };
-
-    const getDynamicSuggestions = () => {
-        const found = categories.filter(c => !c.parentId).map(c => {
-            const key = Object.keys(categorySuggestions).find(k => c.name.toLowerCase().includes(k));
-            if (key) return { id: c.id, name: c.name, text: categorySuggestions[key] };
-            return null;
-        }).filter(Boolean);
-
-        return found.length > 0 ? found : categories.slice(0, 4).map(c => ({
-            id: c.id,
-            name: c.name,
-            text: `${c.name} kategorisine uygun ürünler, 10 adet, alış 100 satış 200 TL`
-        }));
-    };
-
-    const dynamicSuggestions = getDynamicSuggestions();
-
-    const EXAMPLES = [
-        "Type-C 27W şarj aleti 10 adet, alış 85 satış 150 TL, Raf: B-3",
-        "iPhone 11'den iPhone 15 Pro Max'e kadar tüm modellerin hayalet camı, 10'ar adet, alış 45 satış 95 TL",
-        "Samsung Galaxy S22, S23, S24 batarya 5 adet, alış 220 satış 380",
-    ];
 
     return (
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) handleReset(); }}>
@@ -315,8 +326,8 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground font-medium max-w-[120px] truncate">
                                                     {row.categoryPath.length > 0
-                                                        ? getCategoryName(categories, row.categoryPath[row.categoryPath.length - 1])
-                                                        : <span className="text-red-400/70">Seçilmedi</span>}
+                                                        ? row.categoryPath.join(" > ")
+                                                        : getCategoryName(categories, row.categoryId)}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col items-end gap-1 min-w-[90px]">
@@ -445,8 +456,3 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
         </Dialog>
     );
 }
-
-
-
-
-

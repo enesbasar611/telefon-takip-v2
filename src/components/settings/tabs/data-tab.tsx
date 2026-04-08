@@ -123,8 +123,13 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
 
                 const result = await action();
                 if (result.success) {
-                    toast.success("Veritabanı temizliği başarıyla tamamlandı.");
+                    toast.success("Veritabanı temizliği başarıyla tamamlandı. Sayfa yenileniyor...");
                     setResetModal(null);
+
+                    // Delay reload slightly to let toast be seen
+                    setTimeout(() => {
+                        window.location.href = "/dashboard";
+                    }, 1500);
                 } else {
                     toast.error("İşlem sırasında hata oluştu.");
                 }

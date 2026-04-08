@@ -143,7 +143,8 @@ export async function getCategories() {
 
 export async function createProduct(data: {
   name: string;
-  categoryId: string;
+  categoryId?: string | null;
+  categoryPath?: string[];
   buyPrice: number;
   buyPriceUsd?: number | null;
   sellPrice: number;
@@ -161,6 +162,39 @@ export async function createProduct(data: {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    let finalCategoryId = data.categoryId;
+
+    // Resolve or create categories based on path
+    if (data.categoryPath && data.categoryPath.length > 0) {
+      let currentParentId = null;
+      for (const catName of data.categoryPath) {
+        let category: any = await prisma.category.findFirst({
+          where: { shopId, name: { equals: catName, mode: 'insensitive' }, parentId: currentParentId }
+        });
+
+        if (!category) {
+          category = await prisma.category.create({
+            data: { name: formatTitleCase(catName), shopId, parentId: currentParentId }
+          });
+        }
+        currentParentId = category.id;
+        finalCategoryId = category.id;
+      }
+    }
+
+    if (!finalCategoryId) {
+      // Fallback to "Genel" category if not provided
+      let generalCat = await prisma.category.findFirst({
+        where: { shopId, name: { equals: "Genel", mode: "insensitive" } }
+      });
+      if (!generalCat) {
+        generalCat = await prisma.category.create({
+          data: { name: "Genel", shopId }
+        });
+      }
+      finalCategoryId = generalCat.id;
+    }
 
     // Check for duplicate product WITHIN the shop
     const formattedName = formatTitleCase(data.name);
@@ -187,7 +221,7 @@ export async function createProduct(data: {
     const product = await prisma.product.create({
       data: {
         name: formatTitleCase(data.name),
-        categoryId: data.categoryId,
+        categoryId: finalCategoryId as string,
         buyPrice: data.buyPrice,
         buyPriceUsd: data.buyPriceUsd ?? null,
         sellPrice: data.sellPrice,

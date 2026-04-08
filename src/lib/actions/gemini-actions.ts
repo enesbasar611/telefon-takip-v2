@@ -31,25 +31,27 @@ async function buildCategoryContext() {
 }
 
 function buildSystemPrompt(categoryList: any[]) {
-    // Limit category list to max 80 entries to stay well under token limits
     const limited = categoryList.slice(0, 80);
     return `Sen bir telefon & teknik servis dükkanı yazılımının envanter asistanısın.
 
 MEVCUT KATEGORİ AĞACI (id → name → parentId):
 ${JSON.stringify(limited, null, 2)}
 
-KATEGORİ EŞLEŞTİRME KURALLARI:
-- categoryPath: kök kategoriden yaprağa doğru sıralı ID listesi ver. Örn: ["rootId", "childId"]
-- Uygun kategori bulunamazsa null ver, categoryPath: []
-- Fiyat kuralı: Satış işlemi her zaman TL (sellPrice). Ancak alışta DOLAR/USD belirtilirse, buyPriceUsd alanına doları yaz, buyPrice alanına doları 35 ile çarpıp (TL maliyet) yaz. Dolar yoksa sadece buyPrice gir.
-- Belirtilmeyen stok → 1, kritik stok → 3, fiyat → 0
-- confidence: "high" (çoğu alan doluysa), "medium" (bazısı belirsizse), "low" (sadece isim çıkarılabildiyse)`;
+HİYERARŞİK KATEGORİ VE EŞLEŞTİRME KURALLARI:
+1. "categoryPath": Kökten yaprağa doğru isim veya ID listesi olmalı.
+2. Eğer kullanıcı "Şarj Aletleri > Type-C > Samsung 25W" gibi bir yapı girdiyse, categoryPath: ["Şarj Aletleri", "Type-C"] olmalı.
+3. Mevcut kategorilerle eşleşiyorsa ID'leri kullan, yeni bir kategori hiyerarşisi seziyorsan isimleri kullan.
+4. "Şarj Aletleri > Type-C" girdisinde ürün adı "Samsung 25W" olmalı.
+5. Fiyat: Alışta USD belirtilirse buyPriceUsd'ye yaz, buyPrice'ı 35 ile çarpıp TL yaz.
+6. Belirtilmeyen stok: 1, kritik: 3.
+7. confidence: "high", "medium", "low".
+İstisnalar: Telefon ekleme önerilerinde bulunma (ama kullanıcı girerse işle).`;
 }
 
 const SINGLE_SCHEMA = `{
   "name": "string",
   "categoryId": "string | null",
-  "categoryPath": ["id1", "id2"],
+  "categoryPath": ["string (ID or name)", "string"], 
   "buyPrice": number,
   "buyPriceUsd": "number | null",
   "sellPrice": number,
@@ -65,7 +67,7 @@ const BULK_SCHEMA = `{
     {
       "name": "string",
       "categoryId": "string | null",
-      "categoryPath": ["id1", "id2"],
+      "categoryPath": ["string", "string"],
       "buyPrice": number,
       "buyPriceUsd": "number | null",
       "sellPrice": number,
@@ -207,9 +209,10 @@ export async function parseBulkProductsWithAI(
 Kullanıcı BİRDEN FAZLA ürün tanımlamış olabilir. Şu kurallara uy:
 - "iPhone 11'den 15'e kadar" gibi seri ifadeleri her model için ayrı kayıt oluştur (max 20 ürün)
 - "X adet" ifadesi stock anlamına gelir, ayrı ürün değil
+- "Şarj Aletleri > Type-C > 20W" gibi hiyerarşik kategori tanımlarını her ürün için categoryPath olarak işle. categoryPath: ["kategori1", "kategori2"] listesi döndür.
 - "alış X satış Y" işlemleri: Eğer alış dolar ise (örn. 1.5 dolar), buyPriceUsd: 1.5 yaz, buyPrice (TL maliyeti) için doları 35 ile çarp (52.5). Satış her zaman sellPrice. Döviz belirtilmemişse buyPriceUsd: null.
 - Belirsiz modeller için makul isimler üret
-- categoryId ve categoryPath: [] olarak bırak (kategoriler ayrıca seçilir)`;
+- categoryId: null bırak, SADECE categoryPath (isim listesi) döndür (kategoriler review adımında eşleştirilecek veya oluşturulacak)`;
 
     const userPrompt = `SADECE GEÇERLİ JSON DÖNDÜR:\n${BULK_SCHEMA}\n\nKULLANICI AÇIKLAMASI:\n${description}`;
 

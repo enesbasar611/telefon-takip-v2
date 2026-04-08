@@ -8,8 +8,12 @@ import { Input } from "@/components/ui/input";
 import {
     Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye,
     MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2,
-    ChevronLeft, ChevronRight, Loader2, Sparkles
+    ChevronLeft, ChevronRight, Loader2, Sparkles,
+    AlertTriangle, CheckCircle2
 } from "lucide-react";
+import {
+    Dialog, DialogContent
+} from "@/components/ui/dialog";
 import { getLoyaltyTier } from "@/lib/loyalty-utils";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -61,6 +65,11 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
     const [search, setSearch] = useState(searchParams.get("search") || "");
     const debouncedSearch = useDebounce(search, 500);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleteOptions, setDeleteOptions] = useState({
+        deleteRecords: true,
+        revertStock: false,
+        clearBalance: true,
+    });
     const [isPending, startTransition] = useTransition();
 
     // Sync search to URL
@@ -84,12 +93,12 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
     const handleDelete = async () => {
         if (!deleteId) return;
         startTransition(async () => {
-            const result = await deleteCustomer(deleteId);
+            const result = await deleteCustomer(deleteId, deleteOptions);
             if (result.success) {
                 toast.success("Müşteri başarıyla silindi.");
                 router.refresh();
             } else {
-                toast.error(result.error || "Silme işlemi başarısız.");
+                toast.error((result as any).error || "Silme işlemi başarısız.");
             }
             setDeleteId(null);
         });
@@ -309,26 +318,99 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
             </div>
 
             {/* Delete Confirm Dialog */}
-            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent className="bg-background border-border/50 rounded-[2rem]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">Müşteriyi silmek istediğinizden emin misiniz?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-muted-foreground">
-                            Bu işlem geri alınamaz. Müşteriye ait tüm servis ve satış kayıtları etkilenebilir.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-3">
-                        <AlertDialogCancel className="bg-white/5 border-border/50 text-muted-foreground hover:bg-white/10 hover:text-white rounded-xl">Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDelete}
-                            disabled={isPending}
-                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-600/20"
-                        >
-                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kalıcı Olarak Sil"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <DialogContent className="bg-[#0A0A0B] border border-white/5 rounded-[2.5rem] p-0 overflow-hidden sm:max-w-[500px] shadow-2xl">
+                    <div className="p-8 space-y-8">
+                        <div className="flex items-center gap-5">
+                            <div className="h-14 w-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                                <Trash2 className="h-7 w-7 text-rose-500" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-xl font-semibold text-white tracking-tight">Müşteriyi Sil</h3>
+                                <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest mt-1">Veri Temizleme ve Stok Yönetimi</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex gap-3 italic">
+                                <AlertTriangle className="h-5 w-5 text-rose-500 shrink-0" />
+                                <p className="text-[12px] text-rose-200/80 leading-relaxed font-medium">
+                                    Dikkat: Bu müşteri silindiğinde, aşağıdaki seçimlerinize göre sistemdeki tüm bağlı veriler de etkilenir.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-3">
+                                <button
+                                    onClick={() => setDeleteOptions(prev => ({ ...prev, deleteRecords: !prev.deleteRecords }))}
+                                    className={cn(
+                                        "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                                        deleteOptions.deleteRecords ? "bg-blue-500/5 border-blue-500/20 text-blue-400" : "bg-white/[0.02] border-white/5 text-muted-foreground hover:bg-white/[0.04]"
+                                    )}
+                                >
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold">İşlem Geçmişini Sil</p>
+                                        <p className="text-[10px] opacity-60">Satış ve servis kayıtları tamamen kaldırılır.</p>
+                                    </div>
+                                    <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", deleteOptions.deleteRecords ? "border-blue-500 bg-blue-500" : "border-muted/20")}>
+                                        {deleteOptions.deleteRecords && <CheckCircle2 className="h-4 w-4 text-black stroke-[3px]" />}
+                                    </div>
+                                </button>
+
+                                {deleteOptions.deleteRecords && (
+                                    <button
+                                        onClick={() => setDeleteOptions(prev => ({ ...prev, revertStock: !prev.revertStock }))}
+                                        className={cn(
+                                            "flex items-center justify-between p-4 rounded-2xl border transition-all text-left animate-in slide-in-from-top-2",
+                                            deleteOptions.revertStock ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400" : "bg-white/[0.02] border-white/5 text-muted-foreground hover:bg-white/[0.04]"
+                                        )}
+                                    >
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold">Ürünleri Stoka İade Et</p>
+                                            <p className="text-[10px] opacity-60">Silinen satışlardaki ürünler envanter sayısına geri eklenir.</p>
+                                        </div>
+                                        <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", deleteOptions.revertStock ? "border-emerald-500 bg-emerald-500" : "border-muted/20")}>
+                                            {deleteOptions.revertStock && <CheckCircle2 className="h-4 w-4 text-black stroke-[3px]" />}
+                                        </div>
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => setDeleteOptions(prev => ({ ...prev, clearBalance: !prev.clearBalance }))}
+                                    className={cn(
+                                        "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                                        deleteOptions.clearBalance ? "bg-amber-500/5 border-amber-500/20 text-amber-500" : "bg-white/[0.02] border-white/5 text-muted-foreground hover:bg-white/[0.04]"
+                                    )}
+                                >
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold">Bakiyeyi ve Borçları Sil</p>
+                                        <p className="text-[10px] opacity-60">Müşterinin borç ve alacak kayıtları finansal dökümden çıkarılır.</p>
+                                    </div>
+                                    <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", deleteOptions.clearBalance ? "border-amber-500 bg-amber-500" : "border-muted/20")}>
+                                        {deleteOptions.clearBalance && <CheckCircle2 className="h-4 w-4 text-black stroke-[3px]" />}
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => setDeleteId(null)}
+                                className="flex-1 h-14 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 text-muted-foreground transition-all"
+                            >
+                                Vazgeç
+                            </Button>
+                            <Button
+                                onClick={handleDelete}
+                                disabled={isPending}
+                                className="flex-[2] h-14 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-semibold transition-all shadow-[0_0_30px_rgba(225,29,72,0.2)]"
+                            >
+                                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verileri Kalıcı Olarak Sil"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

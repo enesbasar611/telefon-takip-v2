@@ -19,21 +19,26 @@ export async function syncAllRates() {
     const now = new Date();
     const lastRefreshSetting = await prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "currency_last_refresh" } } });
     const refreshCountSetting = await prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "currency_refresh_count" } } });
+    const lastUpdateSetting = await prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "currency_last_update" } } });
 
     const lastRefresh = lastRefreshSetting ? new Date(lastRefreshSetting.value) : new Date(0);
     let refreshCount = refreshCountSetting ? parseInt(refreshCountSetting.value) : 0;
 
-    // Reset count if last refresh was more than 10 mins ago
-    if (now.getTime() - lastRefresh.getTime() > 10 * 60 * 1000) {
+    // Cooldown duration: 15 minutes
+    const COOLDOWN_MS = 15 * 60 * 1000;
+    const MAX_REFRESHES = 2;
+
+    // Reset count if last refresh was more than 15 mins ago
+    if (now.getTime() - lastRefresh.getTime() > COOLDOWN_MS) {
       refreshCount = 0;
     }
 
-    if (refreshCount >= 3) {
-      const remainingTime = Math.ceil((10 * 60 * 1000 - (now.getTime() - lastRefresh.getTime())) / 60000);
+    if (refreshCount >= MAX_REFRESHES) {
+      const remainingTime = Math.ceil((COOLDOWN_MS - (now.getTime() - lastRefresh.getTime())) / 60000);
       return { success: false, error: `Çok sık güncelleme yapıldı. Lütfen ${remainingTime} dakika sonra tekrar deneyin.` };
     }
 
-    // Fetch from a more stable TR financial API
+    // Fetch from TR financial API (Truncgil)
     const response = await fetch("https://finans.truncgil.com/today.json", {
       headers: {
         "User-Agent": "Mozilla/5.0",
@@ -80,6 +85,11 @@ export async function syncAllRates() {
         create: { shopId, key: "currency_last_refresh", value: now.toISOString() }
       }),
       prisma.setting.upsert({
+        where: { shopId_key: { shopId, key: "currency_last_update" } },
+        update: { value: now.toISOString() },
+        create: { shopId, key: "currency_last_update", value: now.toISOString() }
+      }),
+      prisma.setting.upsert({
         where: { shopId_key: { shopId, key: "currency_refresh_count" } },
         update: { value: (refreshCount + 1).toString() },
         create: { shopId, key: "currency_refresh_count", value: (refreshCount + 1).toString() }
@@ -107,6 +117,7 @@ export const getExchangeRates = async (shopId: string) => {
                 "exchange_rate_eur",
                 "exchange_rate_ga",
                 "currency_last_refresh",
+                "currency_last_update",
                 "currency_refresh_count"
               ]
             }
@@ -115,36 +126,44 @@ export const getExchangeRates = async (shopId: string) => {
 
         const now = new Date();
         const lastRefreshStr = settings.find(s => s.key === "currency_last_refresh")?.value;
+        const lastUpdateStr = settings.find(s => s.key === "currency_last_update")?.value;
+
         const lastRefresh = lastRefreshStr ? new Date(lastRefreshStr) : new Date(0);
+        const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
         const refreshCount = parseInt(settings.find(s => s.key === "currency_refresh_count")?.value || "0");
 
-        // Auto-sync if rates are older than 12 hours
-        if (settings.length === 0 || (now.getTime() - lastRefresh.getTime() > 12 * 60 * 60 * 1000)) {
+        // Auto-sync if rates are older than 2 hours or missing
+        const isMissing = !settings.find(s => s.key === "exchange_rate_usd");
+        if (isMissing || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000)) {
+          console.log(`[getExchangeRates] Auto-sync triggered for shop ${shopId}`);
           await syncAllRates().catch(() => { });
           settings = await prisma.setting.findMany({
-            where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_refresh", "currency_refresh_count"] } }
+            where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_refresh", "currency_last_update", "currency_refresh_count"] } }
           });
         }
 
-        const isLocked = (now.getTime() - lastRefresh.getTime() < 10 * 60 * 1000) && refreshCount >= 3;
+        const COOLDOWN_MS = 15 * 60 * 1000;
+        const isLocked = (now.getTime() - lastRefresh.getTime() < COOLDOWN_MS) && refreshCount >= 2;
 
         return {
           usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
           eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
           ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
           lastRefresh,
+          lastUpdate: lastUpdateStr ? new Date(lastUpdateStr) : lastRefresh,
           refreshCount,
           isLocked,
-          remainingMinutes: isLocked ? Math.ceil((10 * 60 * 1000 - (now.getTime() - lastRefresh.getTime())) / 60000) : 0
+          remainingMinutes: isLocked ? Math.ceil((COOLDOWN_MS - (now.getTime() - lastRefresh.getTime())) / 60000) : 0
         };
       } catch (error) {
-        return { usd: 1, eur: 1, ga: 1, lastRefresh: new Date(), refreshCount: 0, isLocked: false, remainingMinutes: 0 };
+        return { usd: 1, eur: 1, ga: 1, lastRefresh: new Date(), lastUpdate: new Date(), refreshCount: 0, isLocked: false, remainingMinutes: 0 };
       }
     },
     [`exchange-rates-${shopId}`],
-    { tags: [`rates-${shopId}`], revalidate: 3600 } // Cache for 1 hour by default
+    { tags: [`rates-${shopId}`], revalidate: 3600 }
   )();
 };
+
 
 // Keeping this for backward compatibility if used elsewhere, but updating it to use the new ga field
 export async function updateExchangeRates(rates: { usd: number; eur: number; ga?: number }) {
