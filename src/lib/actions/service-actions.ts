@@ -225,18 +225,42 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       const totalRevenue = Math.max(0, (partsTotal + laborTotal) - discountAmount);
 
       // Calculate and Increment Loyalty Points dynamically
-      let earnedPoints = 20; // Default fallback
+      let earnedPoints = 0;
       try {
         const settings = await getSettings();
         const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
         const loyaltyEnabled = config.loyalty_enabled !== "false";
 
-        if (loyaltyEnabled && totalRevenue > 0) {
-          const spendThreshold = Number(config.loyalty_service_spend_threshold) || 1000;
-          const pointsRate = Number(config.loyalty_service_points_earned) || 20;
-          earnedPoints = Math.floor((totalRevenue / spendThreshold) * pointsRate);
-        } else {
-          earnedPoints = 0;
+        if (loyaltyEnabled) {
+          // Find categories to exclude (Telefonlar and its subcategories)
+          const allCategories = await prisma.category.findMany({ where: { shopId } });
+          const telefonlarCat = allCategories.find(c => c.name.toLowerCase() === "telefonlar");
+
+          const excludedCategoryIds = new Set<string>();
+          if (telefonlarCat) {
+            excludedCategoryIds.add(telefonlarCat.id);
+            const findChildren = (parentId: string) => {
+              allCategories.filter(c => c.parentId === parentId).forEach(child => {
+                excludedCategoryIds.add(child.id);
+                findChildren(child.id);
+              });
+            };
+            findChildren(telefonlarCat.id);
+          }
+
+          // Calculate eligible revenue (filter out parts in excluded categories)
+          const eligiblePartsTotal = currentTicket.usedParts.reduce((acc, part) => {
+            const isExcluded = part.product.categoryId && excludedCategoryIds.has(part.product.categoryId);
+            return isExcluded ? acc : acc + (Number(part.unitPrice) * part.quantity);
+          }, 0);
+
+          const eligibleRevenue = Math.max(0, (eligiblePartsTotal + laborTotal) - discountAmount);
+
+          if (eligibleRevenue > 0) {
+            const spendThreshold = Number(config.loyalty_service_spend_threshold) || 1000;
+            const pointsRate = Number(config.loyalty_service_points_earned) || 20;
+            earnedPoints = Math.floor((eligibleRevenue / spendThreshold) * pointsRate);
+          }
         }
       } catch (err) {
         console.error("Loyalty calculation error:", err);

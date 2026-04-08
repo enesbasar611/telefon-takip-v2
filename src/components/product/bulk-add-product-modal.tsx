@@ -120,6 +120,31 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
     const savedRowCount = rows.filter(r => r._status === "saved").length;
     const errorCount = rows.filter(r => r._status === "error").length;
 
+    const categorySuggestions: Record<string, string> = {
+        "telefon": "Samsung S23 Ultra 2 adet, iPhone 15 Pro 128GB 3 adet, alış 35000 satış 42000 TL",
+        "ekran": "iPhone 11 asy ekran 5 adet, Samsung A54 orijinal ekran 3 adet, alış 450 satış 950 TL",
+        "batarya": "iPhone X deji batarya 10 adet, iPhone 11 yüksek kapasite 5 adet, alış 220 satış 480 TL",
+        "şarj": "Apple 20W Type-C hızlı şarj başlığı 20 adet, alış 135 satış 350 TL",
+        "kılıf": "iPhone 13-14-15 lansman kılıf karışık renklerden 50 adet, alış 40 satış 150 TL",
+        "aksesuar": "Airpod 3. nesil 5 adet, Watch 8 Ultra kordon 10 adet, alış 450 satış 850 TL"
+    };
+
+    const getDynamicSuggestions = () => {
+        const found = categories.filter(c => !c.parentId).map(c => {
+            const key = Object.keys(categorySuggestions).find(k => c.name.toLowerCase().includes(k));
+            if (key) return { id: c.id, name: c.name, text: categorySuggestions[key] };
+            return null;
+        }).filter(Boolean);
+
+        return found.length > 0 ? found : categories.slice(0, 4).map(c => ({
+            id: c.id,
+            name: c.name,
+            text: `${c.name} kategorisine uygun ürünler, 10 adet, alış 100 satış 200 TL`
+        }));
+    };
+
+    const dynamicSuggestions = getDynamicSuggestions();
+
     const EXAMPLES = [
         "Type-C 27W şarj aleti 10 adet, alış 85 satış 150 TL, Raf: B-3",
         "iPhone 11'den iPhone 15 Pro Max'e kadar tüm modellerin hayalet camı, 10'ar adet, alış 45 satış 95 TL",
@@ -175,9 +200,29 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                     {/* STEP 1: INPUT */}
                     {step === "input" && (
                         <div className="space-y-5">
+                            {/* Category-based Suggestions */}
+                            <div className="space-y-2">
+                                <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
+                                    <Layers className="h-3 w-3 text-violet-400" /> Kategori Bazlı Öneriler
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {dynamicSuggestions.map((s: any) => (
+                                        <Button
+                                            key={s.id}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setDescription(s.text)}
+                                            className="h-8 rounded-full bg-[#18181A] border-[#333] text-[11px]  hover:bg-violet-600/10 hover:border-violet-500/50 hover:text-violet-400 text-muted-foreground transition-all"
+                                        >
+                                            {s.name} Ekle
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Examples */}
                             <div className="space-y-2">
-                                <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest">✨ Örnek Açıklamalar</p>
+                                <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest">✨ Genel Örnekler</p>
                                 <div className="space-y-2">
                                     {EXAMPLES.map((ex, i) => (
                                         <button
