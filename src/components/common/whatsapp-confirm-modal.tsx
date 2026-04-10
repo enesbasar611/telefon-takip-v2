@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Smartphone, CheckCheck } from "lucide-react";
+import { Send, Smartphone, CheckCheck, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { sendWhatsAppAction, getWhatsAppStatusAction } from "@/lib/actions/data-management-actions";
 import { formatWhatsAppLink } from "@/lib/utils/notifications";
@@ -20,6 +20,25 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
     const [message, setMessage] = useState(initialMessage);
     const [isSending, setIsSending] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [isRefining, setIsRefining] = useState(false);
+
+    const handleRefine = async (tone: "professional" | "friendly" | "urgent") => {
+        setIsRefining(true);
+        try {
+            const { refineWhatsAppMessageWithAI } = await import("@/lib/actions/gemini-actions");
+            const result = await refineWhatsAppMessageWithAI(message, tone);
+            if (result.success) {
+                setMessage(result.refinedMessage);
+                toast({ title: "Mesaj Düzenlendi", description: "AI mesajı seçilen tonda yeniden yazdı." });
+            } else {
+                toast({ title: "Hata", description: result.error, variant: "destructive" });
+            }
+        } catch (error) {
+            console.error("Refine error:", error);
+        } finally {
+            setIsRefining(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -84,9 +103,38 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
                             placeholder="Mesajınızı yazın..."
                             autoFocus
                         />
-                        <div className="flex justify-end items-center gap-1 mt-1">
-                            <span className="text-[10px] text-black/40 dark:text-white/40">Şimdi</span>
-                            <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-black/5 dark:border-white/5">
+                            <div className="flex gap-1">
+                                <Button
+                                    onClick={() => handleRefine("professional")}
+                                    disabled={isRefining}
+                                    variant="ghost"
+                                    className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-[#00A884] gap-1.5 font-medium transition-all active:scale-95"
+                                >
+                                    {isRefining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                    Profesyonel
+                                </Button>
+                                <Button
+                                    onClick={() => handleRefine("friendly")}
+                                    disabled={isRefining}
+                                    variant="ghost"
+                                    className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-[#00A884] gap-1.5 font-medium transition-all active:scale-95"
+                                >
+                                    Samimi
+                                </Button>
+                                <Button
+                                    onClick={() => handleRefine("urgent")}
+                                    disabled={isRefining}
+                                    variant="ghost"
+                                    className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-red-500 gap-1.5 font-medium transition-all active:scale-95"
+                                >
+                                    Acil
+                                </Button>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-black/40 dark:text-white/40">Şimdi</span>
+                                <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
+                            </div>
                         </div>
                     </div>
                 </div>

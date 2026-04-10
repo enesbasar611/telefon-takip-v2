@@ -2,8 +2,13 @@
 
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Bell, Printer, CalendarClock, BarChart3, ShieldCheck, Zap, Loader2 } from "lucide-react";
+import { Bell, Printer, CalendarClock, BarChart3, ShieldCheck, Zap, Loader2, BrainCircuit, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { validateGeminiKeyAction } from "@/lib/actions/gemini-actions";
+import { useState } from "react";
 
 interface AutomationTabProps {
     formData: Record<string, string>;
@@ -72,6 +77,30 @@ const iconColorMap: Record<string, string> = {
 };
 
 export function AutomationTab({ formData, onChange, savingKeys }: AutomationTabProps) {
+    const [isValidating, setIsValidating] = useState(false);
+
+    const handleTestKey = async () => {
+        const key = formData["gemini_api_key"];
+        if (!key) {
+            toast.error("Lütfen önce bir API anahtarı girin.");
+            return;
+        }
+
+        setIsValidating(true);
+        try {
+            const res = await validateGeminiKeyAction(key);
+            if (res.success) {
+                toast.success(res.message);
+            } else {
+                toast.error(res.message);
+            }
+        } catch (error) {
+            toast.error("Doğrulama sırasında bir hata oluştu.");
+        } finally {
+            setIsValidating(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="space-y-1">
@@ -114,6 +143,53 @@ export function AutomationTab({ formData, onChange, savingKeys }: AutomationTabP
                         </div>
                     );
                 })}
+                {/* AI Configuration Section */}
+                <div className="pt-4 space-y-4">
+                    <div className="space-y-1">
+                        <Label className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                            <BrainCircuit className="w-4 h-4 text-purple-500" />
+                            BAŞAR AI Entegrasyonu
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground">
+                            Stok ekleme ve analiz özellikleri için Google Gemini API anahtarınızı buraya girin.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3 items-start">
+                        <div className="relative flex-1 group">
+                            <Input
+                                type="password"
+                                placeholder="AIzaSy..."
+                                value={formData["gemini_api_key"] || ""}
+                                onChange={(e) => onChange("gemini_api_key", e.target.value, false)}
+                                onBlur={(e) => onChange("gemini_api_key", e.target.value, true)}
+                                className="h-11 rounded-xl bg-white dark:bg-[#111] border-slate-200 dark:border-[#333] pr-10"
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                {savingKeys.has("gemini_api_key") && (
+                                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                                )}
+                                <Zap className={cn(
+                                    "w-4 h-4 transition-colors",
+                                    formData["gemini_api_key"] ? "text-amber-500" : "text-slate-300 dark:text-slate-700"
+                                )} />
+                            </div>
+                        </div>
+                        <Button
+                            onClick={handleTestKey}
+                            disabled={isValidating || !formData["gemini_api_key"]}
+                            variant="outline"
+                            className="h-11 px-4 rounded-xl border-slate-200 dark:border-[#333] hover:bg-slate-50 dark:hover:bg-white/5 gap-2 shrink-0 transition-all active:scale-95"
+                        >
+                            {isValidating ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            )}
+                            <span className="text-xs uppercase tracking-wider font-semibold">Test Et</span>
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );

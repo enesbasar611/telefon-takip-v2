@@ -22,7 +22,12 @@ export async function updateSetting(key: string, value: string, revalidate = tru
       update: { value },
       create: { key, value, shopId }
     });
-    if (revalidate) revalidatePath("/ayarlar");
+    if (revalidate) {
+      const { revalidateTag } = await import("next/cache");
+      revalidatePath("/ayarlar");
+      revalidateTag("settings");
+      revalidateTag(`settings-${shopId}`);
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ayar kaydedilemedi." };
@@ -40,7 +45,10 @@ export async function bulkUpdateSettings(settings: Record<string, string>) {
       })
     );
     await Promise.all(promises);
+    const { revalidateTag } = await import("next/cache");
     revalidatePath("/ayarlar");
+    revalidateTag("settings");
+    revalidateTag(`settings-${shopId}`);
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ayarlar güncellenirken hata oluştu." };

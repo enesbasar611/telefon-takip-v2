@@ -238,7 +238,8 @@ export async function fullResetAction(): Promise<{ success: boolean; deleted: Re
                     NOT: {
                         OR: [
                             { key: { startsWith: "whatsapp" } },
-                            { key: { startsWith: "WhatsApp" } }
+                            { key: { startsWith: "WhatsApp" } },
+                            { key: "gemini_api_key" }
                         ]
                     }
                 }

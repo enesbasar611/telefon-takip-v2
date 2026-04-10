@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, User, Smartphone, Hash, AlertCircle, Banknote, SmartphoneIcon } from "lucide-react";
+import { PlusCircle, Loader2, User, Smartphone, Hash, AlertCircle, Banknote, SmartphoneIcon, Sparkles } from "lucide-react";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,8 @@ interface CreateServiceModalProps {
 export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isDiagnosticPending, setIsDiagnosticPending] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
   const [phoneValue, setPhoneValue] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<any>(null);
@@ -81,6 +83,74 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
       customerEmail: "",
     }
   });
+
+  const deviceModel = watch("deviceModel");
+  const problemDesc = watch("problemDesc");
+
+  const handleAIDiagnosis = async () => {
+    if (!problemDesc) {
+      toast({
+        title: "Hata",
+        description: "Lütfen önce bir arıza açıklaması girin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDiagnosticPending(true);
+    try {
+      const { parseServiceDiagnosticWithAI } = await import("@/lib/actions/gemini-actions");
+      const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel);
+
+      if (result.success) {
+        setDiagnosticResult(result.data);
+        // Automatically fill estimated cost
+        setValue("estimatedCost", String(result.data.estimatedTotalPrice));
+        toast({
+          title: "AI Analizi Hazır",
+          description: "Arıza teşhisi ve tahmini maliyet oluşturuldu.",
+        });
+      } else {
+        toast({
+          title: "AI Hatası",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("AI Diagnosis error:", error);
+    } finally {
+      setIsDiagnosticPending(false);
+    }
+  };
+
+  const onSubmit = async (data: ServiceFormValues) => {
+    startTransition(async () => {
+      const result = await createServiceTicket({
+        ...data,
+        estimatedCost: Number(data.estimatedCost),
+      });
+
+      if (result.success) {
+        toast({
+          title: "Başarılı",
+          description: "Servis kaydı başarıyla oluşturuldu.",
+        });
+        setCreatedTicket(result.data);
+        setShowReceipt(true);
+        setOpen(false);
+        reset();
+        setDiagnosticResult(null);
+        router.refresh();
+      } else {
+        toast({
+          title: "Hata",
+          description: result.error || "Kayıt oluşturulurken bir hata oluştu.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
 
   // Auto-lookup customer when phone is entered
   useEffect(() => {
@@ -113,33 +183,6 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
     return () => clearTimeout(timeoutId);
   }, [phoneValue, setValue, toast]);
 
-  const onSubmit = async (data: ServiceFormValues) => {
-    startTransition(async () => {
-      const result = await createServiceTicket({
-        ...data,
-        estimatedCost: Number(data.estimatedCost),
-      });
-
-      if (result.success) {
-        toast({
-          title: "Başarılı",
-          description: "Servis kaydı başarıyla oluşturuldu.",
-        });
-        setCreatedTicket(result.data);
-        setShowReceipt(true);
-        setOpen(false);
-        reset();
-        router.refresh();
-      } else {
-        toast({
-          title: "Hata",
-          description: result.error || "Kayıt oluşturulurken bir hata oluştu.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -150,7 +193,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+      <DialogContent className="sm:max-w-[700px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-8 bg-card/50 border-b border-border/50">
             <DialogHeader>
@@ -161,7 +204,7 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
             </DialogHeader>
           </div>
 
-          <div className="p-8 space-y-8">
+          <div className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="customerName" className="font-medium text-xs  text-muted-foreground">Müşteri Ad Soyad</Label>
@@ -185,15 +228,6 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
               />
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="customerEmail" className="font-medium text-xs  text-muted-foreground">E-Posta Adresi (İsteğe Bağlı)</Label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="customerEmail" type="email" {...register("customerEmail")} placeholder="ornek@mail.com" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
-              </div>
-              {errors.customerEmail && <p className="text-[10px] text-red-500  ml-1">{errors.customerEmail.message}</p>}
-            </div>
-
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="deviceBrand" className="font-medium text-xs  text-muted-foreground">Cihaz Markası</Label>
@@ -210,6 +244,72 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                 {errors.deviceModel && <p className="text-[10px] text-red-500  ml-1">{errors.deviceModel.message}</p>}
               </div>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="problemDesc" className="font-medium text-xs  text-muted-foreground">Arıza Tanımı</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px]"
+                  onClick={handleAIDiagnosis}
+                  disabled={isDiagnosticPending}
+                >
+                  {isDiagnosticPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  BAŞAR AI ile Analiz Et
+                </Button>
+              </div>
+              <div className="relative group">
+                <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
+                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
+              </div>
+              {errors.problemDesc && <p className="text-[10px] text-red-500  ml-1">{errors.problemDesc.message}</p>}
+            </div>
+
+            {diagnosticResult && (
+              <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-xs font-semibold">AI Ön Teşhis Raporu</span>
+                  <div className="ml-auto px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold">
+                    Risk: {diagnosticResult.riskLevel}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Olası Nedenler</span>
+                    <ul className="text-[11px] text-blue-900 list-disc list-inside">
+                      {diagnosticResult.possibleCauses.slice(0, 2).map((cause: string, i: number) => (
+                        <li key={i}>{cause}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Önerilen Parçalar</span>
+                    <div className="flex flex-wrap gap-1">
+                      {diagnosticResult.suggestedParts.map((part: any, i: number) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded-md bg-white border border-blue-100 text-[10px] text-blue-800">
+                          {part.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-blue-100/50">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-medium text-blue-600/70">TAHMİNİ SÜRE</span>
+                    <span className="text-xs font-bold text-blue-900">{diagnosticResult.repairTimeRange}</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] font-medium text-blue-600/70">ÖNERİLEN TOPLAM</span>
+                    <span className="text-lg font-black text-emerald-600 tabular-nums">{formatCurrency(diagnosticResult.estimatedTotalPrice)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
@@ -228,19 +328,10 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
                   value={watch("estimatedCost")}
                   onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
                   placeholder="0,00"
-                  className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500"
+                  className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500 font-bold"
                 />
                 {errors.estimatedCost && <p className="text-[10px] text-red-500  ml-1">{errors.estimatedCost.message}</p>}
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="problemDesc" className="font-medium text-xs  text-muted-foreground">Arıza Tanımı</Label>
-              <div className="relative group">
-                <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
-                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
-              </div>
-              {errors.problemDesc && <p className="text-[10px] text-red-500  ml-1">{errors.problemDesc.message}</p>}
             </div>
           </div>
 

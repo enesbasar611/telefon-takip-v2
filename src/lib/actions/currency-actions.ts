@@ -5,9 +5,9 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
-export async function syncAllRates() {
+export async function syncAllRates(providedShopId?: string) {
   try {
-    const shopId = await getShopId();
+    const shopId = providedShopId || await getShopId();
     // Verify shop exists
     const shop = await prisma.shop.findUnique({ where: { id: shopId } });
     if (!shop) {
@@ -132,11 +132,12 @@ export const getExchangeRates = async (shopId: string) => {
         const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
         const refreshCount = parseInt(settings.find(s => s.key === "currency_refresh_count")?.value || "0");
 
-        // Auto-sync if rates are older than 2 hours or missing
+        // Auto-sync check
         const isMissing = !settings.find(s => s.key === "exchange_rate_usd");
         if (isMissing || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000)) {
-          console.log(`[getExchangeRates] Auto-sync triggered for shop ${shopId}`);
-          await syncAllRates().catch(() => { });
+          // IMPORTANT: syncAllRates MUST be called with shopId passed in 
+          // because unstable_cache doesn't allow headers() (via getShopId()) inside it.
+          await syncAllRates(shopId).catch(() => { });
           settings = await prisma.setting.findMany({
             where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_refresh", "currency_last_update", "currency_refresh_count"] } }
           });

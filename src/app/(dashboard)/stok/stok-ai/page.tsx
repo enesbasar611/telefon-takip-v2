@@ -38,6 +38,27 @@ export default function StockAIPage() {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+    // Deep Analysis State
+    const [deepAnalysis, setDeepAnalysis] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const handleDeepAnalysis = async () => {
+        setIsAnalyzing(true);
+        try {
+            const { getSmartAIStockAnalysis } = await import("@/lib/actions/gemini-actions");
+            const res = await getSmartAIStockAnalysis();
+            if (res.success) {
+                setDeepAnalysis(res.analysis);
+            } else {
+                toast.error(res.error);
+            }
+        } catch (error) {
+            toast.error("Stratejik rapor oluşturulamadı.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     const fetchAlerts = async () => {
         setLoading(true);
         const data = await getAIAlerts();
@@ -303,6 +324,31 @@ export default function StockAIPage() {
                         </CardContent>
                     </Card>
 
+                    {/* Deep Analysis Result Card */}
+                    {deepAnalysis && (
+                        <Card className="rounded-[2.5rem] bg-white/[0.02] border-blue-500/20 shadow-[0_20px_40px_rgba(37,99,235,0.1)] overflow-hidden animate-in slide-in-from-bottom duration-700">
+                            <CardHeader className="p-8 border-b border-border/50 bg-blue-600/[0.03]">
+                                <CardTitle className="font-medium text-sm text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4" /> BAŞAR AI STRATEJİK RAPOR
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                                <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+                                    {deepAnalysis}
+                                </div>
+                                <div className="mt-8 pt-6 border-t border-border/50">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setDeepAnalysis(null)}
+                                        className="rounded-xl h-10 px-6 text-[10px] uppercase tracking-widest border-border/50 hover:bg-white/5"
+                                    >
+                                        Raporu Kapat
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <Card className="rounded-[2.5rem] bg-white/[0.01] border border-border/50 overflow-hidden">
                         <CardHeader className="p-8 border-b border-border/50">
                             <CardTitle className="font-medium text-sm  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
@@ -310,6 +356,22 @@ export default function StockAIPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 space-y-4">
+                            {!deepAnalysis && (
+                                <>
+                                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
+                                        Daha derin bir analiz ve gelecek 15 gün için öngörü raporu almak ister misiniz?
+                                    </p>
+                                    <Button
+                                        onClick={handleDeepAnalysis}
+                                        disabled={isAnalyzing}
+                                        className="w-full rounded-2xl h-12 bg-white/5 border border-border/50 hover:bg-white/10 text-white text-[10px] uppercase tracking-widest gap-2"
+                                    >
+                                        {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4 text-blue-500" />}
+                                        DERİN STRATEJİK ANALİZ BAŞLAT
+                                    </Button>
+                                    <div className="h-px bg-border/50 my-2" />
+                                </>
+                            )}
                             <div className="flex justify-between items-center text-[10px]  text-muted-foreground/80 uppercase tracking-widest">
                                 <span>BİLDİRİM SÜRESİ</span>
                                 <span className="text-white">48 SAAT (2 GÜN)</span>
@@ -335,7 +397,7 @@ export default function StockAIPage() {
                     fetchAlerts();
                 }}
             />
-        </div>
+        </div >
     );
 }
 
