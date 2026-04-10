@@ -70,9 +70,9 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                 </TabsList>
             </Tabs>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div key={activeType} className="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-in fade-in duration-500 fill-mode-both">
                 {/* Configuration Form */}
-                <div className="space-y-8 animate-in fade-in duration-1000">
+                <div className="space-y-8">
                     <div className="bg-white dark:bg-card/40 p-10 rounded-[2.5rem] border border-slate-200 dark:border-border/50 space-y-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                             {activeType === "pos" ? <ShoppingCart className="h-32 w-32 text-blue-500 rotate-12" /> :
@@ -86,7 +86,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                                     <div className="h-6 w-1 bg-blue-500 rounded-full" />
                                     <h2 className="font-bold text-xl text-slate-900 dark:text-white">ÜST BİLGİ ALANI</h2>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground tracking-wider font-bold">FİRMA ÜNVANI VE SLOGAN YAPILANDIRMASI</p>
+                                <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground tracking-wider font-bold">FİRMA ÜNVANI VE SLOGAN YAPILANDURMASI</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -171,7 +171,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                 </div>
 
                 {/* Live Preview Section */}
-                <div className="space-y-8 animate-in fade-in duration-1000 delay-200">
+                <div className="space-y-8">
                     <div className="sticky top-8 space-y-6">
                         <div className="flex items-center justify-between px-4">
                             <div className="flex items-center gap-3">

@@ -38,8 +38,10 @@ import {
   Building2,
   UserCircle,
   Star,
-  StickyNote
+  StickyNote,
+  UserPlus
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
 
@@ -119,33 +121,34 @@ export default function NewCustomerPage() {
   }
 
   return (
-    <div className="p-6 bg-background text-white min-h-screen">
+    <div className="animate-in fade-in duration-500 pb-20">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-medium text-3xl ">Yeni Müşteri Kaydı</h1>
-              <p className="text-gray-500 text-sm mt-1">Sistem için yeni bir teknik servis ortağı veya bireysel müşteri tanımlayın.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-gray-400 hover:text-white"
-                onClick={() => router.back()}
-              >
-                İptal
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8  flex gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {loading ? "Kaydediliyor..." : "Kaydet"}
-              </Button>
-            </div>
-          </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+          <PageHeader
+            title="Yeni Müşteri Kaydı"
+            description="Sistem için yeni bir teknik servis ortağı veya bireysel müşteri tanımlayın."
+            icon={UserPlus}
+            actions={
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground rounded-xl"
+                  onClick={() => router.back()}
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl flex gap-2 shadow-lg shadow-blue-500/20"
+                >
+                  <Save className="h-4 w-4" />
+                  {loading ? "Kaydediliyor..." : "Kaydet"}
+                </Button>
+              </div>
+            }
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">

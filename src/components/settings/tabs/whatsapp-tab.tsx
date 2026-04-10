@@ -230,7 +230,7 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
                             </div>
 
                             {!isConnected && statusData.error && (
-                                <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex gap-4 animate-in slide-in-from-top-2 duration-500 mb-4">
+                                <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex gap-4 animate-in fade-in duration-500 mb-4">
                                     <WifiOff className="h-5 w-5 text-rose-500 shrink-0" />
                                     <div className="space-y-1">
                                         <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Bağlantı Sorunu</h4>

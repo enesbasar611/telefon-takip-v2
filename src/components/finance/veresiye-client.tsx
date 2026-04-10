@@ -28,6 +28,7 @@ import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from 'xlsx';
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 
 import {
     Card,
@@ -273,34 +274,29 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts = [] }: Ver
     };
 
     return (
-        <div className="min-h-screen bg-transparent p-4 md:p-12 space-y-12 pb-40 font-sans">
-            {/* --- Premium Header Section --- */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-2">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-4">
-                        <div className="p-4 bg-indigo-500/10 rounded-[1.5rem] border border-indigo-500/20 shadow-[0_0_40px_rgba(99,102,241,0.1)]">
-                            <CreditCard className="w-8 h-8 text-indigo-500" />
-                        </div>
-                        <div>
-                            <h1 className="font-medium text-4xl lg:text-5xl  text-white uppercase">Veresiye Terminali</h1>
-                            <div className="flex items-center gap-2 mt-2">
-                                <Badge className="bg-indigo-500/10 text-indigo-400 border-none px-3 py-1  text-[9px] uppercase">FİNANSAL DENETİM</Badge>
-                                <span className="text-muted-foreground/80  text-[10px]">Dükkan alacak takibi ve analiz merkezi</span>
-                            </div>
-                        </div>
+        <div className="animate-in fade-in duration-700 space-y-12">
+            <PageHeader
+                title="Veresiye Terminali"
+                description="Dükkan alacak takibi, geciken ödemeler ve finansal risk analizi merkezi."
+                icon={CreditCard}
+                iconColor="text-indigo-500"
+                iconBgColor="bg-indigo-500/10"
+                badge={
+                    <div className="flex items-center gap-2">
+                        <Badge className="bg-indigo-500/10 text-indigo-400 border-none px-3 py-1 text-[9px] uppercase font-bold tracking-widest">FİNANSAL DENETİM</Badge>
                     </div>
-                </div>
-                <div className="flex items-center gap-4">
+                }
+                actions={
                     <Button
                         onClick={exportToExcel}
                         variant="ghost"
-                        className="h-14 px-8 rounded-2xl bg-white/5 border border-border shadow-2xl gap-3  text-xs hover:bg-white/10 transition-all text-white"
+                        className="h-12 px-6 rounded-xl bg-white/5 border border-border/40 shadow-xl gap-2 text-xs hover:bg-white/10 transition-all text-white"
                     >
                         <Download className="w-4 h-4 text-indigo-400" />
                         Tabloyu İndir
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             {/* --- Stats Row with Premium Accents --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

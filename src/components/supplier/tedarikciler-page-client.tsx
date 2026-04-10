@@ -54,6 +54,7 @@ const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
     ORDERED: { label: "Sipariş Verildi", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
 };
 
+import { PageHeader } from "@/components/ui/page-header";
 import { SupplierProfile } from "./supplier-profile";
 import { PurchaseForm } from "./purchase-form";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
@@ -136,48 +137,52 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
     }));
 
     return (
-        <div className="flex flex-col gap-8">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <p className="text-[10px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">Operasyonel Genel Bakış</p>
-                    <h1 className="font-medium text-3xl  text-foreground tracking-tight">Tedarikçi &amp; Satın Alma</h1>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap justify-end">
-                    {/* Supplier Order Lists Button with badge */}
-                    <Button
-                        variant="outline"
-                        onClick={() => setIsOrderPanelOpen(true)}
-                        className="relative h-10 px-4 rounded-xl  text-xs gap-2 border-border hover:bg-white/5"
-                    >
-                        <ShoppingBasket className="h-4 w-4" />
-                        Sipariş Listeleri
-                        {totalItemCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-blue-600 text-[9px]  text-white flex items-center justify-center border-2 border-background">
-                                {totalItemCount}
-                            </span>
-                        )}
-                    </Button>
-                    <Button
-                        onClick={() => setIsAnalysisOpen(true)}
-                        className={cn(
-                            "h-10 px-4 rounded-xl  text-xs gap-2 transition-all",
-                            hasCritical
-                                ? "bg-rose-600/10 border border-rose-500/30 text-rose-400 hover:bg-rose-600/20"
-                                : "bg-white/5 border border-border text-foreground hover:bg-white/10"
-                        )}
-                    >
-                        <Brain className="h-4 w-4" />
-                        Tedarik Analizi
-                        {totalUrgent > 0 && (
-                            <Badge className="bg-rose-500/20 text-rose-400 border-none text-[9px]  px-1.5 py-0 ml-1">
-                                {totalUrgent}
-                            </Badge>
-                        )}
-                    </Button>
-                    <CreateSupplierModal />
-                </div>
-            </div>
+        <div className="flex flex-col gap-10 animate-in fade-in duration-700">
+            <PageHeader
+                title="Tedarikçi & Satın Alma"
+                description="Operasyonel genel bakış, tedarikçi yönetimi ve satın alma süreçleri."
+                icon={Truck}
+                badge={
+                    <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1 text-[9px] uppercase font-bold tracking-widest">OPERASYONEL</Badge>
+                    </div>
+                }
+                actions={
+                    <div className="flex items-center gap-3 flex-wrap justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsOrderPanelOpen(true)}
+                            className="relative h-12 px-6 rounded-xl text-xs gap-3 border-border/40 hover:bg-white/5 shadow-xl"
+                        >
+                            <ShoppingBasket className="h-5 w-5" />
+                            Sipariş Listeleri
+                            {totalItemCount > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-blue-600 text-[10px] text-white flex items-center justify-center border-2 border-background font-bold shadow-lg">
+                                    {totalItemCount}
+                                </span>
+                            )}
+                        </Button>
+                        <Button
+                            onClick={() => setIsAnalysisOpen(true)}
+                            className={cn(
+                                "h-12 px-6 rounded-xl text-xs gap-3 transition-all shadow-xl",
+                                hasCritical
+                                    ? "bg-rose-600/10 border border-rose-500/30 text-rose-400 hover:bg-rose-600/20"
+                                    : "bg-white/5 border border-border/40 text-foreground hover:bg-white/10"
+                            )}
+                        >
+                            <Brain className="h-5 w-5" />
+                            Tedarik Analizi
+                            {totalUrgent > 0 && (
+                                <Badge className="bg-rose-500/20 text-rose-400 border-none text-[10px] px-2 py-0.5 ml-1 font-bold">
+                                    {totalUrgent}
+                                </Badge>
+                            )}
+                        </Button>
+                        <CreateSupplierModal />
+                    </div>
+                }
+            />
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

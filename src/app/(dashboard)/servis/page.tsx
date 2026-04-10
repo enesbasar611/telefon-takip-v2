@@ -20,7 +20,7 @@ export default async function ServisMerkeziPage() {
   const assetLabel = getIndustryLabel(shop, "customerAsset");
 
   return (
-    <div className="flex flex-col gap-8 bg-background text-foreground min-h-screen lg:p-14 p-8 animate-in fade-in duration-500 pb-20">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-500 pb-20">
 
       <PageHeader
         title={`${serviceLabel} Merkezi`}

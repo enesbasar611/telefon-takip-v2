@@ -59,7 +59,8 @@ export const authOptions: NextAuthOptions = {
         })
     ],
     callbacks: {
-        async jwt({ token, user, trigger, session }: any) {
+        async jwt({ token, user, account, trigger, session }: any) {
+            // Initial sign in
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -70,13 +71,19 @@ export const authOptions: NextAuthOptions = {
                 token.canFinance = user.canFinance;
             }
 
-            // Recovery: If shopId is missing in token, check DB
-            if (token.id && !token.shopId) {
+            if (account) {
+                token.provider = account.provider;
+                token.accessToken = account.access_token;
+            }
+
+            // Real-time synchronization: Check DB to ensure user is still active and roles are current
+            // This prevents "ghost sessions" for deleted or updated users
+            if (token.id) {
                 const dbUser = await prisma.user.findUnique({
                     where: { id: token.id },
                     select: {
+                        id: true,
                         shopId: true,
-                        shop: { select: { name: true } },
                         role: true,
                         canSell: true,
                         canService: true,
@@ -85,14 +92,18 @@ export const authOptions: NextAuthOptions = {
                     }
                 });
 
-                if (dbUser?.shopId) {
-                    token.shopId = dbUser.shopId;
-                    token.role = dbUser.role;
-                    token.canSell = dbUser.canSell;
-                    token.canService = dbUser.canService;
-                    token.canStock = dbUser.canStock;
-                    token.canFinance = dbUser.canFinance;
+                // Force logout if user no longer exists
+                if (!dbUser) {
+                    return null as any;
                 }
+
+                // Always sync critical fields from DB to ensure permissions are real-time
+                token.shopId = dbUser.shopId;
+                token.role = dbUser.role;
+                token.canSell = dbUser.canSell;
+                token.canService = dbUser.canService;
+                token.canStock = dbUser.canStock;
+                token.canFinance = dbUser.canFinance;
             }
 
             if (trigger === "update" && session) {

@@ -36,7 +36,7 @@ export function NotificationSidebar({
         <div className="flex flex-col gap-5 w-full lg:w-[320px] shrink-0">
             {/* Garanti Bitiş Uyarısı Widget */}
             {warrantyAlerts.length > 0 && (
-                <div className="bg-gradient-to-br from-slate-800 to-slate-950 rounded-2xl p-5 border border-border shadow-xl relative overflow-hidden group">
+                <div className="bg-slate-900/50 dark:bg-black/40 backdrop-blur-3xl rounded-2xl p-5 border border-white/10 shadow-xl relative overflow-hidden group">
                     <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
 
                     <div className="flex items-center justify-between mb-3 relative z-10">
@@ -66,7 +66,7 @@ export function NotificationSidebar({
             )}
 
             {/* Onay Bekleyenler & Gecikmiş Servis Widget */}
-            <div className="bg-white/[0.02] border border-border/50 rounded-2xl p-5 relative overflow-hidden">
+            <div className="bg-white/[0.03] dark:bg-black/20 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
 
                 <div className="flex items-center justify-between mb-5 relative z-10">
@@ -83,7 +83,7 @@ export function NotificationSidebar({
                         <p className="text-xs text-muted-foreground/80 font-medium">Şu an bekleyen işlem yok.</p>
                     ) : (
                         pendingApprovals.slice(0, 3).map((pending: SystemNotification) => (
-                            <div key={pending.id} className="flex gap-3 animate-in fade-in slide-in-from-right-2 duration-500">
+                            <div key={pending.id} className="flex gap-3 animate-in fade-in duration-500">
                                 <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border/50 relative group/avatar">
                                     <User className="h-4 w-4 text-muted-foreground group-hover/avatar:text-blue-400 transition-colors" />
                                     <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-[#0B1120] flex items-center justify-center">
@@ -154,7 +154,7 @@ export function NotificationSidebar({
             {/* Cihaz Takibi Widget - Real Data */}
             <div
                 onClick={() => router.push('/servis')}
-                className="bg-gradient-to-t from-slate-900 to-slate-850 rounded-2xl p-5 border border-border/50 relative overflow-hidden group hover:border-border transition-all cursor-pointer"
+                className="bg-slate-900/30 dark:bg-black/20 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:bg-white/5 transition-all cursor-pointer"
             >
                 <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
                 <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">

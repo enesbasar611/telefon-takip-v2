@@ -33,22 +33,26 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                 } as any
             });
 
-            // SYNC TO RECEIPTS
-            await prisma.receiptSettings.upsert({
-                where: { id: shop.id },
-                update: {
-                    title: data.name.toUpperCase(),
-                    phone: data.phone || "",
-                    address: data.address || "",
-                },
-                create: {
-                    id: shop.id,
-                    shopId: shop.id,
-                    title: data.name.toUpperCase(),
-                    phone: data.phone || "",
-                    address: data.address || "",
-                }
-            });
+            // SYNC TO RECEIPTS FOR ALL TYPES
+            const receiptTypes = ['pos', 'service', 'stock'];
+            for (const rType of receiptTypes) {
+                await prisma.receiptSettings.upsert({
+                    where: { id: `${shop.id}_${rType}` },
+                    update: {
+                        title: data.name.toUpperCase(),
+                        phone: data.phone || "",
+                        address: data.address || "",
+                    },
+                    create: {
+                        id: `${shop.id}_${rType}`,
+                        shopId: shop.id,
+                        title: data.name.toUpperCase(),
+                        phone: data.phone || "",
+                        address: data.address || "",
+                        subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
+                    }
+                });
+            }
 
             return { success: true, shopId: shop.id, shopName: shop.name };
         }
@@ -66,14 +70,16 @@ export async function createShopOnboarding(data: { name: string; industry: strin
         });
 
         // SYNC TO RECEIPTS
-        await prisma.receiptSettings.create({
-            data: {
-                id: shop.id,
+        const receiptTypes = ['pos', 'service', 'stock'];
+        await prisma.receiptSettings.createMany({
+            data: receiptTypes.map(rType => ({
+                id: `${shop.id}_${rType}`,
                 shopId: shop.id,
                 title: data.name.toUpperCase(),
                 phone: data.phone || "",
                 address: data.address || "",
-            }
+                subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
+            }))
         });
 
         return { success: true, shopId: shop.id, shopName: shop.name };

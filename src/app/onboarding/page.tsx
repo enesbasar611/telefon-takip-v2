@@ -76,9 +76,12 @@ const INDUSTRIES = [
     { value: "DIGER", label: "Diğer (Kendi Yazacağım)" },
 ];
 
+import { useSession } from "next-auth/react";
+
 export default function OnboardingPage() {
     const router = useRouter();
-    const [step, setStep] = useState<"setup" | "analysis" | "integrations" | "finance" | "success">("setup");
+    const { update: updateSession } = useSession(); // Access update to refresh JWT
+    const [step, setStep] = useState<Step>("setup");
     const [loading, setLoading] = useState(false);
     const [shopId, setShopId] = useState<string | null>(null);
     const [showApiGuide, setShowApiGuide] = useState(false);
@@ -117,17 +120,8 @@ export default function OnboardingPage() {
 
                 // Restore step if possible, or trigger analysis
                 const savedStep = sessionStorage.getItem("onboarding_step");
-                if (savedStep && ["analysis", "integrations", "finance", "success"].includes(savedStep)) {
+                if (savedStep && ["setup", "analysis", "integrations", "finance", "success"].includes(savedStep)) {
                     setStep(savedStep as any);
-                } else if (existingShop.industry && step === "setup") {
-                    setLoading(true);
-                    const aiRes = await getOnboardingAIAnalysis(existingShop.industry);
-                    if (aiRes.success) {
-                        setAiAnalysis(aiRes.data);
-                        setSelectedModules(aiRes.data.suggestedModules || selectedModules);
-                    }
-                    setStep("analysis");
-                    setLoading(false);
                 }
             }
         };
@@ -191,6 +185,9 @@ export default function OnboardingPage() {
 
             if (res.success && res.shopId) {
                 setShopId(res.shopId);
+                // REFRESH SESSION: This adds the new shopId to the JWT so middleware doesn't redirect back to /onboarding
+                await updateSession({ shopId: res.shopId });
+
                 const aiRes = await getOnboardingAIAnalysis(sector);
                 if (aiRes.success) {
                     setAiAnalysis(aiRes.data);
@@ -238,6 +235,8 @@ export default function OnboardingPage() {
             if (resFin.success) {
                 const res = await finishOnboarding();
                 if (res.success) {
+                    // FINAL SESSION REFRESH: Marks isFirstLogin as false (in DB)
+                    await updateSession();
                     sessionStorage.setItem("just_finished_onboarding", "true");
                     setStep("success");
                 } else {

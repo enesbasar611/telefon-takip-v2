@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, PlusCircle } from "lucide-react";
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -39,33 +40,31 @@ function HistorySkeleton() {
 
 export default async function KasaRaporuPage() {
     return (
-        <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8 animate-in fade-in duration-700">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="flex items-center gap-6">
-                    <div className="h-16 w-16 rounded-[1.5rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
-                        <Wallet className="h-8 w-8 text-indigo-500" />
+        <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
+            <PageHeader
+                title="Kasa & Finans"
+                description="Nakit akışını, günlük raporları ve finansal seansları tek bir merkezden yönetin."
+                icon={Wallet}
+                iconColor="text-indigo-500"
+                iconBgColor="bg-indigo-500/10"
+                badge={
+                    <div className="flex items-center gap-4">
+                        <Suspense fallback={<Skeleton className="h-10 w-48 rounded-full" />}>
+                            <DailySessionStream />
+                        </Suspense>
                     </div>
-                    <div>
-                        <h1 className="font-medium text-5xl font-extrabold text-foreground tracking-tight font-sans">Kasa & Finans</h1>
-                        <p className="text-sm text-muted-foreground/80  mt-1 uppercase tracking-widest">NAKİT AKIŞI VE GÜNLÜK RAPOR</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
+                }
+                actions={
                     <CreateTransactionModal
                         trigger={
-                            <Button className="h-16 rounded-[1.5rem] px-8 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white  text-xs tracking-widest gap-4 group transition-all">
-                                <PlusCircle className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />
+                            <Button className="h-12 rounded-xl px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-xs tracking-widest gap-2 group transition-all">
+                                <PlusCircle className="h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
                                 GELİR / GİDER EKLE
                             </Button>
                         }
                     />
-
-                    <Suspense fallback={<Skeleton className="h-16 w-64 rounded-[1.5rem]" />}>
-                        <DailySessionStream />
-                    </Suspense>
-                </div>
-            </div>
+                }
+            />
 
             <div className="grid grid-cols-1 gap-10">
                 <Suspense fallback={<SummarySkeleton />}>

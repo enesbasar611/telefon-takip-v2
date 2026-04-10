@@ -48,6 +48,8 @@ import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { Wrench } from "lucide-react";
 
 const MAX_PHOTOS = 6;
 const MAX_SIZE_MB = 3;
@@ -521,13 +523,13 @@ export default function NewServicePage() {
   );
 
   return (
-    <main className="min-h-screen relative pb-32">
-      <div className="py-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1.5">{getIndustryLabel(shop, "serviceTicket")} İşlemleri</p>
-          <h2 className="font-medium text-2xl font-semibold text-foreground tracking-tight">Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı</h2>
-        </div>
+    <div className="pb-32 animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto">
+        <PageHeader
+          title={`Yeni ${getIndustryLabel(shop, "serviceTicket")} Kaydı`}
+          description={`${getIndustryLabel(shop, "serviceTicket")} işlemlerini başlatmak için gerekli bilgileri doldurun.`}
+          icon={Wrench}
+        />
 
         <form
           id="new-service-form"
@@ -996,7 +998,7 @@ export default function NewServicePage() {
         </Dialog>
 
       </div>
-    </main>
+    </div>
   );
 }
 

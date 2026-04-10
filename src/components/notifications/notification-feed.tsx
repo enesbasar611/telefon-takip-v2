@@ -159,7 +159,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
     };
 
     return (
-        <div className="flex-1 w-full max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 w-full max-w-3xl mx-auto space-y-8 animate-in fade-in duration-700">
             {showReminders ? (
                 <ReminderManagement onBack={() => setShowReminders(false)} />
             ) : (
@@ -231,7 +231,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                     {/* Feed List */}
                     <div className="space-y-2.5">
                         {notifications.length === 0 && !isLoading ? (
-                            <div className="py-24 flex flex-col items-center justify-center text-center space-y-4 matte-card rounded-3xl border-border/50 bg-white/[0.01]">
+                            <div className="py-24 flex flex-col items-center justify-center text-center space-y-4 rounded-3xl border border-white/5 bg-white/[0.02]">
                                 <div className="h-16 w-16 rounded-full bg-card flex items-center justify-center relative">
                                     <Bell className="h-6 w-6 text-slate-700" />
                                     <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full" />
@@ -250,8 +250,8 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                         style={{ animationDelay: `${idx * 40}ms` }}
                                         onClick={() => handleAction(n)}
                                         className={cn(
-                                            "group relative p-4 matte-card rounded-2xl border border-border/50 bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer overflow-hidden animate-in slide-in-from-bottom-2 duration-500",
-                                            !n.isRead && "border-blue-500/20 bg-blue-500/[0.02]",
+                                            "group relative p-4 rounded-2xl border border-white/5 bg-white/[0.03] dark:bg-black/20 hover:bg-white/10 dark:hover:bg-white/5 transition-all cursor-pointer overflow-hidden animate-in fade-in duration-500",
+                                            !n.isRead && "border-blue-500/30 bg-blue-500/[0.03]",
                                             "hover:translate-x-1"
                                         )}
                                     >

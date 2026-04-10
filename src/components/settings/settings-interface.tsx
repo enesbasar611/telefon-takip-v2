@@ -18,6 +18,7 @@ import { ShopTab } from "./tabs/shop-tab";
 import { ModulesTab } from "./tabs/modules-tab";
 import { FormsTab } from "./tabs/forms-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface SettingsProps {
   initialSettings: any[];
@@ -119,15 +120,11 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
     <div className="flex flex-col gap-8 pb-24">
       {/* Page Header ... (lines 73-138) */}
       {/* ... skipping header ... */}
-      <div className="flex items-center gap-5">
-        <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-          <SettingsIcon className="h-7 w-7 text-blue-500" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Sistem Ayarları</h1>
-          <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground">Platform parametrelerini ve işletme tercihlerini yönetin.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Sistem Ayarları"
+        description="Platform parametrelerini ve işletme tercihlerini yönetin."
+        icon={SettingsIcon}
+      />
 
       <div className="flex gap-6 min-h-[600px]">
         <nav className="w-[220px] shrink-0 sticky top-6 self-start will-change-transform">

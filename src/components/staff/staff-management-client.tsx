@@ -372,6 +372,8 @@ function RoleTemplateModal({
     );
 }
 
+import { PageHeader } from "@/components/ui/page-header";
+
 export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [] }: StaffManagementClientProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
@@ -449,36 +451,42 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     }, [localStaff]);
 
     return (
-        <div className="space-y-8 pb-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="font-medium text-3xl font-medium text-slate-900 dark:text-white tracking-tight">Ekip Yönetimi</h1>
-                    <p className="text-muted-foreground/80 font-medium">Personel performansını ve yetkilerini buradan yönetin.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-2xl bg-white dark:bg-card border-none shadow-sm">
-                        <Filter className="w-4 h-4" />
-                    </Button>
-                    <CreateStaffModal />
-                </div>
-            </div>
+        <div className="animate-in fade-in duration-700 space-y-12">
+            <PageHeader
+                title="Ekip Yönetimi"
+                description="Personel performansını, yetkilerini ve işlem loglarını buradan yönetin."
+                icon={Users}
+                badge={
+                    <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1 text-[9px] uppercase font-bold tracking-widest">SİSTEM DENETİMİ</Badge>
+                    </div>
+                }
+                actions={
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl bg-white/5 border border-border/40 shadow-xl">
+                            <Filter className="w-5 h-5" />
+                        </Button>
+                        <CreateStaffModal />
+                    </div>
+                }
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
-                    { label: "TOPLAM PERSONEL", val: stats.total, icon: Users, color: "blue" },
-                    { label: "AKTİF GÖREVDE", val: stats.active, icon: UserCheck, color: "emerald" },
-                    { label: "İZİNLİ / TATİL", val: stats.onLeave, icon: Calendar, color: "rose" }
+                    { label: "TOPLAM PERSONEL", val: stats.total, icon: Users, color: "blue", bg: "bg-blue-500/10", text: "text-blue-500" },
+                    { label: "AKTİF GÖREVDE", val: stats.active, icon: UserCheck, color: "emerald", bg: "bg-emerald-500/10", text: "text-emerald-500" },
+                    { label: "İZİNLİ / TATİL", val: stats.onLeave, icon: Calendar, color: "rose", bg: "bg-rose-500/10", text: "text-rose-500" }
                 ].map((s, i) => (
-                    <Card key={i} className="rounded-[2.5rem] border-none shadow-xl shadow-black/5 bg-white dark:bg-card/50 overflow-hidden">
+                    <Card key={i} className="rounded-[2.5rem] border-border/40 shadow-xl bg-card overflow-hidden group hover:border-border transition-all">
                         <CardContent className="p-8">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center", `bg-${s.color}-500/10 text-${s.color}-500`)}>
-                                    <s.icon className="w-7 h-7" />
+                            <div className="flex items-center justify-between mb-8">
+                                <div className={cn("h-16 w-16 rounded-[1.6rem] flex items-center justify-center transition-transform group-hover:scale-110 duration-500", s.bg)}>
+                                    <s.icon className={cn("w-8 h-8", s.text)} />
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">{s.label}</p>
-                                <h3 className="font-medium text-4xl  text-slate-900 dark:text-white">{s.val}</h3>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em]">{s.label}</p>
+                                <h3 className="font-medium text-4xl text-foreground tracking-tight">{s.val}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -513,9 +521,9 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                         </div>
                     </div>
 
-                    <Card className="rounded-[2.5rem] border-none shadow-xl shadow-black/5 bg-white dark:bg-card/50 overflow-hidden">
+                    <Card className="rounded-[2.5rem] overflow-hidden">
                         <Table>
-                            <TableHeader className="font-medium bg-slate-50/50 dark:bg-muted/30">
+                            <TableHeader className="font-medium bg-white/5 dark:bg-black/20">
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="font-medium py-6 px-8 text-[10px]  uppercase tracking-widest text-muted-foreground/80">İSİM / ROL</TableHead>
                                     <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">İŞ SAYISI</TableHead>
@@ -588,7 +596,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 </div>
 
                 <div className="lg:col-span-4 space-y-8">
-                    <Card className="rounded-[2.5rem] border-none shadow-xl shadow-black/5 bg-white dark:bg-card/50 overflow-hidden">
+                    <Card className="rounded-[2.5rem] overflow-hidden">
                         <CardHeader className="p-8 pb-4">
                             <h2 className="font-medium text-xl ">Yetki Seviyeleri</h2>
                         </CardHeader>
@@ -671,7 +679,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-card/50 rounded-[2.5rem] border-none shadow-xl shadow-black/5 overflow-hidden divide-y divide-slate-50 dark:divide-white/5 relative">
+                <div className="glass-card rounded-[2.5rem] overflow-hidden divide-y divide-slate-50 dark:divide-white/5 relative">
                     {isLogsLoading && (
                         <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center z-10 backdrop-blur-sm">
                             <Activity className="w-8 h-8 text-blue-500 animate-pulse" />

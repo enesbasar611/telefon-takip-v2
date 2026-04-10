@@ -3,6 +3,8 @@ import { getAllCategories } from "@/lib/actions/category-actions";
 import { getProducts } from "@/lib/actions/product-actions";
 import { CategoryManagementClient } from "@/components/product/category-management-client";
 
+import { PageHeader } from "@/components/ui/page-header";
+
 export const dynamic = 'force-dynamic';
 
 export default async function KategorilerPage() {
@@ -10,18 +12,19 @@ export default async function KategorilerPage() {
     const products = await getProducts();
 
     return (
-        <div className="flex flex-col gap-8 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-4">
-                <div className="flex items-center gap-6">
-                    <div className="h-16 w-16 rounded-[1.5rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
-                        <Package className="h-8 w-8 text-indigo-400" />
+        <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-500">
+            <PageHeader
+                title="Kategori Yönetimi"
+                description="Stok hiyerarşinizi ve ürün ağacınızı bu dinamik merkezden şekillendirin."
+                icon={Layers}
+                iconColor="text-indigo-500"
+                iconBgColor="bg-indigo-500/10"
+                badge={
+                    <div className="bg-indigo-500/10 px-4 py-1.5 rounded-full border border-indigo-500/20">
+                        <span className="text-[10px] text-indigo-500 uppercase tracking-widest font-bold">STOK VARYANT AĞACI</span>
                     </div>
-                    <div>
-                        <h1 className="font-medium text-5xl font-extrabold text-white font-manrope">Kategori Yönetimi</h1>
-                        <p className="text-sm text-muted-foreground/80 font-medium mt-1 uppercase tracking-widest">STOK VARYANT AĞACI</p>
-                    </div>
-                </div>
-            </div>
+                }
+            />
 
             {/* How-To Guide */}
             <div className="rounded-2xl border border-border/50 bg-white/[0.02] p-6 space-y-4">

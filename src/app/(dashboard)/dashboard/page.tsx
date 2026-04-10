@@ -20,9 +20,14 @@ import { getIndustryConfig, isModuleEnabled, getIndustryLabel } from "@/lib/indu
 import { cn } from "@/lib/utils";
 import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
 import { getCategories } from "@/lib/actions/product-actions";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { LayoutDashboard } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function DashboardPage() {
   const shop = await getShop();
@@ -35,12 +40,30 @@ export default async function DashboardPage() {
   const hasConfig = !!(shop?.themeConfig as any)?.aiServiceFields;
 
   return (
-    <div className="flex-1 space-y-10 selection:bg-primary/20 relative z-10">
+    <div className="flex-1 space-y-12 selection:bg-primary/20 relative z-10 animate-in fade-in duration-700">
       <DashboardOnboardingClient categories={categories} shop={shop} />
 
-      <DashboardHeader
+      <PageHeader
         title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
-        subtitle={`${industryConf.name} operasyon ve finans takip merkezi`}
+        description={`${industryConf.name} operasyon ve finans takip merkezi • ${format(new Date(), "d MMMM yyyy", { locale: tr })}`}
+        icon={LayoutDashboard}
+        badge={
+          <div className="flex items-center gap-4 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-full shadow-sm">
+            <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+              <div className="flex flex-col">
+                <span className="text-[8px] text-emerald-600/70 tracking-tighter uppercase leading-none font-bold">Sistem Durumu</span>
+                <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF & STABİL</span>
+              </div>
+            </div>
+            <div className="px-4 py-1.5 pr-6">
+              <div className="flex flex-col">
+                <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
+                <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
+              </div>
+            </div>
+          </div>
+        }
       />
 
       {/* Phase 1: Key Stats */}

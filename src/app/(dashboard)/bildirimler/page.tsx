@@ -6,6 +6,8 @@ import { Bell } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function BildirimlerPage() {
   const [notifications, serviceStats] = await Promise.all([
     getSystemNotifications(),
@@ -13,7 +15,12 @@ export default async function BildirimlerPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-10 pb-20">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-700">
+      <PageHeader
+        title="Bildirim Merkezi"
+        description="Sistem uyarıları, cihaz durum güncellemeleri ve önemli hatırlatıcılar."
+        icon={Bell}
+      />
       <div className="flex flex-col lg:flex-row gap-10 items-start justify-center max-w-7xl mx-auto w-full">
         <NotificationFeed notifications={notifications} />
         <NotificationSidebar

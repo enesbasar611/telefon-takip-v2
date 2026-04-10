@@ -243,7 +243,7 @@ export function FormsTab({ shop }: { shop: any }) {
                                 </div>
                             ) : (
                                 fields.map((field: any, idx: number) => (
-                                    <div key={idx} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
+                                    <div key={idx} className="space-y-2 animate-in fade-in duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
                                         <div className="flex items-center gap-2">
                                             {field.type === "text" && <Type className="w-3 h-3 text-indigo-400/50" />}
                                             {field.type === "number" && <Hash className="w-3 h-3 text-indigo-400/50" />}

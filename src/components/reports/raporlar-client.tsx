@@ -45,38 +45,34 @@ const statusLabels: Record<string, string> = {
     WAITING_PART: "Parça Bekliyor", READY: "Hazır", DELIVERED: "Teslim Edildi", CANCELLED: "İptal"
 };
 
+import { PageHeader } from "@/components/ui/page-header";
+
 export function RaporlarClient({
     stats, salesData, serviceMetrics, cashflow, topProducts, brandDistribution, exportData
 }: RaporlarClientProps) {
     const dashboardRef = useRef<HTMLDivElement>(null!);
 
     return (
-        <div ref={dashboardRef} className="flex flex-col gap-8 bg-background text-foreground min-h-screen lg:p-10 p-6 pb-24 animate-in fade-in duration-500">
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-5">
-                    <div className="h-14 w-14 rounded-[1.6rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_24px_rgba(var(--primary),0.15)] shrink-0">
-                        <BarChart3 className="h-7 w-7 text-primary" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <div className="flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                                <span className="relative flex h-1.5 w-1.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                                </span>
-                                <span className="text-[9px]  text-emerald-500 uppercase tracking-wider">Gerçek Zamanlı</span>
-                            </div>
+        <div ref={dashboardRef} className="animate-in fade-in duration-700 space-y-10">
+            <PageHeader
+                title="Raporlar & Analizler"
+                description={format(new Date(), "d MMMM yyyy", { locale: tr }) + " • Tüm veriler canlı yüklenmektedir"}
+                icon={BarChart3}
+                badge={
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                            </span>
+                            <span className="text-[9px] text-emerald-500 uppercase tracking-widest font-bold">Gerçek Zamanlı</span>
                         </div>
-                        <h1 className="font-medium text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">Raporlar & Analizler</h1>
-                        <p className="text-sm text-muted-foreground mt-1.5 font-medium">
-                            {format(new Date(), "d MMMM yyyy", { locale: tr })} • Tüm veriler canlı yüklenmektedir
-                        </p>
                     </div>
-                </div>
-                <ExportButtons exportData={exportData} dashboardRef={dashboardRef} />
-            </div>
+                }
+                actions={
+                    <ExportButtons exportData={exportData} dashboardRef={dashboardRef} />
+                }
+            />
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -85,7 +81,7 @@ export function RaporlarClient({
                     const value = stats?.[cfg.key] ?? 0;
                     const colorCls = colorMap[cfg.color];
                     return (
-                        <Card key={i} className={cn("rounded-[2rem] bg-card border border-border/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group")}>
+                        <Card key={i} className={cn("rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group")}>
                             <CardContent className="p-6 flex flex-col justify-between min-h-[150px]">
                                 <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform duration-300 group-hover:scale-110", colorCls)}>
                                     <Icon className="h-5 w-5" />
@@ -111,7 +107,7 @@ export function RaporlarClient({
             <div className="grid lg:grid-cols-3 gap-6">
 
                 {/* Satış Trendi - 2 cols */}
-                <Card className="lg:col-span-2 rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
+                <Card className="lg:col-span-2 rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-7 pb-5">
                         <div>
                             <CardTitle className="font-medium text-lg  tracking-tight uppercase">Günlük Satış Trendi</CardTitle>
@@ -128,7 +124,7 @@ export function RaporlarClient({
                 </Card>
 
                 {/* Servis Dağılımı - 1 col */}
-                <Card className="rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
+                <Card className="rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="border-b border-border/40 p-7 pb-5">
                         <CardTitle className="font-medium text-lg  tracking-tight uppercase">Servis Durum Dağılımı</CardTitle>
                         <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mt-1">Statü bazlı analiz</p>
@@ -139,7 +135,7 @@ export function RaporlarClient({
                 </Card>
 
                 {/* Nakit Akışı - 2 cols */}
-                <Card className="lg:col-span-2 rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
+                <Card className="lg:col-span-2 rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-7 pb-5">
                         <div>
                             <CardTitle className="font-medium text-lg  tracking-tight uppercase">Nakit Akışı</CardTitle>
@@ -162,7 +158,7 @@ export function RaporlarClient({
                 </Card>
 
                 {/* Cihaz Marka Dağılımı - 1 col */}
-                <Card className="rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
+                <Card className="rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-xl overflow-hidden">
                     <CardHeader className="border-b border-border/40 p-7 pb-5">
                         <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center border border-violet-500/20">
@@ -189,7 +185,7 @@ export function RaporlarClient({
             </div>
 
             {/* En Çok Satan Ürünler */}
-            <Card className="rounded-[2rem] bg-card border border-border/40 shadow-xl overflow-hidden">
+            <Card className="rounded-[2rem] bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl border border-border/40 shadow-xl overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-7 pb-5">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">

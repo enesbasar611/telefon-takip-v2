@@ -105,7 +105,7 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
     };
 
     return (
-        <div className="p-8 bg-background text-foreground min-h-screen space-y-8">
+        <div className="animate-in fade-in duration-700 space-y-10">
             <PageHeader
                 title="Müşteri Portföyü"
                 description={`Toplam ${totalCount} müşteri kayıtlı. Müşteri bazlı işlem geçmişini ve sadakat puanlarını takip edin.`}

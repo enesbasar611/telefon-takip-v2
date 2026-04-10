@@ -40,7 +40,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
   const shop = await getShop();
 
   return (
-    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
       <PageHeader
         title="Envanter Yönetimi"
         description="Mağaza içerisindeki tüm ürün stoklarının, değerlerinin ve hareketlerinin stratejik merkezi."
@@ -65,7 +65,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         </Suspense>
       </div>
 
-      <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none border border-border/40">
+      <div className="bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border border-border/40">
         <Suspense fallback={<TableSkeleton />}>
           <StockTableStream searchParams={searchParams} shop={shop} />
         </Suspense>
