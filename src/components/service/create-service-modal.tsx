@@ -2,8 +2,6 @@
 
 import { useState, useTransition, ReactNode, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -16,48 +14,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, User, Smartphone, Hash, AlertCircle, Banknote, SmartphoneIcon, Sparkles } from "lucide-react";
+import { PlusCircle, Loader2, User, AlertCircle, Banknote, Sparkles, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
 import { formatCurrency } from "@/lib/utils";
 import { findCustomerByPhone } from "@/lib/actions/customer-lookup-actions";
-import { Mail } from "lucide-react";
 import { ServiceReceiptModal } from "./service-receipt-modal";
-
-const serviceSchema = z.object({
-  customerName: z.string()
-    .min(2, "Müşteri adı en az 2 karakter olmalıdır")
-    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
-  customerPhone: z.string()
-    .min(1, "Telefon numarası gereklidir")
-    .refine((val) => {
-      const d = val.replace(/\D/g, "");
-      return d.length === 10 && d.startsWith("5");
-    }, "Geçerli bir numara girin (5xx xxx xxxx)"),
-  customerEmail: z.string().email("Geçerli bir mail adresi girin").optional().or(z.literal("")),
-  deviceBrand: z.string().min(1, "Marka gereklidir"),
-  deviceModel: z.string().min(1, "Model gereklidir"),
-  imei: z.string()
-    .optional()
-    .or(z.literal(""))
-    .refine((val) => !val || (val.length === 15 && /^\d+$/.test(val)), {
-      message: "IMEI numarası tam olarak 15 haneli rakamlardan oluşmalıdır"
-    }),
-  problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
-  estimatedCost: z.string().refine((val) => !isNaN(Number(val)), "Geçerli bir sayı giriniz"),
-});
-
-type ServiceFormValues = z.infer<typeof serviceSchema>;
+import { FormFactory } from "@/components/common/form-factory";
+import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 
 interface CreateServiceModalProps {
   trigger?: ReactNode;
+  shop?: any;
 }
 
-export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
+export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isDiagnosticPending, setIsDiagnosticPending] = useState(false);
@@ -69,6 +44,8 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
   const { toast } = useToast();
   const router = useRouter();
 
+  const industryFields = getServiceFormFields(shop);
+
   const {
     register,
     handleSubmit,
@@ -76,46 +53,32 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
     formState: { errors },
     reset,
     setValue,
-  } = useForm<ServiceFormValues>({
-    resolver: zodResolver(serviceSchema),
+    control,
+  } = useForm<any>({
     defaultValues: {
       estimatedCost: "0",
       customerEmail: "",
     }
   });
 
-  const deviceModel = watch("deviceModel");
   const problemDesc = watch("problemDesc");
+  const deviceModel = watch("deviceModel");
 
   const handleAIDiagnosis = async () => {
     if (!problemDesc) {
-      toast({
-        title: "Hata",
-        description: "Lütfen önce bir arıza açıklaması girin.",
-        variant: "destructive",
-      });
+      toast({ title: "Hata", description: "Lütfen önce bir arıza açıklaması girin.", variant: "destructive" });
       return;
     }
-
     setIsDiagnosticPending(true);
     try {
       const { parseServiceDiagnosticWithAI } = await import("@/lib/actions/gemini-actions");
-      const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel);
-
+      const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel, shop?.industry);
       if (result.success) {
         setDiagnosticResult(result.data);
-        // Automatically fill estimated cost
         setValue("estimatedCost", String(result.data.estimatedTotalPrice));
-        toast({
-          title: "AI Analizi Hazır",
-          description: "Arıza teşhisi ve tahmini maliyet oluşturuldu.",
-        });
+        toast({ title: "BAŞAR AI Analizi Hazır", description: "Sektörel arıza teşhisi ve tahmini maliyet oluşturuldu." });
       } else {
-        toast({
-          title: "AI Hatası",
-          description: result.error,
-          variant: "destructive",
-        });
+        toast({ title: "AI Hatası", description: result.error, variant: "destructive" });
       }
     } catch (error) {
       console.error("AI Diagnosis error:", error);
@@ -124,30 +87,37 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
     }
   };
 
-  const onSubmit = async (data: ServiceFormValues) => {
+  const onSubmit = async (data: any) => {
     startTransition(async () => {
+      // Split form data into core DB fields and dynamic attributes
+      const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, data);
+
       const result = await createServiceTicket({
-        ...data,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail,
+        deviceBrand,
+        deviceModel,
+        imei,
+        problemDesc: data.problemDesc,
         estimatedCost: Number(data.estimatedCost),
+        attributes,
       });
 
       if (result.success) {
-        toast({
-          title: "Başarılı",
-          description: "Servis kaydı başarıyla oluşturuldu.",
-        });
+        toast({ title: "Başarılı", description: `${getIndustryLabel(shop, "serviceTicket")} kaydı başarıyla oluşturuldu.` });
         setCreatedTicket(result.data);
         setShowReceipt(true);
         setOpen(false);
-        reset();
+        reset({
+          estimatedCost: "0",
+          customerEmail: "",
+          accessories: [],
+        });
         setDiagnosticResult(null);
         router.refresh();
       } else {
-        toast({
-          title: "Hata",
-          description: result.error || "Kayıt oluşturulurken bir hata oluştu.",
-          variant: "destructive",
-        });
+        toast({ title: "Hata", description: result.error || "Kayıt oluşturulurken bir hata oluştu.", variant: "destructive" });
       }
     });
   };
@@ -162,25 +132,18 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
           const customer = await findCustomerByPhone(sanitized);
           if (customer) {
             setValue("customerName", customer.name);
-            if (customer.email) {
-              setValue("customerEmail", customer.email);
-            }
-            toast({
-              title: "Müşteri Bulundu",
-              description: `${customer.name} bilgileri otomatik dolduruldu.`,
-              duration: 3000,
-            });
+            if (customer.email) setValue("customerEmail", customer.email);
+            toast({ title: "Müşteri Bulundu", description: `${customer.name} bilgileri otomatik dolduruldu.`, duration: 3000 });
           }
-        } catch (error) {
-          console.error("Lookup error:", error);
+        } catch (e) {
+          console.error("Lookup error:", e);
         } finally {
           setIsLookingUp(false);
         }
       }
     };
-
-    const timeoutId = setTimeout(checkPhone, 500);
-    return () => clearTimeout(timeoutId);
+    const t = setTimeout(checkPhone, 500);
+    return () => clearTimeout(t);
   }, [phoneValue, setValue, toast]);
 
   return (
@@ -189,38 +152,39 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
         {trigger || (
           <Button className="gap-2">
             <PlusCircle className="h-4 w-4" />
-            <span>Yeni Servis Kaydı</span>
+            <span>Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı</span>
           </Button>
         )}
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-[700px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-8 bg-card/50 border-b border-border/50">
             <DialogHeader>
-              <DialogTitle className="font-medium text-2xl ">Yeni Servis Kaydı</DialogTitle>
+              <DialogTitle className="font-medium text-2xl">{getIndustryLabel(shop, "serviceTicket")} Kaydı</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Müşteri ve cihaz bilgilerini girerek yeni bir teknik servis kaydı oluşturun.
+                Müşteri ve {getIndustryLabel(shop, "customerAsset").toLowerCase()} bilgilerini girerek yeni bir {getIndustryLabel(shop, "serviceTicket").toLowerCase()} kaydı oluşturun.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
+            {/* Customer Info */}
             <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="customerName" className="font-medium text-xs  text-muted-foreground">Müşteri Ad Soyad</Label>
-                <div className="relative group">
+              <div className="space-y-2">
+                <Label htmlFor="customerName" className="font-medium text-xs text-muted-foreground">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
+                <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="customerName" {...register("customerName")} placeholder="Ali Yılmaz" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
+                  <Input id="customerName" {...register("customerName", { required: "Müşteri adı gereklidir" })} placeholder="Ali Yılmaz" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
                 </div>
-                {errors.customerName && <p className="text-[10px] text-red-500  ml-1">{errors.customerName.message}</p>}
+                {errors.customerName && <p className="text-[10px] text-red-500 ml-1">{errors.customerName.message as string}</p>}
               </div>
-
               <PhoneInput
                 label="Telefon Numarası"
                 required
                 value={phoneValue}
                 isLookingUp={isLookingUp}
-                error={errors.customerPhone?.message}
+                error={errors.customerPhone?.message as string}
                 onChange={(val: string) => {
                   setPhoneValue(val);
                   setValue("customerPhone", val);
@@ -228,117 +192,111 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="deviceBrand" className="font-medium text-xs  text-muted-foreground">Cihaz Markası</Label>
-                <div className="relative group">
-                  <SmartphoneIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="deviceBrand" {...register("deviceBrand")} placeholder="Apple, Samsung..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
-                </div>
-                {errors.deviceBrand && <p className="text-[10px] text-red-500  ml-1">{errors.deviceBrand.message}</p>}
-              </div>
+            {/* Dynamic Industry Fields — from FormFactory */}
+            <FormFactory
+              fields={industryFields}
+              register={register}
+              control={control}
+              errors={errors}
+              twoCol={true}
+            />
 
-              <div className="space-y-3">
-                <Label htmlFor="deviceModel" className="font-medium text-xs  text-muted-foreground">Cihaz Modeli</Label>
-                <Input id="deviceModel" {...register("deviceModel")} placeholder="iPhone 13, Galaxy S21..." className="h-14 bg-card border-border/50 rounded-2xl px-6 text-sm " />
-                {errors.deviceModel && <p className="text-[10px] text-red-500  ml-1">{errors.deviceModel.message}</p>}
-              </div>
-            </div>
-
-            <div className="space-y-3">
+            {/* Problem Description */}
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label htmlFor="problemDesc" className="font-medium text-xs  text-muted-foreground">Arıza Tanımı</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
+                <Label htmlFor="problemDesc" className="font-medium text-xs text-muted-foreground">
+                  {getIndustryLabel(shop, "problemDesc")} <span className="text-red-500">*</span>
+                </Label>
+                <Button type="button" size="sm" variant="outline"
                   className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px]"
-                  onClick={handleAIDiagnosis}
-                  disabled={isDiagnosticPending}
+                  onClick={handleAIDiagnosis} disabled={isDiagnosticPending}
                 >
                   {isDiagnosticPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                   BAŞAR AI ile Analiz Et
                 </Button>
               </div>
-              <div className="relative group">
+              <div className="relative">
                 <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
-                <Input id="problemDesc" {...register("problemDesc")} placeholder="Ekran kırık, şarj almıyor..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
+                <Input id="problemDesc" {...register("problemDesc", { required: "Arıza açıklaması gereklidir" })}
+                  placeholder="Arıza detaylarını buraya yazın..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
               </div>
-              {errors.problemDesc && <p className="text-[10px] text-red-500  ml-1">{errors.problemDesc.message}</p>}
+              {errors.problemDesc && <p className="text-[10px] text-red-500 ml-1">{errors.problemDesc.message as string}</p>}
             </div>
 
+            {/* Accessories / Parts Received */}
+            <div className="space-y-3">
+              <Label className="font-medium text-xs text-muted-foreground">Teslim Alınan Parçalar / Aksesuarlar</Label>
+              <div className="flex flex-wrap gap-2">
+                {getIndustryAccessories(shop).map((item) => (
+                  <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
+                    <Checkbox
+                      className="rounded-sm border-muted-foreground/40 h-3.5 w-3.5"
+                      onCheckedChange={(checked) => {
+                        const current = watch("accessories") || [];
+                        if (checked) setValue("accessories", [...current, item]);
+                        else setValue("accessories", current.filter((i: string) => i !== item));
+                      }}
+                    />
+                    <span className="text-sm font-medium whitespace-nowrap">{item}</span>
+                  </Label>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Diagnostic Result */}
             {diagnosticResult && (
               <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl space-y-4 animate-in fade-in slide-in-from-top-2">
                 <div className="flex items-center gap-2 text-blue-700">
                   <Sparkles className="h-4 w-4" />
-                  <span className="text-xs font-semibold">AI Ön Teşhis Raporu</span>
-                  <div className="ml-auto px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold">
-                    Risk: {diagnosticResult.riskLevel}
-                  </div>
+                  <span className="text-xs font-semibold">BAŞAR AI Sektörel Analiz</span>
+                  <div className="ml-auto px-2 py-0.5 rounded-full bg-blue-100 text-[10px] font-bold">Risk: {diagnosticResult.riskLevel}</div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Olası Nedenler</span>
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Olası Sebepler</span>
                     <ul className="text-[11px] text-blue-900 list-disc list-inside">
-                      {diagnosticResult.possibleCauses.slice(0, 2).map((cause: string, i: number) => (
-                        <li key={i}>{cause}</li>
-                      ))}
+                      {diagnosticResult.possibleCauses?.slice(0, 2).map((c: string, i: number) => <li key={i}>{c}</li>)}
                     </ul>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Önerilen Parçalar</span>
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">Önerilen Malzemeler</span>
                     <div className="flex flex-wrap gap-1">
-                      {diagnosticResult.suggestedParts.map((part: any, i: number) => (
-                        <span key={i} className="px-1.5 py-0.5 rounded-md bg-white border border-blue-100 text-[10px] text-blue-800">
-                          {part.name}
-                        </span>
+                      {diagnosticResult.suggestedParts?.map((p: any, i: number) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded-md bg-white border border-blue-100 text-[10px] text-blue-800">{p.name}</span>
                       ))}
                     </div>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-between pt-2 border-t border-blue-100/50">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-medium text-blue-600/70">TAHMİNİ SÜRE</span>
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">TAHMİNİ SÜRE</span>
                     <span className="text-xs font-bold text-blue-900">{diagnosticResult.repairTimeRange}</span>
                   </div>
                   <div className="flex flex-col text-right">
-                    <span className="text-[10px] font-medium text-blue-600/70">ÖNERİLEN TOPLAM</span>
+                    <span className="text-[10px] font-medium text-blue-600/70 uppercase">PROJE BEDELİ</span>
                     <span className="text-lg font-black text-emerald-600 tabular-nums">{formatCurrency(diagnosticResult.estimatedTotalPrice)}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="imei" className="font-medium text-xs  text-muted-foreground">IMEI / Seri No</Label>
-                <div className="relative group">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="imei" {...register("imei")} placeholder="15 haneli IMEI" maxLength={15} className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm " />
-                </div>
-                {errors.imei && <p className="text-[10px] text-red-500  ml-1">{errors.imei.message}</p>}
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="estimatedCost" className="font-medium text-xs  text-muted-foreground">Tahmini Ücret</Label>
-                <PriceInput
-                  id="estimatedCost"
-                  value={watch("estimatedCost")}
-                  onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
-                  placeholder="0,00"
-                  className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm  transition-all tabular-nums text-emerald-500 font-bold"
-                />
-                {errors.estimatedCost && <p className="text-[10px] text-red-500  ml-1">{errors.estimatedCost.message}</p>}
-              </div>
+            {/* Estimated Cost */}
+            <div className="space-y-2">
+              <Label className="font-medium text-xs text-muted-foreground">Tahmini Ücret</Label>
+              <PriceInput
+                id="estimatedCost"
+                value={watch("estimatedCost")}
+                onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
+                placeholder="0,00"
+                className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm transition-all tabular-nums text-emerald-500 font-bold"
+              />
             </div>
           </div>
 
           <div className="p-8 bg-card/50 border-t border-border/50">
             <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-muted-foreground">Vazgeç</Button>
-              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white  text-sm rounded-2xl gap-3 transition-all active:scale-95">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl text-muted-foreground">Vazgeç</Button>
+              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-2xl gap-3 transition-all active:scale-95">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Kaydı Tamamla
               </Button>
@@ -348,20 +306,8 @@ export function CreateServiceModal({ trigger }: CreateServiceModalProps) {
       </DialogContent>
 
       {createdTicket && (
-        <ServiceReceiptModal
-          isOpen={showReceipt}
-          onClose={() => {
-            setShowReceipt(false);
-            setCreatedTicket(null);
-          }}
-          ticket={createdTicket}
-        />
+        <ServiceReceiptModal isOpen={showReceipt} onClose={() => { setShowReceipt(false); setCreatedTicket(null); }} ticket={createdTicket} />
       )}
     </Dialog>
   );
 }
-
-
-
-
-

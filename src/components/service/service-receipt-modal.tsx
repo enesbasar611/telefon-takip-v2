@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { getReceiptSettings } from "@/lib/actions/receipt-settings";
+import { getShop } from "@/lib/actions/setting-actions";
+import { getIndustryLabel } from "@/lib/industry-utils";
 import { useEffect, useState } from "react";
 import { Barcode } from "@/components/barcode/barcode";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
@@ -29,10 +31,12 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
     const [isEditing, setIsEditing] = useState(false);
     const [editableTicket, setEditableTicket] = useState(ticket);
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+    const [shop, setShop] = useState<any>(null);
 
     useEffect(() => {
         if (isOpen) {
             getReceiptSettings("service").then(setSettings);
+            getShop().then(setShop);
             setEditableTicket(ticket);
         }
     }, [isOpen, ticket]);
@@ -120,24 +124,36 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                         </div>
 
                         <div className="mb-4 space-y-2">
-                            <div className="bg-gray-100 px-2 py-1 mb-2  text-[8px] text-center shadow-sm border border-gray-200">CİHAZ VE ARIZA BİLGİLERİ</div>
+                            <div className="bg-gray-100 px-2 py-1 mb-2  text-[8px] text-center shadow-sm border border-gray-200 uppercase font-bold tracking-wider">{getIndustryLabel(shop, "customerAsset")} BİLGİLERİ</div>
                             <div className="flex justify-between border-b border-gray-100 pb-1">
-                                <span className="text-gray-500 text-[8px] ">MARKA / MODEL:</span>
+                                <span className="text-gray-500 text-[8px] uppercase">{getIndustryLabel(shop, "customerAsset")}:</span>
                                 {isEditing ? (
                                     <div className="flex gap-1 text-[9px]">
                                         <input className="w-16 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceBrand} onChange={(e) => updateField("deviceBrand", e.target.value)} />
                                         <input className="w-20 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceModel} onChange={(e) => updateField("deviceModel", e.target.value)} />
                                     </div>
                                 ) : (
-                                    <span className="">{editableTicket.deviceBrand} {editableTicket.deviceModel}</span>
+                                    <span className="font-bold">{editableTicket.deviceBrand} {editableTicket.deviceModel}</span>
                                 )}
                             </div>
+
+                            {/* Dynamic Attributes */}
+                            {editableTicket.attributes && Object.entries(editableTicket.attributes).map(([key, value]) => {
+                                if (!value || key === "brand" || key === "model" || key === "imei") return null;
+                                return (
+                                    <div key={key} className="flex justify-between border-b border-gray-100 pb-1">
+                                        <span className="text-gray-500 text-[8px] uppercase">{key}:</span>
+                                        <span className="font-medium">{String(value)}</span>
+                                    </div>
+                                );
+                            })}
+
                             <div className="flex justify-between border-b border-gray-100 pb-1">
-                                <span className="text-gray-500 text-[8px] ">IMEI / SERİ NO:</span>
+                                <span className="text-gray-500 text-[8px] uppercase">SERİ/KIMLIK NO:</span>
                                 {isEditing ? (
                                     <input className="text-right border-b border-blue-500 text-[9px] focus:outline-none" value={editableTicket.imei || ""} onChange={(e) => updateField("imei", e.target.value)} />
                                 ) : (
-                                    <span className="">{editableTicket.imei || editableTicket.serialNumber || "Belirtilmedi"}</span>
+                                    <span className="">{editableTicket.imei || editableTicket.serialNumber || "—"}</span>
                                 )}
                             </div>
                             <div className="mt-2 text-center py-1.5 bg-black text-white font-bold text-[8px] uppercase tracking-tighter">Arıza Tanımı</div>

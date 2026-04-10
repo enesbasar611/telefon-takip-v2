@@ -11,6 +11,7 @@ import { getShopId, getUserId } from "@/lib/auth";
 import { getOrCreateKasaAccount } from "./finance-actions";
 import { sendWhatsAppAction } from "./data-management-actions";
 import { getSettings } from "./setting-actions";
+import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 
 const serviceSchema = z.object({
   customerName: z.string()
@@ -23,11 +24,8 @@ const serviceSchema = z.object({
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
   deviceBrand: z.string().min(1, "Marka gereklidir"),
   deviceModel: z.string().min(1, "Model gereklidir"),
-  imei: z.string()
-    .length(15, "IMEI numarası tam olarak 15 haneli olmalıdır")
-    .regex(/^\d+$/, "IMEI sadece rakamlardan oluşmalıdır")
-    .optional()
-    .or(z.literal("")),
+  // IMEI is optional across all industries — client-side FormFactory validates per-sector
+  imei: z.string().optional().or(z.literal("")),
   serialNumber: z.string().optional().or(z.literal("")),
   problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
   cosmeticCondition: z.string().optional(),
@@ -40,6 +38,8 @@ const serviceSchema = z.object({
   devicePassword: z.string().optional().or(z.literal("")),
   serviceType: z.string().optional().or(z.literal("")),
   priority: z.number().optional().default(1),
+  /** Dynamic industry-specific fields stored as JSON in ServiceTicket.attributes */
+  attributes: z.record(z.any()).optional(),
 });
 
 // getOrCreateDevUser removed.
@@ -99,6 +99,7 @@ export async function createServiceTicket(rawData: any) {
         estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
         createdById: userId,
         shopId,
+        attributes: validatedData.attributes || null,
         status: ServiceStatus.PENDING,
         logs: {
           create: {
@@ -224,46 +225,22 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       const laborTotal = Number(currentTicket.actualCost) || Number(currentTicket.estimatedCost);
       const totalRevenue = Math.max(0, (partsTotal + laborTotal) - discountAmount);
 
-      // Calculate and Increment Loyalty Points dynamically
+      // Calculate and Increment Loyalty Points dynamically using the Loyalty Engine
       let earnedPoints = 0;
       try {
-        const settings = await getSettings();
-        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
-        const loyaltyEnabled = config.loyalty_enabled !== "false";
-
-        if (loyaltyEnabled) {
-          // Find categories to exclude (Telefonlar and its subcategories)
-          const allCategories = await prisma.category.findMany({ where: { shopId } });
-          const telefonlarCat = allCategories.find(c => c.name.toLowerCase() === "telefonlar");
-
-          const excludedCategoryIds = new Set<string>();
-          if (telefonlarCat) {
-            excludedCategoryIds.add(telefonlarCat.id);
-            const findChildren = (parentId: string) => {
-              allCategories.filter(c => c.parentId === parentId).forEach(child => {
-                excludedCategoryIds.add(child.id);
-                findChildren(child.id);
-              });
-            };
-            findChildren(telefonlarCat.id);
-          }
-
-          // Calculate eligible revenue (filter out parts in excluded categories)
-          const eligiblePartsTotal = currentTicket.usedParts.reduce((acc, part) => {
-            const isExcluded = part.product.categoryId && excludedCategoryIds.has(part.product.categoryId);
-            return isExcluded ? acc : acc + (Number(part.unitPrice) * part.quantity);
-          }, 0);
-
-          const eligibleRevenue = Math.max(0, (eligiblePartsTotal + laborTotal) - discountAmount);
-
-          if (eligibleRevenue > 0) {
-            const spendThreshold = Number(config.loyalty_service_spend_threshold) || 1000;
-            const pointsRate = Number(config.loyalty_service_points_earned) || 20;
-            earnedPoints = Math.floor((eligibleRevenue / spendThreshold) * pointsRate);
-          }
-        }
+        const result = await calculateLoyaltyPoints(
+          currentTicket.usedParts.map(p => ({
+            productId: p.productId,
+            quantity: p.quantity,
+            unitPrice: Number(p.unitPrice)
+          })),
+          laborTotal,
+          discountAmount,
+          shopId
+        );
+        earnedPoints = result.earnedPoints;
       } catch (err) {
-        console.error("Loyalty calculation error:", err);
+        console.error("Loyalty calculation error via engine:", err);
       }
 
       let updatedCustomer = currentTicket.customer as any;

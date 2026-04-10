@@ -7,6 +7,7 @@ import { addShortageItem } from "./shortage-actions";
 import { getOrCreateAccountByType } from "./finance-actions";
 import { getShopId, getUserId } from "@/lib/auth";
 import { getSettings } from "./setting-actions";
+import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 
 // getOrCreateDevUser removed.
 
@@ -59,44 +60,22 @@ export async function createSale(data: {
       }
     });
 
-    // Increment Loyalty Points if any dynamically
+    // Calculate and Increment Loyalty Points dynamically using the Loyalty Engine
     let earnedPoints = 0;
     try {
-      const settings = await getSettings();
-      const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
-      const loyaltyEnabled = config.loyalty_enabled !== "false";
-
-      if (loyaltyEnabled && data.totalAmount > 0) {
-        // Find categories to exclude (Telefonlar and its subcategories)
-        const allCategories = await prisma.category.findMany({ where: { shopId } });
-        const telefonlarCat = allCategories.find(c => c.name.toLowerCase() === "telefonlar");
-
-        const excludedCategoryIds = new Set<string>();
-        if (telefonlarCat) {
-          excludedCategoryIds.add(telefonlarCat.id);
-          const findChildren = (parentId: string) => {
-            allCategories.filter(c => c.parentId === parentId).forEach(child => {
-              excludedCategoryIds.add(child.id);
-              findChildren(child.id);
-            });
-          };
-          findChildren(telefonlarCat.id);
-        }
-
-        // Calculate eligible spend (items not in excluded categories)
-        const eligibleSpend = sale.items.reduce((acc, item) => {
-          const isExcluded = item.product.categoryId && excludedCategoryIds.has(item.product.categoryId);
-          return isExcluded ? acc : acc + Number(item.totalPrice);
-        }, 0);
-
-        if (eligibleSpend > 0) {
-          const spendThreshold = Number(config.loyalty_sale_spend_threshold) || 1000;
-          const pointsRate = Number(config.loyalty_sale_points_earned) || 20;
-          earnedPoints = Math.floor((eligibleSpend / spendThreshold) * pointsRate);
-        }
-      }
+      const result = await calculateLoyaltyPoints(
+        sale.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice)
+        })),
+        0, // No labor for pure product sales
+        data.discountAmount || 0,
+        shopId
+      );
+      earnedPoints = result.earnedPoints;
     } catch (err) {
-      console.error("Loyalty calculation error:", err);
+      console.error("Loyalty calculation error via engine (SALE):", err);
     }
 
     if (data.customerId && (earnedPoints > 0 || (data.usedPoints && data.usedPoints > 0))) {

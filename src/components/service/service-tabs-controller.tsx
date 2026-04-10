@@ -11,13 +11,19 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
+import { getIndustryLabel } from "@/lib/industry-utils";
+
 interface ServiceTabsControllerProps {
     tickets: any[];
     warrantyStats: any;
+    shop?: any;
 }
 
-export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsControllerProps) {
+export function ServiceTabsController({ tickets, warrantyStats, shop }: ServiceTabsControllerProps) {
     const [activeTab, setActiveTab] = useState("active");
+
+    const serviceLabel = getIndustryLabel(shop, "serviceTicket");
+    const assetLabel = getIndustryLabel(shop, "customerAsset");
 
     const activeTickets = tickets.filter(t => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(t.status));
     const readyTickets = tickets.filter(t => t.status === "READY");
@@ -51,6 +57,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         <ServiceListTable
                             data={activeTickets}
                             allowedStatuses={["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"]}
+                            shop={shop}
                         />
                     </div>
                 </TabsContent>
@@ -61,6 +68,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         <ServiceListTable
                             data={readyTickets}
                             allowedStatuses={["READY"]}
+                            shop={shop}
                         />
                     </div>
                 </TabsContent>
@@ -71,6 +79,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         <ServiceListTable
                             data={deliveredTickets}
                             allowedStatuses={["DELIVERED"]}
+                            shop={shop}
                         />
                     </div>
                 </TabsContent>
@@ -81,6 +90,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                         <ServiceListTable
                             data={cancelledTickets}
                             allowedStatuses={["CANCELLED"]}
+                            shop={shop}
                         />
                     </div>
                 </TabsContent>
@@ -97,7 +107,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                 </CardHeader>
                                 <CardContent className="p-8 pt-0">
                                     <div className="text-5xl font-extrabold text-emerald-500">{warrantyStats.activeWarranties}</div>
-                                    <p className="text-xs text-emerald-500/60 font-medium mt-3">Süresi devam eden cihazlar</p>
+                                    <p className="text-xs text-emerald-500/60 font-medium mt-3">Süresi devam eden {assetLabel.toLowerCase()}lar</p>
                                 </CardContent>
                             </Card>
                             <Card className="rounded-[2rem] border-amber-500/10 bg-amber-500/5 shadow-none pb-0">
@@ -107,7 +117,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                 </CardHeader>
                                 <CardContent className="p-8 pt-0">
                                     <div className="text-5xl font-extrabold text-amber-500">{warrantyStats.expiredWarranties}</div>
-                                    <p className="text-xs text-amber-500/60 font-medium mt-3">Süresi dolan eski tamirler</p>
+                                    <p className="text-xs text-amber-500/60 font-medium mt-3">Süresi dolan eski {serviceLabel.toLowerCase()}lar</p>
                                 </CardContent>
                             </Card>
                             <Card className="rounded-[2rem] border-purple-500/10 bg-purple-500/5 shadow-none pb-0">
@@ -141,7 +151,7 @@ export function ServiceTabsController({ tickets, warrantyStats }: ServiceTabsCon
                                 <TableHeader className="font-medium bg-muted/30">
                                     <TableRow className="border-b border-border/50 hover:bg-transparent">
                                         <TableHead className="font-medium px-10 py-6 text-xs text-muted-foreground/80">İade Fişi</TableHead>
-                                        <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Servis Fişi</TableHead>
+                                        <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">{serviceLabel} Fişi</TableHead>
                                         <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">Arızalı Parça</TableHead>
                                         <TableHead className="font-medium px-6 py-6 text-xs  text-muted-foreground/80">İade Sebebi</TableHead>
                                         <TableHead className="font-medium px-10 py-6 text-xs  text-muted-foreground/80">Tarih</TableHead>

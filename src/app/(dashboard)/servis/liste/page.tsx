@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Suspense } from "react";
 import { ServiceTableStream } from "@/components/service/streamed/service-table-stream";
 import { ServiceStatus } from "@prisma/client";
+import { getShop } from "@/lib/actions/setting-actions";
+import { getIndustryConfig, getIndustryLabel } from "@/lib/industry-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +24,9 @@ function LoadingSkeleton() {
 
 export default async function ServisListePage() {
   const counts = await getServiceCounts();
+  const shop = await getShop();
+  const industryConfig = getIndustryConfig(shop?.industry);
+  const Icon = industryConfig.icon || Wrench;
 
   const activeStatuses: ServiceStatus[] = ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"];
   const readyStatus: ServiceStatus = "READY";
@@ -32,18 +37,19 @@ export default async function ServisListePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20">
-            <Wrench className="h-6 w-6 text-primary" />
+            <Icon className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="font-medium text-2xl font-extrabold text-foreground">Servis Listesi</h1>
+            <h1 className="font-medium text-2xl font-extrabold text-foreground">{getIndustryLabel(shop, "serviceTicket")} Listesi</h1>
             <p className="text-xs text-muted-foreground mt-0.5 font-medium">Toplam {counts.all} kayıt</p>
           </div>
         </div>
         <CreateServiceModal
+          shop={shop}
           trigger={
             <Button className="gap-2 rounded-xl  transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4" />
-              Yeni Servis
+              Yeni Kayıt
             </Button>
           }
         />
@@ -67,25 +73,25 @@ export default async function ServisListePage() {
 
         <TabsContent value="active" className="mt-0 ring-offset-background focus-visible:outline-none">
           <Suspense fallback={<LoadingSkeleton />}>
-            <ServiceTableStream status={activeStatuses} />
+            <ServiceTableStream status={activeStatuses} shop={shop} />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="ready" className="mt-0 ring-offset-background focus-visible:outline-none">
           <Suspense fallback={<LoadingSkeleton />}>
-            <ServiceTableStream status={readyStatus} />
+            <ServiceTableStream status={readyStatus} shop={shop} />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="done" className="mt-0 ring-offset-background focus-visible:outline-none">
           <Suspense fallback={<LoadingSkeleton />}>
-            <ServiceTableStream status={doneStatuses} />
+            <ServiceTableStream status={doneStatuses} shop={shop} />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="all" className="mt-0 ring-offset-background focus-visible:outline-none">
           <Suspense fallback={<LoadingSkeleton />}>
-            <ServiceTableStream />
+            <ServiceTableStream shop={shop} />
           </Suspense>
         </TabsContent>
       </Tabs>

@@ -58,6 +58,7 @@ import { ServiceManagementModal } from "./service-management-modal";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { cn, formatPhone } from "@/lib/utils";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import { getIndustryLabel } from "@/lib/industry-utils";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string; icon: any }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500", icon: Clock },
@@ -69,68 +70,13 @@ const statusConfig: Record<ServiceStatus, { label: string; color: string; icon: 
   CANCELLED: { label: "İptal Edildi", color: "bg-red-500", icon: XCircle },
 };
 
-export const columns: ColumnDef<any>[] = [
-  {
-    accessorKey: "ticketNumber",
-    header: "FİŞ NO",
-    cell: ({ row }) => <div className=" text-sm bg-muted px-4 py-1 rounded w-fit">{row.getValue("ticketNumber")}</div>,
-  },
-  {
-    accessorKey: "customer_name",
-    header: "MÜŞTERİ",
-    accessorFn: (row) => row.customer?.name,
-    cell: ({ row }) => (
-      <Link href={`/musteriler/${row.original.customerId}`} className="flex flex-col group/name">
-        <span className=" text-sm group-hover/name:text-blue-500 transition-colors">{row.original.customer?.name}</span>
-        <span className="text-xs text-blue-500 ">{formatPhone(row.original.customer?.phone)}</span>
-      </Link>
-    ),
-  },
-  {
-    accessorKey: "deviceModel",
-    header: "CİHAZ",
-    accessorFn: (row) => `${row.deviceBrand} ${row.deviceModel}`,
-    cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className=" text-sm">{row.original.deviceBrand}</span>
-        <span className="text-sm text-muted-foreground ">{row.original.deviceModel}</span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "problemDesc",
-    header: "ARIZA TANIMI",
-    cell: ({ row }) => <div className="max-w-[150px] truncate text-xs  text-muted-foreground/80">"{row.getValue("problemDesc")}"</div>,
-  },
-  {
-    accessorKey: "status",
-    header: "DURUM",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as ServiceStatus;
-      const config = statusConfig[status];
-      return (
-        <Badge className={`${config.color} text-xs  px-4 py-1 shadow-sm border-none`}>
-          {config.label}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "createdAt",
-    header: "KAYIT TARİHİ",
-    cell: ({ row }) => <div className="text-xs  text-muted-foreground/80">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
-  },
-  {
-    accessorKey: "estimatedCost",
-    header: () => <div className="text-right">TAHMİNİ TUTAR</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("estimatedCost"));
-      return <div className="text-right  text-blue-500 text-sm">₺{amount.toLocaleString('tr-TR')}</div>;
-    },
-  },
-];
+interface ServiceListTableProps {
+  data: any[];
+  allowedStatuses?: ServiceStatus[];
+  shop?: any;
+}
 
-export function ServiceListTable({ data, allowedStatuses }: { data: any[], allowedStatuses?: ServiceStatus[] }) {
+export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTableProps) {
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
 
@@ -147,6 +93,71 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+
+  const assetLabel = getIndustryLabel(shop, "customerAsset");
+  const identifierLabel = getIndustryLabel(shop, "serviceIdentifier");
+  const problemLabel = getIndustryLabel(shop, "problemDesc");
+
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: "ticketNumber",
+      header: "FİŞ NO",
+      cell: ({ row }) => <div className=" text-sm bg-muted px-4 py-1 rounded w-fit">{row.getValue("ticketNumber")}</div>,
+    },
+    {
+      accessorKey: "customer_name",
+      header: "MÜŞTERİ",
+      accessorFn: (row) => row.customer?.name,
+      cell: ({ row }) => (
+        <Link href={`/musteriler/${row.original.customerId}`} className="flex flex-col group/name">
+          <span className=" text-sm group-hover/name:text-blue-500 transition-colors">{row.original.customer?.name}</span>
+          <span className="text-xs text-blue-500 ">{formatPhone(row.original.customer?.phone)}</span>
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "deviceModel",
+      header: assetLabel.toUpperCase(),
+      accessorFn: (row) => `${row.deviceBrand} ${row.deviceModel}`,
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className=" text-sm">{row.original.deviceBrand}</span>
+          <span className="text-sm text-muted-foreground ">{row.original.deviceModel}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "problemDesc",
+      header: problemLabel.toUpperCase(),
+      cell: ({ row }) => <div className="max-w-[150px] truncate text-xs  text-muted-foreground/80">"{row.getValue("problemDesc")}"</div>,
+    },
+    {
+      accessorKey: "status",
+      header: "DURUM",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as ServiceStatus;
+        const config = statusConfig[status];
+        return (
+          <Badge className={`${config.color} text-xs  px-4 py-1 shadow-sm border-none`}>
+            {config.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "createdAt",
+      header: "KAYIT TARİHİ",
+      cell: ({ row }) => <div className="text-xs  text-muted-foreground/80">{format(new Date(row.getValue("createdAt")), "dd MMM HH:mm", { locale: tr })}</div>,
+    },
+    {
+      accessorKey: "estimatedCost",
+      header: () => <div className="text-right">TAHMİNİ TUTAR</div>,
+      cell: ({ row }) => {
+        const amount = parseFloat(row.getValue("estimatedCost"));
+        return <div className="text-right  text-blue-500 text-sm">₺{amount.toLocaleString('tr-TR')}</div>;
+      },
+    },
+  ], [assetLabel, problemLabel]);
 
   const filteredData = useMemo(() => {
     if (statusFilter === "ALL") return data;
@@ -333,7 +344,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
         <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Müşteri, Fiş No veya IMEI Ara..."
+            placeholder={`Müşteri, Fiş No veya ${identifierLabel} Ara...`}
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
             className="pl-10 h-12 bg-white/[0.02] border-border/50 rounded-2xl text-xs  text-white focus:bg-white/[0.05] transition-all"
@@ -362,8 +373,8 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                     >
                       {column.id === "ticketNumber" ? "Fiş No" :
                         column.id === "customer_name" ? "Müşteri" :
-                          column.id === "deviceModel" ? "Cihaz" :
-                            column.id === "problemDesc" ? "Problem" :
+                          column.id === "deviceModel" ? assetLabel :
+                            column.id === "problemDesc" ? problemLabel :
                               column.id === "status" ? "Durum" :
                                 column.id === "createdAt" ? "Tarih" :
                                   column.id === "estimatedCost" ? "Tahmini Tutar" :
@@ -460,7 +471,7 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
                 </div>
 
                 <div className="bg-card/60 p-5 rounded-2xl border border-white/[0.03]">
-                  <p className="text-xs  text-slate-600 mb-2">Arıza Tanımı</p>
+                  <p className="text-xs  text-slate-600 mb-2">{problemLabel}</p>
                   <p className="text-xs text-foreground ">"{ticket.problemDesc}"</p>
                 </div>
 
@@ -597,8 +608,3 @@ export function ServiceListTable({ data, allowedStatuses }: { data: any[], allow
     </div >
   );
 }
-
-
-
-
-

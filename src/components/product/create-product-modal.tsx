@@ -33,6 +33,8 @@ import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
+import { getInventoryFormFields, extractCoreAndAttributes, getIndustryLabel } from "@/lib/industry-utils";
+import { FormFactory } from "@/components/common/form-factory";
 
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { useAura } from "@/lib/context/aura-context";
@@ -58,12 +60,14 @@ interface Category {
 
 interface CreateProductModalProps {
   categories: Category[];
+  shop?: any;
+  autoOpen?: boolean;
 }
 
-export function CreateProductModal({ categories }: CreateProductModalProps) {
+export function CreateProductModal({ categories, shop, autoOpen = false }: CreateProductModalProps) {
   const { rates: exchangeRates } = useDashboardData();
   const { triggerAura } = useAura();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [isPending, startTransition] = useTransition();
   const [isAIPending, startAITransition] = useTransition();
   const [currency, setCurrency] = useState<"TRY" | "USD" | "EUR">("TRY");
@@ -72,15 +76,18 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
   const [aiDescription, setAiDescription] = useState("");
   const [aiStatus, setAiStatus] = useState<"idle" | "success" | "error">("idle");
 
+  const industryFields = getInventoryFormFields(shop);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
     reset,
-  } = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+  } = useForm<any>({
+    resolver: zodResolver(productSchema.passthrough()),
     defaultValues: { stock: "0", criticalStock: "5", buyPrice: "0", sellPrice: "0" }
   });
 
@@ -136,21 +143,24 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
     });
   };
 
-  const onSubmit = async (data: ProductFormValues) => {
+  const onSubmit = async (data: any) => {
     startTransition(async () => {
       let finalBuyPrice = Number(data.buyPrice);
       if (currency === "USD") finalBuyPrice *= exchangeRates.usd;
       if (currency === "EUR") finalBuyPrice *= exchangeRates.eur;
 
+      const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
+
       const result = await createProduct({
-        name: data.name,
+        name: name || data.name,
         categoryId: data.categoryId,
         buyPrice: finalBuyPrice,
         sellPrice: Number(data.sellPrice),
         stock: Number(data.stock),
         criticalStock: Number(data.criticalStock),
-        barcode: data.barcode,
-        location: data.location,
+        barcode: barcode || data.barcode,
+        location: location || data.location,
+        attributes,
       });
 
       if (result.success) {
@@ -158,6 +168,7 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
         triggerAura("success");
         setAiDescription("");
         setAiStatus("idle");
+        reset(); // Reset form for next entry
       } else if (result.isDuplicate) {
         toast.warning(result.message || "Aynı ürün zaten stokta mevcut!");
       } else {
@@ -215,9 +226,9 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     <Package className="h-6 w-6 text-blue-400" />
                   </div>
                   <div>
-                    <DialogTitle className="font-medium text-xl  tracking-tight">Akıllı Envanter Tanımlama</DialogTitle>
+                    <DialogTitle className="font-medium text-xl  tracking-tight">Akıllı {getIndustryLabel(shop, "inventory")} Tanımlama</DialogTitle>
                     <DialogDescription className="text-[13px] font-medium text-muted-foreground mt-1">
-                      Sisteme yeni bir yedek parça, aksesuar veya cihaz kaydedin. <br />
+                      Sisteme yeni bir {getIndustryLabel(shop, "customerAsset").toLowerCase()}, malzeme veya {getIndustryLabel(shop, "productLabel").toLowerCase()} kaydedin. <br />
                       <span className="text-indigo-400 opacity-80">Alt kategorileri sırayla seçerek ilerleyin.</span>
                     </DialogDescription>
                   </div>
@@ -336,19 +347,24 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     </div>
                   ))}
                 </div>
-                {errors.categoryId && <p className="text-[11px] text-rose-500 font-semibold mt-2">{errors.categoryId.message}</p>}
+                {errors.categoryId && <p className="text-[11px] text-rose-500 font-semibold mt-2">{String(errors.categoryId.message || "")}</p>}
               </div>
 
               {/* Temel Bilgiler */}
               <div className="space-y-5">
                 <h4 className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Temel Kimlik
+                  <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Temel Kimlik & Sektörel Detaylar
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-4">
                   <div className="md:col-span-8 space-y-2">
-                    <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-muted-foreground">Ürün Adı &amp; Kesin Tanımı</Label>
-                    <Input id="name" {...register("name")} placeholder="Örn: iPhone 13 Pro Max Ön Cam" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
-                    {errors.name && <p className="text-[11px] text-rose-500 font-medium">{errors.name.message}</p>}
+                    <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-muted-foreground">{getIndustryLabel(shop, "productLabel")} Adı &amp; Kesin Tanımı</Label>
+                    <Input id="name" {...register("name")} placeholder={`Örn: ${getIndustryLabel(shop, "productLabel")} adı / modeli / türü`} className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    {errors.name && (
+                      <p className="text-[11px] text-rose-500 font-medium">
+                        {String(errors.name.message || "")}
+                      </p>
+                    )}
                   </div>
                   <div className="md:col-span-4 space-y-2">
                     <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -356,6 +372,17 @@ export function CreateProductModal({ categories }: CreateProductModalProps) {
                     </Label>
                     <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                   </div>
+                </div>
+
+                {/* Industry Specific Fields */}
+                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/[0.05]">
+                  <FormFactory
+                    fields={industryFields}
+                    register={register}
+                    control={control}
+                    errors={errors}
+                    twoCol={true}
+                  />
                 </div>
               </div>
 

@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useMemo, useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users } from "lucide-react";
-import { bulkUpdateSettings, updateSetting } from "@/lib/actions/setting-actions";
+import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid } from "lucide-react";
+import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 
 // Tab Components
@@ -13,15 +13,20 @@ import { PrinterTab } from "./tabs/printer-tab";
 import { DataTab } from "./tabs/data-tab";
 import { AutomationTab } from "./tabs/automation-tab";
 import { CustomersTab } from "./tabs/customers-tab";
+import { ShopTab } from "./tabs/shop-tab";
+import { ModulesTab } from "./tabs/modules-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
 
 interface SettingsProps {
   initialSettings: any[];
   receiptSettings: any[];
+  shop: any;
 }
 
 const tabs = [
   { id: "appearance", label: "Görünüm", icon: Palette, desc: "Tema ve renkler" },
+  { id: "shop", label: "Dükkan", icon: Store, desc: "Sektör ve bilgiler" },
+  { id: "modules", label: "Modüller", icon: LayoutGrid, desc: "Aktif özellikler" },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, desc: "Mesaj şablonları" },
   { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
   { id: "customers", label: "Müşteriler", icon: Users, desc: "Sadakat modülü" },
@@ -29,8 +34,8 @@ const tabs = [
   { id: "automation", label: "Otomasyon", icon: Zap, desc: "Kurallar ve onaylar" },
 ];
 
-export function SettingsInterface({ initialSettings, receiptSettings }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState("appearance");
+export function SettingsInterface({ initialSettings, receiptSettings, shop }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState("shop");
   const [isPending, startTransition] = useTransition();
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
 
@@ -164,6 +169,12 @@ export function SettingsInterface({ initialSettings, receiptSettings }: Settings
             <div className="animate-in fade-in duration-300">
               {activeTab === "appearance" && (
                 <AppearanceTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "shop" && (
+                <ShopTab shop={shop} />
+              )}
+              {activeTab === "modules" && (
+                <ModulesTab shop={shop} />
               )}
               {activeTab === "whatsapp" && (
                 <WhatsAppTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />

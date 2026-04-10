@@ -3,7 +3,7 @@ import { getProducts, getCategories } from "@/lib/actions/product-actions";
 import { semanticSearchWithAI } from "@/lib/actions/gemini-actions";
 import { serializePrisma } from "@/lib/utils";
 
-export async function StockTableStream({ searchParams }: { searchParams?: any }) {
+export async function StockTableStream({ searchParams, shop }: { searchParams?: any, shop?: any }) {
     let aiFilters = {};
     if (searchParams?.ai_search) {
         const result = await semanticSearchWithAI(searchParams.ai_search);
@@ -24,7 +24,7 @@ export async function StockTableStream({ searchParams }: { searchParams?: any })
     const products = serializePrisma(productsRaw);
     const categories = serializePrisma(categoriesRaw);
 
-    return <StockListTable products={products} categories={categories} />;
+    return <StockListTable products={products} categories={categories} shop={shop} />;
 }
 
 

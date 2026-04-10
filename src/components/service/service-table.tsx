@@ -46,9 +46,11 @@ import Link from "next/link";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { ServiceReceiptModal } from "./service-receipt-modal";
+import { getIndustryLabel, getIndustryConfig } from "@/lib/industry-utils";
 
 interface ServiceTableProps {
   data: any[];
+  shop?: any;
 }
 
 const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any; glow: string }> = {
@@ -61,7 +63,7 @@ const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any
   CANCELLED: { label: "İPTAL EDİLDİ", color: "text-rose-500 bg-rose-500/10 border-rose-500/20", icon: XCircle, glow: "" },
 };
 
-export function ServiceTable({ data }: ServiceTableProps) {
+export function ServiceTable({ data, shop }: ServiceTableProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -107,7 +109,7 @@ export function ServiceTable({ data }: ServiceTableProps) {
               <SortableHeader label="Müşteri" field="customer.name" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
             <TableHead className="font-medium py-6 h-[70px]">
-              <SortableHeader label="Cihaz Analizi" field="deviceBrand" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
+              <SortableHeader label={`${getIndustryLabel(shop, "customerAsset")} Analizi`} field="deviceBrand" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
             </TableHead>
             <TableHead className="font-medium py-6 h-[70px]">
               <SortableHeader label="İşlem Durumu" field="status" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
@@ -143,7 +145,10 @@ export function ServiceTable({ data }: ServiceTableProps) {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center group-hover:bg-muted/50 transition-all">
-                      <Smartphone className="h-5 w-5 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                      {(() => {
+                        const Icon = getIndustryConfig(shop?.industry).icon;
+                        return <Icon className="h-5 w-5 text-muted-foreground group-hover:text-blue-500 transition-colors" />;
+                      })()}
                     </div>
                     <div className="flex flex-col">
                       <span className=" text-sm text-foreground">{ticket.deviceBrand} {ticket.deviceModel}</span>

@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BorderBeam } from "@/components/ui/border-beam";
+import { isModuleEnabled, getIndustryConfig } from "@/lib/industry-utils";
+import { Shop } from "@prisma/client";
 
 const menuItems = [
   {
@@ -90,13 +92,18 @@ const menuItems = [
   { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
   { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
   { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
-  { icon: BarChart3, label: "İstatistikler", href: "/raporlar" },
+  { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
   { icon: UserCog, label: "Ekip", href: "/personel" },
   { icon: Bell, label: "Bildirimler", href: "/bildirimler" },
   { icon: Settings, label: "Ayarlar", href: "/ayarlar" },
 ];
 
-export function Sidebar({ className, user, onNavigate }: { className?: string; user?: { name: string; role: string }, onNavigate?: () => void }) {
+export function Sidebar({ className, user, shop, onNavigate }: {
+  className?: string;
+  user?: { name: string; role: string };
+  shop?: any; // Using any due to pending prisma generate
+  onNavigate?: () => void
+}) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const { MapsWithAura } = useAura();
@@ -146,6 +153,11 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
     onNavigate?.();
   };
 
+  // Logo always stable - only industry label changes below
+  const industryConfig = getIndustryConfig(shop?.industry);
+  const firstName = "BAŞAR";
+  const secondName = "TEKNİK";
+
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
       <div className="flex h-28 items-center px-4 border-b border-border/50 flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-transparent relative overflow-hidden group">
@@ -159,10 +171,10 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
           </div>
           <div className="flex flex-col flex-1 min-w-0 items-start text-left">
             <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
-              BAŞAR<span className="text-primary not-italic font-extrabold ml-1">TEKNİK</span>
+              {firstName}<span className="text-primary not-italic font-extrabold ml-1">{secondName}</span>
             </h1>
             <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate">
-              YÖNETİM PANELİ
+              {industryConfig?.name || "YÖNETİM PANELİ"}
             </span>
           </div>
         </button>
@@ -175,15 +187,22 @@ export function Sidebar({ className, user, onNavigate }: { className?: string; u
           <p className="text-[12px]  text-muted-foreground/60 uppercase tracking-widest px-3 mb-3">Menü</p>
 
           {menuItems.filter(item => {
-            if (session?.user?.role === "ADMIN") return true;
-            if (item.label === "Servis Yönetimi" && session?.user?.canService === false) return false;
-            if (item.label === "Envanter" && session?.user?.canStock === false) return false;
-            if (item.label === "POS & Kasa" && session?.user?.canSell === false) return false;
-            if (item.label === "Veresiye" && session?.user?.canSell === false) return false;
-            if (item.label === "Müşteri CRM" && session?.user?.canSell === false && session?.user?.canService === false) return false;
-            if (item.label === "İstatistikler" && session?.user?.canFinance === false) return false;
-            if (item.label === "Ekip" && session?.user?.role !== "ADMIN") return false;
             if (item.label === "Ayarlar" && session?.user?.role !== "ADMIN") return false;
+
+            // SERVICE module: Servis, Cihaz Merkezi, Randevu
+            if (item.label === "Servis Yönetimi" && !isModuleEnabled(shop, "SERVICE")) return false;
+            if (item.label === "Cihaz Merkezi" && !isModuleEnabled(shop, "SERVICE")) return false;
+            if (item.label === "Randevu Merkezi" && !isModuleEnabled(shop, "SERVICE")) return false;
+
+            // STOCK module
+            if (item.label === "Envanter" && !isModuleEnabled(shop, "STOCK")) return false;
+
+            // SALE module
+            if (item.label === "POS & Kasa" && !isModuleEnabled(shop, "SALE")) return false;
+
+            // FINANCE module
+            if (item.label === "İstatistikler" && !isModuleEnabled(shop, "FINANCE")) return false;
+
             return true;
           }).map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;

@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
+import { IndustryBackground } from "@/components/industry-background";
 import { Navbar } from "@/components/navbar";
 import { BottomNav } from "@/components/bottom-nav";
 import { UIProvider } from "@/lib/context/ui-context";
@@ -13,6 +14,7 @@ import { ProgressBarProvider } from "@/components/providers/progress-bar-provide
 import { getStaff } from "@/lib/actions/staff-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { getDashboardStats } from "@/lib/actions/dashboard-actions";
+import { getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
 import { getShopId } from "@/lib/auth";
@@ -33,17 +35,20 @@ export default async function DashboardLayout({
     let staff: any[] = [];
     let initialRates: any = null;
     let initialStats: any = null;
+    let shop: any = null;
 
     try {
         // Parallel fetch for data needed throughout the dashboard
-        const [staffRes, ratesRes, statsRes] = await Promise.all([
+        const [staffRes, ratesRes, statsRes, shopRes] = await Promise.all([
             getStaff(shopId).catch(() => []),
             getExchangeRates(shopId).catch(() => null),
             getDashboardStats(shopId).catch(() => null),
+            getShop().catch(() => null),
         ]);
         staff = staffRes;
         initialRates = ratesRes;
         initialStats = statsRes;
+        shop = shopRes;
     } catch (err) {
         console.error("DashboardLayout: Could not load initial data.", err);
     }
@@ -60,10 +65,15 @@ export default async function DashboardLayout({
                                 <ShortageProvider>
                                     <AuraSystem />
                                     <GlobalSearch />
-                                    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-                                        <Sidebar className="hidden lg:flex" user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined} />
+                                    {shop?.industry && <IndustryBackground industry={shop.industry} />}
+                                    <div className="flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0">
+                                        <Sidebar
+                                            className="hidden lg:flex"
+                                            user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
+                                            shop={shop}
+                                        />
                                         <DashboardContent>
-                                            <Navbar />
+                                            <Navbar shop={shop} />
                                             <main className="flex-1 p-6 lg:p-10 overflow-y-auto overflow-x-hidden custom-scrollbar">
                                                 <div className="max-w-[1600px] mx-auto w-full min-w-0 pb-20 lg:pb-0">
                                                     {children}

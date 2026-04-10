@@ -27,6 +27,8 @@ import { updateProduct } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { PriceInput } from "@/components/ui/price-input";
 import { formatCurrency } from "@/lib/utils";
+import { getInventoryFormFields, extractCoreAndAttributes, getIndustryLabel } from "@/lib/industry-utils";
+import { FormFactory } from "@/components/common/form-factory";
 
 const productSchema = z.object({
     name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
@@ -46,20 +48,24 @@ interface EditProductModalProps {
     categories: any[];
     isOpen: boolean;
     onClose: () => void;
+    shop?: any;
 }
 
-export function EditProductModal({ product, categories, isOpen, onClose }: EditProductModalProps) {
+export function EditProductModal({ product, categories, isOpen, onClose, shop }: EditProductModalProps) {
     const [isPending, startTransition] = useTransition();
+
+    const industryFields = getInventoryFormFields(shop);
 
     const {
         register,
         handleSubmit,
         watch,
         setValue,
+        control,
         formState: { errors },
         reset,
-    } = useForm<ProductFormValues>({
-        resolver: zodResolver(productSchema),
+    } = useForm<any>({
+        resolver: zodResolver(productSchema.passthrough()),
     });
 
     useEffect(() => {
@@ -73,21 +79,25 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                 criticalStock: product.criticalStock.toString(),
                 barcode: product.barcode || "",
                 location: product.location || "",
+                ...(product.attributes || {}),
             });
         }
     }, [product, reset]);
 
-    const onSubmit = async (data: ProductFormValues) => {
+    const onSubmit = async (data: any) => {
         startTransition(async () => {
+            const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
+
             const result = await updateProduct(product.id, {
-                name: data.name,
+                name: name || data.name,
                 categoryId: data.categoryId,
                 buyPrice: Number(data.buyPrice),
                 sellPrice: Number(data.sellPrice),
                 stock: Number(data.stock),
                 criticalStock: Number(data.criticalStock),
-                barcode: data.barcode,
-                location: data.location,
+                barcode: barcode || data.barcode,
+                location: location || data.location,
+                attributes,
             });
 
             if (result.success) {
@@ -109,7 +119,7 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
                                 <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                                     <Edit className="h-5 w-5 text-blue-500" />
                                 </div>
-                                <DialogTitle className="font-medium text-xl ">Ürün Düzenle</DialogTitle>
+                                <DialogTitle className="font-medium text-xl ">{getIndustryLabel(shop, "inventory")} Düzenle</DialogTitle>
                             </div>
                             <DialogDescription className="text-xs font-medium text-gray-400">
                                 "{product?.name}" bilgilerini güncelleyin.
@@ -118,9 +128,19 @@ export function EditProductModal({ product, categories, isOpen, onClose }: EditP
 
                         <div className="grid gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="name" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Ürün Adı</Label>
+                                <Label htmlFor="name" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">{getIndustryLabel(shop, "productLabel")} Adı</Label>
                                 <Input id="name" {...register("name")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
-                                {errors.name && <p className="text-[10px] text-rose-500 ">{errors.name.message}</p>}
+                                {errors.name && <p className="text-[10px] text-rose-500 ">{String(errors.name.message || "")}</p>}
+                            </div>
+
+                            <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/[0.05] space-y-4">
+                                <FormFactory
+                                    fields={industryFields}
+                                    register={register}
+                                    control={control}
+                                    errors={errors}
+                                    twoCol={true}
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

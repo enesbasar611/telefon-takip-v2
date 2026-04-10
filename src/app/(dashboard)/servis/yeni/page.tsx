@@ -19,14 +19,9 @@ import {
   CheckCircle2,
   Save,
   X,
-  Lock,
-  Tag,
-  Shield,
-  ChevronDown,
+  Sparkles,
   ZoomIn,
-  Grid3x3,
-  RefreshCw,
-  Trash
+  Trash,
 } from "lucide-react";
 import { createCustomerMuted } from "@/lib/actions/customer-actions";
 
@@ -46,10 +41,13 @@ import { createServiceTicket } from "@/lib/actions/service-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
 import { searchDeviceModels } from "@/lib/actions/model-lookup-actions";
+import { getShop } from "@/lib/actions/setting-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { FormFactory } from "@/components/common/form-factory";
+import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 
 const MAX_PHOTOS = 6;
 const MAX_SIZE_MB = 3;
@@ -60,25 +58,16 @@ const serviceSchema = z.object({
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Sadece harflerden oluşmalıdır"),
   customerPhone: z.string()
     .min(1, "Telefon no giriniz"),
-  customerEmail: z.string().email("Geçerli bir e-posta giriniz").or(z.literal("")),
-  deviceBrand: z.string().min(1, "Marka gereklidir"),
-  deviceModel: z.string().min(1, "Model gereklidir"),
-  imei: z.string().max(15, "IMEI en fazla 15 hane olabilir").or(z.literal("")),
-  serialNumber: z.string().or(z.literal("")),
-  devicePassword: z.string().or(z.literal("")),
-  serviceType: z.string().or(z.literal("")),
-  cosmeticConditions: z.array(z.string()),
-  cosmeticNotes: z.string().or(z.literal("")),
-  problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
-  accessories: z.array(z.string()),
-  estimatedCost: z.string().min(1, "Tutar giriniz"),
-  downPayment: z.string(),
-  estimatedDeliveryDate: z.string().or(z.literal("")),
-  technicianId: z.string().or(z.literal("")),
-  priority: z.number(),
-});
+  customerEmail: z.string().email("Geçerli bir e-posta giriniz").or(z.literal("")).optional(),
+  estimatedCost: z.string().min(1, "Tutar giriniz").optional(),
+  downPayment: z.string().optional(),
+  estimatedDeliveryDate: z.string().or(z.literal("")).optional(),
+  technicianId: z.string().or(z.literal("")).optional(),
+  priority: z.number().optional(),
+  // We use .passthrough() so the dynamic industry fields (which aren't defined here) won't be stripped or cause errors.
+}).passthrough();
 
-type ServiceFormValues = z.infer<typeof serviceSchema>;
+type ServiceFormValues = any; // We use 'any' since fields are dynamic
 
 const SectionBadge = ({ icon: Icon, title }: { icon: any, title: string }) => (
   <div className="flex items-center gap-3 mb-6">
@@ -307,7 +296,9 @@ export default function NewServicePage() {
   const [isCustomerCreated, setIsCustomerCreated] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
-
+  const [shop, setShop] = useState<any>(null);
+  const [isDiagnosticPending, setIsDiagnosticPending] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
 
@@ -346,20 +337,29 @@ export default function NewServicePage() {
     }
   });
 
-  useEffect(() => {
-    async function loadStaff() {
-      const staffList = await getStaff();
-      // Include all staff roles if needed
-      const techList = staffList.filter((s: any) =>
-        s.role === "ADMIN" || s.role === "TECHNICIAN" || s.role === "STAFF"
-      );
-      setTechnicians(techList);
+  const industryFields = getServiceFormFields(shop);
 
-      if (techList.length > 0 && !form.getValues("technicianId")) {
-        form.setValue("technicianId", techList[0].id);
+  useEffect(() => {
+    async function loadInitialData() {
+      try {
+        const [s, staffList] = await Promise.all([
+          getShop(),
+          getStaff()
+        ]);
+        setShop(s);
+
+        const techList = staffList.filter((s: any) =>
+          s.role === "ADMIN" || s.role === "TECHNICIAN" || s.role === "STAFF"
+        );
+        setTechnicians(techList);
+        if (techList.length > 0 && !form.getValues("technicianId")) {
+          form.setValue("technicianId", techList[0].id);
+        }
+      } catch (e) {
+        console.error("Initial data load error:", e);
       }
     }
-    loadStaff();
+    loadInitialData();
   }, [form]);
 
   const watchModel = form.watch("deviceModel");
@@ -376,6 +376,32 @@ export default function NewServicePage() {
     };
     fetchModels();
   }, [watchModel]);
+
+  const problemDesc = form.watch("problemDesc");
+  const deviceModel = form.watch("deviceModel");
+
+  const handleAIDiagnosis = async () => {
+    if (!problemDesc) {
+      toast({ title: "Hata", description: "Lütfen önce bir arıza açıklaması girin.", variant: "destructive" });
+      return;
+    }
+    setIsDiagnosticPending(true);
+    try {
+      const { parseServiceDiagnosticWithAI } = await import("@/lib/actions/gemini-actions");
+      const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel, shop?.industry);
+      if (result.success) {
+        setDiagnosticResult(result.data);
+        form.setValue("estimatedCost", String(result.data.estimatedTotalPrice));
+        toast({ title: "BAŞAR AI Analizi Hazır", description: "Sektörel arıza teşhisi ve tahmini maliyet oluşturuldu." });
+      } else {
+        toast({ title: "AI Hatası", description: result.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("AI Diagnosis error:", error);
+    } finally {
+      setIsDiagnosticPending(false);
+    }
+  };
 
   const watchName = form.watch("customerName");
   useEffect(() => {
@@ -447,13 +473,10 @@ export default function NewServicePage() {
 
   const onSubmit = async (values: ServiceFormValues) => {
     startTransition(async () => {
-      const cosmeticStr = [
-        ...values.cosmeticConditions,
-        values.cosmeticNotes
-      ].filter(Boolean).join(", ");
+      const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
 
       const notesStr = [
-        values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
+        values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
         values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
       ].filter(Boolean).join(" | ");
 
@@ -461,14 +484,10 @@ export default function NewServicePage() {
         customerName: values.customerName,
         customerPhone: values.customerPhone.replace(/\D/g, ""),
         customerEmail: values.customerEmail,
-        deviceBrand: values.deviceBrand,
-        deviceModel: values.deviceModel,
-        imei: values.imei,
-        serialNumber: values.serialNumber,
-        devicePassword: values.devicePassword,
-        serviceType: values.serviceType,
+        deviceBrand,
+        deviceModel,
+        imei,
         problemDesc: values.problemDesc,
-        cosmeticCondition: cosmeticStr,
         estimatedCost: Number(values.estimatedCost),
         downPayment: Number(values.downPayment),
         notes: notesStr,
@@ -476,6 +495,7 @@ export default function NewServicePage() {
         estimatedDeliveryDate: values.estimatedDeliveryDate,
         photos: photos.map(p => p.dataUrl),
         priority: values.priority ?? 1,
+        attributes,
       });
 
       if (result.success) {
@@ -493,9 +513,9 @@ export default function NewServicePage() {
   const cardClass = "bg-card p-6 md:p-8 rounded-2xl border border-border/50 transition-all";
   const labelClass = "text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block";
 
-  const getInputClass = (fieldName: keyof ServiceFormValues) => cn(
+  const getInputClass = (fieldName: string) => cn(
     "bg-muted/30 border rounded-xl py-3 px-4 text-sm font-medium transition-all",
-    errors[fieldName as keyof typeof errors]
+    (errors as any)[fieldName]
       ? "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/20 focus-visible:border-destructive"
       : "border-border/50 hover:border-border focus-visible:bg-background focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/10"
   );
@@ -505,8 +525,8 @@ export default function NewServicePage() {
       <div className="py-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1.5">Servis İşlemleri</p>
-          <h2 className="font-medium text-2xl font-semibold text-foreground tracking-tight">Yeni Cihaz Kaydı</h2>
+          <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1.5">{getIndustryLabel(shop, "serviceTicket")} İşlemleri</p>
+          <h2 className="font-medium text-2xl font-semibold text-foreground tracking-tight">Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı</h2>
         </div>
 
         <form
@@ -589,7 +609,7 @@ export default function NewServicePage() {
                       ))}
                     </div>
                   )}
-                  {errors.customerName && <p className="text-xs text-destructive mt-1.5 px-1">{errors.customerName.message}</p>}
+                  {errors.customerName && <p className="text-xs text-destructive mt-1.5 px-1">{errors.customerName.message as string}</p>}
                 </div>
 
                 {/* Telefon */}
@@ -598,7 +618,7 @@ export default function NewServicePage() {
                     label="Telefon Numarası"
                     required
                     value={form.watch("customerPhone")}
-                    error={errors.customerPhone?.message}
+                    error={errors.customerPhone?.message as string}
                     isLookingUp={isLookingUp}
                     onChange={(val) => {
                       form.setValue("customerPhone", val);
@@ -623,230 +643,108 @@ export default function NewServicePage() {
                     type="email"
                     className={getInputClass("customerEmail")}
                   />
-                  {errors.customerEmail && <p className="text-xs text-destructive mt-1.5 px-1">{errors.customerEmail.message}</p>}
+                  {errors.customerEmail && <p className="text-xs text-destructive mt-1.5 px-1">{errors.customerEmail.message as string}</p>}
                 </div>
               </div>
             </section>
 
-            {/* 2. Cihaz Detayları */}
+            {/* 2. Dynamic Industry Details */}
             <section className={cardClass}>
-              <SectionBadge icon={Smartphone} title="Cihaz Detayları" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              <SectionBadge icon={Smartphone} title={`${getIndustryLabel(shop, "customerAsset")} Detayları`} />
 
-                {/* Marka */}
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>Marka <span className="text-destructive">*</span></Label>
-                  <Select onValueChange={(val) => {
-                    form.setValue("deviceBrand", val);
-                    form.clearErrors("deviceBrand");
-                  }} defaultValue={form.watch("deviceBrand")}>
-                    <SelectTrigger className={getInputClass("deviceBrand")}>
-                      <SelectValue placeholder="Marka seçin..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-border/50 shadow-xl">
-                      {["Apple", "Samsung", "Xiaomi", "Huawei", "Oppo", "Vivo", "Realme", "Diğer"].map((brand) => (
-                        <SelectItem key={brand} value={brand} className="text-sm py-2.5 cursor-pointer rounded-lg m-0.5">{brand}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.deviceBrand && <p className="text-xs text-destructive mt-1.5 px-1">{errors.deviceBrand.message}</p>}
-                </div>
+              <FormFactory
+                fields={industryFields}
+                register={form.register}
+                control={form.control}
+                errors={errors}
+                twoCol={true}
+                onPatternClick={() => setIsPatternModalOpen(true)}
+              />
+            </section>
 
-                {/* Model */}
-                <div className="space-y-1.5 relative">
-                  <Label className={labelClass}>Model <span className="text-destructive">*</span></Label>
-                  <Input
-                    {...form.register("deviceModel")}
-                    placeholder="Örn: iPhone 15 Pro"
-                    className={getInputClass("deviceModel")}
-                    onFocus={() => modelSuggestions.length > 0 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  />
-                  {showSuggestions && (
-                    <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-50 bg-card border border-border rounded-2xl shadow-xl overflow-hidden py-1 max-h-48 overflow-y-auto">
-                      {modelSuggestions.map((model) => (
-                        <button
-                          key={model}
-                          type="button"
-                          onClick={() => {
-                            form.setValue("deviceModel", model);
-                            form.clearErrors("deviceModel");
-                            setShowSuggestions(false);
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
-                        >
-                          {model}
-                        </button>
-                      ))}
+            {/* 3. Problem Description & AI Analysis */}
+            <section className={cardClass}>
+              <div className="flex justify-between items-center mb-6">
+                <SectionBadge icon={AlertCircle} title={getIndustryLabel(shop, "problemDesc")} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-xl bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-xs font-medium"
+                  onClick={handleAIDiagnosis}
+                  disabled={isDiagnosticPending}
+                >
+                  {isDiagnosticPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  BAŞAR AI ile Analiz Et
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <Textarea
+                  {...form.register("problemDesc")}
+                  placeholder="Sorun detaylarını buraya yazın..."
+                  className={cn(getInputClass("problemDesc"), "min-h-[120px] resize-none")}
+                />
+                {errors.problemDesc && <p className="text-xs text-destructive">{errors.problemDesc.message as string}</p>}
+
+                {/* AI Diagnostic Result */}
+                {diagnosticResult && (
+                  <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 text-left">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Sparkles className="h-4 w-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wider">BAŞAR AI Sektörel Analiz</span>
+                      <div className="ml-auto px-3 py-1 rounded-full bg-blue-100 text-[10px] font-bold">ÖNEM: {diagnosticResult.riskLevel}</div>
                     </div>
-                  )}
-                  {errors.deviceModel && <p className="text-xs text-destructive mt-1.5 px-1">{errors.deviceModel.message}</p>}
-                </div>
 
-                {/* IMEI */}
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>IMEI Numarası</Label>
-                  <Input
-                    {...form.register("imei")}
-                    placeholder="15 haneli IMEI"
-                    maxLength={15}
-                    className={getInputClass("imei")}
-                  />
-                  {errors.imei && <p className="text-xs text-destructive mt-1.5 px-1">{errors.imei.message}</p>}
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">Olası Teşhisler</span>
+                        <ul className="text-xs text-blue-900 space-y-1.5 list-disc list-inside">
+                          {diagnosticResult.possibleCauses?.map((c: string, i: number) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">Gerekli Malzemeler</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {diagnosticResult.suggestedParts?.map((p: any, i: number) => (
+                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-blue-100 text-[11px] text-blue-800 font-medium">
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Seri No */}
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>Seri Numarası</Label>
-                  <Input
-                    {...form.register("serialNumber")}
-                    placeholder="Seri no (opsiyonel)"
-                    className={getInputClass("serialNumber")}
-                  />
-                </div>
-
-                {/* Cihaz Şifresi */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className={labelClass} style={{ marginBottom: 0 }}>
-                      <span className="flex items-center gap-1.5">
-                        <Lock className="h-2.5 w-2.5" strokeWidth={1.5} />
-                        Cihaz Şifresi / PIN
-                      </span>
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 gap-1"
-                      onClick={() => {
-                        const currentVal = form.getValues("devicePassword");
-                        if (currentVal.startsWith("DESEN:")) {
-                          setTempPattern(currentVal.replace("DESEN:", "").split(",").map(Number));
-                        } else {
-                          setTempPattern([]);
-                        }
-                        setIsPatternModalOpen(true);
-                      }}
-                    >
-                      <Grid3x3 className="w-3 h-3" />
-                      Desen Çiz
-                    </Button>
+                    <div className="flex items-center justify-between pt-4 border-t border-blue-100/50">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">TAHMİNİ İŞ SÜRESİ</span>
+                        <span className="text-sm font-bold text-blue-900">{diagnosticResult.repairTimeRange}</span>
+                      </div>
+                      <div className="flex flex-col text-right">
+                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">PROJE BEDELİ</span>
+                        <span className="text-xl font-black text-emerald-600">₺{diagnosticResult.estimatedTotalPrice}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="relative">
-                    <Input
-                      {...form.register("devicePassword")}
-                      placeholder="Kilit ekranı şifresi veya desen"
-                      className={getInputClass("devicePassword")}
-                      autoComplete="off"
-                      value={form.watch("devicePassword").startsWith("DESEN:") ? "Desen Ayarlandı" : form.watch("devicePassword")}
-                      readOnly={form.watch("devicePassword").startsWith("DESEN:")}
-                      onChange={(e) => {
-                        if (!form.watch("devicePassword").startsWith("DESEN:")) {
-                          form.setValue("devicePassword", e.target.value);
-                        }
-                      }}
-                    />
-                    {form.watch("devicePassword").startsWith("DESEN:") && (
-                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-destructive hover:bg-destructive/10 p-1 rounded-md transition-colors" onClick={() => form.setValue("devicePassword", "")}>
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/60 px-1">Cihaza erişim gerektiğinde kullanılacak</p>
-                </div>
-
-                {/* Servis Türü */}
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>
-                    <span className="flex items-center gap-1.5">
-                      <Tag className="h-2.5 w-2.5" strokeWidth={1.5} />
-                      Servis Türü
-                    </span>
-                  </Label>
-                  <Select onValueChange={(val) => form.setValue("serviceType", val)}>
-                    <SelectTrigger className={cn(getInputClass("serviceType"), "h-auto")}>
-                      <SelectValue placeholder="Servis türünü seçin..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-border/50 shadow-xl">
-                      {[
-                        "Ekran Değişimi",
-                        "Batarya Değişimi",
-                        "Şarj Soketi",
-                        "Kamera Değişimi",
-                        "Hoparlör / Mikrofon",
-                        "Yazılım Sorunu",
-                        "Su Hasarı Temizliği",
-                        "Donanım Hasarı",
-                        "Ürün Kontrolü",
-                        "Diğer",
-                      ].map((type) => (
-                        <SelectItem key={type} value={type} className="text-sm py-2.5 cursor-pointer rounded-lg m-0.5">
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Kozmetik Durum */}
-                <div className="md:col-span-2 space-y-3 pt-1">
-                  <Label className={labelClass}>Kozmetik Durum</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {["Çizik", "Ezik", "Kırık Cam", "Sıvı Teması"].map((item) => (
-                      <Label key={item} className="font-medium flex items-center gap-2.5 p-3.5 bg-muted/30 rounded-xl cursor-pointer border border-transparent hover:border-primary/20 transition-all">
-                        <Checkbox
-                          className="rounded-md data-[state=checked]:bg-primary h-4 w-4 border-muted-foreground/30"
-                          onCheckedChange={(checked) => {
-                            const current = form.getValues("cosmeticConditions");
-                            if (checked) form.setValue("cosmeticConditions", [...current, item]);
-                            else form.setValue("cosmeticConditions", current.filter(i => i !== item));
-                          }}
-                        />
-                        <span className="text-sm font-medium text-foreground">{item}</span>
-                      </Label>
-                    ))}
-                  </div>
-                  <Textarea
-                    {...form.register("cosmeticNotes")}
-                    className={cn(getInputClass("cosmeticNotes"), "h-20 resize-none")}
-                    placeholder="Ek kozmetik notlar..."
-                  />
-                </div>
+                )}
               </div>
-            </section>
 
-            {/* 3. Arıza Açıklaması */}
-            <section className={cardClass}>
-              <SectionBadge icon={AlertCircle} title="Arıza Bilgisi" />
-              <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>Detaylı Arıza Tanımı <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    {...form.register("problemDesc")}
-                    className={cn(getInputClass("problemDesc"), "h-32 resize-none")}
-                    placeholder="Müşterinin şikayetini ve gözlemlenen arızayı detaylıca anlatın..."
-                  />
-                  {errors.problemDesc && <p className="text-xs text-destructive mt-1.5 px-1">{errors.problemDesc.message}</p>}
-                </div>
-
-                <div className="space-y-3 pt-1">
-                  <Label className={labelClass}>Teslim Alınan Aksesuarlar</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Şarj Aleti", "Kutu", "Kılıf", "SIM Kart", "Hafıza Kart"].map((item) => (
-                      <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
-                        <Checkbox
-                          className="rounded-sm border-muted-foreground/40 h-3.5 w-3.5"
-                          onCheckedChange={(checked) => {
-                            const current = form.getValues("accessories");
-                            if (checked) form.setValue("accessories", [...current, item]);
-                            else form.setValue("accessories", current.filter(i => i !== item));
-                          }}
-                        />
-                        <span className="text-sm font-medium whitespace-nowrap">{item}</span>
-                      </Label>
-                    ))}
-                  </div>
+              <div className="space-y-3 pt-1">
+                <Label className={labelClass}>Teslim Alınan Parçalar / Aksesuarlar</Label>
+                <div className="flex flex-wrap gap-2">
+                  {getIndustryAccessories(shop).map((item) => (
+                    <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
+                      <Checkbox
+                        className="rounded-sm border-muted-foreground/40 h-3.5 w-3.5"
+                        onCheckedChange={(checked) => {
+                          const current = form.getValues("accessories") || [];
+                          if (checked) form.setValue("accessories", [...current, item]);
+                          else form.setValue("accessories", current.filter((i: string) => i !== item));
+                        }}
+                      />
+                      <span className="text-sm font-medium whitespace-nowrap">{item}</span>
+                    </Label>
+                  ))}
                 </div>
               </div>
             </section>
@@ -910,7 +808,7 @@ export default function NewServicePage() {
                       placeholder="0.00"
                     />
                   </div>
-                  {errors.estimatedCost && <p className="text-xs text-destructive mt-1.5 px-1">{errors.estimatedCost.message}</p>}
+                  {errors.estimatedCost && <p className="text-xs text-destructive mt-1.5 px-1">{errors.estimatedCost.message as string}</p>}
                 </div>
 
                 <div className="space-y-1.5">

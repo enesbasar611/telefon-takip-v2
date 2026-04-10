@@ -623,7 +623,8 @@ ${JSON.stringify(stats, null, 2)}`;
 
 export async function parseServiceDiagnosticWithAI(
     problemDescription: string,
-    deviceModel?: string
+    deviceModel?: string,
+    industry?: string
 ): Promise<{ success: true; data: AIDiagnosticResult } | { success: false; error: string }> {
     const { getShopId } = await import("@/lib/auth");
     const shopId = await getShopId();
@@ -650,7 +651,7 @@ Kurallar:
 3. suggestedParts listesinde piyasada yaygın kullanılan parçaları öner. inStock: true/false değerini makul bir tahmine göre yap (şimdilik).
 4. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
-    const userPrompt = `ARIZA AÇIKLAMASI: ${problemDescription}\nCİHAZ MODELİ: ${deviceModel || 'Bilinmiyor'}`;
+    const userPrompt = `SEKTÖR: ${industry || 'Bilinmiyor'}\nARIZA AÇIKLAMASI: ${problemDescription}\nCİHAZ MODELİ: ${deviceModel || 'Bilinmiyor'}`;
 
     const result = await callGemini(shopId, [systemPrompt, userPrompt]);
     if ("error" in result) return { success: false, error: result.error };
@@ -785,5 +786,42 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
         }
 
         return { success: false, message: errorMsg };
+    }
+}
+
+// ── INDUSTRY CONFIG AI FALLBACK ──────────────────────────────────────────────
+
+export async function generateIndustryConfigWithAI(sectorName: string): Promise<{ success: true; data: { serviceFormFields: any[], inventoryFormFields: any[] } } | { success: false; error: string }> {
+    const { getShopId } = await import("@/lib/auth");
+    const shopId = await getShopId();
+
+    const schema = `{
+  "serviceFormFields": [
+    { "key": "string (İngilizce camelCase)", "label": "string", "type": "text | number | select | textarea", "required": "boolean (opsiyonel)", "placeholder": "string (opsiyonel)", "options": ["string"] }
+  ],
+  "inventoryFormFields": [
+    { "key": "string (İngilizce camelCase)", "label": "string", "type": "text | number | select | textarea", "required": "boolean (opsiyonel)", "placeholder": "string (opsiyonel)", "options": ["string"] }
+  ],
+  "accessories": ["string"]
+}`;
+
+    const systemPrompt = `Sen bir B2B SaaS konfigürasyon asistanısın. Kullanıcının işletme sektörüne (${sectorName}) özel olarak, servis/arıza kaydı oluştururken (serviceFormFields) ve stok/malzeme eklerken (inventoryFormFields) kullanılması en mantıklı 5'er formu alanı oluştur.
+Kurallar:
+1. "deviceBrand", "deviceModel", "imei" gibi varsayılan alanları TEKRAR EKLEME. Bunlar zaten var. Sadece ekstra ve sektöre spesifik (örn: Elektrikçi için 'Voltaj', 'Bölge') alanlar üret.
+2. type olarak sadece 'text', 'number', 'select', 'textarea' kullan.
+3. select tipi için mantıklı birkaç 'options' sağla.
+4. "accessories": Bu kategoriye giren dükkanlarda müşteriden teslim alınırken kontrol edilecek en mantıklı 5 aksesuarı (örn. terzi için 'Askı', 'Kılıf', 'Hediye Paketi') içeren bir dizi döndür.
+5. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
+
+    const userPrompt = `SEKTÖR: ${sectorName}`;
+
+    const result = await callGemini(shopId, [systemPrompt, userPrompt]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    try {
+        const parsed = JSON.parse(result.text);
+        return { success: true, data: parsed };
+    } catch {
+        return { success: false, error: "AI yapılandırması oluşturulamadı." };
     }
 }

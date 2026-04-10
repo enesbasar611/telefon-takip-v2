@@ -1,127 +1,141 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getShopId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { formatProperCase, formatPhoneRaw } from "@/lib/formatters";
-import { toTitleCase } from "@/lib/utils";
 
-export async function createShopOnboarding(formData: {
-    name: string;
-    address: string;
-    phone: string;
-    currency: string;
-    openingBalance: number;
-    website?: string;
-}) {
-    const session = await auth();
-
-    if (!session?.user?.id) {
-        throw new Error("Unauthorized");
-    }
-
+/**
+ * Destructively resets all transactional data for the current shop.
+ * Used for a "clean start" during onboarding.
+ */
+export async function resetShopData() {
     try {
-        // 1. Create the Shop
-        const shop = await prisma.shop.create({
-            data: {
-                name: toTitleCase(formData.name),
-                address: toTitleCase(formData.address),
-                phone: formatPhoneRaw(formData.phone),
-            },
-        });
+        const shopId = await getShopId();
 
-        // 2. Link User to Shop and set as ADMIN
-        const userExists = await prisma.user.findUnique({ where: { id: session.user.id } });
-        if (!userExists) {
-            return { success: false, error: "Kullanıcı kaydı bulunamadı. DB sıfırlanmış veya eski oturum kalmış olabilir. Lütfen çıkış yapıp tekrar giriş yapın." };
-        }
-
-        await prisma.user.update({
-            where: { id: session.user.id },
-            data: {
-                shopId: shop.id,
-                role: "ADMIN",
-            },
-        });
-
-        // 3. Create initial "Kasa" account
-        await prisma.financeAccount.create({
-            data: {
-                name: "Merkez Kasa",
-                type: "CASH",
-                balance: formData.openingBalance,
-                isDefault: true,
-                shopId: shop.id,
-            },
-        });
-
-        // 4. Create initial Daily Session if balance > 0
-        if (formData.openingBalance > 0) {
-            await prisma.dailySession.create({
+        await prisma.$transaction([
+            prisma.serviceUsedPart.deleteMany({ where: { shopId } }),
+            prisma.serviceLog.deleteMany({ where: { shopId } }),
+            prisma.inventoryMovement.deleteMany({ where: { shopId } }),
+            prisma.saleItem.deleteMany({ where: { shopId } }),
+            prisma.attachment.deleteMany({ where: { shopId } }),
+            prisma.transaction.deleteMany({ where: { shopId } }),
+            prisma.sale.deleteMany({ where: { shopId } }),
+            prisma.returnTicket.deleteMany({ where: { shopId } }),
+            prisma.inventoryLog.deleteMany({ where: { shopId } }),
+            prisma.serviceTicket.deleteMany({ where: { shopId } }),
+            prisma.deviceHubInfo.deleteMany({ where: { shopId } }),
+            prisma.product.deleteMany({ where: { shopId } }),
+            prisma.category.deleteMany({ where: { shopId } }),
+            prisma.stockAIAlert.deleteMany({ where: { shopId } }),
+            prisma.notification.deleteMany({ where: { shopId } }),
+            prisma.reminder.deleteMany({ where: { shopId } }),
+            prisma.shortageItem.deleteMany({ where: { shopId } }),
+            prisma.dailySession.deleteMany({ where: { shopId } }),
+            prisma.debt.deleteMany({ where: { shopId } }),
+            prisma.supplierTransaction.deleteMany({ where: { shopId } }),
+            prisma.purchaseOrderItem.deleteMany({ where: { shopId } }),
+            prisma.purchaseOrder.deleteMany({ where: { shopId } }),
+            prisma.supplier.deleteMany({ where: { shopId } }),
+            prisma.financeAccount.deleteMany({ where: { shopId } }),
+            prisma.agendaEvent.deleteMany({ where: { shopId } }),
+            prisma.receiptSettings.deleteMany({ where: { shopId } }),
+            prisma.setting.deleteMany({ where: { shopId } }),
+            prisma.customer.deleteMany({ where: { shopId } }),
+            prisma.shop.update({
+                where: { id: shopId },
                 data: {
-                    openingBalance: formData.openingBalance,
-                    openedById: session.user.id as string,
-                    status: "OPEN",
-                    shopId: shop.id,
-                    notes: "Sistem açılış bakiyesi",
-                },
+                    isFirstLogin: true,
+                    whatsappSessionId: null,
+                    enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE"],
+                    themeConfig: null
+                } as any
+            })
+        ]);
+
+        revalidatePath("/");
+        return { success: true };
+    } catch (error) {
+        console.error("resetShopData error:", error);
+        return { success: false, error: "Veriler sıfırlanamadı." };
+    }
+}
+
+export async function saveOnboardingModules(modules: string[]) {
+    try {
+        const shopId = await getShopId();
+        await prisma.shop.update({
+            where: { id: shopId },
+            data: { enabledModules: modules }
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Modüller kaydedilemedi." };
+    }
+}
+
+export async function saveOnboardingIntegrations(data: { whatsappConnected: boolean; geminiApiKey?: string }) {
+    try {
+        const shopId = await getShopId();
+
+        if (data.geminiApiKey) {
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId, key: "gemini_api_key" } },
+                update: { value: data.geminiApiKey },
+                create: { shopId, key: "gemini_api_key", value: data.geminiApiKey }
             });
         }
 
-        // 5. Create default Receipt Settings for all types
-        const receiptTypes = [
-            { id: "pos", subtitle: "PROFESYONEL TEKNİK SERVİS" },
-            { id: "service", subtitle: "MOBİL SERVİS & TEKNİK DESTEK" },
-            { id: "stock", subtitle: "EKSİK / SİPARİŞ LİSTESİ" }
-        ];
+        if (data.whatsappConnected) {
+            // Logic to mark as connected or store session id
+            // For now we just mock high-level state
+            await prisma.shop.update({
+                where: { id: shopId },
+                data: { whatsappSessionId: `session_${shopId}` } as any
+            });
+        }
 
-        await Promise.all(receiptTypes.map(type =>
-            prisma.receiptSettings.create({
-                data: {
-                    id: `${shop.id}_${type.id}`,
-                    title: shop.name.toUpperCase(),
-                    subtitle: type.subtitle,
-                    phone: shop.phone || "",
-                    address: shop.address || "",
-                    footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
-                    website: formData.website || "",
-                    shopId: shop.id,
-                    terms: type.id === "service" ? "• Arıza tespit ücreti 150 TL'dir. İptal edilen cihazlarda bu ücret tahsil edilir.\n• 30 gün içinde teslim alınmayan cihazlardan işletmemiz sorumlu değildir.\n• Yedekleme sorumluluğu müşteriye aittir. Veri kaybından firmamız sorumlu tutulamaz." : null
-                }
-            })
-        ));
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Entegrasyonlar kaydedilemedi." };
+    }
+}
 
-        // 6. Initialize Global Settings (WhatsApp Templates, Company Info, etc.)
-        const globalSettings = [
-            { key: "companyName", value: shop.name },
-            { key: "companyPhone", value: shop.phone || "" },
-            { key: "companyAddress", value: shop.address || "" },
-            { key: "companyWebsite", value: formData.website || "" },
-            // WhatsApp Templates
-            { key: "whatsappNewService", value: "Sayın {musteri_adi}, {cihaz} cihazınız {servis_no} numarası ile servisimize kabul edilmiştir." },
-            { key: "whatsappReady", value: "Sayın {musteri_adi}, {cihaz} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz." },
-            { key: "whatsappAppointment", value: "Sayın {musteri_adi}, {tarih} tarihinde randevunuz oluşturulmuştur. Sizi bekliyoruz!" },
-            { key: "whatsappPaymentReminder", value: "Sayın {musteri_adi}, {tutar} tutarındaki ödemeniz hakkında hatırlatma. Ödeme için bize ulaşabilirsiniz." },
-            { key: "whatsappConfirmBeforeSend", value: "true" },
-            // Barcode & Printing
-            { key: "barcodeAutoPrint", value: "true" },
-            { key: "receiptAutoPrint", value: "true" },
-            { key: "currencySymbol", value: "₺" },
-        ];
+export async function saveOnboardingFinance(accounts: any[]) {
+    try {
+        const shopId = await getShopId();
 
-        await Promise.all(globalSettings.map(s =>
-            prisma.setting.upsert({
-                where: { shopId_key: { shopId: shop.id, key: s.key } },
-                update: { value: s.value },
-                create: { ...s, shopId: shop.id }
-            })
-        ));
+        // Clean start for finance accounts
+        await prisma.financeAccount.deleteMany({ where: { shopId } });
 
+        const creations = accounts.map(acc => prisma.financeAccount.create({
+            data: {
+                name: acc.name,
+                type: acc.type,
+                balance: acc.balance || 0,
+                limit: acc.limit || null,
+                billingDay: acc.billingDay || null,
+                shopId,
+                isDefault: acc.isDefault || false
+            } as any
+        }));
+
+        await Promise.all(creations);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Finansal kurulum yapılamadı." };
+    }
+}
+
+export async function finishOnboarding() {
+    try {
+        const shopId = await getShopId();
+        await prisma.shop.update({
+            where: { id: shopId },
+            data: { isFirstLogin: false } as any
+        });
         revalidatePath("/");
-        revalidatePath("/ayarlar");
-        return { success: true, shopId: shop.id, shopName: shop.name };
-    } catch (error: any) {
-        console.error("Onboarding error:", error);
-        return { success: false, error: error?.message || "Dükkan oluşturulamadı." };
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Onboarding bitirilemedi." };
     }
 }

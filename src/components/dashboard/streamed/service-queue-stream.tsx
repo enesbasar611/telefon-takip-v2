@@ -27,7 +27,7 @@ const statusLabels: Record<string, string> = {
     CANCELLED: "İptal edildi",
 };
 
-export async function ServiceQueueStream() {
+export async function ServiceQueueStream({ title = "Servis Kuyruğu" }: { title?: string }) {
     const shopId = await getShopId();
     const recentTicketsRaw = await getRecentSales(shopId, 5);
     const recentTickets = serializePrisma(recentTicketsRaw);
@@ -40,7 +40,7 @@ export async function ServiceQueueStream() {
                         <Smartphone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">Servis Kuyruğu</CardTitle>
+                        <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">{title}</CardTitle>
                         <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
                     </div>
                 </div>

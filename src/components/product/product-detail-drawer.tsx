@@ -164,6 +164,19 @@ export function ProductDetailDrawer({
                                             </div>
                                             <span className="text-[11px]  text-white uppercase">S. GÖKSU</span>
                                         </div>
+
+                                        {/* Dynamic Attributes */}
+                                        {product.attributes && Object.entries(product.attributes).length > 0 && (
+                                            <div className="mt-4 space-y-2">
+                                                <p className="text-[9px]  text-slate-600 mb-2 uppercase tracking-widest pl-1">Sektörel Bilgiler</p>
+                                                {Object.entries(product.attributes).map(([key, value]: [string, any]) => (
+                                                    <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                                                        <span className="text-[10px]  text-indigo-400 uppercase">{key}</span>
+                                                        <span className="text-[11px]  text-white uppercase">{String(value || "-")}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Financial Info Box */}
@@ -268,7 +281,7 @@ export function ProductDetailDrawer({
                     </div>
                 </div>
             </SheetContent>
-        </Sheet>
+        </Sheet >
     );
 }
 

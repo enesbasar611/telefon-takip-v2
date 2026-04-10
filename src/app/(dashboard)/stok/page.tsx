@@ -8,6 +8,7 @@ import { StockTableStream } from "@/components/product/streamed/stock-table-stre
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
+import { getShop } from "@/lib/actions/setting-actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ function CardSkeleton() {
 
 export default async function StokPage({ searchParams }: { searchParams: any }) {
   const categories = await getCategories();
+  const shop = await getShop();
 
   return (
     <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8 animate-in fade-in duration-700">
@@ -48,24 +50,24 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         actions={
           <>
             <BulkAddProductModal categories={categories} />
-            <CreateProductModal categories={categories} />
+            <CreateProductModal categories={categories} shop={shop} />
           </>
         }
       />
 
       <div className="space-y-8">
         <Suspense fallback={<CardSkeleton />}>
-          <StockMetricsStream />
+          <StockMetricsStream shop={shop} />
         </Suspense>
 
         <Suspense fallback={<CardSkeleton />}>
-          <CategorySummaryStream />
+          <CategorySummaryStream shop={shop} />
         </Suspense>
       </div>
 
       <div className="bg-card shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-2xl overflow-hidden border-none border border-border/40">
         <Suspense fallback={<TableSkeleton />}>
-          <StockTableStream searchParams={searchParams} />
+          <StockTableStream searchParams={searchParams} shop={shop} />
         </Suspense>
       </div>
     </div>

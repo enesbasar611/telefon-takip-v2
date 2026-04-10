@@ -24,7 +24,7 @@ import { NotificationDropdown } from "@/components/navbar/notification-dropdown"
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
 import { Landmark } from "lucide-react";
 
-export function Navbar() {
+export function Navbar({ shop }: { shop?: any }) {
   const { isFinancialVisible, toggleFinancialVisibility } = useUI();
 
   return (

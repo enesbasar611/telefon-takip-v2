@@ -158,6 +158,7 @@ export async function createProduct(data: {
   imei?: string;
   color?: string;
   capacity?: string;
+  attributes?: Record<string, any>;
 }) {
   try {
     const shopId = await getShopId();
@@ -233,6 +234,7 @@ export async function createProduct(data: {
         supplierId: data.supplierId,
         shopId,
         isSecondHand: data.isSecondHand || false,
+        attributes: data.attributes || (null as any),
         deviceInfo: data.isSecondHand ? {
           create: {
             imei: data.imei ? formatUppercase(data.imei) : `GEN-${Date.now()}`,
@@ -292,6 +294,7 @@ export async function updateProduct(id: string, data: any) {
         sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
         stock: newStock,
         criticalStock: data.criticalStock !== undefined ? Number(data.criticalStock) : undefined,
+        attributes: data.attributes !== undefined ? data.attributes : undefined,
       }
     });
 

@@ -14,6 +14,19 @@ export async function getSettings() {
   }
 }
 
+export async function getShop() {
+  try {
+    const shopId = await getShopId();
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId }
+    });
+    return serializePrisma(shop);
+  } catch (error) {
+    console.error("getShop error:", error);
+    return null;
+  }
+}
+
 export async function updateSetting(key: string, value: string, revalidate = true) {
   try {
     const shopId = await getShopId();
@@ -52,5 +65,74 @@ export async function bulkUpdateSettings(settings: Record<string, string>) {
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ayarlar güncellenirken hata oluştu." };
+  }
+}
+
+export async function updateShop(data: any) {
+  try {
+    const shopId = await getShopId();
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        name: data.name,
+        industry: data.industry,
+        phone: data.phone,
+        email: data.email,
+        address: data.address,
+        enabledModules: data.enabledModules,
+        themeConfig: data.themeConfig
+      } as any,
+    });
+    revalidatePath("/");
+    revalidatePath("/ayarlar");
+    return { success: true };
+  } catch (error) {
+    console.error("updateShop error:", error);
+    return { success: false, error: "Dükkan bilgileri güncellenemedi." };
+  }
+}
+
+export async function updateShopModules(enabledModules: string[]) {
+  try {
+    const shopId = await getShopId();
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: { enabledModules } as any,
+    });
+    revalidatePath("/");
+    revalidatePath("/ayarlar");
+    return { success: true };
+  } catch (error) {
+    console.error("updateShopModules error:", error);
+    return { success: false, error: "Modüller güncellenemedi." };
+  }
+}
+
+export async function saveAIIndustryConfig(serviceFields: any[], inventoryFields: any[], accessories: string[]) {
+  try {
+    const shopId = await getShopId();
+    const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+    if (!shop) throw new Error("Dükkan bulunamadı.");
+
+    const themeConfig = (shop.themeConfig as any) || {};
+
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        themeConfig: {
+          ...themeConfig,
+          aiServiceFields: serviceFields,
+          aiInventoryFields: inventoryFields,
+          aiAccessories: accessories,
+        }
+      } as any,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/ayarlar");
+    return { success: true };
+  } catch (error) {
+    console.error("saveAIIndustryConfig error:", error);
+    return { success: false, error: "AI yapılandırması kaydedilemedi." };
   }
 }

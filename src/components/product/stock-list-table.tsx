@@ -44,9 +44,10 @@ import { ProductDetailDrawer } from "./product-detail-drawer";
 import { EditProductModal } from "./edit-product-modal";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { getIndustryLabel } from "@/lib/industry-utils";
 
 
-export function StockListTable({ products, categories }: { products: any[], categories: any[] }) {
+export function StockListTable({ products, categories, shop }: { products: any[], categories: any[], shop?: any }) {
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
 
@@ -164,7 +165,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
           <Input
-            placeholder="Ürün adı, SKU veya barkod ara..."
+            placeholder={`${getIndustryLabel(shop, "productLabel")} adı, SKU veya barkod ara...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 bg-white/[0.02] border-border/50 rounded-xl text-[13px] font-medium text-white h-10 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all"
@@ -291,7 +292,7 @@ export function StockListTable({ products, categories }: { products: any[], cate
           <TableHeader>
             <TableRow className="border-b border-border/50 hover:bg-transparent">
               <TableHead className="font-medium py-3 pl-8 h-11">
-                <SortableHeader label="Ürün Bilgisi" field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
+                <SortableHeader label={`${getIndustryLabel(shop, "productLabel")} Bilgisi`} field="name" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />
               </TableHead>
               <TableHead className="font-medium py-3 h-11">
                 <SortableHeader label="Kategori" field="categoryId" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} />

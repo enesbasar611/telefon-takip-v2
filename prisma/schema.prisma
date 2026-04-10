@@ -14,6 +14,11 @@ model Shop {
   address     String?
   phone       String?
   email       String?
+  industry    IndustryType @default(PHONE_REPAIR)
+  enabledModules String[] @default(["SERVICE", "STOCK", "SALE", "FINANCE"])
+  isFirstLogin Boolean @default(true)
+  whatsappSessionId String?
+  themeConfig Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -150,6 +155,7 @@ model ServiceTicket {
   photos                String[]
   devicePassword        String?
   serviceType           String?
+  attributes            Json?               // Industry specific dynamic fields
   
   shopId                String
   shop                  Shop                @relation(fields: [shopId], references: [id])
@@ -231,6 +237,7 @@ model Product {
   supplierId     String?
   location       String?
   warrantyMonths Int                 @default(0)
+  attributes     Json?               // Industry specific dynamic fields (color, storage etc.)
   
   shopId         String
   shop           Shop                @relation(fields: [shopId], references: [id])
@@ -500,6 +507,8 @@ model FinanceAccount {
   name         String
   type         AccountType   @default(CASH)
   balance      Decimal       @default(0) @db.Decimal(12, 2)
+  limit        Decimal?      @db.Decimal(12, 2)
+  billingDay   Int?
   isDefault    Boolean       @default(false)
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
@@ -794,5 +803,15 @@ enum AgendaEventType {
   PAYMENT
   COLLECTION
   TASK
+}
+
+enum IndustryType {
+  PHONE_REPAIR
+  ELECTRICIAN
+  PLUMBING
+  COMPUTER_REPAIR
+  GROCERY
+  CLOTHING
+  GENERAL
 }
 
