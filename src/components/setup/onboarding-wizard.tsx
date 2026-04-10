@@ -67,8 +67,9 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
     const [step, setStep] = useState<Step>("modules");
     const [loading, setLoading] = useState(false);
 
-    // Step 1: Modules
+    // Step 1: Modules & Industry
     const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE"]);
+    const [sector, setSector] = useState("");
 
     // Step 2: Integrations
     const [whatsappConnected, setWhatsappConnected] = useState(false);
@@ -84,24 +85,48 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
         setLoading(true);
         try {
             if (step === "modules") {
-                await saveOnboardingModules(selectedModules);
+                if (!sector.trim()) {
+                    toast.error("Lütfen sektörünüzü belirtin.");
+                    setLoading(false);
+                    return;
+                }
+                const loadingToast = toast.loading("Sektörünüz AI ile analiz ediliyor...");
+                const res = await saveOnboardingModules(selectedModules, sector);
+                toast.dismiss(loadingToast);
+                if (!res.success) {
+                    toast.error(res.error || "İşlem başarısız oldu.");
+                    setLoading(false);
+                    return;
+                }
                 setStep("integrations");
             } else if (step === "integrations") {
-                await saveOnboardingIntegrations({
+                const res = await saveOnboardingIntegrations({
                     whatsappConnected,
                     geminiApiKey: useDefaultGemini ? undefined : geminiKey
                 });
+                if (!res.success) {
+                    toast.error(res.error || "İşlem başarısız oldu.");
+                    setLoading(false);
+                    return;
+                }
                 setStep("finance");
             } else if (step === "finance") {
-                await saveOnboardingFinance(accounts);
-                const res = await finishOnboarding();
-                if (res.success) {
+                const res1 = await saveOnboardingFinance(accounts);
+                if (!res1.success) {
+                    toast.error(res1.error || "İşlem başarısız oldu.");
+                    setLoading(false);
+                    return;
+                }
+                const res2 = await finishOnboarding();
+                if (res2.success) {
                     sessionStorage.setItem("just_finished_onboarding", "true");
                     setStep("success");
+                } else {
+                    toast.error(res2.error || "İşlem başarısız oldu.");
                 }
             }
-        } catch (error) {
-            toast.error("Bir hata oluştu.");
+        } catch (error: any) {
+            toast.error(error.message || "Beklenmeyen bir hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -173,7 +198,17 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                 >
                                     <div className="space-y-2">
                                         <h1 className="text-4xl font-bold tracking-tight">Hoş Geldiniz, {shopName}</h1>
-                                        <p className="text-gray-400 text-lg">İşletmenizde kullanmak istediğiniz modülleri seçin.</p>
+                                        <p className="text-gray-400 text-lg">İşletme sektörünüzü ve kullanmak istediğiniz modülleri seçin.</p>
+                                    </div>
+
+                                    <div className="space-y-2 pb-2 border-b border-white/10 mb-4">
+                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Sektörünüz / İş Alanınız</Label>
+                                        <Input
+                                            placeholder="Örn: Telefoncu, Terzi, Elektrikçi..."
+                                            value={sector}
+                                            onChange={(e) => setSector(e.target.value)}
+                                            className="bg-black/40 border-white/10 rounded-2xl h-14 text-lg focus:border-white transition-colors"
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">

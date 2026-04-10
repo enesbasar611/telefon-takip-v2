@@ -350,8 +350,9 @@ export async function backupToDriveAction() {
 
 export async function getWhatsAppStatusAction() {
     try {
+        const shopId = await getShopId();
         const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        return whatsappManager.getStatus();
+        return await whatsappManager.getStatus(shopId);
     } catch (error: any) {
         return { status: "DISCONNECTED", qr: undefined };
     }
@@ -360,8 +361,9 @@ export async function getWhatsAppStatusAction() {
 /** Send WhatsApp Message using local whatsapp-web.js */
 export async function sendWhatsAppAction(phone: string, message: string) {
     try {
+        const shopId = await getShopId();
         const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        await whatsappManager.sendMessage(phone, message);
+        await whatsappManager.sendMessage(shopId, phone, message);
         return { success: true };
     } catch (error: any) {
         console.error("[WHATSAPP ERROR]", error.message);

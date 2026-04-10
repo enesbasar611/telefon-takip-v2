@@ -14,6 +14,7 @@ import {
 import { DeviceListClient } from "@/components/device-hub/device-list-client";
 import { getMonthlySalesComparisonHtml } from "@/lib/device-utils";
 import { DeviceExportButton } from "@/components/device-hub/device-export-button";
+import { getIndustryLabel } from "@/lib/industry-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,16 @@ export default async function DeviceHubPage() {
     getExpiringDevices(),
   ]);
 
+  const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+  const assetLabel = getIndustryLabel(shop, "customerAsset");
+  const assetLabelUpper = assetLabel.toLocaleUpperCase('tr-TR');
+
   // Metrics
   const newDevices = devices.filter((d: any) => d.deviceInfo?.condition === "NEW");
   const usedDevices = devices.filter((d: any) => d.deviceInfo?.condition === "USED");
   const intlDevices = devices.filter((d: any) => d.deviceInfo?.condition === "INTERNATIONAL");
+
+  // ... (rest of data fetching)
 
   // Today's Sales
   const startOfToday = new Date();
@@ -138,7 +145,7 @@ export default async function DeviceHubPage() {
 
       {/* Standardized Page Header */}
       <PageHeader
-        title="Cihaz Listesi"
+        title={`${assetLabel} Merkezi`}
         description="Envanter yönetimi, finansal takip ve alım-satım süreçlerinin merkezi."
         icon={MonitorSmartphone}
         iconColor="text-blue-500"
@@ -157,10 +164,16 @@ export default async function DeviceHubPage() {
           <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-          <MetricCard icon={MonitorSmartphone} label="TOPLAM STOK" value={devices.length.toString()} subLabel="Cihaz Adet" color="blue" />
-          <MetricCard icon={BadgeCheck} label="SIFIR CİHAZ" value={newDevices.length.toString()} subLabel="Sıfır Stok" color="emerald" />
-          <MetricCard icon={RotateCcw} label="2. EL CİHAZ" value={usedDevices.length.toString()} subLabel="İkinci El" color="amber" />
-          <MetricCard icon={Globe} label="YURTDIŞI" value={intlDevices.length.toString()} subLabel="Dual SIM" color="purple" />
+          <MetricCard icon={MonitorSmartphone} label={`TOPLAM ${assetLabelUpper}`} value={devices.length.toString()} subLabel={`${assetLabel} Adet`} color="blue" />
+          {(shop?.industry === 'PHONE_REPAIR' || shop?.industry === 'COMPUTER_REPAIR') ? (
+            <>
+              <MetricCard icon={BadgeCheck} label={`SIFIR ${assetLabelUpper}`} value={newDevices.length.toString()} subLabel="Sıfır Stok" color="emerald" />
+              <MetricCard icon={RotateCcw} label={`2. EL ${assetLabelUpper}`} value={usedDevices.length.toString()} subLabel="İkinci El" color="amber" />
+              <MetricCard icon={Globe} label="YURTDIŞI" value={intlDevices.length.toString()} subLabel="Dual SIM" color="purple" />
+            </>
+          ) : (
+            <MetricCard icon={TrendingUp} label="AKTİF STOK" value={devices.length.toString()} subLabel="Toplam Ürün" color="emerald" />
+          )}
           <ExpiringWarrantiesModal devices={expiringDevices} count={expiringDevices.length} />
           <DeviceAiStockAdviceModal missingItems={missingItems} />
         </div>
@@ -175,7 +188,7 @@ export default async function DeviceHubPage() {
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel="Toplam Alış" color="rose" />
           <MetricCard icon={TrendingUp} label="BEKLENEN KAR" value={`${beklenenKar.toLocaleString("tr-TR")} ₺`} subLabel="Satış Potansiyeli" color="emerald" />
-          <MetricCard icon={CreditCard} label="BUGÜNKÜ SATIŞ" value={`${todaySalesTotal.toLocaleString("tr-TR")} ₺`} subLabel={`${todayCount} Cihaz`} color="blue" />
+          <MetricCard icon={CreditCard} label="BUGÜNKÜ SATIŞ" value={`${todaySalesTotal.toLocaleString("tr-TR")} ₺`} subLabel={`${todayCount} İşlem`} color="blue" />
           <DeviceMonthlySalesModal
             monthlyTotal={monthlyTotal}
             monthlyCount={monthlyCount}

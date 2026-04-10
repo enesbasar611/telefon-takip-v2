@@ -18,7 +18,6 @@ import {
 import { getShop } from "@/lib/actions/setting-actions";
 import { getIndustryConfig, isModuleEnabled, getIndustryLabel } from "@/lib/industry-utils";
 import { cn } from "@/lib/utils";
-import { SetupCheck } from "@/components/setup/setup-check";
 import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
 import { getCategories } from "@/lib/actions/product-actions";
 
@@ -36,11 +35,7 @@ export default async function DashboardPage() {
   const hasConfig = !!(shop?.themeConfig as any)?.aiServiceFields;
 
   return (
-    <div className="flex-1 space-y-10 p-8 pt-6 bg-transparent min-h-screen font-sans selection:bg-primary/20 relative z-10">
-      <SetupCheck
-        isFirstLogin={shop?.isFirstLogin ?? false}
-        shopName={shop?.name || "Dükkan"}
-      />
+    <div className="flex-1 space-y-10 selection:bg-primary/20 relative z-10">
       <DashboardOnboardingClient categories={categories} shop={shop} />
 
       <DashboardHeader

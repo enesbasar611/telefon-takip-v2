@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
 interface Account {
     id: string;
     name: string;
-    type: string;
+    type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
     balance: number;
+    limit?: number;
+    billingDay?: number;
 }
 
 export function AccountDetailModal({ account }: { account: Account }) {
@@ -75,14 +77,18 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             <div>
                                 <DialogTitle className="font-medium text-3xl  tracking-tight text-foreground">{account.name}</DialogTitle>
                                 <DialogDescription className="text-xs  text-muted-foreground mt-1.5 flex items-center gap-3">
-                                    <Badge variant="outline" className="text-[10px]  tracking-widest h-6 px-3 bg-background/50">{account.type}</Badge>
-                                    <span className="opacity-60 font-mono tracking-tighter">ID: {account.id}</span>
+                                    <Badge variant="outline" className="text-[10px]  tracking-widest h-6 px-3 bg-background/50">
+                                        {account.type === 'CREDIT_CARD' ? 'KREDİ KARTI' : account.type === 'POS' ? 'SANAL POS' : account.type}
+                                    </Badge>
+                                    <span className="opacity-60 font-mono tracking-tighter">Sektörel Finans Takibi</span>
                                 </DialogDescription>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[11px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">GÜNCEL BAKİYE</p>
-                            <p className={cn("text-4xl  tracking-tight", account.balance >= 0 ? "text-foreground" : "text-rose-500")}>
+                            <p className="text-[11px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">
+                                {account.type === 'CREDIT_CARD' ? 'GÜNCEL BORÇ' : 'GÜNCEL BAKİYE'}
+                            </p>
+                            <p className={cn("text-4xl  tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
                                 ₺{Number(account.balance).toLocaleString('tr-TR')}
                             </p>
                         </div>
@@ -91,30 +97,104 @@ export function AccountDetailModal({ account }: { account: Account }) {
 
                 <div className="flex-1 overflow-y-auto p-8 pt-6 space-y-8 custom-scrollbar">
                     {/* Analytics Summary */}
+                    {/* Account Health & Comparison */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.03] rounded-full bg-blue-500 group-hover:scale-125 transition-transform" />
-                            <h4 className="font-medium text-[11px]  text-muted-foreground uppercase flex items-center gap-2 mb-4 tracking-widest">
-                                <TrendingUp className="h-4 w-4 text-emerald-500" /> TOPLAM GELİR
+                        {account.type === 'CREDIT_CARD' ? (
+                            <div className="md:col-span-2 p-8 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 flex flex-col justify-between">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">KART LİMİT DURUMU</h4>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-black text-foreground">₺{(Number(account.limit || 0) - Number(account.balance || 0)).toLocaleString('tr-TR')}</span>
+                                            <span className="text-xs text-muted-foreground">kullanılabilir</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">AÇILIŞTAN BERİ DEĞİŞİM</h4>
+                                        {analytics?.transactions.some((t: any) => t.category === 'AÇILIŞ') ? (
+                                            (() => {
+                                                const opening = Number(analytics.transactions.find((t: any) => t.category === 'AÇILIŞ')?.amount || 0);
+                                                const diff = account.balance - opening;
+                                                return (
+                                                    <Badge variant="secondary" className={cn("font-black h-8 px-4 text-xs border-none", diff <= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400")}>
+                                                        {diff > 0 ? '+' : ''}{diff.toLocaleString('tr-TR')} ₺
+                                                    </Badge>
+                                                );
+                                            })()
+                                        ) : (
+                                            <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 border-none font-black h-8 px-4 text-xs">
+                                                Ayın {account.billingDay}. Günü
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase">
+                                        <span>Kullanılan: ₺{Number(account.balance || 0).toLocaleString('tr-TR')}</span>
+                                        <span>Toplam: ₺{Number(account.limit || 0).toLocaleString('tr-TR')}</span>
+                                    </div>
+                                    <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                        <div
+                                            className="h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all duration-1000"
+                                            style={{ width: `${Math.min(100, (Number(account.balance || 0) / (Number(account.limit || 1))) * 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="md:col-span-2 p-8 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col justify-between bg-gradient-to-br from-emerald-500/[0.03] to-transparent">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">HESAP DURUMU</h4>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-black text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</span>
+                                            <span className="text-xs text-muted-foreground">toplam bakiye</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">AÇILIŞTAN BERİ DEĞİŞİM</h4>
+                                        {analytics?.transactions.some((t: any) => t.category === 'AÇILIŞ') ? (
+                                            (() => {
+                                                const opening = Number(analytics.transactions.find((t: any) => t.category === 'AÇILIŞ')?.amount || 0);
+                                                const diff = account.balance - opening;
+                                                return (
+                                                    <Badge variant="secondary" className={cn("font-black h-8 px-4 text-xs border-none", diff >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400")}>
+                                                        {diff >= 0 ? '+' : ''}{diff.toLocaleString('tr-TR')} ₺
+                                                    </Badge>
+                                                );
+                                            })()
+                                        ) : (
+                                            <span className="text-[10px] text-muted-foreground font-medium italic">Açılış kaydı yok</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="h-px w-full bg-white/5 my-2" />
+                                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                                    Bu hesap üzerinden yapılan tüm işlemler anlık olarak bakiyenize yansıtılır. {account.type === 'BANK' ? 'Banka transferleri' : 'Nakit hareketleri'} için varsayılan hesaptır.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="p-8 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
+                            <h4 className="font-medium text-[10px]  text-muted-foreground uppercase flex items-center gap-2 mb-3 tracking-widest">
+                                <Activity className="h-4 w-4 text-blue-400" /> İŞLEM ANALİZİ
                             </h4>
-                            <p className="text-3xl  text-emerald-500 tracking-tight">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0).toLocaleString('tr-TR') || "0"}</p>
-                            <p className="text-[11px] text-muted-foreground  mt-2 opacity-80 uppercase tracking-tighter">Seçili periyottaki toplam giriş</p>
-                        </div>
-                        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.03] rounded-full bg-rose-500 group-hover:scale-125 transition-transform" />
-                            <h4 className="font-medium text-[10px]  text-muted-foreground uppercase flex items-center gap-2 mb-3">
-                                <TrendingDown className="h-3 w-3 text-rose-500" /> TOPLAM GİDER
-                            </h4>
-                            <p className="text-2xl  text-rose-500">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.expense, 0).toLocaleString('tr-TR') || "0"}</p>
-                            <p className="text-[10px] text-muted-foreground font-medium mt-1">Seçili periyottaki toplam çıkış</p>
-                        </div>
-                        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.03] rounded-full bg-orange-500 group-hover:scale-125 transition-transform" />
-                            <h4 className="font-medium text-[10px]  text-muted-foreground uppercase flex items-center gap-2 mb-3">
-                                <Activity className="h-3 w-3 text-orange-500" /> İŞLEM SAYISI
-                            </h4>
-                            <p className="text-2xl ">{analytics?.transactions.length || "0"}</p>
-                            <p className="text-[10px] text-muted-foreground font-medium mt-1">Seçili periyottaki hareket sayısı</p>
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-2xl font-black">{analytics?.transactions.length || "0"}</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Toplam Hareket</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-emerald-400">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0).toLocaleString('tr-TR')}</p>
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase">Giriş</p>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-rose-400">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.expense, 0).toLocaleString('tr-TR')}</p>
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase">Çıkış</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

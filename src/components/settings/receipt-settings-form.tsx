@@ -72,7 +72,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {/* Configuration Form */}
-                <div className="space-y-8 animate-in slide-in-from-left duration-700">
+                <div className="space-y-8 animate-in fade-in duration-1000">
                     <div className="bg-white dark:bg-card/40 p-10 rounded-[2.5rem] border border-slate-200 dark:border-border/50 space-y-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                             {activeType === "pos" ? <ShoppingCart className="h-32 w-32 text-blue-500 rotate-12" /> :
@@ -171,7 +171,7 @@ export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[
                 </div>
 
                 {/* Live Preview Section */}
-                <div className="space-y-8 animate-in slide-in-from-right duration-700">
+                <div className="space-y-8 animate-in fade-in duration-1000 delay-200">
                     <div className="sticky top-8 space-y-6">
                         <div className="flex items-center justify-between px-4">
                             <div className="flex items-center gap-3">

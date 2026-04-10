@@ -791,26 +791,52 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
 
 // ── INDUSTRY CONFIG AI FALLBACK ──────────────────────────────────────────────
 
-export async function generateIndustryConfigWithAI(sectorName: string): Promise<{ success: true; data: { serviceFormFields: any[], inventoryFormFields: any[] } } | { success: false; error: string }> {
+export async function generateIndustryConfigWithAI(sectorName: string): Promise<{ success: true; data: { serviceFields: any[], productFields: any[], accessories: string[] } } | { success: false; error: string }> {
     const { getShopId } = await import("@/lib/auth");
     const shopId = await getShopId();
 
+    // Mapping for UI values to config keys
+    const sectorMapping: Record<string, string> = {
+        "TELEFONCU": "PHONE_REPAIR",
+        "ELEKTRIKCI": "ELECTRICIAN",
+        "TERZI": "CLOTHING",
+        "OTOMOTIV": "AUTOMOTIVE",
+        "BILGISAYAR": "COMPUTER_REPAIR",
+        "KUAFOR": "BARBER"
+    };
+
+    const configKey = sectorMapping[sectorName] || sectorName;
+    const { industries } = await import("@/config/industries");
+    const preset = (industries as any)[configKey];
+
+    if (preset) {
+        console.log(`[AI-BYPASS] Using preset for sector: ${sectorName}`);
+        return {
+            success: true,
+            data: {
+                serviceFields: preset.serviceFormFields,
+                productFields: preset.inventoryFormFields,
+                accessories: preset.accessories || []
+            }
+        };
+    }
+
     const schema = `{
-  "serviceFormFields": [
+  "serviceFields": [
     { "key": "string (İngilizce camelCase)", "label": "string", "type": "text | number | select | textarea", "required": "boolean (opsiyonel)", "placeholder": "string (opsiyonel)", "options": ["string"] }
   ],
-  "inventoryFormFields": [
+  "productFields": [
     { "key": "string (İngilizce camelCase)", "label": "string", "type": "text | number | select | textarea", "required": "boolean (opsiyonel)", "placeholder": "string (opsiyonel)", "options": ["string"] }
   ],
   "accessories": ["string"]
 }`;
 
-    const systemPrompt = `Sen bir B2B SaaS konfigürasyon asistanısın. Kullanıcının işletme sektörüne (${sectorName}) özel olarak, servis/arıza kaydı oluştururken (serviceFormFields) ve stok/malzeme eklerken (inventoryFormFields) kullanılması en mantıklı 5'er formu alanı oluştur.
+    const systemPrompt = `Sen bir B2B SaaS konfigürasyon asistanısın. Kullanıcının işletme sektörüne (${sectorName}) özel olarak, servis/arıza kaydı oluştururken (serviceFields) ve stok/ürün eklerken (productFields) kullanılması en mantıklı 5'er form alanı oluştur.
 Kurallar:
-1. "deviceBrand", "deviceModel", "imei" gibi varsayılan alanları TEKRAR EKLEME. Bunlar zaten var. Sadece ekstra ve sektöre spesifik (örn: Elektrikçi için 'Voltaj', 'Bölge') alanlar üret.
+1. "deviceBrand", "deviceModel", "imei", "barcode", "location", "buyPrice", "sellPrice", "stock" gibi varsayılan ana alanları TEKRAR EKLEME. Sadece sektöre spesifik (örn: Elektrikçi için 'Voltaj', Terzi için 'Kumaş Türü', Giyim için 'Beden') dinamik özellik alanları üret.
 2. type olarak sadece 'text', 'number', 'select', 'textarea' kullan.
 3. select tipi için mantıklı birkaç 'options' sağla.
-4. "accessories": Bu kategoriye giren dükkanlarda müşteriden teslim alınırken kontrol edilecek en mantıklı 5 aksesuarı (örn. terzi için 'Askı', 'Kılıf', 'Hediye Paketi') içeren bir dizi döndür.
+4. "accessories": Bu kategoriye giren dükkanlarda müşteriden teslim alınırken kontrol edilecek en mantıklı 5 aksesuarı (örn. terzi için 'Askı', 'Kılıf', telefoncu için 'Şarj Aleti') içeren bir dizi döndür.
 5. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `SEKTÖR: ${sectorName}`;
@@ -823,5 +849,79 @@ Kurallar:
         return { success: true, data: parsed };
     } catch {
         return { success: false, error: "AI yapılandırması oluşturulamadı." };
+    }
+}
+
+/**
+ * Analyzes the sector during onboarding to suggest modules, terminology and initial categories.
+ */
+export async function onboardingAISectorAnalysis(sectorName: string): Promise<{
+    success: true;
+    data: {
+        suggestedModules: string[];
+        labels: Record<string, string>;
+        suggestedCategories: string[];
+        businessAdvice: string;
+    }
+} | { success: false; error: string }> {
+    const { getShopId } = await import("@/lib/auth");
+    const shopId = await getShopId();
+
+    // Mapping for UI values
+    const sectorMapping: Record<string, string> = {
+        "TELEFONCU": "PHONE_REPAIR",
+        "ELEKTRIKCI": "ELECTRICIAN",
+        "TERZI": "CLOTHING",
+        "OTOMOTIV": "AUTOMOTIVE",
+        "BILGISAYAR": "COMPUTER_REPAIR",
+        "KUAFOR": "BARBER"
+    };
+
+    const configKey = sectorMapping[sectorName] || sectorName;
+    const { industries } = await import("@/config/industries");
+    const preset = (industries as any)[configKey];
+
+    if (preset) {
+        console.log(`[AI-BYPASS-ANALYSIS] Using preset for sector: ${sectorName}`);
+        return {
+            success: true,
+            data: {
+                suggestedModules: preset.features,
+                labels: preset.labels,
+                suggestedCategories: preset.suggestedCategories,
+                businessAdvice: preset.businessAdvice
+            }
+        };
+    }
+
+    const schema = `{
+  "suggestedModules": ["SERVICE", "STOCK", "SALE", "FINANCE", "LOYALTY", "APPOINTMENT"],
+  "labels": {
+    "serviceTicket": "string (örn: Servis Kaydı, Arıza Formu)",
+    "customerAsset": "string (örn: Cihaz, Ürün, Araç)",
+    "inventory": "string (örn: Stok, Parça Havuzu, Reçete)",
+    "productLabel": "string (örn: Parça, Malzeme, Ürün)"
+  },
+  "suggestedCategories": ["string (en mantıklı 5 kategori)"],
+  "businessAdvice": "string (kısa bir tavsiye)"
+}`;
+
+    const systemPrompt = `Sen bir iş geliştirme uzmanısın. Kullanıcının yeni açtığı dükkanın sektörüne (${sectorName}) bakarak sistemi nasıl yapılandırması gerektiğini belirle.
+Kurallar:
+1. SADECE kullanıcı için gerçekten GEREKLİ olan modülleri suggestedModules içine ekle.
+2. Sektöre en uygun terimleri (labels) belirle.
+3. Dükkana başlangıç için en mantıklı 5 ana kategoriyi öner.
+4. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
+
+    const userPrompt = `SEKTÖR: ${sectorName}`;
+
+    const result = await callGemini(shopId, [systemPrompt, userPrompt]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    try {
+        const parsed = JSON.parse(result.text);
+        return { success: true, data: parsed };
+    } catch {
+        return { success: false, error: "AI analizi başarısız oldu." };
     }
 }

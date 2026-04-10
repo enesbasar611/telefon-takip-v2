@@ -115,6 +115,20 @@ export const authOptions: NextAuthOptions = {
             return session;
         },
     },
+    events: {
+        async createUser({ user }) {
+            // New users registered via OAuth (PrismaAdapter) are set as ADMIN by default
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    role: "ADMIN",
+                    canFinance: true,
+                    canDelete: true,
+                    canEdit: true
+                }
+            });
+        }
+    },
     pages: {
         signIn: "/login",
     },

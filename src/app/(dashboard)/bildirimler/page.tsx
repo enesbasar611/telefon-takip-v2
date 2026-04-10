@@ -13,8 +13,7 @@ export default async function BildirimlerPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
-
+    <div className="flex flex-col gap-10 pb-20">
       <div className="flex flex-col lg:flex-row gap-10 items-start justify-center max-w-7xl mx-auto w-full">
         <NotificationFeed notifications={notifications} />
         <NotificationSidebar
@@ -22,7 +21,6 @@ export default async function BildirimlerPage() {
           serviceStats={serviceStats}
         />
       </div>
-
     </div>
   );
 }

@@ -37,11 +37,13 @@ export function isModuleEnabled(shop: any | null | undefined, moduleName: string
  */
 export function getServiceFormFields(shop: any | null | undefined): FieldDef[] {
     if (!shop) return industries.GENERAL.serviceFormFields;
-    const config = getIndustryConfig(shop.industry);
-    // If GENERAL with AI-generated config cached in themeConfig, use that
-    if (shop.industry === "GENERAL" && shop.themeConfig?.aiServiceFields) {
-        return shop.themeConfig.aiServiceFields as FieldDef[];
+
+    // Check if the AI generated configuration exists
+    if (shop.themeConfig?.serviceFields?.length > 0) {
+        return shop.themeConfig.serviceFields as FieldDef[];
     }
+
+    const config = getIndustryConfig(shop.industry);
     return config.serviceFormFields;
 }
 
@@ -50,10 +52,13 @@ export function getServiceFormFields(shop: any | null | undefined): FieldDef[] {
  */
 export function getInventoryFormFields(shop: any | null | undefined): FieldDef[] {
     if (!shop) return industries.GENERAL.inventoryFormFields;
-    const config = getIndustryConfig(shop.industry);
-    if (shop.industry === "GENERAL" && shop.themeConfig?.aiInventoryFields) {
-        return shop.themeConfig.aiInventoryFields as FieldDef[];
+
+    // Check if the AI generated configuration exists
+    if (shop.themeConfig?.productFields?.length > 0) {
+        return shop.themeConfig.productFields as FieldDef[];
     }
+
+    const config = getIndustryConfig(shop.industry);
     return config.inventoryFormFields;
 }
 
@@ -63,9 +68,9 @@ export function getInventoryFormFields(shop: any | null | undefined): FieldDef[]
 export function getIndustryAccessories(shop: any | null | undefined): string[] {
     if (!shop) return industries.GENERAL.accessories || [];
 
-    // Check for AI-generated accessories in themeConfig first (for GENERAL industry)
-    if (shop.industry === "GENERAL" && shop.themeConfig?.aiAccessories) {
-        return shop.themeConfig.aiAccessories as string[];
+    // Check for user-defined accessories in themeConfig first
+    if (shop.themeConfig?.accessories?.length > 0) {
+        return shop.themeConfig.accessories as string[];
     }
 
     const config = getIndustryConfig(shop.industry);

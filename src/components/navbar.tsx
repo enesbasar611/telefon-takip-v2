@@ -39,6 +39,7 @@ export function Navbar({ shop }: { shop?: any }) {
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 pr-6 border-r border-border">
           <CreateServiceModal
+            shop={shop}
             trigger={
               <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
                 <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />

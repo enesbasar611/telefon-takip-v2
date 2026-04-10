@@ -53,6 +53,10 @@ export default async function DashboardLayout({
         console.error("DashboardLayout: Could not load initial data.", err);
     }
 
+    if (shop?.isFirstLogin) {
+        redirect("/onboarding");
+    }
+
     const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
 
     return (
@@ -74,8 +78,8 @@ export default async function DashboardLayout({
                                         />
                                         <DashboardContent>
                                             <Navbar shop={shop} />
-                                            <main className="flex-1 p-6 lg:p-10 overflow-y-auto overflow-x-hidden custom-scrollbar">
-                                                <div className="max-w-[1600px] mx-auto w-full min-w-0 pb-20 lg:pb-0">
+                                            <main className="flex-1 lg:p-6 p-4 overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+                                                <div className="max-w-[1700px] mx-auto w-full min-h-full rounded-[2.5rem] lg:rounded-[4rem] border border-white/20 dark:border-white/5 bg-white/50 dark:bg-black/40 backdrop-blur-3xl shadow-2xl p-6 lg:p-12 transition-all duration-500 relative z-10">
                                                     {children}
                                                 </div>
                                             </main>

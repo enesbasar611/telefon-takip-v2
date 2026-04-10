@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 export type AuraType = "idle" | "focus" | "analyzing" | "success" | "error" | "navigation";
@@ -15,29 +15,30 @@ const AuraContext = createContext<AuraContextType | null>(null);
 
 export function AuraProvider({ children }: { children: React.ReactNode }) {
     const [aura, setAura] = useState<AuraType>("idle");
+    const [isPending, startTransition] = useTransition();
     const pathname = usePathname();
     const router = useRouter();
 
     const triggerAura = useCallback((type: AuraType) => {
         setAura(type);
-        // Only non-navigation types reset via timeout if needed, 
-        // but for this flow we focus on navigation which resets via pathname change
         if (type !== "navigation" && type !== "idle") {
             setTimeout(() => setAura("idle"), 2000);
         }
     }, []);
 
     const MapsWithAura = useCallback((href: string) => {
-        // Immediate visual feedback
         setAura("navigation");
-        // Start Next.js navigation
-        router.push(href);
+        startTransition(() => {
+            router.push(href);
+        });
     }, [router]);
 
-    // Reset aura to idle ONLY when pathname changes (meaning navigation completed)
+    // Reset aura to idle when pathname changes OR when transition completes
     useEffect(() => {
-        setAura("idle");
-    }, [pathname]);
+        if (!isPending) {
+            setAura("idle");
+        }
+    }, [pathname, isPending]);
 
     return (
         <AuraContext.Provider value={{ aura, triggerAura, MapsWithAura }}>

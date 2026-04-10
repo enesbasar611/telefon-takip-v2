@@ -121,9 +121,9 @@ export async function saveAIIndustryConfig(serviceFields: any[], inventoryFields
       data: {
         themeConfig: {
           ...themeConfig,
-          aiServiceFields: serviceFields,
-          aiInventoryFields: inventoryFields,
-          aiAccessories: accessories,
+          serviceFields: serviceFields,
+          productFields: inventoryFields,
+          accessories: accessories,
         }
       } as any,
     });

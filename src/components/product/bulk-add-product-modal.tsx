@@ -23,7 +23,8 @@ interface Category {
 }
 
 interface BulkAddProductModalProps {
-    categories: Category[];
+    categories: any[];
+    shop: any;
 }
 
 type ProductRow = AIProductResult & {
@@ -38,7 +39,7 @@ function getCategoryName(categories: Category[], id: string | null): string {
     return cat?.name || "Bilinmiyor";
 }
 
-export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
+export function BulkAddProductModal({ categories, shop }: BulkAddProductModalProps) {
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<"input" | "review">("input");
     const [description, setDescription] = useState("");
@@ -47,29 +48,28 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
     const [isSavePending, startSaveTransition] = useTransition();
     const [savedCount, setSavedCount] = useState(0);
 
-    const categorySuggestions: Record<string, string> = {
-        "ekran": "Ekranlar > iPhone > iPhone 11 asy ekran 5 adet, iPhone 12 Pro orijinal 2 adet, alış 450 satış 950 TL",
-        "batarya": "Bataryalar > Deji > iPhone X deji batarya 10 adet, 11 Pro yüksek kapasite 5 adet, alış 220 satış 480 TL",
-        "şarj": "Şarj Aletleri > Type-C > Apple 20W Type-C hızlı şarj başlığı 20 adet, alış 135 satış 350 TL",
-        "kılıf": "Aksesuarlar > Kılıflar > iPhone 13-14-15 lansman kılıf karışık 50 adet, alış 40 satış 150 TL",
-        "modem": "Ağ Ürünleri > Modem > TP-Link TD-W9970 2 adet, alış 450 satış 850 TL",
-        "aksesuar": "Aksesuarlar > Bluetooth > Airpod 3. nesil 5 adet, Watch 8 Ultra kordon 10 adet, alış 450 satış 850 TL"
+    const categorySuggestions: Record<string, any> = {
+        "TELEFONCU": [
+            { name: "Ekranlar", text: "Ekranlar > iPhone > iPhone 11 ASY Ekran 5 adet, alış 450 satış 950 TL" },
+            { name: "Bataryalar", text: "Bataryalar > iPhone > iPhone 11 Deji Batarya 10 adet, alış 250 satış 550 TL" },
+            { name: "Şarj Aletleri", text: "Aksesuarlar > Şarj > Samsung 25W Süper Hızlı Şarj 10 adet, alış 180 satış 450 TL" }
+        ],
+        "ELEKTRIKCI": [
+            { name: "Kablolar", text: "Kablolar > NYM > 3x2.5 NYM Kablo 100 metre, alış 1200 satış 1800 TL" },
+            { name: "Sigortalar", text: "Sigortalar > Siemens > 16A Otomatik Sigorta 20 adet, alış 85 satış 150 TL" }
+        ],
+        "TERZI": [
+            { name: "İplikler", text: "Malzeme > İplik > Siyah dikiş ipliği 50 adet, alış 10 satış 25 TL" },
+            { name: "Fermuarlar", text: "Malzeme > Fermuar > 20cm gizli fermuar karışık renk 100 adet, alış 5 satış 15 TL" }
+        ],
+        "GENERAL": [
+            { name: "Ürünler", text: "Kategori > Marka > Ürün adı 10 adet, alış 100 satış 200 TL" }
+        ]
     };
 
     const getDynamicSuggestions = () => {
-        const found = categories
-            .filter(c => !c.parentId && c.name.toLowerCase() !== "telefonlar")
-            .map(c => {
-                const key = Object.keys(categorySuggestions).find(k => c.name.toLowerCase().includes(k));
-                if (key) return { id: c.id, name: c.name, text: categorySuggestions[key] };
-                return null;
-            }).filter(Boolean);
-
-        return found.length > 0 ? found : [
-            { id: "s1", name: "Şarj Aletleri", text: "Şarj Aletleri > Type-C > Samsung 25W Süper Hızlı Şarj 10 adet, alış 180 satış 450 TL" },
-            { id: "s2", name: "Ekranlar", text: "Ekranlar > iPhone > iPhone 11 ASY Ekran 5 adet, alış 450 satış 950 TL" },
-            { id: "s3", name: "Bataryalar", text: "Bataryalar > iPhone > iPhone 11 Deji Batarya 10 adet, alış 250 satış 550 TL" }
-        ];
+        const ind = ((shop as any)?.industry || "GENERAL").toUpperCase();
+        return categorySuggestions[ind] || categorySuggestions["GENERAL"];
     };
 
     const dynamicSuggestions = getDynamicSuggestions();
@@ -217,9 +217,9 @@ export function BulkAddProductModal({ categories }: BulkAddProductModalProps) {
                                     <Layers className="h-3 w-3 text-violet-400" /> Kategori Bazlı Öneriler
                                 </p>
                                 <div className="flex flex-wrap gap-2">
-                                    {dynamicSuggestions.map((s: any) => (
+                                    {dynamicSuggestions.map((s: any, idx: number) => (
                                         <Button
-                                            key={s.id}
+                                            key={idx}
                                             variant="outline"
                                             size="sm"
                                             onClick={() => setDescription(s.text)}

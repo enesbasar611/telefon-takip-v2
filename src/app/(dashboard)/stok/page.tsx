@@ -49,7 +49,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         iconBgColor="bg-primary/10"
         actions={
           <>
-            <BulkAddProductModal categories={categories} />
+            <BulkAddProductModal categories={categories} shop={shop} />
             <CreateProductModal categories={categories} shop={shop} />
           </>
         }

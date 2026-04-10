@@ -16,9 +16,6 @@ export default withAuth(
                 return NextResponse.redirect(new URL("/onboarding", req.url));
             }
 
-            if (hasShop && isOnboardingPage) {
-                return NextResponse.redirect(new URL("/", req.url));
-            }
 
             // --- Role & Permission Protection ---
             const isAdmin = role === "ADMIN";

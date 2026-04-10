@@ -14,6 +14,8 @@ interface Account {
     name: string;
     type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
     balance: number;
+    limit?: number;
+    billingDay?: number;
 }
 
 export function AccountList({ accounts }: { accounts: Account[] }) {

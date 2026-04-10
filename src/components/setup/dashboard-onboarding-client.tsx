@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreateProductModal } from "@/components/product/create-product-modal";
+import { ActionGuideModal } from "./action-guide-modal";
 import { FirstTaskCheck } from "./first-task-check";
 
 interface DashboardOnboardingClientProps {
@@ -10,20 +10,16 @@ interface DashboardOnboardingClientProps {
 }
 
 export function DashboardOnboardingClient({ categories, shop }: DashboardOnboardingClientProps) {
-    const [autoOpen, setAutoOpen] = useState(false);
+    const [actionModalOpen, setActionModalOpen] = useState(false);
 
     return (
         <>
-            <FirstTaskCheck onTrigger={() => setAutoOpen(true)} />
-            {autoOpen && (
-                <div className="hidden">
-                    <CreateProductModal
-                        categories={categories}
-                        shop={shop}
-                        autoOpen={true}
-                    />
-                </div>
-            )}
+            <FirstTaskCheck onTrigger={() => setActionModalOpen(true)} />
+            <ActionGuideModal
+                open={actionModalOpen}
+                onOpenChange={setActionModalOpen}
+                shopName={shop?.name || "Dükkan"}
+            />
         </>
     );
 }

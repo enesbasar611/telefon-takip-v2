@@ -35,7 +35,9 @@ export function IndustryBackground({ industry }: IndustryBackgroundProps) {
                             industry === 'GROCERY' ? 'bg-emerald-500' :
                                 industry === 'CLOTHING' ? 'bg-rose-500' :
                                     industry === 'COMPUTER_REPAIR' ? 'bg-indigo-500' :
-                                        industry === 'PLUMBING' ? 'bg-cyan-500' : 'bg-slate-500'}`}
+                                        industry === 'AUTOMOTIVE' ? 'bg-orange-500' :
+                                            industry === 'BARBER' ? 'bg-purple-600' :
+                                                industry === 'PLUMBING' ? 'bg-cyan-500' : 'bg-slate-500'}`}
                 />
                 <div className={`absolute bottom-[-20%] left-[-10%] w-[55%] h-[55%] blur-[140px] rounded-full opacity-[0.25] animate-pulse transition-colors duration-1000
                     ${industry === 'PHONE_REPAIR' ? 'bg-indigo-600' :
@@ -43,7 +45,9 @@ export function IndustryBackground({ industry }: IndustryBackgroundProps) {
                             industry === 'GROCERY' ? 'bg-green-600' :
                                 industry === 'CLOTHING' ? 'bg-pink-600' :
                                     industry === 'COMPUTER_REPAIR' ? 'bg-blue-600' :
-                                        industry === 'PLUMBING' ? 'bg-blue-400' : 'bg-gray-600'}`}
+                                        industry === 'AUTOMOTIVE' ? 'bg-red-600' :
+                                            industry === 'BARBER' ? 'bg-pink-500' :
+                                                industry === 'PLUMBING' ? 'bg-blue-400' : 'bg-gray-600'}`}
                 />
 
                 {/* Corner Icons */}

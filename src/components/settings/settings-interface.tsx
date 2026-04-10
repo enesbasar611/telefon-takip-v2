@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback, useMemo, useTransition, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid } from "lucide-react";
+import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate } from "lucide-react";
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ import { AutomationTab } from "./tabs/automation-tab";
 import { CustomersTab } from "./tabs/customers-tab";
 import { ShopTab } from "./tabs/shop-tab";
 import { ModulesTab } from "./tabs/modules-tab";
+import { FormsTab } from "./tabs/forms-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
 
 interface SettingsProps {
@@ -26,6 +28,7 @@ interface SettingsProps {
 const tabs = [
   { id: "appearance", label: "Görünüm", icon: Palette, desc: "Tema ve renkler" },
   { id: "shop", label: "Dükkan", icon: Store, desc: "Sektör ve bilgiler" },
+  { id: "forms", label: "Dinamik Formlar", icon: LayoutTemplate, desc: "Sektörel form ayarları" },
   { id: "modules", label: "Modüller", icon: LayoutGrid, desc: "Aktif özellikler" },
   { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, desc: "Mesaj şablonları" },
   { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
@@ -35,7 +38,17 @@ const tabs = [
 ];
 
 export function SettingsInterface({ initialSettings, receiptSettings, shop }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState("shop");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTabStates] = useState(searchParams.get("tab") || "shop");
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabStates(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
   const [isPending, startTransition] = useTransition();
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
 
@@ -172,6 +185,9 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
               )}
               {activeTab === "shop" && (
                 <ShopTab shop={shop} />
+              )}
+              {activeTab === "forms" && (
+                <FormsTab shop={shop} />
               )}
               {activeTab === "modules" && (
                 <ModulesTab shop={shop} />

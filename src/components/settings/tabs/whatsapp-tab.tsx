@@ -65,7 +65,12 @@ const badgeColorMap: Record<string, string> = {
 
 
 export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps) {
-    const [statusData, setStatusData] = useState<{ status: string; qr?: string; error?: string }>({ status: 'DISCONNECTED' });
+    const [statusData, setStatusData] = useState<{
+        status: string;
+        qr?: string;
+        error?: string;
+        me?: { name: string; number: string };
+    }>({ status: 'DISCONNECTED' });
     const [loading, setLoading] = useState(false);
 
     const fetchStatus = async () => {
@@ -174,7 +179,14 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-emerald-400 font-black text-sm tracking-widest">BAĞLANDI</p>
-                                        <p className="text-[10px] text-muted-foreground/80 font-medium">Sistem mesaj göndermeye hazır.</p>
+                                        {statusData.me ? (
+                                            <div className="mt-2 text-center">
+                                                <p className="text-white font-bold text-xs">{statusData.me.name}</p>
+                                                <p className="text-emerald-500/60 font-mono text-[9px]">+{statusData.me.number}</p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-muted-foreground/80 font-medium">Sistem mesaj göndermeye hazır.</p>
+                                        )}
                                     </div>
                                 </div>
                             ) : isQr && statusData.qr ? (

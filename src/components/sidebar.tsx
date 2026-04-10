@@ -38,65 +38,70 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { isModuleEnabled, getIndustryConfig } from "@/lib/industry-utils";
 import { Shop } from "@prisma/client";
 
-const menuItems = [
-  {
-    icon: LayoutDashboard,
-    label: "Anasayfa",
-    href: "/dashboard",
-  },
-  {
-    icon: Calendar,
-    label: "Randevu Merkezi",
-    href: "/ajanda",
-  },
-  {
-    icon: Wrench,
-    label: "Servis Yönetimi",
-    href: "/servis",
-    subItems: [
-      { label: "Servis Merkezi", href: "/servis" },
-      { label: "Servis Listesi", href: "/servis/liste" },
-      { label: "Yeni Cihaz Girişi", href: "/servis/yeni" },
-    ]
-  },
-  {
-    icon: Package,
-    label: "Envanter",
-    href: "/stok",
-    subItems: [
-      { label: "Stok Listesi", href: "/stok" },
-      { label: "Hareket Analizi", href: "/stok/hareketler" },
-      { label: "Kategoriler", href: "/stok/kategoriler" },
-      { label: "AI Önerileri", href: "/stok/stok-ai" },
-    ]
-  },
-  {
-    icon: ShoppingCart,
-    label: "POS & Kasa",
-    href: "/satis",
-    subItems: [
-      { label: "Hızlı Satış", href: "/satis" },
-      { label: "Satış Arşivi", href: "/satis/gecmis" },
-      { label: "Kasa Raporu", href: "/satis/kasa" },
-    ]
-  },
-  {
-    icon: Users,
-    label: "Müşteri CRM",
-    href: "/musteriler",
-    subItems: [
-      { label: "Müşteri Portföyü", href: "/musteriler" },
-      { label: "Yeni Tanımlama", href: "/musteriler/yeni" },
-    ]
-  },
-  { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
-  { icon: Smartphone, label: "Cihaz Merkezi", href: "/cihaz-listesi" },
-  { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
-  { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
-  { icon: UserCog, label: "Ekip", href: "/personel" },
-  { icon: Bell, label: "Bildirimler", href: "/bildirimler" },
-  { icon: Settings, label: "Ayarlar", href: "/ayarlar" },
-];
+const getMenuItems = (shop: any) => {
+  const config = getIndustryConfig(shop?.industry);
+  const labels = config.labels;
+
+  return [
+    {
+      icon: LayoutDashboard,
+      label: "Anasayfa",
+      href: "/dashboard",
+    },
+    {
+      icon: Calendar,
+      label: "Randevu Merkezi",
+      href: "/ajanda",
+    },
+    {
+      icon: Wrench,
+      label: labels.serviceTicket || "Servis Yönetimi",
+      href: "/servis",
+      subItems: [
+        { label: `${labels.serviceTicket} Merkezi` || "Servis Merkezi", href: "/servis" },
+        { label: `${labels.serviceTicket} Listesi` || "Servis Listesi", href: "/servis/liste" },
+        { label: `Yeni ${labels.customerAsset} Girişi` || "Yeni Cihaz Girişi", href: "/servis/yeni" },
+      ]
+    },
+    {
+      icon: Package,
+      label: labels.inventory || "Envanter",
+      href: "/stok",
+      subItems: [
+        { label: "Stok Listesi", href: "/stok" },
+        { label: "Hareket Analizi", href: "/stok/hareketler" },
+        { label: "Kategoriler", href: "/stok/kategoriler" },
+        { label: "AI Önerileri", href: "/stok/stok-ai" },
+      ]
+    },
+    {
+      icon: ShoppingCart,
+      label: "POS & Kasa",
+      href: "/satis",
+      subItems: [
+        { label: "Hızlı Satış", href: "/satis" },
+        { label: "Satış Arşivi", href: "/satis/gecmis" },
+        { label: "Kasa Raporu", href: "/satis/kasa" },
+      ]
+    },
+    {
+      icon: Users,
+      label: "Müşteri CRM",
+      href: "/musteriler",
+      subItems: [
+        { label: "Müşteri Portföyü", href: "/musteriler" },
+        { label: "Yeni Tanımlama", href: "/musteriler/yeni" },
+      ]
+    },
+    { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
+    { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi" },
+    { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
+    { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
+    { icon: UserCog, label: "Ekip", href: "/personel" },
+    { icon: Bell, label: "Bildirimler", href: "/bildirimler" },
+    { icon: Settings, label: "Ayarlar", href: "/ayarlar" },
+  ];
+};
 
 export function Sidebar({ className, user, shop, onNavigate }: {
   className?: string;
@@ -113,7 +118,21 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   const [aiAnalyzeOpen, setAiAnalyzeOpen] = useState(false);
   const [isAiHovered, setIsAiHovered] = useState(false);
   const [localActivePath, setLocalActivePath] = useState(pathname);
+  const [currentShop, setCurrentShop] = useState<any>(shop);
   const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
+
+  useEffect(() => {
+    if (shop) {
+      setCurrentShop(shop);
+    } else {
+      const fetchShop = async () => {
+        const { getShop } = await import("@/lib/actions/setting-actions");
+        const res = await getShop();
+        if (res) setCurrentShop(res);
+      };
+      fetchShop();
+    }
+  }, [shop]);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -131,6 +150,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     return () => clearInterval(interval);
   }, []);
 
+  const menuItems = getMenuItems(currentShop);
+
   useEffect(() => {
     setLocalActivePath(pathname);
     const activeMenu = menuItems.find(item =>
@@ -139,7 +160,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     if (activeMenu && !openMenus.includes(activeMenu.label)) {
       setOpenMenus(prev => [...prev, activeMenu.label]);
     }
-  }, [pathname]);
+  }, [pathname, shop]); // Re-run when shop/industry changes
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev =>
@@ -164,17 +185,17 @@ export function Sidebar({ className, user, shop, onNavigate }: {
         {/* Subtle Decorative Background Glow */}
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
 
-        <button onClick={() => handleNavigation("/")} className="flex items-center gap-4 group outline-none relative z-10 w-full overflow-hidden">
+        <button onClick={() => handleNavigation("/")} className="flex items-center gap-4 group outline-none relative z-10 w-full">
           <div className="h-12 w-12 shrink-0 rounded-2xl bg-black dark:bg-[#0A0A0A] border border-border flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-all duration-500 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
             <Zap className="h-6 w-6 text-primary fill-primary animate-pulse shadow-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={1} />
           </div>
           <div className="flex flex-col flex-1 min-w-0 items-start text-left">
-            <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
-              {firstName}<span className="text-primary not-italic font-extrabold ml-1">{secondName}</span>
+            <h1 className="text-[17px] font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
+              BAŞAR TEKNİK
             </h1>
-            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate">
-              {industryConfig?.name || "YÖNETİM PANELİ"}
+            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate block">
+              {industryConfig?.name || "ERP SİSTEMİ"}
             </span>
           </div>
         </button>
