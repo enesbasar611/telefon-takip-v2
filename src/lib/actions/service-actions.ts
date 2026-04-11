@@ -12,43 +12,22 @@ import { getOrCreateKasaAccount } from "./finance-actions";
 import { sendWhatsAppAction } from "./data-management-actions";
 import { getSettings } from "./setting-actions";
 import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
+import { serviceTicketSchema } from "@/lib/validations/schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-const serviceSchema = z.object({
-  customerName: z.string()
-    .min(2, "Müşteri adı en az 2 karakter olmalıdır")
-    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Müşteri adı sadece harflerden oluşmalıdır"),
-  customerPhone: z.string()
-    .min(1, "Telefon numarası gereklidir")
-    .transform(val => val.replace(/\D/g, "").slice(-10))
-    .refine((val) => val.length === 10 && val.startsWith("5"), "Geçerli bir numara girin (5xx xxx xxxx)"),
-  customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
-  deviceBrand: z.string().min(1, "Marka gereklidir"),
-  deviceModel: z.string().min(1, "Model gereklidir"),
-  // IMEI is optional across all industries — client-side FormFactory validates per-sector
-  imei: z.string().optional().or(z.literal("")),
-  serialNumber: z.string().optional().or(z.literal("")),
-  problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
-  cosmeticCondition: z.string().optional(),
-  estimatedCost: z.number().min(0, "Geçerli bir ücret giriniz"),
-  notes: z.string().optional(),
-  technicianId: z.string().optional().or(z.literal("")),
-  estimatedDeliveryDate: z.string().optional().or(z.literal("")),
-  downPayment: z.number().optional().default(0),
-  photos: z.array(z.string()).optional().default([]),
-  devicePassword: z.string().optional().or(z.literal("")),
-  serviceType: z.string().optional().or(z.literal("")),
-  priority: z.number().optional().default(1),
-  /** Dynamic industry-specific fields stored as JSON in ServiceTicket.attributes */
-  attributes: z.record(z.any()).optional(),
-});
+// Local schema moved to centralized lib/validations/schemas.ts
 
 // getOrCreateDevUser removed.
 
 export async function createServiceTicket(rawData: any) {
   try {
-    const validatedData = serviceSchema.parse(rawData);
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 20 tickets per minute
+    await checkRateLimit(`createServiceTicket:${userId}`, 20);
+
+    const validatedData = serviceTicketSchema.parse(rawData);
 
     // Find or create customer (shop-scoped)
     const customer = await prisma.customer.upsert({
@@ -173,6 +152,9 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 100 status updates per minute
+    await checkRateLimit(`updateServiceStatus:${userId}`, 100);
 
     // Fetch current ticket to calculate costs if delivering
     const currentTicket = await prisma.serviceTicket.findUnique({

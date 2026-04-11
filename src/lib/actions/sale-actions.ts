@@ -8,20 +8,21 @@ import { getOrCreateAccountByType } from "./finance-actions";
 import { getShopId, getUserId } from "@/lib/auth";
 import { getSettings } from "./setting-actions";
 import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
+import { saleSchema } from "@/lib/validations/schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
 
 // getOrCreateDevUser removed.
 
-export async function createSale(data: {
-  customerId?: string;
-  items: { productId: string; quantity: number; unitPrice: number }[];
-  totalAmount: number;
-  paymentMethod: string;
-  discountAmount?: number;
-  usedPoints?: number;
-}) {
+export async function createSale(rawData: z.infer<typeof saleSchema>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 30 sales per minute
+    await checkRateLimit(`createSale:${userId}`, 30);
+
+    const data = saleSchema.parse(rawData);
     const saleCount = await prisma.sale.count({ where: { shopId } });
     const saleNumber = `SALE-${1000 + saleCount + 1}`;
 
@@ -180,8 +181,11 @@ export async function createSale(data: {
 
     return { success: true, data: serializePrisma(sale) };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
     console.error("Sale creation error:", error);
-    return { success: false, error: "Satış işlemi sırasında bir hata oluştu." };
+    return { success: false, error: error instanceof Error ? error.message : "Satış işlemi sırasında bir hata oluştu." };
   }
 }
 
@@ -226,6 +230,10 @@ export async function getSaleById(id: string) {
 export async function deleteSale(id: string) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Rate limit: 10 deletions per minute
+    await checkRateLimit(`deleteSale:${userId}`, 10);
 
     // 1. Get sale details to refund stock
     const sale = await prisma.sale.findUnique({

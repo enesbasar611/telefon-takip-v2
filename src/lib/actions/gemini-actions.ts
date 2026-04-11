@@ -925,3 +925,127 @@ Kurallar:
         return { success: false, error: "AI analizi başarısız oldu." };
     }
 }
+
+export async function generateAndCacheIndustryTemplate(sectorName: string) {
+    const { getShopId } = await import("@/lib/auth");
+    const shopId = await getShopId();
+
+    // ── STEP 1: PRE-SLUGGER ─────────────────────────────────────────────────
+    // Normalize any variant name ("Terzi Salonu", "Moda Evi") → canonical slug ("terzi")
+    // This prevents duplicate IndustryTemplate rows for the same sector.
+    let canonicalSlug: string;
+    const slugResult = await callGemini(shopId, [
+        `Aşağıdaki sektör adını, farklı yazılışlardan bağımsız, veritabanında birleştirici bir canonical slug'a çevir.
+Kurallar: sadece küçük harf İngilizce karakter, Türkçe/özel karakter yok, kelimeler tire ile birleşik, sadece kök/ana sektör.
+Örnekler:
+  "Terzi Salonu" → "terzi"
+  "Moda Atölyesi" → "terzi"
+  "Oto Yıkamacı" → "oto-yikama"
+  "Araç Yıkama" → "oto-yikama"
+  "Elektrik Ustası" → "elektrikci"
+  "Bilgisayar Tamiri" → "bilgisayar-servisi"
+  "Kuaför Salonu" → "kuafor"
+SADECE slug metnini döndür (tırnak işareti olmadan, başka metin ekleme): ${sectorName}`
+    ]);
+
+    if ("error" in slugResult) {
+        // Fallback: basic normalization without AI
+        canonicalSlug = sectorName
+            .toLowerCase()
+            .replace(/[çÇ]/g, "c").replace(/[ğĞ]/g, "g").replace(/[ıİ]/g, "i")
+            .replace(/[öÖ]/g, "o").replace(/[şŞ]/g, "s").replace(/[üÜ]/g, "u")
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    } else {
+        canonicalSlug = slugResult.text.trim().replace(/[^a-z0-9-]/g, '').slice(0, 64) || "genel";
+    }
+
+    // ── STEP 2: CACHE LOOKUP ────────────────────────────────────────────────
+    const existing = await prisma.industryTemplate.findUnique({ where: { slug: canonicalSlug } });
+    if (existing) {
+        console.log(`[INDUSTRY-CACHE-HIT] Returning cached template: ${canonicalSlug}`);
+        return existing;
+    }
+
+    // ── STEP 3: MASTER_PROMPT — FULL TEMPLATE GENERATION ───────────────────
+    const MASTER_PROMPT = `Sen dünyanın en iyi SaaS iş analisti ve UI/UX mimarısın. Sana verilen sektörü profesyonel bir dükkan yönetim yazılımı için tam bir "Sektör Şablonuna" dönüştüreceksin.
+
+HEDEF SEKTÖR: ${sectorName}
+CANONICAL SLUG: ${canonicalSlug}
+
+### KRİTERLER:
+1. TERMINOLOJİ: Menü isimleri esnafın anlayacağı dilden (Terzi için "Cihaz" değil "Tamirat", Oto Yıkama için "Araç Peron").
+2. IKONLAR: Sadece Lucide React ikon isimleri (Wrench, Scissors, Car, Shirt, Box vb.).
+3. WHATSAPP: Sektöre özel, profesyonel, {customer} {item} {price} {id} placeholder içeren Türkçe şablonlar.
+4. DASHBOARD: Dükkan sahibinin sabah açtığında ilk görmek istediği istatistikler.
+5. PRIMARY_COLOR: Bu sektörün ruhuna uygun bir HEX renk kodu. Örnekler: terzi → "#7c3aed", oto-yikama → "#0ea5e9", elektrik → "#f59e0b", kuafor → "#ec4899".
+
+### JSON ÇIKTI FORMATI (sadece geçerli JSON, başka metin yok):
+{
+  "slug": "${canonicalSlug}",
+  "displayName": "Sektörün Türkçe Tam Adı",
+  "primaryColor": "#HEXKOD",
+  "sidebar": [
+    { "title": "Ana Sayfa", "icon": "LayoutDashboard", "path": "/dashboard" },
+    { "title": "İş Takibi", "icon": "LucideIkon", "path": "/service" },
+    { "title": "Kasa", "icon": "Wallet", "path": "/finance" },
+    { "title": "Stok", "icon": "Package", "path": "/stock" }
+  ],
+  "serviceForm": {
+    "title": "Kayıt Başlığı",
+    "fields": [
+      { "name": "item_name", "label": "Ürün/Hizmet Adı", "type": "text", "required": true },
+      { "name": "description", "label": "İşlem Detayı", "type": "textarea" },
+      { "name": "status", "label": "Durum", "type": "select", "options": ["Beklemede", "İşlemde", "Tamamlandı", "Teslim Edildi"] }
+    ]
+  },
+  "whatsappTemplates": {
+    "new_record": "Sayın {customer}, {item} kaydınız oluşturuldu. Takip No: {id}",
+    "ready": "Sayın {customer}, {item} hazır. Teslim alabilirsiniz. Tutar: {price} TL",
+    "reminder": "Sayın {customer}, yarınki randevunuzu hatırlatmak isteriz."
+  },
+  "dashboardStats": [
+    { "label": "Aktif İşler", "key": "active_works", "color": "blue" },
+    { "label": "Bugünkü Ciro", "key": "daily_revenue", "color": "green" }
+  ]
+}`;
+
+    const result = await callGemini(shopId, [MASTER_PROMPT]);
+    if ("error" in result) {
+        throw new Error(result.error);
+    }
+
+    try {
+        const config = JSON.parse(result.text);
+
+        // ── STEP 4: UPSERT (safe against race conditions) ───────────────────
+        const template = await prisma.industryTemplate.upsert({
+            where: { slug: canonicalSlug },
+            update: {
+                displayName: config.displayName || sectorName,
+                sidebarConfig: config.sidebar || [],
+                whatsappTemplates: config.whatsappTemplates || {},
+                serviceFields: config.serviceForm || {},
+                dashboardStats: config.dashboardStats || [],
+                primaryColor: config.primaryColor || "#6366f1",
+            },
+            create: {
+                slug: canonicalSlug,
+                displayName: config.displayName || sectorName,
+                sidebarConfig: config.sidebar || [],
+                whatsappTemplates: config.whatsappTemplates || {},
+                serviceFields: config.serviceForm || {},
+                dashboardStats: config.dashboardStats || [],
+                primaryColor: config.primaryColor || "#6366f1",
+            }
+        });
+
+        console.log(`[INDUSTRY-TEMPLATE] Created/updated template: ${canonicalSlug} (color: ${template.primaryColor})`);
+        return template;
+    } catch (e: any) {
+        console.error("Failed to parse or save AI config:", e);
+        throw new Error("Sektör şablonu işlenemedi.");
+    }
+}
+
+
+

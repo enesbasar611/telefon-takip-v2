@@ -16,9 +16,19 @@ export default withAuth(
                 return NextResponse.redirect(new URL("/onboarding", req.url));
             }
 
+            // --- Passive Shop Protection ---
+            const isShopActive = token.isShopActive;
+            const isSuperAdmin = role === "SUPER_ADMIN";
+            if (!isShopActive && !isSuperAdmin && !isOnboardingPage) {
+                // If shop is passive and user is not Super Admin, block access.
+                // We redirect to a simple static page or back to log in with an error.
+                // For now, let's redirect to a "suspended" message or just login.
+                return NextResponse.redirect(new URL("/login?error=AccountSuspended", req.url));
+            }
+
 
             // --- Role & Permission Protection ---
-            const isAdmin = role === "ADMIN";
+            const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN" || role === "SHOP_MANAGER";
             const isManager = role === "MANAGER" || isAdmin;
 
             // Restricted sections

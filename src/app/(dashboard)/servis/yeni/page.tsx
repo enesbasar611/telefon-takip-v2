@@ -351,7 +351,7 @@ export default function NewServicePage() {
         setShop(s);
 
         const techList = staffList.filter((s: any) =>
-          s.role === "ADMIN" || s.role === "TECHNICIAN" || s.role === "STAFF"
+          s.role === "SUPER_ADMIN" || s.role === "SHOP_MANAGER" || s.role === "ADMIN" || s.role === "TECHNICIAN" || s.role === "STAFF"
         );
         setTechnicians(techList);
         if (techList.length > 0 && !form.getValues("technicianId")) {

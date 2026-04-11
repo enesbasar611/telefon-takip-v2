@@ -38,7 +38,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { isModuleEnabled, getIndustryConfig } from "@/lib/industry-utils";
 import { Shop } from "@prisma/client";
 
-const getMenuItems = (shop: any) => {
+const getMenuItems = (shop: any, userRole?: string) => {
   const config = getIndustryConfig(shop?.industry);
   const labels = config.labels;
 
@@ -52,11 +52,13 @@ const getMenuItems = (shop: any) => {
       icon: Calendar,
       label: "Randevu Merkezi",
       href: "/ajanda",
+      module: "APPOINTMENT"
     },
     {
       icon: Wrench,
       label: labels.serviceTicket || "Servis Yönetimi",
       href: "/servis",
+      module: "SERVICE",
       subItems: [
         { label: `${labels.serviceTicket} Merkezi` || "Servis Merkezi", href: "/servis" },
         { label: `${labels.serviceTicket} Listesi` || "Servis Listesi", href: "/servis/liste" },
@@ -67,6 +69,7 @@ const getMenuItems = (shop: any) => {
       icon: Package,
       label: labels.inventory || "Envanter",
       href: "/stok",
+      module: "STOCK",
       subItems: [
         { label: "Stok Listesi", href: "/stok" },
         { label: "Hareket Analizi", href: "/stok/hareketler" },
@@ -78,6 +81,7 @@ const getMenuItems = (shop: any) => {
       icon: ShoppingCart,
       label: "POS & Kasa",
       href: "/satis",
+      module: "SALE",
       subItems: [
         { label: "Hızlı Satış", href: "/satis" },
         { label: "Satış Arşivi", href: "/satis/gecmis" },
@@ -88,18 +92,30 @@ const getMenuItems = (shop: any) => {
       icon: Users,
       label: "Müşteri CRM",
       href: "/musteriler",
+      module: "CRM",
       subItems: [
         { label: "Müşteri Portföyü", href: "/musteriler" },
         { label: "Yeni Tanımlama", href: "/musteriler/yeni" },
       ]
     },
-    { icon: CreditCard, label: "Veresiye", href: "/veresiye" },
-    { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi" },
-    { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler" },
+    { icon: CreditCard, label: "Veresiye", href: "/veresiye", module: "DEBT" },
+    { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi", module: "SERVICE" },
+    { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler", module: "SUPPLIER" },
     { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
-    { icon: UserCog, label: "Ekip", href: "/personel" },
-    { icon: Bell, label: "Bildirimler", href: "/bildirimler" },
-    { icon: Settings, label: "Ayarlar", href: "/ayarlar" },
+    { icon: UserCog, label: "Ekip", href: "/personel", module: "STAFF" },
+    { icon: Bell, label: "Bildirimler", href: "/bildirimler", module: "NOTIFICATION" },
+    {
+      icon: Settings,
+      label: "Ayarlar",
+      href: "/ayarlar",
+      subItems: [
+        { label: "Sistem Ayarları", href: "/ayarlar" },
+        ...(userRole === "SUPER_ADMIN" ? [
+          { label: "Sektör Yönetimi", href: "/ayarlar/sektorler" },
+          { label: "Tüm Dükkanlar (Admin)", href: "/admin/shops" },
+        ] : []),
+      ]
+    },
   ];
 };
 
@@ -133,7 +149,6 @@ export function Sidebar({ className, user, shop, onNavigate }: {
       fetchShop();
     }
   }, [shop]);
-
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -150,7 +165,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     return () => clearInterval(interval);
   }, []);
 
-  const menuItems = getMenuItems(currentShop);
+  const menuItems = getMenuItems(currentShop, user?.role || session?.user?.role);
 
   useEffect(() => {
     setLocalActivePath(pathname);
@@ -208,31 +223,26 @@ export function Sidebar({ className, user, shop, onNavigate }: {
           <p className="text-[12px]  text-muted-foreground/60 uppercase tracking-widest px-3 mb-3">Menü</p>
 
           {menuItems.filter(item => {
-            if (item.label === "Ayarlar" && session?.user?.role !== "ADMIN") return false;
+            if (item.label === "Ayarlar" &&
+              session?.user?.role !== "SUPER_ADMIN" &&
+              session?.user?.role !== "ADMIN" &&
+              session?.user?.role !== "SHOP_MANAGER") return false;
 
-            // SERVICE module: Servis, Cihaz Merkezi, Randevu
-            if (item.label === "Servis Yönetimi" && !isModuleEnabled(shop, "SERVICE")) return false;
-            if (item.label === "Cihaz Merkezi" && !isModuleEnabled(shop, "SERVICE")) return false;
-            if (item.label === "Randevu Merkezi" && !isModuleEnabled(shop, "SERVICE")) return false;
-
-            // STOCK module
-            if (item.label === "Envanter" && !isModuleEnabled(shop, "STOCK")) return false;
-
-            // SALE module
-            if (item.label === "POS & Kasa" && !isModuleEnabled(shop, "SALE")) return false;
-
-            // FINANCE module
-            if (item.label === "İstatistikler" && !isModuleEnabled(shop, "FINANCE")) return false;
+            // Granular module check
+            if ((item as any).module && !isModuleEnabled(shop, (item as any).module)) return false;
 
             return true;
           }).map((item) => {
             const hasSubItems = item.subItems && item.subItems.length > 0;
+            // Optimization: If only one sub-item and it points to the same href as parent, treat as a direct link
+            const isRedundantDropdown = hasSubItems && item.subItems.length === 1 && item.subItems[0].href === item.href;
+
             const isOpen = openMenus.includes(item.label);
             const isActive = localActivePath === item.href || (item.href !== "/" && localActivePath?.startsWith(item.href));
 
             return (
               <div key={item.label}>
-                {hasSubItems ? (
+                {hasSubItems && !isRedundantDropdown ? (
                   <button
                     onClick={() => toggleMenu(item.label)}
                     className={cn(
@@ -356,9 +366,16 @@ export function Sidebar({ className, user, shop, onNavigate }: {
             )}
           </div>
           <div className="flex flex-col overflow-hidden flex-1 min-w-0 text-left">
-            <span className="text-[14px] text-foreground truncate leading-tight group-hover:text-primary transition-colors">{session?.user?.name || "Yönetici"}</span>
+            <span className="text-[14px] text-foreground truncate leading-tight group-hover:text-primary transition-colors">
+              {session?.user?.name || "..."}
+            </span>
             <span className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
-              {session?.user?.role === 'ADMIN' ? 'Sistem Yöneticisi' : session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' : 'Personel'}
+              {session?.user?.role === 'SUPER_ADMIN' ? 'Süper Admin' :
+                session?.user?.role === 'ADMIN' || session?.user?.role === 'SHOP_MANAGER' ? 'Yönetici' :
+                  session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' :
+                    session?.user?.role === 'CASHIER' ? 'Kasiyer' :
+                      session?.user?.role === 'STAFF' ? 'Personel' :
+                        'Yükleniyor...'}
             </span>
           </div>
         </button>

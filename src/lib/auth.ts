@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma) as any,
@@ -79,7 +80,7 @@ export const authOptions: NextAuthOptions = {
             // Real-time synchronization: Check DB to ensure user is still active and roles are current
             // This prevents "ghost sessions" for deleted or updated users
             if (token.id) {
-                const dbUser = await prisma.user.findUnique({
+                const dbUser = await (prisma.user as any).findUnique({
                     where: { id: token.id },
                     select: {
                         id: true,
@@ -89,6 +90,9 @@ export const authOptions: NextAuthOptions = {
                         canService: true,
                         canStock: true,
                         canFinance: true,
+                        shop: {
+                            select: { isActive: true }
+                        }
                     }
                 });
 
@@ -104,6 +108,7 @@ export const authOptions: NextAuthOptions = {
                 token.canService = dbUser.canService;
                 token.canStock = dbUser.canStock;
                 token.canFinance = dbUser.canFinance;
+                token.isShopActive = (dbUser as any).shop?.isActive ?? true;
             }
 
             if (trigger === "update" && session) {
@@ -120,6 +125,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.canService = token.canService;
                 session.user.canStock = token.canStock;
                 session.user.canFinance = token.canFinance;
+                session.user.isShopActive = token.isShopActive;
                 if (token.picture) session.user.image = token.picture;
                 if (token.image) session.user.image = token.image;
             }
@@ -127,12 +133,29 @@ export const authOptions: NextAuthOptions = {
         },
     },
     events: {
+        async signIn({ user }) {
+            // Automatically promote the specific email to SUPER_ADMIN
+            if (user.email === "qwerty61.enes@gmail.com") {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        role: "SUPER_ADMIN" as Role,
+                        canFinance: true,
+                        canDelete: true,
+                        canEdit: true
+                    }
+                });
+            }
+        },
         async createUser({ user }) {
-            // New users registered via OAuth (PrismaAdapter) are set as ADMIN by default
+            // New users registered via OAuth (PrismaAdapter)
+            // If it's the super admin email, set SUPER_ADMIN, otherwise SHOP_MANAGER
+            const roleStr = user.email === "qwerty61.enes@gmail.com" ? "SUPER_ADMIN" : "SHOP_MANAGER";
+
             await prisma.user.update({
                 where: { id: user.id },
                 data: {
-                    role: "ADMIN",
+                    role: roleStr as Role,
                     canFinance: true,
                     canDelete: true,
                     canEdit: true

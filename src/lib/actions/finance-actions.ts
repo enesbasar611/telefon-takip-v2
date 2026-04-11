@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { format, isAfter, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { getShopId, getUserId } from "@/lib/auth";
+import { transactionSchema } from "@/lib/validations/schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
 
 export async function getTransactions(options: {
   accountId?: string;
@@ -90,19 +93,15 @@ export async function createAccount(data: { name: string; type: "CASH" | "BANK" 
   }
 }
 
-export async function createManualTransaction(data: {
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-  description: string;
-  paymentMethod: "CASH" | "CARD" | "TRANSFER";
-  accountId?: string;
-  category?: string;
-  date?: string;
-  attachments?: { url: string; filename: string; fileType: string; fileSize: number }[];
-}) {
+export async function createManualTransaction(rawData: z.infer<typeof transactionSchema>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 50 transactions per minute
+    await checkRateLimit(`createManualTransaction:${userId}`, 50);
+
+    const data = transactionSchema.parse(rawData);
 
     // Get active session if any
     const activeSession = await prisma.dailySession.findFirst({
@@ -178,26 +177,27 @@ export async function createManualTransaction(data: {
 
     revalidatePath("/satis/kasa");
     revalidatePath("/");
+    revalidatePath("/satis/kasa");
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
     console.error("Manual transaction error:", error);
-    return { success: false, error: "İşlem kaydedilemedi." };
+    return { success: false, error: error instanceof Error ? error.message : "İşlem kaydedilemedi." };
   }
 }
 
-export async function updateManualTransaction(id: string, data: {
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-  description: string;
-  paymentMethod: "CASH" | "CARD" | "TRANSFER";
-  accountId?: string;
-  category?: string;
-  date?: string;
-  newAttachments?: { url: string; filename: string; fileType: string; fileSize: number }[];
-  removedAttachmentIds?: string[];
-}) {
+export async function updateManualTransaction(id: string, rawData: Partial<z.infer<typeof transactionSchema>>) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Rate limit: 50 updates per minute
+    await checkRateLimit(`updateManualTransaction:${userId}`, 50);
+
+    const data = transactionSchema.partial().parse(rawData);
+
     const oldTx = await prisma.transaction.findUnique({
       where: { id, shopId },
       include: { attachments: true }
@@ -217,16 +217,16 @@ export async function updateManualTransaction(id: string, data: {
           financeAccountId: data.accountId,
           category: data.category,
           createdAt: data.date ? new Date(data.date) : oldTx.createdAt,
-          attachments: {
-            deleteMany: data.removedAttachmentIds ? { id: { in: data.removedAttachmentIds } } : {},
-            create: data.newAttachments?.map(att => ({
+          attachments: data.attachments ? {
+            deleteMany: {},
+            create: data.attachments.map(att => ({
               url: att.url,
               filename: att.filename,
               fileType: att.fileType,
               fileSize: att.fileSize,
               shopId
             }))
-          }
+          } : undefined
         }
       });
 
@@ -261,8 +261,11 @@ export async function updateManualTransaction(id: string, data: {
     revalidatePath("/satis/kasa");
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
     console.error("Update transaction error:", error);
-    return { success: false, error: "İşlem güncellenemedi." };
+    return { success: false, error: error instanceof Error ? error.message : "İşlem güncellenemedi." };
   }
 }
 

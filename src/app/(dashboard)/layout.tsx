@@ -57,7 +57,10 @@ export default async function DashboardLayout({
         redirect("/onboarding");
     }
 
-    const adminUser = staff.find((u: any) => u.role === 'ADMIN') || staff[0] || null;
+    const adminUser = staff.find((u: any) => u.role === 'SUPER_ADMIN' || u.role === 'ADMIN') || staff[0] || null;
+    const primaryColor = (shop?.themeConfig as any)?.industryTemplate?.primaryColor
+        || (shop?.themeConfig as any)?.primaryColor
+        || "#6366f1";
 
     return (
         <QueryProvider>
@@ -67,6 +70,7 @@ export default async function DashboardLayout({
                         <DashboardDataProvider initialRates={initialRates} initialStats={initialStats}>
                             <SupplierOrderProvider>
                                 <ShortageProvider>
+                                    <style>{`:root { --brand-color: ${primaryColor}; --brand-color-muted: ${primaryColor}1a; }`}</style>
                                     <AuraSystem />
                                     <GlobalSearch />
                                     {shop?.industry && <IndustryBackground industry={shop.industry} />}

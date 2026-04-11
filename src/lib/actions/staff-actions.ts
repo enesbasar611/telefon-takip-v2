@@ -107,6 +107,8 @@ export async function createStaff(data: {
     });
 
     const roleDefaults: Record<string, { canSell: boolean, canService: boolean, canStock: boolean, canFinance: boolean, canDelete: boolean, canEdit: boolean }> = {
+      SUPER_ADMIN: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
+      SHOP_MANAGER: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
       ADMIN: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
       MANAGER: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
       CASHIER: { canSell: true, canService: false, canStock: false, canFinance: false, canDelete: false, canEdit: false },

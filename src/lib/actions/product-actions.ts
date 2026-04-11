@@ -5,6 +5,9 @@ import { formatTitleCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
+import { productSchema } from "@/lib/validations/schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
   const shopId = await getShopId();
@@ -141,28 +144,15 @@ export async function getCategories() {
   }
 }
 
-export async function createProduct(data: {
-  name: string;
-  categoryId?: string | null;
-  categoryPath?: string[];
-  buyPrice: number;
-  buyPriceUsd?: number | null;
-  sellPrice: number;
-  stock: number;
-  criticalStock: number;
-  barcode?: string;
-  sku?: string;
-  location?: string;
-  supplierId?: string;
-  isSecondHand?: boolean;
-  imei?: string;
-  color?: string;
-  capacity?: string;
-  attributes?: Record<string, any>;
-}) {
+export async function createProduct(rawData: z.infer<typeof productSchema>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 30 products per minute
+    await checkRateLimit(`createProduct:${userId}`, 30);
+
+    const data = productSchema.parse(rawData);
 
     let finalCategoryId = data.categoryId;
 
@@ -268,33 +258,62 @@ export async function createProduct(data: {
     revalidatePath("/ikinci-el");
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
     console.error("Create product error:", error);
-    return { success: false, error: "Ürün eklenemedi." };
+    return { success: false, error: error instanceof Error ? error.message : "Ürün eklenemedi." };
   }
 }
 
 // getOrCreateDevUser removed.
 
-export async function updateProduct(id: string, data: any) {
+export async function updateProduct(id: string, rawData: Partial<z.infer<typeof productSchema>>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+
+    // Rate limit: 100 updates per minute
+    await checkRateLimit(`updateProduct:${userId}`, 100);
+
+    const data = productSchema.partial().parse(rawData);
+
     const oldProduct = await prisma.product.findUnique({ where: { id, shopId } });
     const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
     const newStock = data.stock !== undefined ? Number(data.stock) : undefined;
 
+    const { imei, color, capacity, categoryPath, ...productFields } = data;
+
     const product = await prisma.product.update({
       where: { id, shopId },
       data: {
-        ...data,
-        name: data.name ? formatTitleCase(data.name) : undefined,
-        barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
-        sku: data.sku ? formatUppercase(data.sku) : undefined,
+        name: productFields.name ? formatTitleCase(productFields.name) : undefined,
+        barcode: productFields.barcode ? formatUppercase(productFields.barcode) : undefined,
+        sku: productFields.sku ? formatUppercase(productFields.sku) : undefined,
         buyPrice,
-        sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
+        sellPrice: productFields.sellPrice ? Number(productFields.sellPrice) : undefined,
         stock: newStock,
-        criticalStock: data.criticalStock !== undefined ? Number(data.criticalStock) : undefined,
-        attributes: data.attributes !== undefined ? data.attributes : undefined,
+        criticalStock: productFields.criticalStock !== undefined ? Number(productFields.criticalStock) : undefined,
+        categoryId: productFields.categoryId || undefined,
+        supplierId: productFields.supplierId || undefined,
+        location: productFields.location || undefined,
+        isSecondHand: productFields.isSecondHand,
+        attributes: productFields.attributes !== undefined ? (productFields.attributes as any) : undefined,
+        deviceInfo: (imei || color || capacity) ? {
+          upsert: {
+            create: {
+              imei: imei ? formatUppercase(imei) : `GEN-${Date.now()}`,
+              color: color ? formatTitleCase(color) : undefined,
+              capacity: capacity || undefined,
+              shopId
+            },
+            update: {
+              imei: imei ? formatUppercase(imei) : undefined,
+              color: color ? formatTitleCase(color) : undefined,
+              capacity: capacity || undefined,
+            }
+          }
+        } : undefined
       }
     });
 

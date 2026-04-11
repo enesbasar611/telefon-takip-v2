@@ -16,6 +16,7 @@ model Shop {
   email                String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  isActive             Boolean               @default(true)
   enabledModules       String[]              @default(["SERVICE", "STOCK", "SALE", "FINANCE"])
   industry             String                @default("GENERAL")
   themeConfig          Json?
@@ -689,11 +690,14 @@ enum PaymentStatus {
 }
 
 enum Role {
+  SUPER_ADMIN
+  SHOP_MANAGER
   ADMIN
   MANAGER
   CASHIER
   STAFF
   TECHNICIAN
+  USER
 }
 
 enum ServiceStatus {
@@ -753,3 +757,17 @@ enum IndustryType {
   CLOTHING
   GENERAL
 }
+
+model IndustryTemplate {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  displayName       String
+  sidebarConfig     Json
+  whatsappTemplates Json
+  serviceFields     Json
+  dashboardStats    Json     @default("[]")
+  primaryColor      String   @default("#6366f1")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+

@@ -3,7 +3,10 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { formatProperCase, formatPhoneRaw } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
-import { getShopId } from "@/lib/auth";
+import { getShopId, getUserId } from "@/lib/auth";
+import { customerSchema } from "@/lib/validations/schemas";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
 
 export async function getCustomers() {
   try {
@@ -145,24 +148,21 @@ export async function getCustomerById(id: string) {
   }
 }
 
-export async function createCustomer(data: {
-  name: string;
-  phone?: string;
-  secondaryPhone?: string;
-  email?: string;
-  address?: string;
-  notes?: string;
-  type?: string;
-  isVip?: boolean;
-  photo?: string;
-}) {
+export async function createCustomer(rawData: z.infer<typeof customerSchema>) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Rate limit: 20 creations per minute per user
+    await checkRateLimit(`createCustomer:${userId}`, 20);
+
+    const data = customerSchema.parse(rawData);
+
     const customer = await prisma.customer.create({
       data: {
         ...data,
         name: formatProperCase(data.name),
-        phone: formatPhoneRaw(data.phone || ""),
+        phone: data.phone ? formatPhoneRaw(data.phone) : undefined,
         secondaryPhone: data.secondaryPhone ? formatPhoneRaw(data.secondaryPhone) : undefined,
         shopId,
       }
@@ -198,19 +198,16 @@ export async function createCustomerMuted(data: {
   }
 }
 
-export async function updateCustomer(id: string, data: {
-  name?: string;
-  phone?: string;
-  secondaryPhone?: string;
-  email?: string;
-  address?: string;
-  notes?: string;
-  type?: string;
-  isVip?: boolean;
-  photo?: string;
-}) {
+export async function updateCustomer(id: string, rawData: Partial<z.infer<typeof customerSchema>>) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Rate limit: 50 updates per minute per user
+    await checkRateLimit(`updateCustomer:${userId}`, 50);
+
+    const data = customerSchema.partial().parse(rawData);
+
     const customer = await prisma.customer.update({
       where: { id, shopId },
       data: {
@@ -224,8 +221,11 @@ export async function updateCustomer(id: string, data: {
     revalidatePath(`/musteriler/${id}`);
     return { success: true, customer: serializePrisma(customer) };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
     console.error("Error updating customer:", error);
-    return { success: false, error: "Müşteri güncellenirken hata oluştu." };
+    return { success: false, error: error instanceof Error ? error.message : "Müşteri güncellenirken hata oluştu." };
   }
 }
 
@@ -236,6 +236,10 @@ export async function deleteCustomer(id: string, options?: {
 }) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Rate limit: 10 deletions per minute per user
+    await checkRateLimit(`deleteCustomer:${userId}`, 10);
 
     return await prisma.$transaction(async (tx) => {
       // 1. Handle Sales

@@ -63,9 +63,32 @@ const MODULES = [
     { id: "FINANCE", name: "Finans & Gider", icon: Wallet, desc: "Kasa, banka ve cari hesaplar" },
 ];
 
+// Sector-aware loading messages — copywriting magic ✨
+const LOADING_MESSAGES: Record<string, string[]> = {
+    terzi: ["Makaslar bileniyor...", "Dikim masası hazırlanıyor...", "Kumaşlar seçiliyor...", "İplikler hazırlanıyor..."],
+    "oto-yikama": ["Köpükler hazırlandı...", "Peronlar ayrılıyor...", "Havlular katlanıyor...", "Basınçlı su ayarlanıyor..."],
+    elektrikci: ["Kablolar çekiliyor...", "Sigorta kutusu açılıyor...", "Voltaj ölçülüyor..."],
+    "bilgisayar-serv": ["BIOS kontrol ediliyor...", "RAM slotları taranıyor...", "Sistem restore başlatılıyor..."],
+    kuafor: ["Makaslar sterilize ediliyor...", "Renk karıştırılıyor...", "Müşteri koltuğu hazırlanıyor..."],
+    "oto-servis": ["Motor kapağı açılıyor...", "Yağ seviyeleri kontrol ediliyor...", "Lift kaldırılıyor..."],
+    lokanta: ["Malzemeler hazırlanıyor...", "Ocak ateşleniyor...", "Menü oluşturuluyor..."],
+    default: ["Sisteminiz hazırlanıyor...", "Yapay zeka düşünüyor...", "Sektörünüz analiz ediliyor...", "Neredeyse bitti..."]
+};
+
+function getLoadingMessages(sectorValue: string): string[] {
+    const lower = sectorValue.toLowerCase()
+        .replace(/[çÇ]/g, "c").replace(/[ğĞ]/g, "g").replace(/[ıİ]/g, "i")
+        .replace(/[öÖ]/g, "o").replace(/[şŞ]/g, "s").replace(/[üÜ]/g, "u");
+    for (const [key, msgs] of Object.entries(LOADING_MESSAGES)) {
+        if (lower.includes(key.replace("-", "").slice(0, 5))) return msgs;
+    }
+    return LOADING_MESSAGES.default;
+}
+
 export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizardProps) {
     const [step, setStep] = useState<Step>("modules");
     const [loading, setLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState("");
 
     // Step 1: Modules & Industry
     const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE"]);
@@ -81,6 +104,19 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
         { id: "1", name: "Merkez Kasa", type: "CASH", balance: 0, isDefault: true }
     ]);
 
+    // Cycling loading message animation
+    useEffect(() => {
+        if (!loading || step !== "modules") { setLoadingMessage(""); return; }
+        const messages = getLoadingMessages(sector);
+        let idx = 0;
+        setLoadingMessage(messages[0]);
+        const interval = setInterval(() => {
+            idx = (idx + 1) % messages.length;
+            setLoadingMessage(messages[idx]);
+        }, 900);
+        return () => clearInterval(interval);
+    }, [loading, step, sector]);
+
     const handleNext = async () => {
         setLoading(true);
         try {
@@ -90,9 +126,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                     setLoading(false);
                     return;
                 }
-                const loadingToast = toast.loading("Sektörünüz AI ile analiz ediliyor...");
                 const res = await saveOnboardingModules(selectedModules, sector);
-                toast.dismiss(loadingToast);
                 if (!res.success) {
                     toast.error(res.error || "İşlem başarısız oldu.");
                     setLoading(false);
@@ -489,14 +523,32 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                 <Button
                                     onClick={handleNext}
                                     disabled={loading}
-                                    className="flex-1 h-16 rounded-[2rem] bg-white text-black font-extrabold text-lg tracking-wide hover:bg-gray-200 shadow-xl shadow-white/10 group"
+                                    className="flex-1 h-16 rounded-[2rem] bg-white text-black font-extrabold text-lg tracking-wide hover:bg-gray-200 shadow-xl shadow-white/10 group overflow-hidden"
                                 >
-                                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
-                                        <div className="flex items-center gap-2">
-                                            {step === "finance" ? "TAMAMLA" : "SONRAKİ ADIM"}
-                                            <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                                        </div>
-                                    )}
+                                    <AnimatePresence mode="wait">
+                                        {loading && step === "modules" && loadingMessage ? (
+                                            <motion.span
+                                                key={loadingMessage}
+                                                initial={{ opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -8 }}
+                                                transition={{ duration: 0.25 }}
+                                                className="flex items-center gap-2 text-sm font-semibold"
+                                            >
+                                                <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                                                {loadingMessage}
+                                            </motion.span>
+                                        ) : loading ? (
+                                            <motion.span key="spinner" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                                <Loader2 className="h-6 w-6 animate-spin" />
+                                            </motion.span>
+                                        ) : (
+                                            <motion.div key="label" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                                {step === "finance" ? "TAMAMLA" : "SONRAKİ ADIM"}
+                                                <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </Button>
                             </div>
                         )}

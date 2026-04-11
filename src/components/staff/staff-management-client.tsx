@@ -99,6 +99,7 @@ interface StaffManagementClientProps {
 
 function RoleBadge({ role }: { role: string }) {
     const configs: Record<string, { label: string, className: string }> = {
+        SUPER_ADMIN: { label: "SÜPER EDN", className: "bg-rose-500/10 text-rose-500" },
         ADMIN: { label: "YÖNETİCİ", className: "bg-indigo-500/10 text-indigo-500" },
         MANAGER: { label: "MÜDÜR", className: "bg-purple-500/10 text-purple-500" },
         CASHIER: { label: "KASİYER", className: "bg-emerald-500/10 text-emerald-500" },
@@ -307,7 +308,7 @@ function RoleTemplateModal({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"].map((role) => {
+                            {["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"].map((role) => {
                                 const t = templates.find(temp => temp.role === role) || {
                                     canSell: true,
                                     canService: true,
@@ -377,7 +378,7 @@ import { PageHeader } from "@/components/ui/page-header";
 export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [] }: StaffManagementClientProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
-    const [filter, setFilter] = useState<"all" | "TECHNICIAN" | "MANAGER" | "CASHIER">("all");
+    const [filter, setFilter] = useState<"all" | "SUPER_ADMIN" | "TECHNICIAN" | "MANAGER" | "CASHIER">("all");
     const [localStaff, setLocalStaff] = useState<StaffMember[]>(initialStaff || []);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -441,7 +442,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     }), [localStaff]);
 
     const rolePermissions = useMemo(() => {
-        const roles = ["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN"];
+        const roles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN"];
         return [
             { name: "Satış İşlemleri", perms: roles.map(r => localStaff.find(s => s.role === r)?.canSell ?? true) },
             { name: "Servis Kayıtları", perms: roles.map(r => localStaff.find(s => s.role === r)?.canService ?? true) },
@@ -500,6 +501,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                         <div className="flex items-center gap-2 p-1 bg-white dark:bg-card/50 rounded-2xl border border-slate-100 dark:border-border/50">
                             {[
                                 { id: "all", label: "TÜMÜ" },
+                                { id: "SUPER_ADMIN", label: "SÜPER EDN" },
                                 { id: "TECHNICIAN", label: "TEKNİSYENLER" },
                                 { id: "MANAGER", label: "MÜDÜRLER" },
                                 { id: "CASHIER", label: "KASİYERLER" }

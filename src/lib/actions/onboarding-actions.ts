@@ -156,10 +156,36 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
 
         let themeConfig: any = {};
         if (sector) {
-            // Generate AI configuration for this sector (dynamic fields)
-            const aiGen = await generateIndustryConfigWithAI(sector);
-            if (aiGen.success) {
-                themeConfig = { ...themeConfig, ...aiGen.data };
+            // 1. Önce veritabanında bu sektörün şablonu var mı?
+            const sectorSlug = sector.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+            let template = await (prisma as any).industryTemplate.findUnique({
+                where: { slug: sectorSlug }
+            });
+
+            // 2. Yoksa ve sektör "Telefoncu" değilse yak ateşi!
+            if (!template && sector !== 'TELEFON_TEKNIK_SERVIS' && sector !== 'TELEFONCU') {
+                const { generateAndCacheIndustryTemplate } = await import("./gemini-actions");
+                template = await generateAndCacheIndustryTemplate(sector);
+            }
+
+            if (template) {
+                const config = template as any;
+                themeConfig = {
+                    ...themeConfig,
+                    industryTemplate: template,
+                    primaryColor: config.primaryColor,
+                    labels: config.sidebarConfig?.labels || {},
+                };
+                // If user didn't select specific modules, use industry defaults
+                if (!modules || modules.length === 0) {
+                    modules = config.sidebarConfig?.features || [];
+                }
+            } else {
+                // Generate AI configuration for this sector (dynamic fields) if fallback
+                const aiGen = await generateIndustryConfigWithAI(sector);
+                if (aiGen.success) {
+                    themeConfig = { ...themeConfig, ...aiGen.data };
+                }
             }
         }
 
