@@ -150,9 +150,9 @@ export async function getOnboardingAIAnalysis(sector: string) {
     return await onboardingAISectorAnalysis(sector);
 }
 
-export async function saveOnboardingModules(modules: string[], sector?: string, extraData?: any) {
+export async function saveOnboardingModules(modules: string[], sector?: string, extraData?: any, overrideShopId?: string) {
     try {
-        const shopId = await getShopId();
+        const shopId = overrideShopId || await getShopId();
 
         let themeConfig: any = {};
         if (sector) {
@@ -176,8 +176,8 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
                     primaryColor: config.primaryColor,
                     labels: config.sidebarConfig?.labels || {},
                 };
-                // If user didn't select specific modules, use industry defaults
-                if (!modules || modules.length === 0) {
+                // Only fall back to industry defaults if modules parameter is not provided at all
+                if (modules === undefined || modules === null) {
                     modules = config.sidebarConfig?.features || [];
                 }
             } else {
@@ -207,8 +207,8 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
         if (sector) {
             const { getIndustryConfig } = await import("@/lib/industry-utils");
             const indConf = getIndustryConfig(sector as any);
-            await prisma.receiptSettings.update({
-                where: { id: shopId },
+            await prisma.receiptSettings.updateMany({
+                where: { shopId: shopId },
                 data: {
                     subtitle: `PROFESYONEL ${indConf.name?.toUpperCase() || ""}`
                 }
@@ -228,9 +228,9 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
         }
 
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("saveOnboardingModules error:", error);
-        return { success: false, error: "Modüller kaydedilemedi." };
+        return { success: false, error: `Modüller kaydedilemedi: ${error.message || "Bilinmeyen hata"}` };
     }
 }
 

@@ -7,7 +7,8 @@ import { updateShopModules } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import {
     Wrench, Package, ShoppingCart, BarChart3,
-    Heart, Calendar, CheckCircle2, Sparkles, Info
+    Heart, Calendar, CheckCircle2, Sparkles, Info,
+    Users, Wallet, Truck, UserCheck, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +18,14 @@ const ALL_MODULES = [
         key: "SERVICE",
         icon: Wrench,
         label: "Servis & Arıza Takibi",
-        desc: "Teknik servis kayıtları, iş emirleri, cihaz takibi, randevu yönetimi.",
+        desc: "Teknik servis kayıtları, iş emirleri, cihaz takibi ve randevu yönetimi.",
         color: "blue",
     },
     {
         key: "STOCK",
         icon: Package,
         label: "Envanter & Stok",
-        desc: "Ürün, malzeme ve parça stoğunu takip edin, hareket raporları.",
+        desc: "Ürün, malzeme ve parça stoğunu takip edin, hareket raporları alın.",
         color: "violet",
     },
     {
@@ -42,6 +43,41 @@ const ALL_MODULES = [
         color: "amber",
     },
     {
+        key: "CRM",
+        icon: Users,
+        label: "Müşteri Yönetimi (CRM)",
+        desc: "Müşteri listesi, iletişim geçmişi ve özel kayıtlar.",
+        color: "cyan",
+    },
+    {
+        key: "DEBT",
+        icon: Wallet,
+        label: "Veresiye & Borç Takibi",
+        desc: "Müşteri borçları, ödeme planları ve borç hatırlatıcıları.",
+        color: "rose",
+    },
+    {
+        key: "SUPPLIER",
+        icon: Truck,
+        label: "Toptancı & Tedarikçi",
+        desc: "Tedarikçi borçları, malzeme alımları ve stok girişleri.",
+        color: "blue",
+    },
+    {
+        key: "STAFF",
+        icon: UserCheck,
+        label: "Personel Takibi",
+        desc: "Personel maaş, prim ve performans takibi.",
+        color: "violet",
+    },
+    {
+        key: "NOTIFICATION",
+        icon: MessageSquare,
+        label: "WhatsApp Bildirimleri",
+        desc: "Otomatik durum güncellemeleri ve müşteri mesajları.",
+        color: "emerald",
+    },
+    {
         key: "LOYALTY",
         icon: Heart,
         label: "Sadakat Programı",
@@ -52,7 +88,7 @@ const ALL_MODULES = [
         key: "APPOINTMENT",
         icon: Calendar,
         label: "Randevu & Ajanda",
-        desc: "Müşteri randevu takvimi, hatırlatmalar.",
+        desc: "Müşteri randevu takvimi ve iş planlayıcı.",
         color: "cyan",
     },
 ];

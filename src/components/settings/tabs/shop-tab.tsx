@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ interface ShopTabProps {
 }
 
 export function ShopTab({ shop }: ShopTabProps) {
+    const { data: session } = useSession();
+    const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
     const [isPending, startTransition] = useTransition();
     const [formData, setFormData] = useState({
         name: shop?.name || "",
@@ -72,7 +75,10 @@ export function ShopTab({ shop }: ShopTabProps) {
                                 value={formData.industry}
                                 onValueChange={(value) => setFormData(prev => ({ ...prev, industry: value as IndustryType }))}
                             >
-                                <SelectTrigger className="bg-card/50">
+                                <SelectTrigger
+                                    className="bg-card/50"
+                                    disabled={!isSuperAdmin}
+                                >
                                     <SelectValue placeholder="Sektör seçin" />
                                 </SelectTrigger>
                                 <SelectContent>

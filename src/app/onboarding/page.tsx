@@ -28,8 +28,11 @@ import {
     QrCode,
     RefreshCw,
     AlertCircle,
-    X
+    X,
+    Users,
+    Building
 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,9 +64,12 @@ const MODULES = [
     { id: "SALE", name: "POS & Satış", icon: CreditCard, desc: "Hızlı satış ve ödeme takibi" },
     { id: "SERVICE", name: "Teknik Servis", icon: Smartphone, desc: "Arıza kaydı ve onarım yönetimi" },
     { id: "STOCK", name: "Stok & Envanter", icon: Package, desc: "Ürün ve parça satış takibi" },
+    { id: "CRM", name: "Müşteri Yönetimi", icon: Users, desc: "Müşteri portföyü ve CRM" },
+    { id: "DEBT", name: "Cari & Veresiye", icon: CreditCard, desc: "Borç/alacak ve taksit takibi" },
     { id: "FINANCE", name: "Finans & Gider", icon: Wallet, desc: "Kasa, banka ve cari hesaplar" },
-    { id: "LOYALTY", name: "Sadakat & Puan", icon: Sparkles, desc: "Müşteri ödüllendirme sistemi" },
-    { id: "APPOINTMENT", name: "Randevu Sistemi", icon: Zap, desc: "Zaman planlaması ve takvim" },
+    { id: "SUPPLIER", name: "Tedarikçiler", icon: Building2, desc: "Toptancı ve parça tedariği" },
+    { id: "STAFF", name: "Ekip Yönetimi", icon: Users, desc: "Personel ve yetkilendirme" },
+    { id: "APPOINTMENT", name: "Randevu Sistemi", icon: Zap, desc: "Zaman planlaması" },
 ];
 
 const INDUSTRIES = [
@@ -104,7 +110,7 @@ export default function OnboardingPage() {
 
             if (existingShop) {
                 // If they already finished, don't let them stay here
-                if (!existingShop.isFirstLogin) {
+                if (!existingShop.isFirstLogin && !sessionStorage.getItem("just_finished_onboarding")) {
                     router.push("/dashboard");
                     return;
                 }
@@ -143,7 +149,7 @@ export default function OnboardingPage() {
 
     // Step 1: AI Analysis
     const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-    const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE"]);
+    const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"]);
 
     // Step 2: Integrations
     const [wsStatus, setWsStatus] = useState<any>({ status: "DISCONNECTED" });
@@ -174,6 +180,11 @@ export default function OnboardingPage() {
             if (!shopData.name.trim()) return toast.error("Dükkan adı gereklidir.");
             const sector = shopData.industry === "DIGER" ? shopData.customIndustry : shopData.industry;
             if (!sector) return toast.error("Lütfen bir sektör belirtin.");
+
+            // Phone validation
+            if (shopData.phone && shopData.phone.length > 0 && shopData.phone.length < 14) {
+                return toast.error("Lütfen geçerli bir telefon numarası girin.");
+            }
 
             setLoading(true);
             const res = await createShopOnboarding({
@@ -206,7 +217,8 @@ export default function OnboardingPage() {
                 {
                     labels: aiAnalysis?.labels,
                     categories: aiAnalysis?.suggestedCategories
-                }
+                },
+                shopId || undefined
             );
             if (res.success) {
                 setStep("integrations");
@@ -235,17 +247,25 @@ export default function OnboardingPage() {
             if (resFin.success) {
                 const res = await finishOnboarding();
                 if (res.success) {
-                    // FINAL SESSION REFRESH: Marks isFirstLogin as false (in DB)
-                    await updateSession();
                     sessionStorage.setItem("just_finished_onboarding", "true");
                     setStep("success");
                 } else {
                     toast.error(res.error);
                 }
             } else {
-                toast.error(resFin.error);
+                toast.error(resFin.error || "Finansal bilgiler kaydedilemedi.");
             }
             setLoading(false);
+        }
+    };
+
+    const handleFinish = async () => {
+        setLoading(true);
+        try {
+            await updateSession();
+            router.push("/dashboard");
+        } catch (error) {
+            router.push("/dashboard");
         }
     };
 
@@ -364,11 +384,10 @@ export default function OnboardingPage() {
                                         <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
                                             <Phone className="h-3 w-3" /> Telefon (Müşteri için)
                                         </Label>
-                                        <Input
-                                            placeholder="05..."
+                                        <PhoneInput
                                             value={shopData.phone}
-                                            onChange={e => setShopData({ ...shopData, phone: e.target.value })}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                            onChange={val => setShopData({ ...shopData, phone: val })}
+                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner border-0"
                                         />
                                     </div>
                                 </div>
@@ -402,87 +421,92 @@ export default function OnboardingPage() {
                                 <p className="text-gray-400">Yapay zeka dükkanınız için en iyi modülleri ve terimleri belirledi.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="md:col-span-2 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {MODULES.map(mod => (
-                                            <button
-                                                key={mod.id}
-                                                onClick={() => {
-                                                    if (selectedModules.includes(mod.id)) {
-                                                        setSelectedModules(selectedModules.filter(id => id !== mod.id));
-                                                    } else {
-                                                        setSelectedModules([...selectedModules, mod.id]);
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "p-6 rounded-[2rem] border transition-all duration-300 text-left relative group",
-                                                    selectedModules.includes(mod.id)
-                                                        ? "bg-white/10 border-white/20 shadow-2xl"
-                                                        : "bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "h-12 w-12 rounded-2xl flex items-center justify-center mb-4 transition-all",
-                                                    selectedModules.includes(mod.id) ? "bg-white text-black shadow-lg" : "bg-white/5 text-white"
-                                                )}>
-                                                    <mod.icon className="h-6 w-6" />
-                                                </div>
-                                                <h3 className="font-bold text-lg">{mod.name}</h3>
-                                                <p className="text-xs text-gray-500 mt-1 leading-tight">{mod.desc}</p>
-                                                {selectedModules.includes(mod.id) && (
-                                                    <div className="absolute top-4 right-4">
-                                                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    {aiAnalysis ? (
-                                        <div className="p-8 bg-indigo-500/10 border border-indigo-500/20 rounded-[2.5rem] space-y-6">
+                            {/* AI Analysis - Horizontal Section */}
+                            <div className="w-full">
+                                {aiAnalysis ? (
+                                    <div className="p-8 bg-indigo-500/10 border border-indigo-500/20 rounded-[2.5rem] space-y-6">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3 text-indigo-400">
                                                 <Cpu className="h-6 w-6 animate-pulse" />
                                                 <span className="text-[10px] font-black tracking-widest uppercase">Zeka Analizi</span>
                                             </div>
+                                            <div className="flex-1 max-w-2xl px-8 hidden md:block">
+                                                <p className="text-[10px] text-indigo-300/80 italic font-medium text-center">"{aiAnalysis.businessAdvice}"</p>
+                                            </div>
+                                        </div>
 
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <Label className="text-[9px] text-indigo-400/60 uppercase font-black">Önerilen Terimler</Label>
-                                                    <div className="grid grid-cols-1 gap-2 mt-2">
-                                                        {Object.entries(aiAnalysis.labels || {}).map(([key, val]: any) => (
-                                                            <div key={key} className="flex items-center justify-between text-xs py-2 border-b border-indigo-500/10 last:border-0">
-                                                                <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                                                                <span className="font-bold text-white">{val}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>
+                                                <Label className="text-[9px] text-indigo-400/60 uppercase font-black">Önerilen Terimler</Label>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 mt-2">
+                                                    {Object.entries(aiAnalysis.labels || {}).map(([key, val]: any) => (
+                                                        <div key={key} className="flex items-center justify-between text-[10px] py-1 border-b border-indigo-500/10 last:border-0">
+                                                            <span className="text-gray-400 capitalize truncate mr-2">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                                            <span className="font-bold text-white truncate">{val}</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
+                                            </div>
 
-                                                <div>
-                                                    <Label className="text-[9px] text-indigo-400/60 uppercase font-black">Başlangıç Kategorileri</Label>
-                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                        {aiAnalysis.suggestedCategories?.map((cat: string) => (
-                                                            <Badge key={cat} className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 rounded-lg h-7">
-                                                                {cat}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-2">
-                                                    <p className="text-[10px] text-indigo-300/80 italic font-medium">"{aiAnalysis.businessAdvice}"</p>
+                                            <div>
+                                                <Label className="text-[9px] text-indigo-400/60 uppercase font-black">Başlangıç Kategorileri</Label>
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    {aiAnalysis.suggestedCategories?.map((cat: string) => (
+                                                        <Badge key={cat} className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 rounded-lg h-6 text-[10px]">
+                                                            {cat}
+                                                        </Badge>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="h-full flex flex-col items-center justify-center p-8 border border-white/5 bg-white/[0.01] rounded-[2.5rem] opacity-30">
-                                            <Loader2 className="h-10 w-10 animate-spin mb-4" />
-                                            <p className="text-[10px] uppercase font-black tracking-widest">AI Analiz Ediyor...</p>
-                                        </div>
-                                    )}
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-32 flex flex-col items-center justify-center p-8 border border-white/5 bg-white/[0.01] rounded-[2.5rem] opacity-30">
+                                        <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                                        <p className="text-[10px] uppercase font-black tracking-widest">AI Analiz Ediyor...</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modules Section - 4 Columns */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Mevcut Modüller</h3>
+                                    <span className="text-[10px] text-indigo-400 font-bold italic">* Seçilmeyen modülleri daha sonra Ayarlar &gt; Modüller kısmından aktif edebilirsiniz.</span>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {MODULES.map(mod => (
+                                        <button
+                                            key={mod.id}
+                                            onClick={() => {
+                                                if (selectedModules.includes(mod.id)) {
+                                                    setSelectedModules(selectedModules.filter(id => id !== mod.id));
+                                                } else {
+                                                    setSelectedModules([...selectedModules, mod.id]);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "p-4 rounded-[2rem] border transition-all duration-300 text-left relative group",
+                                                selectedModules.includes(mod.id)
+                                                    ? "bg-white/10 border-white/20 shadow-2xl scale-[1.02]"
+                                                    : "bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-xl flex items-center justify-center mb-3 transition-all",
+                                                selectedModules.includes(mod.id) ? "bg-white text-black shadow-lg" : "bg-white/5 text-white"
+                                            )}>
+                                                <mod.icon className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-bold text-sm">{mod.name}</h3>
+                                            <p className="text-[10px] text-gray-500 mt-0.5 leading-tight line-clamp-2">{mod.desc}</p>
+                                            {selectedModules.includes(mod.id) && (
+                                                <div className="absolute top-3 right-3">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
@@ -838,10 +862,13 @@ export default function OnboardingPage() {
                             </div>
 
                             <Button
-                                onClick={() => router.push("/dashboard")}
+                                onClick={handleFinish}
+                                disabled={loading}
                                 className="w-full h-24 bg-white text-black text-4xl font-black rounded-[3rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-indigo-500/20"
                             >
-                                SİSTEMİ AÇ <ChevronRight className="h-10 w-10 ml-4" />
+                                {loading ? <Loader2 className="h-10 w-10 animate-spin" /> : (
+                                    <>SİSTEMİ AÇ <ChevronRight className="h-10 w-10 ml-4" /></>
+                                )}
                             </Button>
                         </motion.div>
                     )}

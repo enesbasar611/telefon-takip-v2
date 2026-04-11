@@ -42,6 +42,23 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTabStates] = useState(searchParams.get("tab") || "shop");
+  const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");
+        const res = await getWhatsAppStatusAction();
+        setWhatsappStatus(res.status);
+      } catch (error) {
+        console.error("WhatsApp status check failed", error);
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const setActiveTab = (tab: string) => {
     setActiveTabStates(tab);
@@ -143,7 +160,12 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
                       : "text-muted-foreground/80 dark:text-muted-foreground hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1a1a1a] border border-transparent"
                   )}
                 >
-                  <Icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? "text-blue-400" : "text-slate-600")} />
+                  <div className="relative">
+                    <Icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? "text-blue-400" : "text-slate-600")} />
+                    {tab.id === "whatsapp" && whatsappStatus === "DISCONNECTED" && (
+                      <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                    )}
+                  </div>
                   <div className="min-w-0">
                     <span className="text-sm font-semibold block leading-tight">{tab.label}</span>
                     <span className={cn("text-[10px] block leading-tight mt-0.5", isActive ? "text-blue-400/60" : "text-slate-600")}>

@@ -94,7 +94,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Parça / Aksesuar",
         },
         themeColor: "blue",
-        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "LOYALTY"],
+        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "LOYALTY", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Ekranlar", "Bataryalar", "Kılıf & Koruyucular", "Şarj Aletleri", "Anakart Parçaları"],
         businessAdvice: "Hızlı servis ve orijinal parça kullanımı müşteri sadakatini artırır. Stoklarınızı her zaman güncel tutun.",
         serviceFormFields: [
@@ -128,7 +128,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Malzeme",
         },
         themeColor: "amber",
-        features: ["SERVICE", "STOCK", "FINANCE"],
+        features: ["SERVICE", "STOCK", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Kablolar", "Sigortalar", "Anahtar & Priz", "Aydınlatma", "El Aletleri"],
         businessAdvice: "İleri tarihli arıza kayıtları için ajanda modülünü kullanın. Malzeme eksiklerini stok asistanı ile takip edin.",
         serviceFormFields: [
@@ -161,7 +161,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Malzeme",
         },
         themeColor: "cyan",
-        features: ["SERVICE", "STOCK", "FINANCE"],
+        features: ["SERVICE", "STOCK", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Musluk & Batarya", "Boru & Ek Parçalar", "Vana & Fitting", "Gider Malzemeleri", "Sızdırmazlık"],
         businessAdvice: "Yapılan her müdahaleyi servis formuna kaydedin, parça değişimlerini stoktan otomatik düşürün.",
         serviceFormFields: [
@@ -194,7 +194,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Bileşen",
         },
         themeColor: "indigo",
-        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "LOYALTY"],
+        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "LOYALTY", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["SSD / HDD", "RAM Bellek", "Ekran Kartları", "Yazılım / Lisans", "Aksesuar"],
         businessAdvice: "Müşterilere periyodik bakım (termal macun, donanım temizliği) hatırlatmaları göndererek gelirinizi artırın.",
         serviceFormFields: [
@@ -228,7 +228,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Ürün",
         },
         themeColor: "emerald",
-        features: ["STOCK", "SALE", "FINANCE"],
+        features: ["STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Temel Gıda", "Atıştırmalık", "İçecek & Meşrubat", "Temizlik Ürünleri", "Kişisel Bakım"],
         businessAdvice: "Cari hesap takibi ile veresiye müşterilerinizi yönetin. En çok satan ürünleri stok analizinden takip edin.",
         serviceFormFields: [
@@ -259,7 +259,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Ürün",
         },
         themeColor: "rose",
-        features: ["SERVICE", "STOCK", "SALE", "FINANCE"],
+        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Pantolon Tadilat", "Ceket / Mont", "Gömlek / Bluz", "Özel Dikim", "Kumaş Satış"],
         businessAdvice: "Tadilat işlerinde teslimat tarihini SMS/WhatsApp ile hatırlatarak dükkan trafiğinizi yönetin.",
         serviceFormFields: [
@@ -292,7 +292,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Ürün",
         },
         themeColor: "slate",
-        features: ["SERVICE", "STOCK", "SALE", "FINANCE"],
+        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Ek Hizmetler", "Malzeme Satışı", "Bakım / Onarım", "Yedek Parça", "Diğer"],
         businessAdvice: "Sistemin esnek yapısını dükkanınıza göre özelleştirin, tüm giderlerinizi finans bölümünden kaydedin.",
         serviceFormFields: [
@@ -322,7 +322,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Parça",
         },
         themeColor: "orange",
-        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "APPOINTMENT"],
+        features: ["SERVICE", "STOCK", "SALE", "FINANCE", "APPOINTMENT", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Motor Yağları", "Fren Sistemleri", "Aydınlatma", "Filtre Grupları", "Debriyaj & Şanzıman"],
         businessAdvice: "Araç plakası üzerinden geçmiş işlemleri takip ederek müşterilerinize güven verin.",
         serviceFormFields: [
@@ -354,7 +354,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
             productLabel: "Ürün",
         },
         themeColor: "purple",
-        features: ["SALE", "FINANCE", "LOYALTY", "APPOINTMENT"],
+        features: ["SALE", "FINANCE", "LOYALTY", "APPOINTMENT", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"],
         suggestedCategories: ["Saç Kesim", "Sakal Traşı", "Cilt Bakımı", "Kozmetik Ürünler", "Paket Hizmetler"],
         businessAdvice: "Randevu sistemi ile müşteri bekleme süresini azaltın, sadakat puanları ile geri dönüşleri artırın.",
         serviceFormFields: [
