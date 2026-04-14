@@ -1,0 +1,17 @@
+
+# Direct Bağlantı (Prisma işlemleri için - Pooler OLMAMALI)
+NEXT_PUBLIC_APP_URL="http://basarteknik.tech"
+
+DATABASE_URL="postgresql://neondb_owner:npg_3BDNheXV2xSL@ep-still-shadow-alqclhl0.c-3.eu-central-1.aws.neon.tech/telefoncu-app-db?sslmode=require&channel_binding=require"
+
+# Auth.js / NextAuth
+NEXTAUTH_URL="http://basarteknik.tech"
+NEXTAUTH_SECRET="basar_teknik_ozel_123"
+AUTH_SECRET="basar_teknik_ozel_123_super"
+GOOGLE_CLIENT_ID="304070078322-c0snj0oe63u5r6b634fqv5fu7a63opma.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="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"
+
+
+# Gemini AI
+GEMINI_API_KEY="AIzaSyA6k0d0b5Iteu3T80L6ElYm7S6EYaIatB8" # Ayarlar > Otomasyon kısmından veya Google AI Studio'dan aldığınız anahtarı buraya yazın
+
