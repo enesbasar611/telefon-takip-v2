@@ -467,11 +467,56 @@ export interface AIUpdateOperation {
     status: "Halledildi" | "Eksik Veri";
 }
 
+export interface AIIntentClarification {
+    enhancedPrompt: string;
+    clarifiedIntent: string;
+    isPerfect: boolean;
+}
+
 export interface AIUpdateResponse {
     updates: AIUpdateOperation[];
     warnings: string[];
     affectedCount: number;
     summary: string;
+}
+
+export async function enhanceAndClarifyIntent(command: string): Promise<{ success: true; data: AIIntentClarification } | { success: false; error: string }> {
+    const { getShopId } = await import("@/lib/auth");
+    const shopId = await getShopId();
+
+    if (!command.trim()) return { success: false, error: "Komut boş olamaz." };
+
+    const schema = `{
+        "enhancedPrompt": "string",
+        "clarifiedIntent": "string",
+        "isPerfect": "boolean"
+    }`;
+
+    const systemPrompt = `Sen bir envanter yönetim asistanısın. Kullanıcının günlük dilde yazdığı (muğlak olabilecek) komutları analiz edip daha net bir formata çevirirsin.
+    
+    KURALLAR:
+    - enhancedPrompt: Kullanıcının niyetini daha teknik ve net ifade eden versiyon.
+    - clarifiedIntent: Kullanıcıya 'Bunu mu demek istediniz?' diye sorulacak samimi soru.
+    - isPerfect: Eğer komut zaten çok netse true, muğlaklık veya çok günlük dil varsa false.
+    
+    YANIT SADECE JSON OLMALIDIR: ${schema}`;
+
+    const result = await callGemini(shopId, [systemPrompt, `KULLANICI KOMUTU: ${command}`]);
+    if ("error" in result) return { success: false, error: result.error };
+
+    try {
+        const parsed = JSON.parse(result.text);
+        return {
+            success: true,
+            data: {
+                enhancedPrompt: parsed.enhancedPrompt || command,
+                clarifiedIntent: parsed.clarifiedIntent || "Bunu mu demek istediniz?",
+                isPerfect: !!parsed.isPerfect
+            }
+        };
+    } catch {
+        return { success: false, error: "Komut analiz edilemedi." };
+    }
 }
 
 export async function parseBulkUpdateWithAI(command: string): Promise<{ success: true; data: AIUpdateResponse } | { success: false; error: string }> {
@@ -960,7 +1005,7 @@ SADECE slug metnini döndür (tırnak işareti olmadan, başka metin ekleme): ${
     }
 
     // ── STEP 2: CACHE LOOKUP ────────────────────────────────────────────────
-    const existing = await prisma.industryTemplate.findUnique({ where: { slug: canonicalSlug } });
+    const existing = await (prisma as any).industryTemplate.findUnique({ where: { slug: canonicalSlug } });
     if (existing) {
         console.log(`[INDUSTRY-CACHE-HIT] Returning cached template: ${canonicalSlug}`);
         return existing;
@@ -1018,7 +1063,7 @@ CANONICAL SLUG: ${canonicalSlug}
         const config = JSON.parse(result.text);
 
         // ── STEP 4: UPSERT (safe against race conditions) ───────────────────
-        const template = await prisma.industryTemplate.upsert({
+        const template = await (prisma as any).industryTemplate.upsert({
             where: { slug: canonicalSlug },
             update: {
                 displayName: config.displayName || sectorName,

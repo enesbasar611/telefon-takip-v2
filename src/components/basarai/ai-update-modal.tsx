@@ -6,8 +6,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Sparkles, RefreshCcw, Loader2, Table, Check, AlertTriangle, ArrowLeft } from "lucide-react";
-import { parseBulkUpdateWithAI, AIUpdateOperation, AIUpdateResponse } from "@/lib/actions/gemini-actions";
+import { Sparkles, RefreshCcw, Loader2, Table, Check, AlertTriangle, ArrowLeft, Info } from "lucide-react";
+import { parseBulkUpdateWithAI, AIUpdateOperation, AIUpdateResponse, enhanceAndClarifyIntent, AIIntentClarification } from "@/lib/actions/gemini-actions";
 import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
 import { useUI } from "@/lib/context/ui-context";
 import { useAura } from "@/lib/context/aura-context";
@@ -20,6 +20,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
     const { setAiInputFocused, setAiLoading } = useUI();
     const { triggerAura } = useAura();
     const [aiResponse, setAiResponse] = useState<AIUpdateResponse | null>(null);
+    const [clarification, setClarification] = useState<AIIntentClarification | null>(null);
 
     useEffect(() => {
         setAiLoading(isPending);
@@ -34,22 +35,42 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     const updates = aiResponse?.updates || null;
 
-    const handleParse = () => {
-        if (!command.trim()) return;
+    const handleParse = (forcedCommand?: string) => {
+        const cmdToUse = forcedCommand || command;
+        if (!cmdToUse.trim()) return;
 
         startTransition(async () => {
-            const result = await parseBulkUpdateWithAI(command);
-            if (result.success) {
-                if (result.data.updates.length === 0) {
-                    toast.error("BAŞAR AI: Hiçbir ürün eşleşmedi. Lütfen daha net bir ifade kullanın.");
+            // If we don't have a clarification yet, get one
+            if (!clarification && !forcedCommand) {
+                const intentResult = await enhanceAndClarifyIntent(cmdToUse);
+                if (intentResult.success) {
+                    if (intentResult.data.isPerfect) {
+                        // Skip clarification if AI is very sure
+                        executeParse(intentResult.data.enhancedPrompt);
+                    } else {
+                        setClarification(intentResult.data);
+                    }
                     return;
                 }
-                setAiResponse(result.data);
-                toast.success(`BAŞAR AI: ${result.data.affectedCount} ürün tespit edildi.`);
-            } else {
-                toast.error(result.error);
             }
+
+            executeParse(cmdToUse);
         });
+    };
+
+    const executeParse = async (cmd: string) => {
+        const result = await parseBulkUpdateWithAI(cmd);
+        if (result.success) {
+            if (result.data.updates.length === 0) {
+                toast.error("BAŞAR AI: Hiçbir ürün eşleşmedi. Lütfen daha net bir ifade kullanın.");
+                return;
+            }
+            setAiResponse(result.data);
+            setClarification(null); // Clear clarification when response arrives
+            toast.success(`BAŞAR AI: ${result.data.affectedCount} ürün tespit edildi.`);
+        } else {
+            toast.error(result.error);
+        }
     };
 
     const handleApply = () => {
@@ -68,7 +89,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
     };
 
     return (
-        <Dialog open={open} onOpenChange={(v) => { if (!v) { setAiResponse(null); onOpenChange(false); } else onOpenChange(v); }}>
+        <Dialog open={open} onOpenChange={(v) => { if (!v) { setAiResponse(null); setClarification(null); onOpenChange(false); } else onOpenChange(v); }}>
             <DialogContent className="sm:max-w-2xl bg-[#111111] border border-[#333333] text-white p-0 shadow-2xl">
                 <DialogHeader className="p-6 pb-4 border-b border-[#222]">
                     <div className="flex items-center gap-4">
@@ -114,10 +135,64 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                         [Ctrl+Enter] Planı Hazırlar
                                     </p>
                                 </div>
+
+                                <div className="pt-4 space-y-3">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold flex items-center gap-2">
+                                        <Info className="h-3 w-3" /> Neler Yapabilirsiniz? (Günlük Dil)
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {[
+                                            { t: "Fiyat Artışı", e: "Şarjların fiyatını 20 lira arttır" },
+                                            { t: "Stok Girişi", e: "Kılıflara 10 tane daha ekle" },
+                                            { t: "Konum Güncelleme", e: "Bataryaları en arka rafa taşı" },
+                                            { t: "Hızlı Kayıt", e: "iPhone 11 camı ekle, fiyat kalsın, stoğu 3 yap" },
+                                        ].map((tip, i) => (
+                                            <div
+                                                key={i}
+                                                className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:border-violet-500/30 transition-colors cursor-pointer group"
+                                                onClick={() => setCommand(tip.e)}
+                                            >
+                                                <p className="text-[10px] text-violet-400 font-medium mb-1 group-hover:text-violet-300 transition-colors">{tip.t}</p>
+                                                <p className="text-[11px] text-muted-foreground leading-snug italic line-clamp-2">"{tip.e}"</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
+                            {clarification && (
+                                <div className="bg-violet-600/10 border border-violet-500/30 rounded-xl p-4 space-y-3 animate-in fade-in zoom-in duration-300">
+                                    <div className="flex gap-3">
+                                        <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center shrink-0">
+                                            <RefreshCcw className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="text-xs font-bold text-violet-300">Bunu mu demek istemiştiniz?</h4>
+                                            <p className="text-sm text-white font-medium italic">"{clarification.clarifiedIntent}"</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            className="bg-violet-600 hover:bg-violet-700 text-[11px] h-8 px-4"
+                                            onClick={() => handleParse(clarification.enhancedPrompt)}
+                                        >
+                                            Evet, Devam Et
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-muted-foreground hover:text-white text-[11px] h-8"
+                                            onClick={() => setClarification(null)}
+                                        >
+                                            Hayır, Düzenle
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
                             <Button
-                                onClick={handleParse}
+                                onClick={() => handleParse()}
                                 disabled={isPending || !command.trim()}
                                 className="w-full h-12 bg-violet-600 hover:bg-violet-700 "
                             >
@@ -144,7 +219,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                         <AlertTriangle className="h-3 w-3" /> Uyarılar
                                     </h3>
                                     <ul className="space-y-1">
-                                        {aiResponse.warnings.map((w, i) => (
+                                        {aiResponse.warnings.map((w: string, i: number) => (
                                             <li key={i} className="text-[11px] text-amber-200/70 border-l border-amber-500/30 pl-3 leading-relaxed">
                                                 {w}
                                             </li>
