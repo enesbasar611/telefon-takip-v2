@@ -1,78 +1,173 @@
 "use server";
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
-import { getShopId } from "@/lib/auth";
+import { serializePrisma, formatCurrency } from "@/lib/utils";
+import { getDeadStockCount } from "./product-actions";
+import { getOrCreateKasaAccount } from "./finance-actions";
+import { getExchangeRates } from "./currency-actions";
 
-// 1. syncAllRates fonksiyonu olduğu gibi kalabilir (içindeki getShopId dışarıdan shopId gelirse çalışmıyor zaten)
-export async function syncAllRates(providedShopId?: string) {
+export const getDashboardStats = async (shopId: string) => {
+  return unstable_cache(
+    async () => {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [
+          pendingServices,
+          readyDevices,
+          products,
+          todaySalesAgg,
+          todayRepairIncome,
+          todayTransactions,
+          totalDebts,
+          pendingProcurementCount,
+          deadStockCount,
+          kasaAccount,
+        ] = await Promise.all([
+          prisma.serviceTicket.count({
+            where: { shopId, status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
+          }),
+          prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
+          prisma.product.findMany({ where: { shopId } }),
+          prisma.sale.aggregate({
+            where: { shopId, createdAt: { gte: today } },
+            _sum: { finalAmount: true }
+          }),
+          prisma.serviceTicket.aggregate({
+            where: { shopId, status: "DELIVERED", deliveredAt: { gte: today } },
+            _sum: { actualCost: true }
+          }),
+          prisma.transaction.aggregate({
+            where: { shopId, type: "INCOME", createdAt: { gte: today } },
+            _sum: { amount: true }
+          }),
+          prisma.supplier.aggregate({ where: { shopId }, _sum: { balance: true } }),
+          prisma.shortageItem.count({ where: { shopId, isResolved: false } }),
+          getDeadStockCount(shopId),
+          getOrCreateKasaAccount(shopId),
+        ]);
+
+        const lowStockCount = products.filter(p => p.stock <= p.criticalStock).length;
+        const kasaBalance = Number(kasaAccount.balance) || 0;
+        const todaySalesAmount = Number(todaySalesAgg._sum.finalAmount) || 0;
+
+        let kasaOpeningBalance = 0;
+        try {
+          const activeSession = await prisma.dailySession.findFirst({
+            where: { shopId, status: "OPEN" },
+            orderBy: { createdAt: "desc" }
+          });
+          kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
+        } catch { /* ignore */ }
+
+        return serializePrisma({
+          todaySales: `₺${formatCurrency(todaySalesAmount)}`,
+          todaySalesRaw: todaySalesAmount,
+          kasaBalance: `₺${formatCurrency(kasaBalance)}`,
+          kasaBalanceRaw: kasaBalance,
+          kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
+          kasaOpeningBalanceRaw: kasaOpeningBalance,
+          todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncome._sum.actualCost) || 0)}`,
+          collectedPayments: `₺${formatCurrency(Number(todayTransactions._sum.amount) || 0)}`,
+          pendingServices: pendingServices.toString(),
+          readyDevices: readyDevices.toString(),
+          criticalStock: lowStockCount.toString(),
+          totalDebts: `₺${formatCurrency(Number(totalDebts._sum.balance) || 0)}`,
+          cashBalance: `₺${formatCurrency(kasaBalance)}`,
+          pendingProcurementCount: pendingProcurementCount.toString(),
+          deadStockCount: deadStockCount.toString(),
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        return serializePrisma({
+          todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
+          kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
+          collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
+          criticalStock: "0", totalDebts: "₺0", cashBalance: "₺0",
+          pendingProcurementCount: "0", deadStockCount: "0",
+        });
+      }
+    },
+    [`dashboard-stats-${shopId}`],
+    { tags: [`dashboard-${shopId}`], revalidate: 3600 } // Cache for 1 hour
+  )();
+};
+
+export const getRecentSales = async (shopId: string, limit: number = 5) => {
   try {
-    const shopId = providedShopId || await getShopId();
-    const shop = await prisma.shop.findUnique({ where: { id: shopId } });
-    if (!shop) return { success: false, error: "İşletme bulunamadı." };
-
-    const response = await fetch("https://finans.truncgil.com/today.json", {
-      next: { revalidate: 0 }
+    const tickets = await prisma.serviceTicket.findMany({
+      where: { shopId },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: true,
+        technician: true
+      }
     });
-
-    if (!response.ok) throw new Error("API hatası");
-    const data = await response.json();
-    const parseTR = (val: string) => val ? val.replace(/\./g, '').replace(',', '.') : "1";
-
-    const usdRate = parseTR(data.USD?.Satış);
-    const eurRate = parseTR(data.EUR?.Satış);
-    const gaRate = parseTR(data["gram-altin"]?.Satış);
-
-    await prisma.$transaction([
-      prisma.setting.upsert({ where: { shopId_key: { shopId, key: "exchange_rate_usd" } }, update: { value: usdRate }, create: { shopId, key: "exchange_rate_usd", value: usdRate } }),
-      prisma.setting.upsert({ where: { shopId_key: { shopId, key: "exchange_rate_eur" } }, update: { value: eurRate }, create: { shopId, key: "exchange_rate_eur", value: eurRate } }),
-      prisma.setting.upsert({ where: { shopId_key: { shopId, key: "exchange_rate_ga" } }, update: { value: gaRate }, create: { shopId, key: "exchange_rate_ga", value: gaRate } }),
-      prisma.setting.upsert({ where: { shopId_key: { shopId, key: "currency_last_update" } }, update: { value: new Date().toISOString() }, create: { shopId, key: "currency_last_update", value: new Date().toISOString() } })
-    ]);
-
-    // BU SATIR HATA VERDİRİYOR OLABİLİR: Cache içinden çağrıldığında sorun çıkarır.
-    // Şimdilik burada kalsın ama cache içinden çağırmayacağız.
-    revalidatePath("/");
-    return { success: true };
+    return serializePrisma(tickets);
   } catch (error) {
-    return { success: false };
+    console.error("Error fetching recent tickets:", error);
+    return [];
   }
 }
 
-// 2. KRİTİK DEĞİŞİKLİK BURADA: Veriyi çekmeyi ve sync etmeyi ayırdık.
-export const getExchangeRates = async (shopId: string) => {
-  // Önce veriyi cache'den alalım
-  const getCachedRates = unstable_cache(
-    async (sId: string) => {
-      return prisma.setting.findMany({
-        where: {
-          shopId: sId,
-          key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update"] }
+export async function getRecentTransactions(shopId: string) {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { shopId },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        sale: {
+          include: {
+            customer: true
+          }
         }
-      });
-    },
-    [`exchange-rates-${shopId}`],
-    { tags: [`rates-${shopId}`], revalidate: 3600 }
-  );
-
-  let settings = await getCachedRates(shopId);
-  const lastUpdateStr = settings.find(s => s.key === "currency_last_update")?.value;
-  const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
-  const now = new Date();
-
-  // Eğer veri eksikse veya 2 saat geçmişse "Dışarıda" sync yapalım (unstable_cache dışında!)
-  if (settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000)) {
-    await syncAllRates(shopId).catch(() => { });
-    // Sync sonrası güncel veriyi tekrar çek (cache'i bypass ederek)
-    settings = await prisma.setting.findMany({
-      where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update"] } }
+      }
     });
+    return serializePrisma(transactions);
+  } catch (error) {
+    console.error("Error fetching recent transactions:", error);
+    return [];
   }
+}
 
-  return {
-    usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
-    eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
-    ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
-    lastUpdate
-  };
-};
+export const getTopProducts = async (shopId: string, limit: number = 5) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { shopId },
+      take: limit,
+      orderBy: { saleItems: { _count: 'desc' } },
+      include: {
+        category: true,
+        _count: {
+          select: { saleItems: true }
+        }
+      }
+    });
+
+    return serializePrisma(products.map(p => ({
+      id: p.id,
+      name: p.name,
+      category: p.category.name,
+      price: Number(p.sellPrice),
+      sales: p._count.saleItems,
+      stock: p.stock,
+      criticalStock: p.criticalStock
+    })));
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    return [];
+  }
+}
+
+export async function getDashboardInit(shopId: string) {
+  const [stats, rates] = await Promise.all([
+    getDashboardStats(shopId),
+    getExchangeRates(shopId),
+  ]);
+
+  return { stats, rates };
+}
