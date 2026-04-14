@@ -148,7 +148,7 @@ export async function getCustomerById(id: string) {
   }
 }
 
-export async function createCustomer(rawData: z.infer<typeof customerSchema>) {
+export async function createCustomer(rawData: z.input<typeof customerSchema>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();

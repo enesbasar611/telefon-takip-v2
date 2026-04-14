@@ -255,7 +255,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             <button
                                 onClick={async () => {
                                     setIsProcessing(true);
-                                    const res = await createCustomer({ name: customerSearch });
+                                    const res = await createCustomer({
+                                        name: customerSearch,
+                                        phone: "",
+                                        email: "",
+                                        type: "BIREYSEL",
+                                        isVip: false
+                                    });
                                     if (res.success) {
                                         toast({ title: "Müşteri Eklendi", description: `${customerSearch} başarıyla kaydedildi.` });
                                         setSelectedCustomerId(res.customer.id);
@@ -291,7 +297,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                         <button
                                             onClick={async () => {
                                                 setIsProcessing(true);
-                                                const res = await createCustomer({ name: customerSearch });
+                                                const res = await createCustomer({
+                                                    name: customerSearch,
+                                                    phone: "",
+                                                    email: "",
+                                                    type: "BIREYSEL",
+                                                    isVip: false
+                                                });
                                                 if (res.success) {
                                                     toast({ title: "Müşteri Eklendi", description: `${customerSearch} başarıyla kaydedildi.` });
                                                     setSelectedCustomerId(res.customer.id);

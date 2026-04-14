@@ -57,11 +57,11 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
 
       <div className="space-y-8">
         <Suspense fallback={<CardSkeleton />}>
-          <StockMetricsStream shop={shop} />
+          <StockMetricsStream />
         </Suspense>
 
         <Suspense fallback={<CardSkeleton />}>
-          <CategorySummaryStream shop={shop} />
+          <CategorySummaryStream />
         </Suspense>
       </div>
 

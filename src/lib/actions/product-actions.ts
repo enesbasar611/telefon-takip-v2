@@ -144,7 +144,7 @@ export async function getCategories() {
   }
 }
 
-export async function createProduct(rawData: z.infer<typeof productSchema>) {
+export async function createProduct(rawData: z.input<typeof productSchema>) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();

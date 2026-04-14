@@ -188,7 +188,13 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
   }
 }
 
-export async function updateManualTransaction(id: string, rawData: Partial<z.infer<typeof transactionSchema>>) {
+export async function updateManualTransaction(
+  id: string,
+  rawData: Partial<z.infer<typeof transactionSchema>> & {
+    newAttachments?: any[];
+    removedAttachmentIds?: string[];
+  }
+) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -196,7 +202,8 @@ export async function updateManualTransaction(id: string, rawData: Partial<z.inf
     // Rate limit: 50 updates per minute
     await checkRateLimit(`updateManualTransaction:${userId}`, 50);
 
-    const data = transactionSchema.partial().parse(rawData);
+    const { newAttachments, removedAttachmentIds, ...otherData } = rawData;
+    const data = transactionSchema.partial().parse(otherData);
 
     const oldTx = await prisma.transaction.findUnique({
       where: { id, shopId },
@@ -206,7 +213,26 @@ export async function updateManualTransaction(id: string, rawData: Partial<z.inf
     if (!oldTx) return { success: false, error: "İşlem bulunamadı." };
 
     const transaction = await prisma.$transaction(async (tx) => {
-      // 1. Update the transaction
+      // 1. Delete removed attachments if IDs provided
+      if (removedAttachmentIds && removedAttachmentIds.length > 0) {
+        await tx.attachment.deleteMany({
+          where: {
+            id: { in: removedAttachmentIds },
+            shopId
+          }
+        });
+      }
+
+      // 2. Create new attachments if provided
+      const attachmentData = newAttachments?.map(att => ({
+        url: att.url,
+        filename: att.filename,
+        fileType: att.fileType,
+        fileSize: att.fileSize,
+        shopId
+      })) || [];
+
+      // 3. Update the transaction
       const t = await tx.transaction.update({
         where: { id },
         data: {
@@ -217,15 +243,8 @@ export async function updateManualTransaction(id: string, rawData: Partial<z.inf
           financeAccountId: data.accountId,
           category: data.category,
           createdAt: data.date ? new Date(data.date) : oldTx.createdAt,
-          attachments: data.attachments ? {
-            deleteMany: {},
-            create: data.attachments.map(att => ({
-              url: att.url,
-              filename: att.filename,
-              fileType: att.fileType,
-              fileSize: att.fileSize,
-              shopId
-            }))
+          attachments: attachmentData.length > 0 ? {
+            create: attachmentData
           } : undefined
         }
       });

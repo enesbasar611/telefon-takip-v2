@@ -50,6 +50,8 @@ export function AddCustomerDialog({ onSuccess, trigger }: AddCustomerDialogProps
             const res = await createCustomer({
                 ...formData,
                 phone: formData.phone.replace(/\D/g, "").substring(0, 10),
+                type: "BIREYSEL",
+                isVip: false
             });
 
             if (res.success) {

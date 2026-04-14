@@ -77,6 +77,7 @@ export const transactionSchema = z.object({
     category: z.string().optional(),
     date: z.string().optional(),
     attachments: z.array(z.object({
+        id: z.string().optional(),
         url: z.string(),
         filename: z.string(),
         fileType: z.string(),

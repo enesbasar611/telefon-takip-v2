@@ -43,21 +43,10 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { createCustomer } from "@/lib/actions/customer-actions";
+import { customerSchema } from "@/lib/validations/schemas";
 import { toast } from "sonner";
 
-const customerSchema = z.object({
-  name: z.string().min(2, "Müşteri adı en az 2 karakter olmalıdır"),
-  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz (5XXXXXXXXX)"),
-  secondaryPhone: z.string().optional().or(z.literal("")),
-  email: z.string().email("Geçerli bir e-posta adresi giriniz").optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
-  type: z.string().optional().or(z.literal("")),
-  isVip: z.boolean().optional(),
-  photo: z.string().optional().or(z.literal("")),
-});
-
-type CustomerFormValues = z.infer<typeof customerSchema>;
+type CustomerFormValues = z.input<typeof customerSchema>;
 
 export default function NewCustomerPage() {
   const router = useRouter();

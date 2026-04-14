@@ -54,7 +54,11 @@ export function CreateCustomerModal() {
   const onSubmit = async (data: CustomerFormValues) => {
     startTransition(async () => {
       try {
-        const result = await createCustomer(data);
+        const result = await createCustomer({
+          ...data,
+          type: "BIREYSEL",
+          isVip: false
+        });
         if (result.success) {
           toast({ title: "Başarılı", description: "Müşteri kaydı oluşturuldu." });
           setOpen(false);
