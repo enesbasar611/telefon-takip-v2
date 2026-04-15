@@ -59,10 +59,22 @@ import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal
 import { cn, formatPhone } from "@/lib/utils";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import { getIndustryLabel } from "@/lib/industry-utils";
+import { deleteServiceTicket } from "@/lib/actions/service-actions";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string; icon: any }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500", icon: Clock },
-  APPROVED: { label: "Onay Bekliyor", color: "bg-blue-500", icon: CheckCircle2 },
+  APPROVED: { label: "Onaylandı", color: "bg-blue-500", icon: CheckCircle2 },
   REPAIRING: { label: "Tamirde", color: "bg-orange-500", icon: Wrench },
   WAITING_PART: { label: "Parça Bekliyor", color: "bg-purple-500", icon: PackagePlus },
   READY: { label: "Hazır", color: "bg-emerald-500", icon: CheckCircle2 },
@@ -93,6 +105,8 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const identifierLabel = getIndustryLabel(shop, "serviceIdentifier");
@@ -265,7 +279,10 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   <Wrench className="h-4 w-4 text-blue-500" /> Durum Güncelle
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5" />
-                <DropdownMenuItem className="text-sm  gap-3 p-4 cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 rounded-xl">
+                <DropdownMenuItem
+                  className="text-sm  gap-3 p-4 cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-500 rounded-xl"
+                  onSelect={() => setDeleteId(ticket.id)}
+                >
                   <Trash2 className="h-4 w-4" /> Kaydı Sil
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -605,6 +622,39 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="bg-card border-border/50 text-foreground rounded-[2rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kaydı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu işlem geri alınamaz. Cihaza eklenen parçalar varsa stoğa iade edilecektir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
+              onClick={async () => {
+                if (!deleteId) return;
+                setIsDeleting(true);
+                try {
+                  await deleteServiceTicket(deleteId);
+                  toast.success("Servis kaydı başarıyla silindi.");
+                } catch (error) {
+                  toast.error("Silme işlemi sırasında bir hata oluştu.");
+                } finally {
+                  setIsDeleting(false);
+                  setDeleteId(null);
+                }
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Siliniyor..." : "Evet, Sil"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div >
   );
 }

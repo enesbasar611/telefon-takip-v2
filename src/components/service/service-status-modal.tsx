@@ -27,7 +27,7 @@ import { Loader2, Wrench } from "lucide-react";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500" },
-  APPROVED: { label: "Onay Bekliyor", color: "bg-blue-500" },
+  APPROVED: { label: "Onaylandı", color: "bg-blue-500" },
   REPAIRING: { label: "Tamirde", color: "bg-orange-500" },
   WAITING_PART: { label: "Parça Bekliyor", color: "bg-purple-500" },
   READY: { label: "Hazır", color: "bg-emerald-500" },

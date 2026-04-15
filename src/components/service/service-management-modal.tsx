@@ -61,7 +61,8 @@ import {
     updateServicePartPrice,
     updateServiceCost,
     updateServiceStatus,
-    getServiceTicketById
+    getServiceTicketById,
+    deleteServiceTicket
 } from "@/lib/actions/service-actions";
 import { searchProducts, createProduct, getCategories } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
@@ -74,6 +75,16 @@ import { formatCurrency, parseCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ServiceManagementModalProps {
     ticket: any;
@@ -119,6 +130,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [staff, setStaff] = useState<any[]>([]);
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const lastDeliveryLog = useMemo(() => {
         return ticket?.logs?.find((log: any) => log.message.includes("Durum güncellendi: Teslim Edildi"));
@@ -450,6 +463,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <span className="md:hidden">Tamam</span>
                             </Button>
                         )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-rose-500/10 text-rose-500"
+                        >
+                            <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
+                        </Button>
                         <Button
                             variant="ghost"
                             onClick={onClose}
@@ -1094,6 +1115,39 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     }
                 )}
             />
+
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent className="bg-card border-border/50 text-foreground rounded-[2rem]">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Kaydı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu işlem geri alınamaz. Cihaza eklenen parçalar varsa stoğa iade edilecektir.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
+                            onClick={async () => {
+                                setIsDeleting(true);
+                                try {
+                                    const res = await deleteServiceTicket(ticket.id);
+                                    toast.success("Servis kaydı başarıyla silindi.");
+                                    onClose();
+                                } catch (error) {
+                                    toast.error("Silme işlemi sırasında bir hata oluştu.");
+                                } finally {
+                                    setIsDeleting(false);
+                                    setShowDeleteConfirm(false);
+                                }
+                            }}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? "Siliniyor..." : "Evet, Sil"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }

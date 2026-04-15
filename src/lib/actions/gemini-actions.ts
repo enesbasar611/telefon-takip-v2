@@ -44,6 +44,7 @@ export interface AIDiagnosticResult {
         name: string;
         estimatedPrice: number;
         inStock: boolean;
+        alternative?: string;
     }[];
     estimatedLaborPrice: number;
     estimatedTotalPrice: number;
@@ -677,7 +678,7 @@ export async function parseServiceDiagnosticWithAI(
     const schema = `{
   "possibleCauses": ["string"],
   "suggestedParts": [
-    { "name": "string", "estimatedPrice": number, "inStock": boolean }
+    { "name": "string", "estimatedPrice": number, "inStock": boolean, "alternative": "string | null (eğer asıl parça yoksa stoktaki en yakın muadil)" }
   ],
   "estimatedLaborPrice": number,
   "estimatedTotalPrice": number,
@@ -686,13 +687,27 @@ export async function parseServiceDiagnosticWithAI(
   "professionalNote": "string (teknik tavsiye)"
 }`;
 
+    // Get current inventory names and prices for context
+    const products = await prisma.product.findMany({
+        where: { shopId },
+        select: { name: true, sellPrice: true, stock: true },
+        take: 300
+    });
+
+    const inventoryContext = products.map(p => `${p.name} (Fiyat: ${p.sellPrice} TL, Stok: ${p.stock})`).join(", ");
+
     const systemPrompt = `Sen profesyonel bir teknik servis danışmanısın. 
 Kullanıcının girdiği arıza açıklamasına göre bir ön teşhis koy.
+
+GÜNCEL DÜKKAN STOĞU (Bu listeden eşleştirme yap):
+${inventoryContext}
+
 Kurallar:
-1. Türkiye piyasası fiyatlarını (TL) baz al.
-2. Cihaz modeli verilmişse (${deviceModel || "Belirtilmemiş"}) ona göre daha spesifik ol.
-3. suggestedParts listesinde piyasada yaygın kullanılan parçaları öner. inStock: true/false değerini makul bir tahmine göre yap (şimdilik).
-4. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
+1. Gerekli parçaları belirlerken yukarıdaki GÜNCEL DÜKKAN STOĞU listesini kontrol et.
+2. Eğer parça stokta varsa: name olarak dükkandaki tam adı kullan, estimatedPrice olarak dükkan fiyatını al ve inStock: true set et.
+3. Eğer parça stokta YOKSA: name olarak genel adını yaz, inStock: false set et, piyasa fiyatını tahmin et.
+4. MUADİL: Eğer parça stokta yoksa ama dükkan stoğunda benzer/muadil olabilecek bir parça varsa (örn: iPhone 7 ekranı yerine iPhone 8 ekranı veya farklı kalite), "alternative" alanına dükkandaki o parçanın adını yaz.
+5. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `SEKTÖR: ${industry || 'Bilinmiyor'}\nARIZA AÇIKLAMASI: ${problemDescription}\nCİHAZ MODELİ: ${deviceModel || 'Bilinmiyor'}`;
 
@@ -740,11 +755,11 @@ export async function getSmartAIStockAnalysis(): Promise<{ success: true; analys
     try {
         const prisma = (await import("@/lib/prisma")).default;
 
-        // 1. Get current stock levels (top 50 products by stock or name)
+        // 1. Get current stock levels (top 100 products)
         const products = await prisma.product.findMany({
             where: { shopId },
             select: { name: true, stock: true, criticalStock: true, buyPrice: true, sellPrice: true },
-            take: 50
+            take: 100
         });
 
         // 2. Get sales data for the last 30 days
@@ -755,7 +770,7 @@ export async function getSmartAIStockAnalysis(): Promise<{ success: true; analys
                 sale: { createdAt: { gte: thirtyDaysAgo } }
             },
             include: { product: { select: { name: true } } },
-            take: 100
+            take: 200
         });
 
         // 3. Summarize sales
@@ -769,15 +784,20 @@ export async function getSmartAIStockAnalysis(): Promise<{ success: true; analys
 Asla JSON veya süslü parantez kullanma. Doğrudan düz metin ve markdown (listeler, kalın yazılar) kullan.
 Giriş kısmını çok kısa tut. Teknik detaya boğma, aksiyon söyle.
 
+ÖNEMLİ KURALLAR:
+1. Gerekli parça veya ürün önerirken, eğer dükkan stoğunda varsa "Stokta Var - [Fiyat] TL" şeklinde belirt.
+2. Eğer dükkan stoğunda yoksa "Stokta Yok - [Tahmini Fiyat] TL" yaz ve varsa dükkanındaki en yakın alternatifini (muadil) öner.
+3. Rakamları ve önemli ürün adlarını kalın (bold) yaz.
+
 RAPOR AKIŞI:
 1. 📈 POPÜLER: En çok satanlar özeti.
-2. ⚠️ KRİTİK: Acil stoklanması gerekenler.
+2. ⚠️ KRİTİK: Acil stoklanması gerekenler (Stokta yoksa belirt).
 3. 📉 ÖLÜ STOK: Hareket etmeyenler için tavsiye.
 4. 🛡️ TAVSİYE: Önümüzdeki 15 gün için 3 kısa altın kural.
 
 KULLANICI VERİLERİ (Son 30 Gün):
-- Stok: ${JSON.stringify(products.slice(0, 30))}
-- Satışlar: ${JSON.stringify(salesSummary)}`;
+- Mevcut Stok Listesi: ${JSON.stringify(products.slice(0, 50))}
+- Satış Özetleri: ${JSON.stringify(salesSummary)}`;
 
         const result = await callGemini(shopId, [systemPrompt, "Genel analiz raporu oluştur."], "text");
         if ("error" in result) return { success: false, error: result.error };

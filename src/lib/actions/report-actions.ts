@@ -219,7 +219,7 @@ export async function getDetailedExportData() {
         Müşteri: t.customer?.name || 'Bilinmiyor',
         Cihaz: `${t.deviceBrand} ${t.deviceModel}`,
         Durum: {
-          PENDING: "Beklemede", APPROVED: "Onay Bekliyor", REPAIRING: "Tamirde",
+          PENDING: "Beklemede", APPROVED: "Onaylandı", REPAIRING: "Tamirde",
           WAITING_PART: "Parça Bekliyor", READY: "Hazır", DELIVERED: "Teslim Edildi", CANCELLED: "İptal"
         }[t.status] || t.status,
         Maliyet: Number(t.estimatedCost || 0)

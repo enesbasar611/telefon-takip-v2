@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 import { serializePrisma } from "@/lib/utils";
-import { AgendaEventType } from "@prisma/client";
+import { AgendaEventType, ServiceStatus } from "@prisma/client";
 
 export async function createAgendaEventAction(data: {
     title: string;
@@ -164,9 +164,20 @@ export async function getCalendarEventsAction(year: number, month: number) {
             where: { shopId, date: { gte: start, lte: end } }
         });
 
-        // Fetch service tickets (use estimatedDeliveryDate or createdAt)
+        // Fetch service tickets (exclude delivered, cancelled, and approved/repairing as they move to active service)
         const services = await prisma.serviceTicket.findMany({
-            where: { shopId, createdAt: { gte: start, lte: end } },
+            where: {
+                shopId,
+                createdAt: { gte: start, lte: end },
+                status: {
+                    notIn: [
+                        ServiceStatus.APPROVED,
+                        ServiceStatus.REPAIRING,
+                        ServiceStatus.DELIVERED,
+                        ServiceStatus.CANCELLED
+                    ]
+                }
+            },
             select: { id: true, ticketNumber: true, deviceModel: true, estimatedCost: true, createdAt: true, status: true, estimatedDeliveryDate: true }
         });
 

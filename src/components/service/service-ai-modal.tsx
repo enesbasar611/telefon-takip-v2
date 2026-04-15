@@ -29,7 +29,7 @@ interface ServiceAIModalProps {
     onClose: () => void;
     data: {
         possibleCauses: string[];
-        suggestedParts: { name: string; estimatedPrice: number; inStock?: boolean }[];
+        suggestedParts: { name: string; estimatedPrice: number; inStock?: boolean; alternative?: string }[];
         repairTimeRange: string;
         estimatedTotalPrice: number;
         riskLevel: "Düşük" | "Orta" | "Yüksek";
@@ -107,13 +107,20 @@ export function ServiceAIModal({ isOpen, onClose, data, deviceInfo }: ServiceAIM
                                             {part.inStock !== undefined && (
                                                 <Badge variant="outline" className={cn(
                                                     "text-[8px] px-2 py-0",
-                                                    part.inStock ? "text-emerald-500 border-emerald-500/20 bg-emerald-500/5" : "text-rose-500 border-rose-500/20 bg-rose-500/5"
+                                                    part.inStock ? "text-emerald-500 border-emerald-500/20 bg-emerald-500/5 font-bold" : "text-rose-500 border-rose-500/20 bg-rose-500/5 font-bold"
                                                 )}>
-                                                    {part.inStock ? "STOKTA" : "YOK"}
+                                                    {part.inStock ? "STOKTA VAR" : "STOKTA YOK"}
                                                 </Badge>
                                             )}
                                         </div>
-                                        <span className="text-xs font-mono text-muted-foreground">₺{part.estimatedPrice.toLocaleString('tr-TR')}</span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-mono text-muted-foreground">₺{part.estimatedPrice.toLocaleString('tr-TR')}</span>
+                                            {part.alternative && (
+                                                <span className="text-[9px] text-blue-500 font-bold italic">
+                                                    Muadil: {part.alternative}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
