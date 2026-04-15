@@ -1,31 +1,22 @@
-import { CardSkeleton } from "@/components/ui/card-skeleton";
+import { Loader2 } from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 export default function Loading() {
     return (
-        <div className="space-y-6">
-            {/* Header Skeleton */}
-            <div className="flex justify-between items-end mb-8">
-                <div className="space-y-2">
-                    <div className="h-4 w-48 bg-muted rounded-md animate-pulse" />
-                    <div className="h-10 w-64 bg-muted rounded-md animate-pulse" />
+        <div className="relative w-full h-[60vh] flex flex-col items-center justify-center gap-6 overflow-hidden rounded-[4rem]">
+            <BorderBeam duration={4} size={300} />
+            <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                <div className="h-20 w-20 rounded-full border-4 border-muted flex items-center justify-center relative bg-background/50 backdrop-blur-xl">
+                    <Loader2 className="h-10 w-10 text-primary animate-spin" />
                 </div>
-                <div className="h-12 w-48 bg-muted rounded-xl animate-pulse" />
             </div>
-
-            {/* Stats Grid Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                    <CardSkeleton key={i} />
-                ))}
-            </div>
-
-            {/* Main Content Area Skeleton */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <CardSkeleton className="h-[400px]" />
-                </div>
-                <div>
-                    <CardSkeleton className="h-[400px]" />
+            <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-light tracking-[0.3em] uppercase text-primary animate-pulse">Yükleniyor</span>
+                <div className="flex gap-1">
+                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce [animation-delay:-0.3s]" />
+                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce [animation-delay:-0.15s]" />
+                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce" />
                 </div>
             </div>
         </div>

@@ -39,6 +39,8 @@ export const productSchema = z.object({
     imei: z.string().optional(),
     color: z.string().optional(),
     capacity: z.string().optional(),
+    batteryHealth: z.string().optional(),
+    condition: z.string().optional(),
     attributes: z.record(z.any()).optional().nullable(),
 });
 

@@ -22,8 +22,13 @@ import {
   Sparkles,
   ZoomIn,
   Trash,
+  Clock,
+  Package,
+  Lock,
 } from "lucide-react";
 import { createCustomerMuted } from "@/lib/actions/customer-actions";
+import { parseServiceDiagnosticWithAI } from "@/lib/actions/gemini-actions";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,7 +394,6 @@ export default function NewServicePage() {
     }
     setIsDiagnosticPending(true);
     try {
-      const { parseServiceDiagnosticWithAI } = await import("@/lib/actions/gemini-actions");
       const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel, shop?.industry);
       if (result.success) {
         setDiagnosticResult(result.data);
@@ -691,40 +695,72 @@ export default function NewServicePage() {
 
                 {/* AI Diagnostic Result */}
                 {diagnosticResult && (
-                  <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 text-left">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <Sparkles className="h-4 w-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wider">BAŞAR AI Sektörel Analiz</span>
-                      <div className="ml-auto px-3 py-1 rounded-full bg-blue-100 text-[10px] font-bold">ÖNEM: {diagnosticResult.riskLevel}</div>
+                  <div className="p-5 md:p-8 bg-gradient-to-br from-blue-500/5 to-violet-500/5 dark:from-blue-500/10 dark:to-violet-500/10 border border-blue-200 dark:border-blue-900/50 rounded-3xl space-y-6 animate-in fade-in slide-in-from-top-4 text-left shadow-xl shadow-blue-500/5">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
+                      </div>
+                      <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">BAŞAR AI SEKTÖREL ANALİZ</span>
+                      <div className={cn(
+                        "ml-auto px-3 py-1.5 rounded-full text-[10px] font-bold border",
+                        diagnosticResult.riskLevel === "Yüksek" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                          diagnosticResult.riskLevel === "Orta" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                            "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                      )}>
+                        ÖNEM: {diagnosticResult.riskLevel}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">Olası Teşhisler</span>
-                        <ul className="text-xs text-blue-900 space-y-1.5 list-disc list-inside">
-                          {diagnosticResult.possibleCauses?.map((c: string, i: number) => <li key={i}>{c}</li>)}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-3.5 w-3.5 text-blue-500/60" />
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Olası Teşhisler</span>
+                        </div>
+                        <ul className="text-sm text-foreground/80 space-y-2 list-none">
+                          {diagnosticResult.possibleCauses?.map((c: string, i: number) => (
+                            <li key={i} className="flex gap-2 items-start">
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                              <span>{c}</span>
+                            </li>
+                          ))}
                         </ul>
                       </div>
-                      <div className="space-y-2">
-                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">Gerekli Malzemeler</span>
-                        <div className="flex flex-wrap gap-1.5">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-3.5 w-3.5 text-blue-500/60" />
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Gerekli Malzemeler</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
                           {diagnosticResult.suggestedParts?.map((p: any, i: number) => (
-                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-blue-100 text-[11px] text-blue-800 font-medium">
-                              {p.name}
-                            </span>
+                            <div key={i} className="flex flex-col gap-1 p-2.5 rounded-xl bg-background border border-border/50 group hover:border-blue-500/30 transition-all">
+                              <span className="text-xs font-semibold text-foreground">{p.name}</span>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-[10px] text-muted-foreground">₺{p.estimatedPrice}</span>
+                                <span className={cn("text-[8px] font-bold uppercase tracking-tighter", p.inStock ? "text-emerald-500" : "text-rose-500")}>
+                                  {p.inStock ? "Stokta Var" : "Stokta Yok"}
+                                </span>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-blue-100/50">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">TAHMİNİ İŞ SÜRESİ</span>
-                        <span className="text-sm font-bold text-blue-900">{diagnosticResult.repairTimeRange}</span>
+                    <div className="grid grid-cols-2 gap-4 pt-6 border-t border-border/10">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-[8px] sm:text-[10px]">TAHMİNİ İŞ SÜRESİ</span>
+                        </div>
+                        <span className="text-sm sm:text-lg font-bold text-foreground">{diagnosticResult.repairTimeRange}</span>
                       </div>
-                      <div className="flex flex-col text-right">
-                        <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">PROJE BEDELİ</span>
-                        <span className="text-xl font-black text-emerald-600">₺{diagnosticResult.estimatedTotalPrice}</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2">
+                          <Receipt className="h-3.5 w-3.5 text-muted-foreground/60" />
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-[8px] sm:text-[10px]">PROJE BEDELİ</span>
+                        </div>
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-500 tracking-tighter leading-none">₺{diagnosticResult.estimatedTotalPrice}</span>
                       </div>
                     </div>
                   </div>
@@ -901,8 +937,8 @@ export default function NewServicePage() {
         </form>
 
         {/* Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-10 pointer-events-none">
-          <div className="bg-background/80 backdrop-blur-2xl border-t border-white/5 shadow-[0_-20px_50px_rgba(0,0,0,0.4)] p-5 md:p-6 px-10 md:px-12 pointer-events-auto w-full">
+        <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-none">
+          <div className="bg-background/95 backdrop-blur-3xl border-t border-white/5 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] p-4 md:p-6 px-4 md:px-12 pointer-events-auto w-full lg:mb-0 mb-[100px]">
             <div className="w-full flex items-center justify-between gap-8">
               <div className="flex items-center gap-8">
                 <div className="hidden sm:flex flex-col">

@@ -28,6 +28,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { PageHeader } from "@/components/ui/page-header";
+import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
 
 export default async function DashboardPage() {
   const shop = await getShop();
@@ -37,89 +38,95 @@ export default async function DashboardPage() {
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
   const assetLabel = getIndustryLabel(shop, "customerAsset");
 
-  const hasConfig = !!(shop?.themeConfig as any)?.aiServiceFields;
-
   return (
-    <div className="flex-1 space-y-12 selection:bg-primary/20 relative z-10 animate-in fade-in duration-700">
+    <>
       <DashboardOnboardingClient categories={categories} shop={shop} />
 
-      <PageHeader
-        title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
-        description={`${industryConf.name} operasyon ve finans takip merkezi • ${format(new Date(), "d MMMM yyyy", { locale: tr })}`}
-        icon={LayoutDashboard}
-        badge={
-          <div className="flex items-center gap-4 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-full shadow-sm">
-            <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              <div className="flex flex-col">
-                <span className="text-[8px] text-emerald-600/70 tracking-tighter uppercase leading-none font-bold">Sistem Durumu</span>
-                <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF & STABİL</span>
+      {/* Desktop Dashboard View */}
+      <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10 animate-in fade-in duration-700">
+        <PageHeader
+          title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
+          description={`${industryConf.name} operasyon ve finans takip merkezi • ${format(new Date(), "d MMMM yyyy", { locale: tr })}`}
+          icon={LayoutDashboard}
+          badge={
+            <div className="flex items-center gap-4 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-full shadow-sm">
+              <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-emerald-600/70 tracking-tighter uppercase leading-none font-bold">Sistem Durumu</span>
+                  <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF & STABİL</span>
+                </div>
+              </div>
+              <div className="px-4 py-1.5 pr-6">
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
+                  <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
+                </div>
               </div>
             </div>
-            <div className="px-4 py-1.5 pr-6">
-              <div className="flex flex-col">
-                <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
-                <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
-              </div>
-            </div>
-          </div>
-        }
-      />
-
-      {/* Phase 1: Key Stats */}
-      <Suspense fallback={<StatsSkeleton />}>
-        <StatsGridStream
-          labels={{
-            repairIncome: `${serviceLabel} Gelirleri`,
-            pendingServices: `Bekleyen ${serviceLabel || 'Servis'}ler`,
-            readyAssets: `Hazır ${assetLabel || 'Cihaz'}lar`
-          }}
+          }
         />
-      </Suspense>
 
-      <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
-        {/* Phase 2: Core Analytics */}
-        <Suspense fallback={<ChartSkeleton />}>
-          <RevenueAnalysisStream />
+        {/* Phase 1: Key Stats */}
+        <Suspense fallback={<StatsSkeleton />}>
+          <StatsGridStream
+            labels={{
+              repairIncome: `${serviceLabel} Gelirleri`,
+              pendingServices: `Bekleyen ${serviceLabel || 'Servis'}ler`,
+              readyAssets: `Hazır ${assetLabel || 'Cihaz'}lar`
+            }}
+          />
         </Suspense>
 
-        {/* Phase 2: Operational Health */}
-        {showService && (
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+          {/* Phase 2: Core Analytics */}
           <Suspense fallback={<ChartSkeleton />}>
-            <ServiceStatusStream title={serviceLabel} />
+            <RevenueAnalysisStream />
           </Suspense>
-        )}
 
-        {/* Phase 3: AI Insights (Spans 2 columns if service is hidden) */}
-        <div className={cn(showService ? "lg:col-span-1" : "lg:col-span-2")}>
-          <Suspense fallback={<StatsSkeleton />}>
-            <SmartInsightsStream />
+          {/* Phase 2: Operational Health */}
+          {showService && (
+            <Suspense fallback={<ChartSkeleton />}>
+              <ServiceStatusStream title={serviceLabel} />
+            </Suspense>
+          )}
+
+          {/* Phase 3: AI Insights (Spans 2 columns if service is hidden) */}
+          <div className={cn(showService ? "lg:col-span-1" : "lg:col-span-2")}>
+            <Suspense fallback={<StatsSkeleton />}>
+              <SmartInsightsStream />
+            </Suspense>
+          </div>
+
+          {/* Phase 3: Live Feed */}
+          <Suspense fallback={<ActivitySkeleton />}>
+            <LiveActivityStream />
           </Suspense>
-        </div>
 
-        {/* Phase 3: Live Feed */}
-        <Suspense fallback={<ActivitySkeleton />}>
-          <LiveActivityStream />
-        </Suspense>
-
-        {/* Phase 4: Operational Queues */}
-        <Suspense fallback={<ListSkeleton />}>
-          <RecentTransactionsStream />
-        </Suspense>
-
-        {showService && (
+          {/* Phase 4: Operational Queues */}
           <Suspense fallback={<ListSkeleton />}>
-            <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
+            <RecentTransactionsStream />
           </Suspense>
-        )}
 
-        {/* Phase 4: Inventory Trends (Full width) */}
-        <div className="lg:col-span-3">
-          <Suspense fallback={<ListSkeleton />}>
-            <TopProductsStream />
-          </Suspense>
+          {showService && (
+            <Suspense fallback={<ListSkeleton />}>
+              <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
+            </Suspense>
+          )}
+
+          {/* Phase 4: Inventory Trends (Full width) */}
+          <div className="lg:col-span-3">
+            <Suspense fallback={<ListSkeleton />}>
+              <TopProductsStream />
+            </Suspense>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Dashboard View (Apple Style) */}
+      <div className="md:hidden flex flex-col space-y-6 pt-2 pb-10">
+        <MobileDashboard />
+      </div>
+    </>
   );
 }

@@ -27,7 +27,7 @@ export function BorderBeam({
     isError = false,
     isSuccess = false,
     opacity = 0.5,
-    blur = 0,
+    blur = 4,
 }: BorderBeamProps) {
 
     // Smooth transitions for visuals
@@ -64,11 +64,12 @@ export function BorderBeam({
                         marginLeft: "-75vmax",
                         marginTop: "-75vmax",
                         background: isError
-                            ? "conic-gradient(from 0deg, #EA4335 0deg, #b91c1c 90deg, #EA4335 180deg, #b91c1c 270deg, #EA4335 360deg)"
+                            ? "conic-gradient(from 0deg, rgba(234, 67, 53, 0.8) 0deg, rgba(185, 28, 28, 0.4) 90deg, rgba(234, 67, 53, 0.8) 180deg, rgba(185, 28, 28, 0.4) 270deg, rgba(234, 67, 53, 0.8) 360deg)"
                             : isSuccess
-                                ? "conic-gradient(from 0deg, #34A853 0deg, #15803d 90deg, #34A853 180deg, #15803d 270deg, #34A853 360deg)"
-                                : "conic-gradient(from 0deg, #4285F4 0deg, #EA4335 90deg, #FBBC05 180deg, #34A853 270deg, #4285F4 360deg)",
+                                ? "conic-gradient(from 0deg, rgba(52, 168, 83, 0.8) 0deg, rgba(21, 128, 61, 0.4) 90deg, rgba(52, 168, 83, 0.8) 180deg, rgba(21, 128, 61, 0.4) 270deg, rgba(52, 168, 83, 0.8) 360deg)"
+                                : "conic-gradient(from 0deg, #4285F4 0deg, #9b51e0 60deg, #EA4335 120deg, #FBBC05 180deg, #34A853 240deg, #4285F4 300deg, #4285F4 360deg)",
                         opacity: currentOpacity,
+                        filter: "blur(40px)",
                     }}
                 />
             </div>

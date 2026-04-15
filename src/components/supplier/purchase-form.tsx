@@ -191,18 +191,18 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[1000px] max-h-[95vh] overflow-y-auto bg-[#0a0f18] border-border p-0 overflow-hidden rounded-3xl text-foreground/90">
+            <DialogContent className="sm:max-w-[1000px] w-full h-full sm:h-auto sm:max-h-[95vh] overflow-y-auto bg-[#0a0f18] border-border p-0 sm:rounded-3xl rounded-none text-foreground/90">
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
                     {/* Main Form Area */}
-                    <div className="p-8 space-y-8">
+                    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
                         <DialogHeader>
                             <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                                    <ShoppingBag className="h-6 w-6 text-blue-500" />
+                                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                                    <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="font-medium text-2xl  tracking-tight text-white">Yeni Satın Alma Formu</DialogTitle>
-                                    <p className="text-[10px]  text-muted-foreground uppercase tracking-widest pt-1">CRM & FİNANS › TEDARİKÇİ YÖNETİMİ › YENİ KAYIT</p>
+                                    <DialogTitle className="font-medium text-lg sm:text-2xl tracking-tight text-white">Yeni Satın Alma Formu</DialogTitle>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest pt-0.5">CRM & FİNANS › TEDARİKÇİ › YENİ KAYIT</p>
                                 </div>
                             </div>
                         </DialogHeader>
@@ -267,7 +267,8 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                             </div>
 
                             <div className="rounded-2xl border border-border/50 overflow-hidden">
-                                <table className="w-full text-left">
+                                {/* Desktop Table View */}
+                                <table className="w-full text-left hidden sm:table">
                                     <thead className="bg-white/5 border-b border-border/50">
                                         <tr className="text-[10px]  text-muted-foreground uppercase tracking-widest">
                                             <th className="px-5 py-4">Ürün Adı / Açıklama</th>
@@ -352,6 +353,90 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                         ))}
                                     </tbody>
                                 </table>
+
+                                {/* Mobile Card View */}
+                                <div className="sm:hidden divide-y divide-white/[0.03]">
+                                    {items.map((item) => (
+                                        <div key={item.id} className="p-4 space-y-4">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex-1 relative" ref={item.id === activeSearchId ? searchRef : null}>
+                                                    <Label className="text-[10px] text-muted-foreground uppercase mb-1 block">Ürün / Açıklama</Label>
+                                                    <Input
+                                                        value={item.name}
+                                                        onChange={e => handleSearch(item.id, e.target.value)}
+                                                        onFocus={() => {
+                                                            if (item.name.length >= 2) setActiveSearchId(item.id);
+                                                        }}
+                                                        className="h-11 bg-white/5 border-none rounded-xl text-sm"
+                                                        placeholder="Sıfır iPhone 15..."
+                                                    />
+                                                    {activeSearchId === item.id && searchResults[item.id]?.length > 0 && (
+                                                        <div className="absolute top-full left-0 w-full mt-1 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                                                            {searchResults[item.id].map((p) => (
+                                                                <button
+                                                                    key={p.id}
+                                                                    onClick={() => selectProduct(item.id, p)}
+                                                                    className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center justify-between group"
+                                                                >
+                                                                    <div>
+                                                                        <p className="text-sm text-white group-hover:text-blue-400">{p.name}</p>
+                                                                        <p className="text-[10px] text-muted-foreground">Stok: {p.stock}</p>
+                                                                    </div>
+                                                                    <p className="text-xs text-blue-400">₺{Number(p.sellPrice).toLocaleString("tr-TR")}</p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button onClick={() => removeItem(item.id)} className="mt-6 text-rose-500/50 hover:text-rose-500 p-2">
+                                                    <Trash2 className="h-5 w-5" />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] text-muted-foreground uppercase">Miktar</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={e => updateItem(item.id, "quantity", parseInt(e.target.value) || 0)}
+                                                        className="h-11 bg-white/5 border-none rounded-xl text-center"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] text-muted-foreground uppercase">KDV %</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={item.vatRate}
+                                                        onChange={e => updateItem(item.id, "vatRate", parseInt(e.target.value) || 0)}
+                                                        className="h-11 bg-white/5 border-none rounded-xl text-center"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-1">
+                                                <Label className="text-[10px] text-muted-foreground uppercase">Alış Fiyatı (Birim)</Label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₺</span>
+                                                    <Input
+                                                        type="number"
+                                                        value={item.buyPrice}
+                                                        onChange={e => updateItem(item.id, "buyPrice", parseFloat(e.target.value) || 0)}
+                                                        className="h-12 bg-white/10 border-none rounded-xl pl-9 text-lg"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-between items-center pt-2">
+                                                <span className="text-xs text-muted-foreground">Satır Toplamı:</span>
+                                                <span className="text-base font-medium text-emerald-400">
+                                                    ₺{(item.quantity * item.buyPrice * (1 + item.vatRate / 100)).toLocaleString("tr-TR")}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
                                 <div className="p-4 bg-white/5 flex items-center justify-center">
                                     <button onClick={addItem} className="text-[10px]  text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">+ YENİ ÜRÜN SATIRI EKLE</button>
                                 </div>
@@ -359,7 +444,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                         </div>
 
                         {/* Ödeme Bilgileri */}
-                        <div className="grid grid-cols-2 gap-8 pt-4 border-t border-border/50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pt-6 border-t border-border/50">
                             <div className="space-y-4">
                                 <p className="text-[10px]  text-muted-foreground uppercase tracking-widest px-1">Ödeme Durumu</p>
                                 <div className="flex bg-white/5 p-1 rounded-2xl">
@@ -429,7 +514,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     <span>KDV Toplamı</span>
                                     <span>₺{vatTotal.toLocaleString("tr-TR")}</span>
                                 </div>
-                                <div className="h-px bg-white/5 my-2" />
+                                <div className="h-px bg-white/5 sm:my-2" />
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs  text-muted-foreground uppercase tracking-widest">Genel Toplam</span>
                                     <span className="text-2xl  text-white">₺{total.toLocaleString("tr-TR")}</span>
@@ -446,7 +531,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                     </div>
 
                     {/* Right Sidebar - Info */}
-                    <div className="bg-[#121a28] border-l border-border/50 p-8 space-y-8">
+                    <div className="bg-[#121a28] border-l border-border/50 p-4 sm:p-8 space-y-6 sm:space-y-8">
                         <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-3xl p-6 relative overflow-hidden text-white shadow-2xl">
                             <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
                             <div className="relative z-10 space-y-4">

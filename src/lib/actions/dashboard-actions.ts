@@ -14,18 +14,7 @@ export const getDashboardStats = async (shopId: string) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const [
-          pendingServices,
-          readyDevices,
-          products,
-          todaySalesAgg,
-          todayRepairIncome,
-          todayTransactions,
-          totalDebts,
-          pendingProcurementCount,
-          deadStockCount,
-          kasaAccount,
-        ] = await Promise.all([
+        const res = await Promise.all([
           prisma.serviceTicket.count({
             where: { shopId, status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
           }),
@@ -47,11 +36,26 @@ export const getDashboardStats = async (shopId: string) => {
           prisma.shortageItem.count({ where: { shopId, isResolved: false } }),
           getDeadStockCount(shopId),
           getOrCreateKasaAccount(shopId),
+          prisma.product.count({ where: { shopId, deviceInfo: { isNot: null } } }),
         ]);
 
-        const lowStockCount = products.filter(p => p.stock <= p.criticalStock).length;
-        const kasaBalance = Number(kasaAccount.balance) || 0;
-        const todaySalesAmount = Number(todaySalesAgg._sum.finalAmount) || 0;
+        const [
+          pendingServicesValue,
+          readyDevicesValue,
+          productsList,
+          todaySalesAggResult,
+          todayRepairIncomeResult,
+          todayTransactionsResult,
+          totalDebtsResult,
+          pendingProcurementCountValue,
+          deadStockCountValue,
+          kasaAccountObject,
+          totalDevicesCountValue,
+        ] = res;
+
+        const lowStockCount = productsList.filter(p => p.stock <= p.criticalStock).length;
+        const kasaBalance = Number(kasaAccountObject.balance) || 0;
+        const todaySalesAmount = Number(todaySalesAggResult._sum.finalAmount) || 0;
 
         let kasaOpeningBalance = 0;
         try {
@@ -69,15 +73,16 @@ export const getDashboardStats = async (shopId: string) => {
           kasaBalanceRaw: kasaBalance,
           kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
           kasaOpeningBalanceRaw: kasaOpeningBalance,
-          todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncome._sum.actualCost) || 0)}`,
-          collectedPayments: `₺${formatCurrency(Number(todayTransactions._sum.amount) || 0)}`,
-          pendingServices: pendingServices.toString(),
-          readyDevices: readyDevices.toString(),
+          todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncomeResult._sum.actualCost) || 0)}`,
+          collectedPayments: `₺${formatCurrency(Number(todayTransactionsResult._sum.amount) || 0)}`,
+          pendingServices: pendingServicesValue.toString(),
+          readyDevices: readyDevicesValue.toString(),
           criticalStock: lowStockCount.toString(),
-          totalDebts: `₺${formatCurrency(Number(totalDebts._sum.balance) || 0)}`,
+          totalDebts: `₺${formatCurrency(Number(totalDebtsResult._sum.balance) || 0)}`,
           cashBalance: `₺${formatCurrency(kasaBalance)}`,
-          pendingProcurementCount: pendingProcurementCount.toString(),
-          deadStockCount: deadStockCount.toString(),
+          pendingProcurementCount: pendingProcurementCountValue.toString(),
+          deadStockCount: deadStockCountValue.toString(),
+          totalDevices: (totalDevicesCountValue || 0).toString(),
         });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);

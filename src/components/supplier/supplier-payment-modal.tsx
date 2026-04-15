@@ -146,7 +146,7 @@ export function SupplierPaymentModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-[#0B101B] border-border/50 p-6 rounded-3xl">
+            <DialogContent className="sm:max-w-md max-w-full w-full h-full sm:h-auto overflow-y-auto bg-[#0B101B] border-border/50 p-6 sm:rounded-3xl rounded-none">
                 <DialogHeader className="mb-6">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">

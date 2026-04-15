@@ -157,30 +157,30 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[700px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
-          <div className="p-8 bg-card/50 border-b border-border/50">
+      <DialogContent className="w-full md:max-w-[700px] h-full md:h-auto md:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl flex flex-col">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
+          <div className="p-5 md:p-8 bg-card/50 border-b border-border/50">
             <DialogHeader>
-              <DialogTitle className="font-medium text-2xl">{getIndustryLabel(shop, "serviceTicket")} Kaydı</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Müşteri ve {getIndustryLabel(shop, "customerAsset").toLowerCase()} bilgilerini girerek yeni bir {getIndustryLabel(shop, "serviceTicket").toLowerCase()} kaydı oluşturun.
+              <DialogTitle className="font-medium text-xl md:text-2xl">{getIndustryLabel(shop, "serviceTicket")} Kaydı</DialogTitle>
+              <DialogDescription className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-widest mt-1">
+                Kayıt oluşturmak için bilgileri eksiksiz doldurun.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
+          <div className="p-5 md:p-8 space-y-6 overflow-y-auto flex-1 scrollbar-hide">
             {/* Customer Info */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <Label htmlFor="customerName" className="font-medium text-xs text-muted-foreground">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
+                <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="customerName" {...register("customerName", { required: "Müşteri adı gereklidir" })} placeholder="Ali Yılmaz" className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
+                  <Input id="customerName" {...register("customerName", { required: "Müşteri adı gereklidir" })} placeholder="Ali Yılmaz" className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm" />
                 </div>
                 {errors.customerName && <p className="text-[10px] text-red-500 ml-1">{errors.customerName.message as string}</p>}
               </div>
               <PhoneInput
-                label="Telefon Numarası"
+                label="TELEFON NUMARASI"
                 required
                 value={phoneValue}
                 isLookingUp={isLookingUp}
@@ -203,41 +203,41 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
 
             {/* Problem Description */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="problemDesc" className="font-medium text-xs text-muted-foreground">
-                  {getIndustryLabel(shop, "problemDesc")} <span className="text-red-500">*</span>
+              <div className="flex justify-between items-center mb-1">
+                <Label htmlFor="problemDesc" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                  {getIndustryLabel(shop, "problemDesc").toUpperCase()} <span className="text-red-500">*</span>
                 </Label>
                 <Button type="button" size="sm" variant="outline"
-                  className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px]"
+                  className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px] font-bold"
                   onClick={handleAIDiagnosis} disabled={isDiagnosticPending}
                 >
                   {isDiagnosticPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  BAŞAR AI ile Analiz Et
+                  BAŞAR AI ANALİZ
                 </Button>
               </div>
               <div className="relative">
-                <AlertCircle className="absolute left-4 top-5 h-4 w-4 text-muted-foreground" />
+                <AlertCircle className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input id="problemDesc" {...register("problemDesc", { required: "Arıza açıklaması gereklidir" })}
-                  placeholder="Arıza detaylarını buraya yazın..." className="h-14 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
+                  placeholder="Arıza detaylarını buraya yazın..." className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm" />
               </div>
               {errors.problemDesc && <p className="text-[10px] text-red-500 ml-1">{errors.problemDesc.message as string}</p>}
             </div>
 
             {/* Accessories / Parts Received */}
             <div className="space-y-3">
-              <Label className="font-medium text-xs text-muted-foreground">Teslim Alınan Parçalar / Aksesuarlar</Label>
+              <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Aksesuar / Emanet Parçalar</Label>
               <div className="flex flex-wrap gap-2">
                 {getIndustryAccessories(shop).map((item) => (
-                  <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-full px-4 py-2 transition-all">
+                  <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-xl px-4 py-2.5 transition-all">
                     <Checkbox
-                      className="rounded-sm border-muted-foreground/40 h-3.5 w-3.5"
+                      className="rounded-sm border-muted-foreground/40 h-4 w-4"
                       onCheckedChange={(checked) => {
                         const current = watch("accessories") || [];
                         if (checked) setValue("accessories", [...current, item]);
                         else setValue("accessories", current.filter((i: string) => i !== item));
                       }}
                     />
-                    <span className="text-sm font-medium whitespace-nowrap">{item}</span>
+                    <span className="text-[13px] font-medium whitespace-nowrap">{item}</span>
                   </Label>
                 ))}
               </div>
@@ -282,21 +282,21 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
 
             {/* Estimated Cost */}
             <div className="space-y-2">
-              <Label className="font-medium text-xs text-muted-foreground">Tahmini Ücret</Label>
+              <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Tahmini Ücret</Label>
               <PriceInput
                 id="estimatedCost"
                 value={watch("estimatedCost")}
                 onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
                 placeholder="0,00"
-                className="h-14 bg-card border-border/50 rounded-2xl pl-10 text-sm transition-all tabular-nums text-emerald-500 font-bold"
+                className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-10 text-sm transition-all tabular-nums text-emerald-500 font-bold"
               />
             </div>
           </div>
 
-          <div className="p-8 bg-card/50 border-t border-border/50">
-            <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl text-muted-foreground">Vazgeç</Button>
-              <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-2xl gap-3 transition-all active:scale-95">
+          <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
+            <DialogFooter className="flex-row gap-3">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-12 md:h-14 rounded-xl md:rounded-2xl text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Kapat</Button>
+              <Button type="submit" disabled={isPending} className="flex-[2] h-12 md:h-14 bg-blue-600 hover:bg-blue-500 text-white text-[13px] font-bold rounded-xl md:rounded-2xl gap-3 transition-all active:scale-95 uppercase tracking-widest">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Kaydı Tamamla
               </Button>

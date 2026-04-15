@@ -329,7 +329,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[820px] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-2xl overflow-hidden">
+      <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
         {/* Header */}
         <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
           <div>
@@ -338,20 +338,23 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col" style={{ maxHeight: "84vh" }}>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="overflow-y-auto flex-1 px-7 py-5 space-y-5">
 
-            {/* Condition Toggle */}
-            <div className="grid grid-cols-3 gap-3">
-              <ConditionCard type="NEW" icon={BadgeCheck} title="Sıfır Ürün" desc="Distribütör garantili, kutusunda" color="emerald" />
-              <ConditionCard type="USED" icon={RotateCcw} title="İkinci El" desc="Kullanılmış, ekspertiz gerektiren" color="amber" />
-              <ConditionCard type="INTERNATIONAL" icon={Globe} title="Yurtdışı" desc="IMEI aktiflik kısıtlı ithal cihaz" color="purple" />
+            {/* Condition Selection */}
+            <div className="space-y-3">
+              <Label className={labelCls}>Cihaz Kondisyonu</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <ConditionCard type="NEW" icon={BadgeCheck} title="Sıfır" desc="Distribütör garantili" color="emerald" />
+                <ConditionCard type="USED" icon={RotateCcw} title="2. El" desc="Kullanılmış, ekspertizli" color="amber" />
+                <ConditionCard type="INTERNATIONAL" icon={Globe} title="Yurdışı" desc="Kısıtlı ithal cihaz" color="purple" />
+              </div>
             </div>
 
             {/* Temel Bilgiler */}
             <div className={sectionCls}>
               <p className={labelCls}>Cihaz Bilgileri</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Brand Dropdown */}
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Marka</Label>
@@ -585,7 +588,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 </div>
                 <p className="text-[10px]  text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Ad Soyad</Label>
                   <Input {...register("sellerName")} placeholder="Örn: Enes Başar" className={inputCls} />
@@ -627,7 +630,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             </div>
 
             {/* Fiyat & Ödeme Hesabı */}
-            <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
               <div className="col-span-2 space-y-1.5 pb-2">
                 <Label className="font-medium text-[9px]  text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
                 <Select
@@ -724,15 +727,15 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           {/* Footer */}
-          <div className="px-7 py-5 border-t border-border/60 bg-[#0B0F19] flex justify-between items-center">
-            <p className="text-[11px] text-slate-600 font-medium">
+          <div className="px-7 py-5 border-t border-border/60 bg-[#0B0F19] flex sm:flex-row flex-col gap-4 justify-between items-center sm:sticky bottom-0 z-50">
+            <p className="text-[11px] text-slate-600 font-medium sm:text-left text-center">
               Otomatik kategori:{" "}
               <span className="text-muted-foreground ">
                 Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
               </span>
             </p>
             <Button type="submit" disabled={isPending}
-              className="bg-blue-600 hover:bg-blue-500 text-white  text-[13px] h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
+              className="bg-blue-600 hover:bg-blue-500 text-white  text-[13px] h-12 w-full sm:w-auto sm:h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Kaydı Tamamla
             </Button>

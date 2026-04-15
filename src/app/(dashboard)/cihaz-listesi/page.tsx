@@ -14,6 +14,7 @@ import {
 import { DeviceListClient } from "@/components/device-hub/device-list-client";
 import { getMonthlySalesComparisonHtml } from "@/lib/device-utils";
 import { DeviceExportButton } from "@/components/device-hub/device-export-button";
+import { DeviceImportModal } from "@/components/device-hub/device-import-modal";
 import { getIndustryLabel } from "@/lib/industry-utils";
 
 export const dynamic = "force-dynamic";
@@ -141,7 +142,7 @@ export default async function DeviceHubPage() {
   const missingItems = Array.from(missingItemsMap.values());
 
   return (
-    <div className="flex flex-col gap-8 max-w-7xl mx-auto p-4 lg:p-8">
+    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
 
       {/* Standardized Page Header */}
       <PageHeader
@@ -151,6 +152,7 @@ export default async function DeviceHubPage() {
         iconColor="text-blue-500"
         actions={
           <>
+            <DeviceImportModal />
             <DeviceExportButton devices={devices} />
             <CreateDeviceModal categories={categories} />
           </>

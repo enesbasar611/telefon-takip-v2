@@ -91,5 +91,21 @@ export function ActivitySkeleton() {
     );
 }
 
+export function MobileStatsSkeleton() {
+    return (
+        <div className="flex gap-4 overflow-x-auto px-4 pb-4">
+            {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[160px] p-4 rounded-[2rem] bg-white dark:bg-zinc-900 border border-border/40 space-y-3">
+                    <Skeleton className="h-10 w-10 rounded-2xl" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-6 w-20" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 
 

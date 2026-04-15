@@ -782,3 +782,97 @@ export async function getPOSInitialData() {
     return { products: [], customers: [], categories: [] };
   }
 }
+export async function bulkCreateProducts(products: z.input<typeof productSchema>[]) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const results = await prisma.$transaction(async (tx) => {
+      const createdProducts = [];
+
+      for (const data of products) {
+        let finalCategoryId = data.categoryId;
+
+        // Resolve or create categories
+        if (data.categoryPath && data.categoryPath.length > 0) {
+          let currentParentId = null;
+          for (const catName of data.categoryPath) {
+            let category: any = await tx.category.findFirst({
+              where: { shopId, name: { equals: catName, mode: 'insensitive' }, parentId: currentParentId }
+            });
+
+            if (!category) {
+              category = await tx.category.create({
+                data: { name: formatTitleCase(catName), shopId, parentId: currentParentId }
+              });
+            }
+            currentParentId = category.id;
+            finalCategoryId = category.id;
+          }
+        }
+
+        if (!finalCategoryId) {
+          let generalCat = await tx.category.findFirst({
+            where: { shopId, name: { equals: "Genel", mode: "insensitive" } }
+          });
+          if (!generalCat) {
+            generalCat = await tx.category.create({
+              data: { name: "Genel", shopId }
+            });
+          }
+          finalCategoryId = generalCat.id;
+        }
+
+        const product = await tx.product.create({
+          data: {
+            name: formatTitleCase(data.name),
+            categoryId: finalCategoryId as string,
+            buyPrice: data.buyPrice,
+            sellPrice: data.sellPrice,
+            stock: data.stock,
+            barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
+            sku: data.sku ? formatUppercase(data.sku) : undefined,
+            shopId,
+            isSecondHand: data.isSecondHand || false,
+            deviceInfo: (data.imei || data.color || data.capacity) ? {
+              create: {
+                imei: data.imei ? formatUppercase(data.imei) : `GEN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                color: data.color ? formatTitleCase(data.color) : undefined,
+                capacity: data.capacity,
+                batteryHealth: data.batteryHealth,
+                condition: data.condition || "USED",
+                shopId
+              }
+            } : undefined,
+            movements: {
+              create: {
+                quantity: data.stock || 0,
+                type: "PURCHASE",
+                notes: "Toplu içe aktarma ile eklendi.",
+                shopId
+              }
+            },
+            inventoryLogs: {
+              create: {
+                userId,
+                quantity: data.stock || 0,
+                type: "PURCHASE",
+                notes: "Toplu içe aktarma.",
+                shopId
+              }
+            }
+          }
+        });
+        createdProducts.push(product);
+      }
+      return createdProducts;
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/cihaz-listesi");
+    return { success: true, count: results.length };
+  } catch (error) {
+    console.error("Bulk create products error:", error);
+    return { success: false, error: "Toplu kayıt işlemi başarısız oldu." };
+  }
+}

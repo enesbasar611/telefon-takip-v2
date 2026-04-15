@@ -34,7 +34,7 @@ export default async function ServisListePage() {
   const doneStatuses: ServiceStatus[] = ["DELIVERED", "CANCELLED"];
 
   return (
-    <div className="flex flex-col gap-10 animate-in fade-in duration-700 pb-20">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-700 pb-20 p-0 md:p-8">
       <PageHeader
         title={`${getIndustryLabel(shop, "serviceTicket")} Listesi`}
         description={`Toplam ${counts.all} kayıt üzerinden operasyonel takip ve yönetim.`}

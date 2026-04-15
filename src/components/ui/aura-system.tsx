@@ -21,11 +21,11 @@ export function AuraSystem() {
                     style={{ transform: "translateZ(0)" }}
                 >
                     <BorderBeam
-                        duration={6}
-                        size={500}
-                        borderWidth={2}
-                        opacity={0.8}
-                        className="opacity-60"
+                        duration={4}
+                        size={2000}
+                        borderWidth={4}
+                        opacity={1}
+                        className="opacity-100"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/60 opacity-60" />
 
@@ -47,6 +47,3 @@ export function AuraSystem() {
         </AnimatePresence>
     );
 }
-
-
-

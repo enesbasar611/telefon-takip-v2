@@ -255,72 +255,118 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                 <p className="text-xs text-muted-foreground font-medium">En sık işlem yaptığınız tedarik ortakları</p>
                             </div>
                         </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="border-b border-border/50 hover:bg-transparent">
-                                    {["Tedarikçi Adı", "İletişim", "Aktif Sipariş", "Son Alım", "Güvenilirlik", ""].map((h) => (
-                                        <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {suppliers.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-32 text-center text-sm font-medium text-muted-foreground">
-                                            Henüz tedarikçi eklenmedi.
-                                        </TableCell>
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                        {["Tedarikçi Adı", "İletişim", "Aktif Sipariş", "Son Alım", "Güvenilirlik", ""].map((h) => (
+                                            <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
+                                        ))}
                                     </TableRow>
-                                ) : (
-                                    suppliers.slice(0, 5).map((supplier: any, idx: number) => {
-                                        const supplierOrders = purchaseOrders.filter((o: any) => o.supplierId === supplier.id);
-                                        const activeOrders = supplierOrders.filter((o: any) => o.status === "PENDING" || o.status === "ORDERED");
-                                        const lastOrder = supplierOrders[0];
-                                        const reliability = Math.min(99, 75 + idx * 5);
-                                        const initials = supplier.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
-                                        const colors = ["bg-blue-500/20 text-blue-400", "bg-emerald-500/20 text-emerald-400", "bg-amber-500/20 text-amber-400", "bg-purple-500/20 text-purple-400", "bg-rose-500/20 text-rose-400"];
-                                        return (
-                                            <TableRow key={supplier.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group cursor-pointer" onClick={() => setSelectedSupplierId(supplier.id)}>
-                                                <TableCell className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn("h-9 w-9 rounded-xl  text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
-                                                            {initials}
+                                </TableHeader>
+                                <TableBody>
+                                    {suppliers.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-32 text-center text-sm font-medium text-muted-foreground">
+                                                Henüz tedarikçi eklenmedi.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        suppliers.slice(0, 5).map((supplier: any, idx: number) => {
+                                            const supplierOrders = purchaseOrders.filter((o: any) => o.supplierId === supplier.id);
+                                            const activeOrders = supplierOrders.filter((o: any) => o.status === "PENDING" || o.status === "ORDERED");
+                                            const lastOrder = supplierOrders[0];
+                                            const reliability = Math.min(99, 75 + idx * 5);
+                                            const initials = supplier.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+                                            const colors = ["bg-blue-500/20 text-blue-400", "bg-emerald-500/20 text-emerald-400", "bg-amber-500/20 text-amber-400", "bg-purple-500/20 text-purple-400", "bg-rose-500/20 text-rose-400"];
+                                            return (
+                                                <TableRow key={supplier.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group cursor-pointer" onClick={() => setSelectedSupplierId(supplier.id)}>
+                                                    <TableCell className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn("h-9 w-9 rounded-xl  text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
+                                                                {initials}
+                                                            </div>
+                                                            <div>
+                                                                <p className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
+                                                                <p className="text-[10px] font-medium text-muted-foreground">{supplier.phone || supplier.email || "—"}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
-                                                            <p className="text-[10px] font-medium text-muted-foreground">{supplier.phone || supplier.email || "—"}</p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px]  px-2.5 rounded-lg">
+                                                            {supplier.contact || "Genel"}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className="text-sm  text-foreground">
+                                                            {activeOrders.length > 0 ? `${activeOrders.length} sipariş` : "—"}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs font-medium text-muted-foreground">
+                                                        {lastOrder ? format(new Date(lastOrder.createdAt), "dd MMM yyyy", { locale: tr }) : "—"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden w-16">
+                                                                <div className={cn("h-full rounded-full", reliability >= 80 ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${reliability}%` }} />
+                                                            </div>
+                                                            <span className={cn("text-[10px] ", reliability >= 80 ? "text-emerald-400" : "text-amber-400")}>+{reliability}%</span>
                                                         </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px]  px-2.5 rounded-lg">
-                                                        {supplier.contact || "Genel"}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className="text-sm  text-foreground">
-                                                        {activeOrders.length > 0 ? `${activeOrders.length} sipariş` : "—"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-xs font-medium text-muted-foreground">
-                                                    {lastOrder ? format(new Date(lastOrder.createdAt), "dd MMM yyyy", { locale: tr }) : "—"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden w-16">
-                                                            <div className={cn("h-full rounded-full", reliability >= 80 ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${reliability}%` }} />
-                                                        </div>
-                                                        <span className={cn("text-[10px] ", reliability >= 80 ? "text-emerald-400" : "text-amber-400")}>+{reliability}%</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Mobile Suppliers Card List */}
+                        <div className="flex flex-col divide-y divide-border/20 md:hidden">
+                            {suppliers.length === 0 ? (
+                                <div className="py-20 text-center text-xs text-muted-foreground uppercase tracking-widest opacity-40">
+                                    TEDARİKÇİ BULUNAMADI
+                                </div>
+                            ) : (
+                                suppliers.slice(0, 10).map((supplier: any, idx: number) => {
+                                    const supplierOrders = purchaseOrders.filter((o: any) => o.supplierId === supplier.id);
+                                    const activeOrders = supplierOrders.filter((o: any) => o.status === "PENDING" || o.status === "ORDERED");
+                                    const initials = supplier.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+                                    const colors = ["bg-blue-500/20 text-blue-400", "bg-emerald-500/20 text-emerald-400", "bg-amber-500/20 text-amber-400", "bg-purple-500/20 text-purple-400", "bg-rose-500/20 text-rose-400"];
+                                    const reliability = Math.min(99, 75 + idx * 3);
+                                    return (
+                                        <div key={supplier.id} onClick={() => setSelectedSupplierId(supplier.id)} className="p-4 flex flex-col gap-3 active:bg-muted/30 transition-colors relative">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn("h-10 w-10 rounded-xl text-xs flex items-center justify-center shrink-0", colors[idx % colors.length])}>
+                                                    {initials}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-semibold text-sm text-foreground">{supplier.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground">{supplier.phone || supplier.email || "İletişim yok"}</p>
+                                                </div>
+                                                <Badge className="bg-blue-500/10 text-blue-400 border-none text-[8px] px-2 rounded-lg">
+                                                    {supplier.contact || "Genel"}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[10px] mt-1 pt-3 border-t border-border/10">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-muted-foreground uppercase tracking-tighter">Aktif Sipariş</span>
+                                                    <span className="text-foreground font-medium">{activeOrders.length} Sipariş</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1 items-end text-right">
+                                                    <span className="text-muted-foreground uppercase tracking-tighter">Güvenilirlik</span>
+                                                    <span className={cn("font-bold", reliability >= 80 ? "text-emerald-400" : "text-amber-400")}>%{reliability}</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/30" />
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </Card>
 
                     {/* Purchase Orders Table */}
@@ -331,87 +377,161 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                 <p className="text-xs text-muted-foreground font-medium">Tüm tedarikçilerle gerçekleştirilen son işlemler</p>
                             </div>
                         </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="border-b border-border/50 hover:bg-transparent">
-                                    {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
-                                        <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {purchaseOrders.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-32 text-center text-sm font-medium text-muted-foreground">
-                                            Henüz satın alma kaydı yok.
-                                        </TableCell>
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                        {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
+                                            <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
+                                        ))}
                                     </TableRow>
-                                ) : (
-                                    purchaseOrders.slice(0, 8).map((order: any, idx: number) => {
-                                        const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
-                                        const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
-                                        return (
-                                            <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
-                                                <TableCell className="px-6 py-4  text-sm text-foreground">{orderNum}</TableCell>
-                                                <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn(
-                                                        "text-[9px]  border px-2 py-0.5 rounded-lg",
-                                                        order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                                            order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                                                                "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                                    )}>
-                                                        {order.paymentStatus === "PAID" ? "Ödendi" :
-                                                            order.paymentStatus === "PARTIAL" ? "Kısmi" : "Ödenmedi"}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn("text-[9px]  border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-sm  text-foreground">
-                                                    ₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}
-                                                </TableCell>
-                                                <TableCell className="text-xs font-medium text-muted-foreground">
-                                                    {format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setGlobalSelectedOrder(order);
-                                                                setIsGlobalPaymentOpen(true);
-                                                            }}
-                                                            className="h-8 text-xs  text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
-                                                            disabled={order.paymentStatus === "PAID"}
-                                                        >
-                                                            Ödeme Yap
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                if (order.status === "PENDING" || order.status === "ORDERED") {
+                                </TableHeader>
+                                <TableBody>
+                                    {purchaseOrders.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-32 text-center text-sm font-medium text-muted-foreground">
+                                                Henüz satın alma kaydı yok.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        purchaseOrders.slice(0, 8).map((order: any, idx: number) => {
+                                            const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
+                                            const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
+                                            return (
+                                                <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
+                                                    <TableCell className="px-6 py-4  text-sm text-foreground">{orderNum}</TableCell>
+                                                    <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
+                                                    <TableCell>
+                                                        <Badge className={cn(
+                                                            "text-[9px]  border px-2 py-0.5 rounded-lg",
+                                                            order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                                order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                                    "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                                        )}>
+                                                            {order.paymentStatus === "PAID" ? "Ödendi" :
+                                                                order.paymentStatus === "PARTIAL" ? "Kısmi" : "Ödenmedi"}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge className={cn("text-[9px]  border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-sm  text-foreground">
+                                                        ₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}
+                                                    </TableCell>
+                                                    <TableCell className="text-xs font-medium text-muted-foreground">
+                                                        {format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
                                                                     setGlobalSelectedOrder(order);
-                                                                    setIsGlobalMalKabulOpen(true);
-                                                                } else {
-                                                                    setGlobalSelectedOrder(order);
-                                                                    setIsGlobalDetailOpen(true);
-                                                                }
-                                                            }}
-                                                            className="h-8 text-xs  text-blue-400 hover:bg-blue-500/10 rounded-lg"
-                                                        >
-                                                            {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
+                                                                    setIsGlobalPaymentOpen(true);
+                                                                }}
+                                                                className="h-8 text-xs  text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                                                                disabled={order.paymentStatus === "PAID"}
+                                                            >
+                                                                Ödeme Yap
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    if (order.status === "PENDING" || order.status === "ORDERED") {
+                                                                        setGlobalSelectedOrder(order);
+                                                                        setIsGlobalMalKabulOpen(true);
+                                                                    } else {
+                                                                        setGlobalSelectedOrder(order);
+                                                                        setIsGlobalDetailOpen(true);
+                                                                    }
+                                                                }}
+                                                                className="h-8 text-xs  text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                            >
+                                                                {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Mobile Purchase Orders Card List */}
+                        <div className="flex flex-col divide-y divide-border/20 md:hidden">
+                            {purchaseOrders.length === 0 ? (
+                                <div className="py-20 text-center text-xs text-muted-foreground uppercase tracking-widest opacity-40">
+                                    SİPARİŞ KAYDI YOK
+                                </div>
+                            ) : (
+                                purchaseOrders.slice(0, 10).map((order: any, idx: number) => {
+                                    const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
+                                    const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
+                                    return (
+                                        <div key={order.id} className="p-4 flex flex-col gap-3 active:bg-muted/30 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-muted-foreground uppercase font-bold">{orderNum}</span>
+                                                    <span className="text-sm font-semibold text-foreground truncate max-w-[150px]">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</span>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-base font-bold text-foreground">₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}</span>
+                                                    <span className="text-[9px] text-muted-foreground">{format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <Badge className={cn("text-[9px] border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
+                                                <Badge className={cn(
+                                                    "text-[9px] border px-2 py-0.5 rounded-lg",
+                                                    order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                        order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                            "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                                )}>
+                                                    {order.paymentStatus === "PAID" ? "Ödendi" :
+                                                        order.paymentStatus === "PARTIAL" ? "Kısmi" : "Ödenmedi"}
+                                                </Badge>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 mt-1 pt-3 border-t border-border/10">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setGlobalSelectedOrder(order);
+                                                        setIsGlobalPaymentOpen(true);
+                                                    }}
+                                                    className="flex-1 h-9 text-[10px] uppercase font-bold text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
+                                                    disabled={order.paymentStatus === "PAID"}
+                                                >
+                                                    ÖDEME YAP
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        if (order.status === "PENDING" || order.status === "ORDERED") {
+                                                            setGlobalSelectedOrder(order);
+                                                            setIsGlobalMalKabulOpen(true);
+                                                        } else {
+                                                            setGlobalSelectedOrder(order);
+                                                            setIsGlobalDetailOpen(true);
+                                                        }
+                                                    }}
+                                                    className="flex-1 h-9 text-[10px] uppercase font-bold text-blue-400 border-blue-500/20 hover:bg-blue-500/10"
+                                                >
+                                                    {order.status === "PENDING" || order.status === "ORDERED" ? "TAHSİL ET" : "İNCELE"}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </Card>
                 </div>
 

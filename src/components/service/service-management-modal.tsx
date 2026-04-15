@@ -415,52 +415,54 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[98vw] w-[1400px] h-[95vh] bg-background border-border/50 p-0 overflow-hidden flex flex-col shadow-2xl">
-                <div className="relative h-24 flex items-center justify-between px-10 bg-card/30 backdrop-blur-xl border-b border-border/50 shrink-0 z-50">
-                    <div className="flex items-center gap-8">
+            <DialogContent className="w-full md:max-w-[98vw] md:w-[1400px] h-full md:h-[95vh] bg-background border-border/50 p-0 overflow-hidden flex flex-col shadow-2xl md:rounded-[2.5rem]">
+                <div className="relative h-20 md:h-24 flex items-center justify-between px-5 md:px-10 bg-card/30 backdrop-blur-xl border-b border-border/50 shrink-0 z-50">
+                    <div className="flex items-center gap-4 md:gap-8">
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-3 mb-1">
-                                <span className="text-xs  text-blue-500">Servis Kaydı</span>
-                                <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                <span className="text-xs font-medium text-muted-foreground/80">#{ticket.ticketNumber}</span>
+                            <div className="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
+                                <span className="text-[10px] md:text-xs text-blue-500">Servis Kaydı</span>
+                                <span className="h-0.5 w-0.5 md:h-1 md:w-1 rounded-full bg-slate-700" />
+                                <span className="text-[10px] md:text-xs font-medium text-muted-foreground/80">#{ticket.ticketNumber}</span>
                             </div>
-                            <h2 className="font-medium text-3xl text-foreground flex items-center gap-3">
+                            <h2 className="font-medium text-lg md:text-3xl text-foreground flex items-center gap-2 md:gap-3 truncate max-w-[150px] md:max-w-none">
                                 {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
                             </h2>
                         </div>
                         <div className={cn(
-                            "px-6 py-2.5 rounded-2xl border border-border/50 flex items-center gap-3 transition-all",
+                            "px-3 md:px-6 py-1.5 md:py-2.5 rounded-xl md:rounded-2xl border border-border/50 flex items-center gap-2 md:gap-3 transition-all",
                             statusConfig[ticket.status as ServiceStatus]?.bg
                         )}>
-                            <div className={cn("h-3 w-3 rounded-full shadow-[0_0_15px_currentColor]", statusConfig[ticket.status as ServiceStatus]?.dot)} />
-                            <span className={cn("text-xs ", statusConfig[ticket.status as ServiceStatus]?.color)}>
+                            <div className={cn("h-2 w-2 md:h-3 md:w-3 rounded-full shadow-[0_0_15px_currentColor]", statusConfig[ticket.status as ServiceStatus]?.dot)} />
+                            <span className={cn("text-[10px] md:text-xs", statusConfig[ticket.status as ServiceStatus]?.color)}>
                                 {statusConfig[ticket.status as ServiceStatus]?.label}
                             </span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         {!isQuickDeliver && ticket.status !== "READY" && ticket.status !== "DELIVERED" && (
                             <Button
                                 onClick={() => handleStatusUpdate("READY")}
-                                className="h-12 bg-white text-black hover:bg-white/90  text-xs px-8 rounded-2xl gap-3 shadow-2xl transition-all active:scale-95"
+                                className="h-10 md:h-12 bg-white text-black hover:bg-white/90 text-[10px] md:text-xs px-4 md:px-8 rounded-xl md:rounded-2xl gap-2 md:gap-3 shadow-2xl transition-all active:scale-95"
                             >
-                                <CheckCircle2 className="h-5 w-5" /> Servisi Tamamla
+                                <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" />
+                                <span className="hidden md:inline">Servisi Tamamla</span>
+                                <span className="md:hidden">Tamam</span>
                             </Button>
                         )}
                         <Button
                             variant="ghost"
                             onClick={onClose}
-                            className="h-12 w-12 rounded-2xl hover:bg-white/5 text-muted-foreground"
+                            className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-white/5 text-muted-foreground"
                         >
-                            <X className="h-6 w-6" />
+                            <X className="h-5 w-5 md:h-6 md:w-6" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex-1 grid grid-cols-[300px_1fr_380px] overflow-hidden p-6 gap-6 bg-background">
+                <div className="flex-1 flex flex-col md:grid md:grid-cols-[300px_1fr_380px] overflow-y-auto md:overflow-hidden p-4 md:p-6 gap-6 bg-background custom-scrollbar">
 
-                    <div className="w-[300px] flex flex-col gap-4 overflow-hidden shrink-0">
+                    <div className="w-full md:w-[300px] flex flex-col gap-4 shrink-0">
                         <div className="bg-white/[0.02] border border-border/50 rounded-[2rem] p-6 space-y-6">
                             <div className="flex items-center gap-2 mb-2">
                                 <ScanLine className="h-3.5 w-3.5 text-blue-500" />
@@ -566,9 +568,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-6 min-w-0 overflow-hidden">
-                        <div className="bg-card border border-border/50 rounded-[2.5rem] p-8 flex flex-col gap-8 shrink-0">
-                            <div className="grid grid-cols-2 gap-8">
+                    <div className="flex-1 flex flex-col gap-6 min-w-0">
+                        <div className="bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 flex flex-col gap-6 md:gap-8 shrink-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 <div className="space-y-3">
                                     <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">Parça Ekle</p>
                                     <div className="relative group">
@@ -638,9 +640,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <Dialog open={isAddingManual} onOpenChange={(val) => { if (!val) { setIsAddingManual(false); setSelectedProduct(null); } }}>
                                     <DialogContent
                                         overlayClassName="bg-black/20 backdrop-blur-[2px]"
-                                        className="max-w-xl bg-background border-border/50 p-0 overflow-hidden shadow-2xl rounded-[2.5rem]"
+                                        className="w-full md:max-w-xl h-full md:h-auto md:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden shadow-2xl md:rounded-[2.5rem] flex flex-col"
                                     >
-                                        <div className="p-10 space-y-8">
+                                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-8 custom-scrollbar">
                                             <div className="flex items-center justify-between">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-3">
@@ -848,7 +850,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-card border border-border/50 rounded-[2.5rem] p-8 flex flex-col overflow-hidden shadow-sm">
+                        <div className="flex-1 bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 flex flex-col overflow-hidden shadow-sm min-h-[400px]">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <ShoppingBag className="h-3.5 w-3.5 text-blue-500" />
@@ -865,16 +867,18 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     </div>
                                 ) : (
                                     ticket.usedParts?.map((p: any) => (
-                                        <div key={p.id} className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-border/50 group hover:bg-white/[0.04] transition-all">
-                                            <div className="h-10 w-10 rounded-xl bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10 text-blue-500">
-                                                <Box className="h-5 w-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-medium text-foreground/90 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
-                                                <p className="text-[9px]  text-muted-foreground uppercase tracking-tighter mt-0.5">{p.product?.sku || "SKU-NONE"}</p>
+                                        <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-border/50 group hover:bg-white/[0.04] transition-all">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="h-10 w-10 rounded-xl bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10 text-blue-500">
+                                                    <Box className="h-5 w-5" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-medium text-foreground/90 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
+                                                    <p className="text-[9px]  text-muted-foreground uppercase tracking-tighter mt-0.5">{p.product?.sku || "SKU-NONE"}</p>
+                                                </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3 px-2">
+                                            <div className="flex items-center justify-between md:justify-end gap-3 md:px-2 border-t md:border-t-0 border-border/30 pt-3 md:pt-0">
                                                 <div className="flex flex-col items-center gap-1">
                                                     <span className="text-[8px]  text-slate-700 uppercase">Maliyet (Alış)</span>
                                                     <div className="relative w-32">
@@ -930,8 +934,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </div>
 
                     {/* Right Column: Workflow Timeline & Payment */}
-                    <div className="w-[380px] flex flex-col gap-4 overflow-hidden shrink-0">
-                        <div className="flex-1 bg-card border border-border/50 rounded-[2.5rem] p-7 flex flex-col overflow-hidden shadow-sm">
+                    <div className="w-full md:w-[380px] flex flex-col gap-4 shrink-0">
+                        <div className="flex-1 bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-7 flex flex-col overflow-hidden shadow-sm min-h-[300px]">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Activity className="h-4 w-4 text-blue-500" />
@@ -940,7 +944,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-md">{ticket.logs?.length || 0} ADIM</span>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pr-2 relative">
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pr-1 relative">
                                 {/* Connecting Line */}
                                 <div className="absolute left-[19px] top-6 bottom-6 w-px bg-gradient-to-b from-blue-500/50 via-border to-transparent" />
 
@@ -985,7 +989,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         {/* Financial Area - Moved to Right Column */}
-                        <div className="bg-card border-t border-border/80 rounded-[2rem] p-6 flex flex-col gap-5 shrink-0 shadow-lg">
+                        <div className="bg-card border-t border-border/80 rounded-[2rem] p-5 md:p-6 flex flex-col gap-5 shrink-0 shadow-lg">
                             <div className="flex items-center justify-between px-1">
                                 <div className="flex flex-col gap-1">
                                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest">İşçilik</p>

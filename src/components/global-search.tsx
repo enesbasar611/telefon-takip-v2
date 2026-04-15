@@ -106,6 +106,13 @@ export function GlobalSearch() {
     const [isCommandMode, setIsCommandMode] = useState(false);
     const router = useRouter();
 
+    // Global Event Listener for manual trigger
+    useEffect(() => {
+        const handleOpen = () => setOpen(true);
+        window.addEventListener("open-global-search", handleOpen);
+        return () => window.removeEventListener("open-global-search", handleOpen);
+    }, []);
+
     // Ctrl+Shift+S → Detaylı Arama
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
