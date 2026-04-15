@@ -230,6 +230,8 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
             imei: data.imei ? formatUppercase(data.imei) : `GEN-${Date.now()}`,
             color: data.color ? formatTitleCase(data.color) : undefined,
             capacity: data.capacity,
+            batteryHealth: data.batteryHealth ? Number(data.batteryHealth) : undefined,
+            condition: data.condition || "NEW",
             shopId
           }
         } : undefined,
@@ -282,7 +284,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
     const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
     const newStock = data.stock !== undefined ? Number(data.stock) : undefined;
 
-    const { imei, color, capacity, categoryPath, ...productFields } = data;
+    const { imei, color, capacity, batteryHealth, condition, categoryPath, ...productFields } = data;
 
     const product = await prisma.product.update({
       where: { id, shopId },
@@ -299,18 +301,22 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
         location: productFields.location || undefined,
         isSecondHand: productFields.isSecondHand,
         attributes: productFields.attributes !== undefined ? (productFields.attributes as any) : undefined,
-        deviceInfo: (imei || color || capacity) ? {
+        deviceInfo: (imei || color || capacity || batteryHealth) ? {
           upsert: {
             create: {
               imei: imei ? formatUppercase(imei) : `GEN-${Date.now()}`,
               color: color ? formatTitleCase(color) : undefined,
               capacity: capacity || undefined,
+              batteryHealth: batteryHealth ? Number(batteryHealth) : undefined,
+              condition: condition || "USED",
               shopId
             },
             update: {
               imei: imei ? formatUppercase(imei) : undefined,
               color: color ? formatTitleCase(color) : undefined,
               capacity: capacity || undefined,
+              batteryHealth: batteryHealth ? Number(batteryHealth) : undefined,
+              condition: condition || undefined,
             }
           }
         } : undefined
@@ -839,7 +845,7 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
                 imei: data.imei ? formatUppercase(data.imei) : `GEN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 color: data.color ? formatTitleCase(data.color) : undefined,
                 capacity: data.capacity,
-                batteryHealth: data.batteryHealth,
+                batteryHealth: data.batteryHealth ? Number(data.batteryHealth) : undefined,
                 condition: data.condition || "USED",
                 shopId
               }

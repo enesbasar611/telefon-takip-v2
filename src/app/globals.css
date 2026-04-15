@@ -276,3 +276,24 @@
 .nexus-fade-in {
   animation: nexus-fade-in 0.2s ease-out forwards;
 }
+
+/* Marquee Animation for Ticker */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 20s linear infinite;
+}
+
+.pause {
+  animation-play-state: paused;
+}

@@ -527,8 +527,8 @@ export default function NewServicePage() {
   );
 
   return (
-    <div className="pb-32 animate-in fade-in duration-500">
-      <div className="max-w-7xl mx-auto">
+    <div className="pb-48 animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto px-4 md:px-0">
         <PageHeader
           title={`Yeni ${getIndustryLabel(shop, "serviceTicket")} Kaydı`}
           description={`${getIndustryLabel(shop, "serviceTicket")} işlemlerini başlatmak için gerekli bilgileri doldurun.`}
@@ -798,55 +798,36 @@ export default function NewServicePage() {
                   <h3 className="font-medium text-xs font-semibold tracking-widest text-blue-600 uppercase">Geçmiş Analizi</h3>
                 </div>
                 <div className="space-y-4">
-                  <Badge className={cn("border-none text-[10px] px-3 py-1 font-medium",
-                    foundCustomer.isVip ? "bg-amber-400 text-amber-950" : "bg-blue-600 text-white"
-                  )}>
-                    {foundCustomer.isVip ? "⭐ VIP Müşteri" : "✓ Düzenli Müşteri"}
-                  </Badge>
-                  <Separator className="bg-blue-500/15" />
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-semibold text-blue-600/60 uppercase tracking-wider">Son Servisler</p>
-                    {foundCustomer.tickets?.slice(0, 3).map((t: any) => (
-                      <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-blue-500/10">
-                        <div>
-                          <span className="text-xs font-medium text-foreground block">{t.deviceBrand} {t.deviceModel}</span>
-                          <span className="text-[10px] text-muted-foreground">{t.ticketNumber} • {format(new Date(t.createdAt), "dd.MM.yyyy")}</span>
-                        </div>
-                        <Badge variant="outline" className="border-blue-500/20 text-[9px] text-blue-600 bg-blue-500/5">{t.status}</Badge>
-                      </div>
-                    ))}
-                    {(!foundCustomer.tickets || foundCustomer.tickets.length === 0) && (
-                      <p className="text-xs text-muted-foreground italic">Kayıtlı servis işlemi yok.</p>
-                    )}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Toplam Servis</span>
+                    <span className="font-bold text-blue-600">{foundCustomer._count?.services || 0} Adet</span>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => window.open(`/musteriler/${foundCustomer.id}`, '_blank')}
-                    size="sm"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl"
-                  >
-                    Profilini Aç
-                  </Button>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Sadakat Puanı</span>
+                    <Badge variant="outline" className="text-emerald-600 bg-emerald-500/5 border-emerald-500/20">
+                      {foundCustomer.loyaltyPoints || 0} Puan
+                    </Badge>
+                  </div>
                 </div>
               </section>
             )}
 
-            {/* Mali İşlemler */}
+            {/* Maliyet ve Teslimat */}
             <section className={cardClass}>
-              <SectionBadge icon={Receipt} title="Mali İşlemler" />
+              <SectionBadge icon={Receipt} title="Ödeme & Planlama" />
+
               <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label className={labelClass}>Tahmini Ücret <span className="text-destructive">*</span></Label>
+                <div className="space-y-1.5 flex flex-col">
+                  <Label className={labelClass}>Tahmini Tutar</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-primary/60">₺</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-emerald-600">₺</span>
                     <Input
                       {...form.register("estimatedCost")}
                       type="number"
-                      className={cn(getInputClass("estimatedCost"), "pl-9 text-lg font-semibold")}
+                      className={cn(getInputClass("estimatedCost"), "pl-9 text-2xl font-black text-emerald-500 bg-emerald-500/5 border-emerald-500/20 focus-visible:border-emerald-500")}
                       placeholder="0.00"
                     />
                   </div>
-                  {errors.estimatedCost && <p className="text-xs text-destructive mt-1.5 px-1">{errors.estimatedCost.message as string}</p>}
                 </div>
 
                 <div className="space-y-1.5">
@@ -937,41 +918,34 @@ export default function NewServicePage() {
         </form>
 
         {/* Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-[60] pointer-events-none">
-          <div className="bg-background/95 backdrop-blur-3xl border-t border-white/5 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] p-4 md:p-6 px-4 md:px-12 pointer-events-auto w-full lg:mb-0 mb-[100px]">
-            <div className="w-full flex items-center justify-between gap-8">
-              <div className="flex items-center gap-8">
-                <div className="hidden sm:flex flex-col">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Hesaplanan Tahmini Ücret</span>
+        <div className="fixed bottom-0 left-0 right-0 z-[100] pb-[120px] lg:pb-8 px-4 pointer-events-none">
+          <div className="max-w-7xl mx-auto flex items-center justify-end pointer-events-auto">
+            <div className="bg-background/80 dark:bg-zinc-950/80 backdrop-blur-2xl border border-white/10 dark:border-zinc-800/50 p-2 pl-6 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-500">
+              <div className="hidden sm:flex items-center gap-8 py-2">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-0.5">TOPLAM TAHMİN</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-white tracking-tight">₺{currentEstimatedCost}</span>
-                    <span className="text-[10px] text-muted-foreground/60 font-medium">+ KDV DAHİL</span>
+                    <span className="text-2xl font-black text-foreground tracking-tighter">₺{Number(currentEstimatedCost).toLocaleString('tr-TR')}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground/40">YTL</span>
                   </div>
                 </div>
 
-                <div className="h-10 w-px bg-white/5 hidden md:block" />
+                <div className="h-10 w-px bg-white/5" />
 
                 {photos.length > 0 && (
-                  <div className="hidden md:flex items-center gap-2.5 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-xl border border-blue-500/20">
+                  <div className="flex items-center gap-2.5 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-xl border border-blue-500/20">
                     <Camera className="h-4 w-4" strokeWidth={1.5} />
-                    <span className="text-xs font-semibold">{photos.length} Fotoğraf</span>
-                  </div>
-                )}
-
-                {Object.keys(errors).length > 0 && (
-                  <div className="hidden md:flex items-center gap-2.5 bg-rose-500/10 text-rose-400 px-4 py-2 rounded-xl border border-rose-500/20">
-                    <AlertCircle className="h-4 w-4" strokeWidth={1.5} />
-                    <span className="text-xs font-semibold">Form Hatalarını Düzeltein</span>
+                    <span className="text-xs font-bold">{photos.length} GÖRSEL</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => router.back()}
-                  className="rounded-xl font-medium text-sm h-12 px-8 text-muted-foreground hover:text-white hover:bg-white/5 transition-all"
+                  className="rounded-2xl font-bold text-sm h-14 px-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
                 >
                   İptal
                 </Button>
@@ -982,26 +956,27 @@ export default function NewServicePage() {
                     form="new-service-form"
                     disabled={isPending}
                     className={cn(
-                      "relative h-12 px-10 font-semibold rounded-xl gap-2.5 transition-all shadow-xl",
+                      "relative h-14 px-12 font-black rounded-2xl gap-3 transition-all shadow-xl text-lg",
                       Object.keys(errors).length > 0
                         ? "bg-rose-600 hover:bg-rose-700 text-white"
-                        : "bg-primary hover:bg-primary-hover text-primary-foreground min-w-[200px]"
+                        : "bg-primary hover:bg-primary/90 text-primary-foreground"
                     )}
                   >
                     {isPending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     ) : Object.keys(errors).length > 0 ? (
-                      <AlertCircle className="h-5 w-5" strokeWidth={2} />
+                      <AlertCircle className="h-6 w-6" strokeWidth={2.5} />
                     ) : (
-                      <Save className="h-5 w-5" strokeWidth={2} />
+                      <Save className="h-6 w-6" strokeWidth={2.5} />
                     )}
-                    {Object.keys(errors).length > 0 ? "Hataları Giderin" : "Servis Kaydını Tamamla"}
+                    {Object.keys(errors).length > 0 ? "Hataları Düzeltin" : "KAYDI TAMAMLA"}
                   </Button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
         <Dialog open={isPatternModalOpen} onOpenChange={setIsPatternModalOpen}>
           <DialogContent className="sm:max-w-md p-6">
             <DialogHeader>

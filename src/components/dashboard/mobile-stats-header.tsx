@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wrench, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useAura } from "@/lib/context/aura-context";
 
-import { StatType } from "./modals/stat-detail-modal";
+import { StatDetailModal, StatType } from "./modals/stat-detail-modal";
 
 interface MobileStatsHeaderProps {
     stats: {
@@ -20,6 +23,10 @@ interface MobileStatsHeaderProps {
 }
 
 export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps) {
+    const [selectedType, setSelectedType] = useState<StatType | null>(null);
+    const router = useRouter();
+    const { MapsWithAura } = useAura();
+
     const cards = [
         {
             label: "Güncel Kasa",
@@ -28,6 +35,7 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
             color: "text-blue-500",
             bg: "bg-blue-500/10",
             type: "DAILY_SALES" as StatType,
+            description: "Kasa hareketleri ve bakiyesi"
         },
         {
             label: "Toplam Cihaz",
@@ -55,6 +63,17 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
         },
     ];
 
+    const handleClick = (card: any) => {
+        if (card.href) {
+            MapsWithAura(card.href);
+            return;
+        }
+        if (card.type) {
+            setSelectedType(card.type);
+            if (onStatClick) onStatClick(card.type);
+        }
+    };
+
     return (
         <div className="w-full overflow-hidden py-2">
             <div className="flex gap-4 overflow-x-auto pb-4 px-4 custom-scrollbar-hide snap-x snap-mandatory">
@@ -65,10 +84,7 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.1 }}
                         className="flex-shrink-0 w-[160px] snap-start"
-                        onClick={() => {
-                            if (card.type && onStatClick) onStatClick(card.type);
-                            if (card.href) window.location.href = card.href;
-                        }}
+                        onClick={() => handleClick(card)}
                     >
                         <div className="p-4 rounded-[2rem] bg-white dark:bg-zinc-900 border border-white/20 dark:border-zinc-800 shadow-xl shadow-black/5 flex flex-col gap-3 active:scale-95 transition-transform cursor-pointer">
                             <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center", card.bg)}>
@@ -86,6 +102,12 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
                     </motion.div>
                 ))}
             </div>
+
+            <StatDetailModal
+                type={selectedType}
+                isOpen={!!selectedType}
+                onClose={() => setSelectedType(null)}
+            />
         </div>
     );
 }

@@ -98,7 +98,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
         suggestedCategories: ["Ekranlar", "Bataryalar", "Kılıf & Koruyucular", "Şarj Aletleri", "Anakart Parçaları"],
         businessAdvice: "Hızlı servis ve orijinal parça kullanımı müşteri sadakatini artırır. Stoklarınızı her zaman güncel tutun.",
         serviceFormFields: [
-            { key: "deviceBrand", label: "Marka", type: "select", options: ["Apple", "Samsung", "Xiaomi", "Huawei", "Oppo", "Vivo", "Realme", "Infinix", "Techno", "Poco", "General Mobile", "Casper", "Reeder", "Diğer"], required: true, placeholder: "Marka seçin...", coreMapping: "deviceBrand" },
+            { key: "deviceBrand", label: "Marka", type: "select", options: ["Apple", "Samsung", "Xiaomi", "Huawei", "Oppo", "Vivo", "Realme", "Infinix", "Techno", "Poco", "General Mobile", "Casper", "Reeder", "Asus", "Sony", "Nokia", "Motorola", "Pixel", "Meizu", "OnePlus", "Honor", "TCL", "ZTE", "Lenovo", "LG", "Diğer"], required: true, placeholder: "Marka seçin...", coreMapping: "deviceBrand" },
             { key: "deviceModel", label: "Model", type: "text", required: true, placeholder: "iPhone 14 Pro, Galaxy S23...", coreMapping: "deviceModel" },
             { key: "imei", label: "IMEI Numarası", type: "text", placeholder: "15 haneli IMEI numarası", validate: "imei", coreMapping: "imei" },
             { key: "batteryHealth", label: "Pil Sağlığı (%)", type: "number", placeholder: "85" },

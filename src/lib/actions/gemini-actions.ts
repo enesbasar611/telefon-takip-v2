@@ -137,7 +137,7 @@ function sanitizeProduct(parsed: any): AIProductResult {
 }
 
 // ── CORE GEMINI CALLER with official SDK ─────────────────────
-async function callGemini(shopId: string, promptParts: string[], retries = 2): Promise<{ text: string } | { error: string }> {
+async function callGemini(shopId: string, promptParts: string[], responseType: "json" | "text" = "json", retries = 2): Promise<{ text: string } | { error: string }> {
     const key = await getGeminiApiKey(shopId);
     if (!key) {
         return { error: "GEMINI_API_KEY eksik — Ayarlar > Otomasyon tablosundan veya .env.local dosyasından kontrol edin." };
@@ -149,9 +149,9 @@ async function callGemini(shopId: string, promptParts: string[], retries = 2): P
             {
                 model: "gemini-2.5-flash",
                 generationConfig: {
-                    responseMimeType: "application/json",
+                    responseMimeType: responseType === "json" ? "application/json" : "text/plain",
                     temperature: 0.1,
-                    maxOutputTokens: 4096
+                    maxOutputTokens: 2048
                 }
             }
         );
@@ -655,10 +655,8 @@ Verilen özet verilere bakarak dükkan sahibine kısa (3-4 paragraf), etkileyici
 Raporunda stok durumunu, kritik ürünleri ve genel dükkan verimliliğini yorumla.
 Türkçe, profesyonel ama samimi bir dil kullan.`;
 
-    const userPrompt = `DÜKKAN ÖZET VERİLERİ:
-${JSON.stringify(stats, null, 2)}`;
-
-    const result = await callGemini(shopId, [systemPrompt, userPrompt]);
+    const userPrompt = `DÜKKAN ÖZET VERİLERİ: ${JSON.stringify(stats, null, 2)}`;
+    const result = await callGemini(shopId, [systemPrompt, userPrompt], "text");
     if ("error" in result) return { success: false, error: result.error };
 
     return { success: true, analysis: result.text };
@@ -727,7 +725,7 @@ Kurallar:
 4. Yazım kurallarına %100 uy.
 5. SADECE YENİ MESAJ METNİNİ DÖNDÜR.`;
 
-    const result = await callGemini(shopId, [systemPrompt, originalMessage]);
+    const result = await callGemini(shopId, [systemPrompt, originalMessage], "text");
     if ("error" in result) return { success: false, error: result.error };
 
     return { success: true, refinedMessage: result.text };
@@ -767,25 +765,21 @@ export async function getSmartAIStockAnalysis(): Promise<{ success: true; analys
             salesSummary[name] = (salesSummary[name] || 0) + item.quantity;
         });
 
-        const systemPrompt = `Sen profesyonel bir perakende ve stok yönetimi danışmanısın (BAŞAR AI).
-Dükkan verilerini analiz ederek stratejik bir rapor hazırla.
-Rapor şunları içermeli:
-1. 📈 POPÜLER ÜRÜNLER: En çok satanlar ve stok durumu.
-2. ⚠️ KRİTİK UYARILAR: Acil alınması gerekenler (satış hızı vs stok).
-3. 📉 ÖLÜ STOK: Yatırım yapılmış ama satılmayan ürünler için tavsiye.
-4. 💰 FİNANSAL ÖNGÖRÜ: Stoktaki bağlı sermaye ve potansiyel kar.
-5. 🛡️ STRATEJİK TAVSİYE: Önümüzdeki 15 gün için dükkan sahibine 3 altın tavsiye.
+        const systemPrompt = `Sen BAŞAR AI Stok Danışmanısın. Verileri analiz edip kısa, öz ve etkileyici bir stratejik rapor oluştur.
+Asla JSON veya süslü parantez kullanma. Doğrudan düz metin ve markdown (listeler, kalın yazılar) kullan.
+Giriş kısmını çok kısa tut. Teknik detaya boğma, aksiyon söyle.
+
+RAPOR AKIŞI:
+1. 📈 POPÜLER: En çok satanlar özeti.
+2. ⚠️ KRİTİK: Acil stoklanması gerekenler.
+3. 📉 ÖLÜ STOK: Hareket etmeyenler için tavsiye.
+4. 🛡️ TAVSİYE: Önümüzdeki 15 gün için 3 kısa altın kural.
 
 KULLANICI VERİLERİ (Son 30 Gün):
-- Mevcut Stok Listesi: ${JSON.stringify(products.slice(0, 30))}
-- Satış Adetleri: ${JSON.stringify(salesSummary)}
+- Stok: ${JSON.stringify(products.slice(0, 30))}
+- Satışlar: ${JSON.stringify(salesSummary)}`;
 
-Kurallar:
-- Yanıtın profesyonel, motive edici ve Türkçe olsun.
-- Markdown formatını (kalın yazım, listeler, emojiler) etkili kullan.
-- Gereksiz teknik terimlerden kaçın, esnaf diline yakın ama kurumsal ol.`;
-
-        const result = await callGemini(shopId, [systemPrompt, "Genel analiz raporu oluştur."]);
+        const result = await callGemini(shopId, [systemPrompt, "Genel analiz raporu oluştur."], "text");
         if ("error" in result) return { success: false, error: result.error };
 
         return { success: true, analysis: result.text };

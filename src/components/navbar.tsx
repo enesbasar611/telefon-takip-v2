@@ -18,6 +18,7 @@ import Link from "next/link";
 import { ShortageList } from "@/components/navbar/shortage-list";
 import { POSDrawer } from "@/components/navbar/pos-drawer";
 import { CurrencyDisplay } from "@/components/navbar/currency-display";
+import { CurrencyTicker } from "@/components/navbar/currency-ticker";
 import { GlobalSearch } from "@/components/navbar/global-search";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useUI } from "@/lib/context/ui-context";
@@ -29,35 +30,33 @@ export function Navbar({ shop }: { shop?: any }) {
   const { MapsWithAura } = useAura();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-10 shadow-none">
-      <div className="flex items-center gap-4 lg:w-1/3">
-        {/* Desktop: Thinner Logo - Hidden on large as it exists in Sidebar */}
-        <Link href="/" className="hidden items-center gap-2 hover:opacity-80 transition-opacity">
-          <span className="text-xl font-light tracking-[0.2em] whitespace-nowrap">BAŞAR <span className="font-bold text-primary">TEKNİK</span></span>
-        </Link>
-
-        {/* Mobile: Hamburger & Thinner Logo */}
-        <div className="lg:hidden flex items-center gap-2">
-          <MobileSidebar />
-          <Link href="/" className="hover:opacity-80 transition-opacity">
-            <span className="text-[14px] font-light tracking-[0.1em] whitespace-nowrap">BAŞAR <span className="font-semibold text-primary">TEKNİK</span></span>
-          </Link>
+    <>
+      <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-20 shadow-none gap-4">
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Mobile: Hamburger & Branding */}
+          <div className="flex items-center gap-3">
+            <MobileSidebar />
+            <Link href="/" className="md:hidden hover:opacity-80 transition-opacity">
+              <span className="text-[14px] font-bold tracking-tight text-primary">BAŞAR TEKNİK</span>
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2 lg:gap-3 lg:w-1/3 justify-end">
-        {/* Quick Shortcut: Cihaz Merkezi - Hidden on desktop as requested */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => MapsWithAura("/cihaz-listesi")}
-          className="hidden h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
-        >
-          <MonitorSmartphone className="h-5 w-5" />
-        </Button>
+        <div className="flex-1" />
 
-        <div className="flex items-center gap-1.5 lg:gap-3 p-1 bg-muted/40 rounded-2xl border border-border/40">
-          <div className="hidden md:flex items-center gap-1">
+        <div className="flex items-center gap-2 lg:gap-3 justify-end shrink-0">
+          {/* Quick Shortcut: Cihaz Merkezi - Strictly Mobile Only */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => MapsWithAura("/cihaz-listesi")}
+            className="md:hidden h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all shrink-0"
+          >
+            <MonitorSmartphone className="h-5 w-5" />
+          </Button>
+
+          {/* Action Containers - Only visible on Desktop */}
+          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-muted/40 rounded-2xl border border-border/40">
             <CreateServiceModal
               shop={shop}
               trigger={
@@ -75,65 +74,73 @@ export function Navbar({ shop }: { shop?: any }) {
                 </Button>
               }
             />
-          </div>
-          <POSDrawer />
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-4 shrink-0">
-          <div className="hidden md:flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleFinancialVisibility}
-              className="h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary transition-all"
-            >
-              {isFinancialVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-            </Button>
-
-            <CurrencyDisplay />
-            <ShortageList />
-            <ModeToggle />
+            <POSDrawer />
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
-            className="h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary transition-all"
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-
-          <NotificationDropdown />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 bg-muted/40 border border-border hover:border-primary/20 shadow-none overflow-hidden group">
-                <div className="h-full w-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <User className="h-5 w-5" />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
-              <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={() => MapsWithAura("/profil")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                <User className="h-4 w-4 text-primary" /> Profil Detayları
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => MapsWithAura("/ayarlar")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="p-3 text-sm  rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex gap-3 items-center"
+          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+            <div className="hidden lg:flex items-center gap-3">
+              <div className="hidden xl:flex">
+                <CurrencyDisplay />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFinancialVisibility}
+                className="h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary transition-all"
               >
-                <LogOut className="h-4 w-4" /> Çıkış Yap
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {isFinancialVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+              </Button>
+
+              <ShortageList />
+              <ModeToggle />
+            </div>
+
+            <div className="flex items-center gap-1.5 ml-1">
+              {/* Search Button - Icon only, moved here */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
+                className="h-10 w-10 rounded-xl bg-muted/20 md:bg-muted/40 border border-border/40 text-muted-foreground hover:text-primary transition-all shrink-0"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+
+              <NotificationDropdown />
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 bg-muted/20 md:bg-muted/40 border border-border/40 hover:border-primary/20 shadow-none overflow-hidden group shrink-0">
+                    <div className="h-full w-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <User className="h-5 w-5" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
+                  <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onClick={() => MapsWithAura("/profil")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+                    <User className="h-4 w-4 text-primary" /> Profil Detayları
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => MapsWithAura("/ayarlar")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+                    <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="p-3 text-sm  rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive flex gap-3 items-center"
+                  >
+                    <LogOut className="h-4 w-4" /> Çıkış Yap
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
+      </header>
+      <div className="md:hidden flex items-center gap-2 px-4 py-2 bg-background/60 backdrop-blur-md border-b border-border/50 overflow-x-auto no-scrollbar scroll-smooth">
+        <CurrencyDisplay mobile />
       </div>
-    </header>
+    </>
   );
 }

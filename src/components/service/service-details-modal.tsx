@@ -35,6 +35,7 @@ import { ServiceStatus } from "@prisma/client";
 import { cn, formatPhone } from "@/lib/utils";
 import { PatternLock } from "@/components/ui/pattern-lock";
 import { parseServiceDiagnosticWithAI } from "@/lib/actions/gemini-actions";
+import { ServiceAIModal } from "./service-ai-modal";
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "Beklemede", color: "bg-slate-500" },
@@ -140,69 +141,14 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
                       "{ticket.problemDesc}"
                     </p>
                   </div>
-
-                  {/* AI Recommendation Result */}
-                  {aiRecommendation && (
-                    <div className="p-6 md:p-8 bg-gradient-to-br from-blue-500/5 to-violet-500/5 dark:from-blue-500/10 dark:to-violet-500/10 border border-blue-200 dark:border-blue-900/50 rounded-3xl space-y-6 animate-in fade-in zoom-in-95 duration-500 shadow-xl shadow-blue-500/5">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                          <Sparkles className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">BAŞAR AI ANALİZİ</span>
-                        <div className={cn(
-                          "ml-auto px-3 py-1.5 rounded-full text-[10px] font-bold border",
-                          aiRecommendation.riskLevel === "Yüksek" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                            aiRecommendation.riskLevel === "Orta" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                              "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                        )}>
-                          ÖNEM: {aiRecommendation.riskLevel}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="h-3.5 w-3.5 text-blue-500/60" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Olası Teşhisler</span>
-                          </div>
-                          <ul className="text-sm text-foreground/80 space-y-2 list-none">
-                            {aiRecommendation.possibleCauses?.map((c: string, i: number) => (
-                              <li key={i} className="flex gap-2 items-start">
-                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                                <span>{c}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-3.5 w-3.5 text-blue-500/60" />
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Önerilen Parçalar</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {aiRecommendation.suggestedParts?.map((p: any, i: number) => (
-                              <div key={i} className="flex flex-col gap-1 p-2.5 rounded-xl bg-background border border-border/50">
-                                <span className="text-xs font-semibold text-foreground">{p.name}</span>
-                                <span className="text-[10px] text-muted-foreground">Tahmini: ₺{p.estimatedPrice}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {aiRecommendation.professionalNote && (
-                        <div className="p-4 bg-blue-600/5 rounded-2xl border border-blue-500/10 flex gap-3">
-                          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                            <Wrench className="h-3 w-3 text-blue-500" />
-                          </div>
-                          <p className="text-xs leading-relaxed italic text-blue-700 dark:text-blue-300">
-                            {aiRecommendation.professionalNote}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
+
+                <ServiceAIModal
+                  isOpen={!!aiRecommendation}
+                  onClose={() => setAiRecommendation(null)}
+                  data={aiRecommendation}
+                  deviceInfo={{ brand: ticket.deviceBrand, model: ticket.deviceModel }}
+                />
               </section>
 
               {/* Müşteri ve Cihaz Kartları */}

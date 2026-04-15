@@ -57,32 +57,32 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
 
         if (typeof analysis === 'string') {
             return (
-                <div className="bg-muted/30 border border-border/50 rounded-2xl p-6 text-sm whitespace-pre-wrap leading-relaxed">
+                <div className="bg-muted/30 border border-border/50 rounded-3xl p-8 text-sm whitespace-pre-wrap leading-relaxed shadow-inner">
                     {analysis}
                 </div>
             );
         }
 
         return (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/10 via-transparent to-blue-600/5 border border-violet-500/20 p-8">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Sparkles className="h-24 w-24 text-violet-500" />
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600/20 via-blue-600/10 to-transparent border border-violet-500/20 p-10 shadow-2xl shadow-violet-500/5">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 translate-x-4 -translate-y-4">
+                        <Sparkles className="h-48 w-48 text-violet-500" />
                     </div>
 
-                    <div className="relative z-10 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-[0.3em] mb-2 px-3 py-1 bg-violet-500/10 rounded-full w-fit">
-                            Yönetici Özeti
+                    <div className="relative z-10 flex flex-col gap-2">
+                        <span className="text-[10px] font-black text-violet-500 bg-violet-500/10 px-4 py-1.5 rounded-full w-fit uppercase tracking-[0.3em]">
+                            YAPAY ZEKA STRATEJİ RAPORU
                         </span>
-                        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                        <h2 className="text-3xl font-black tracking-tighter text-foreground leading-none mt-2">
                             {analysis.reportTitle}
                         </h2>
-                        <div className="flex items-center gap-2 mt-2">
-                            <div className="h-6 w-6 rounded-full bg-violet-600 flex items-center justify-center">
-                                <Activity className="h-3 w-3 text-white" />
+                        <div className="flex items-center gap-3 mt-4">
+                            <div className="h-8 w-8 rounded-full bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                                <Activity className="h-4 w-4 text-white" />
                             </div>
-                            <span className="text-xs font-medium text-muted-foreground">
-                                Danışman: <span className="text-foreground">{analysis.consultantName}</span>
+                            <span className="text-sm font-bold opacity-80">
+                                Baş Danışman: <span className="text-foreground underline decoration-violet-500/30 underline-offset-4">{analysis.consultantName}</span>
                             </span>
                         </div>
                     </div>
@@ -90,31 +90,39 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
 
                 <div className="grid gap-4">
                     {analysis.reportContent.map((item, idx) => {
-                        const isCritical = item.paragraph.toLowerCase().includes("kritik") || item.paragraph.toLowerCase().includes("acil");
-                        const isTip = item.paragraph.toLowerCase().includes("tavsiye") || item.paragraph.toLowerCase().includes("öneri");
+                        const isCritical = item.paragraph.toLowerCase().includes("kritik") || item.paragraph.toLowerCase().includes("acil") || item.paragraph.toLowerCase().includes("risk");
+                        const isTip = item.paragraph.toLowerCase().includes("tavsiye") || item.paragraph.toLowerCase().includes("öneri") || item.paragraph.toLowerCase().includes("fırsat");
 
                         return (
                             <div
                                 key={idx}
                                 className={cn(
-                                    "p-5 rounded-2xl border transition-all hover:shadow-md",
+                                    "p-6 rounded-[2rem] border transition-all hover:scale-[1.01] active:scale-[0.99] cursor-default group",
                                     isCritical
-                                        ? "bg-rose-500/5 border-rose-500/20"
+                                        ? "bg-rose-500/5 border-rose-500/20 shadow-rose-500/5 hover:shadow-rose-500/10"
                                         : isTip
-                                            ? "bg-amber-500/5 border-amber-500/20"
-                                            : "bg-muted/20 border-border/50"
+                                            ? "bg-amber-500/5 border-amber-500/20 shadow-amber-500/5 hover:shadow-amber-500/10"
+                                            : "bg-card border-border/50 hover:border-violet-500/30 shadow-sm"
                                 )}
                             >
-                                <div className="flex gap-4">
+                                <div className="flex gap-5">
                                     <div className={cn(
-                                        "mt-1 shrink-0 h-8 w-8 rounded-xl flex items-center justify-center",
+                                        "mt-1 shrink-0 h-12 w-12 rounded-[1.25rem] flex items-center justify-center transition-transform group-hover:rotate-12 shadow-sm",
                                         isCritical ? "bg-rose-500/10 text-rose-500" : isTip ? "bg-amber-500/10 text-amber-500" : "bg-violet-500/10 text-violet-500"
                                     )}>
-                                        {isCritical ? <AlertTriangle className="h-4 w-4" /> : isTip ? <Lightbulb className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                                        {isCritical ? <AlertTriangle className="h-6 w-6" /> : isTip ? <Lightbulb className="h-6 w-6" /> : <TrendingUp className="h-6 w-6" strokeWidth={2.5} />}
                                     </div>
-                                    <p className="text-sm leading-relaxed text-foreground/90">
-                                        {item.paragraph}
-                                    </p>
+                                    <div className="space-y-1">
+                                        <h4 className={cn(
+                                            "text-[10px] font-black uppercase tracking-widest opacity-60",
+                                            isCritical ? "text-rose-600" : isTip ? "text-amber-600" : "text-violet-600"
+                                        )}>
+                                            {isCritical ? "Kritik Uyarı" : isTip ? "Stratejik Öneri" : "Verimlilik Analizi"}
+                                        </h4>
+                                        <p className="text-sm font-medium leading-relaxed text-foreground/80 md:text-base">
+                                            {item.paragraph}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         );
