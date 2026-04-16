@@ -270,39 +270,39 @@ export default function OnboardingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center lg:justify-center p-4 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-10 pb-20 lg:py-10">
             {/* API Guide Modal */}
             {showApiGuide && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#111] border border-white/10 p-8 rounded-[2rem] max-w-md w-full space-y-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="bg-[#111] border border-white/10 p-6 sm:p-8 rounded-[2rem] max-w-sm sm:max-w-md w-full space-y-4 shadow-2xl">
                         <div className="flex justify-between items-center">
-                            <h3 className="text-xl font-black">Gemini API Anahtarı</h3>
-                            <Button variant="ghost" size="icon" onClick={() => setShowApiGuide(false)}><X /></Button>
+                            <h3 className="text-xl font-black italic">Gemini API Anahtarı</h3>
+                            <Button variant="ghost" size="icon" onClick={() => setShowApiGuide(false)} className="rounded-full"><X className="h-5 w-5" /></Button>
                         </div>
-                        <p className="text-gray-400 text-sm">Google AI Studio üzerinden ücretsiz API anahtarınızı oluşturabilirsiniz.</p>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" className="block w-full text-center py-3 bg-indigo-600 rounded-xl font-bold">Anahtar Al</a>
+                        <p className="text-gray-400 text-sm leading-relaxed">Google AI Studio üzerinden ücretsiz API anahtarınızı çekerek Başar AI'yı kendi limitlerinizle kullanabilirsiniz.</p>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" className="block w-full text-center py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-widest">Anahtar Al</a>
                     </div>
                 </div>
             )}
 
             {/* Animated Background */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[150px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[150px] rounded-full animate-pulse delay-700" />
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <div className="absolute top-[-10%] right-[-10%] w-[80%] md:w-[50%] h-[50%] bg-indigo-500/10 blur-[150px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[80%] md:w-[50%] h-[50%] bg-emerald-500/10 blur-[150px] rounded-full animate-pulse delay-700" />
             </div>
 
-            <div className="w-full max-w-[900px] relative z-10">
+            <div className="w-full max-w-[900px] relative z-10 flex flex-col">
                 {/* Progress Indicators */}
                 {step !== "success" && (
-                    <div className="flex items-center justify-center gap-2 mb-12">
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-8 md:mb-12 sticky top-0 py-4 bg-[#050505]/80 backdrop-blur-md z-30">
                         {["setup", "analysis", "integrations", "finance"].map((s, i) => (
                             <div
                                 key={s}
                                 className={cn(
-                                    "h-1.5 rounded-full transition-all duration-700",
+                                    "h-1 sm:h-1.5 rounded-full transition-all duration-700",
                                     ["setup", "analysis", "integrations", "finance"].indexOf(step) >= i
-                                        ? "w-16 bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
-                                        : "w-8 bg-white/10"
+                                        ? "w-10 sm:w-16 bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                                        : "w-4 sm:w-8 bg-white/10"
                                 )}
                             />
                         ))}
@@ -320,14 +320,14 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-4">
-                                <div className="h-20 w-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                                    <Store className="h-10 w-10 text-white" />
+                                <div className="h-16 w-16 md:h-20 md:w-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-4 md:mb-6">
+                                    <Store className="h-8 w-8 md:h-10 md:w-10 text-white" />
                                 </div>
-                                <h1 className="text-5xl font-black tracking-tighter italic">Dükkanınızı Tanıyalım</h1>
-                                <p className="text-gray-400 text-xl max-w-lg mx-auto leading-relaxed">Başar Bulut ERP ile işletmenizi dijital dünyaya entegre edin. Saniyeler içinde başlayın.</p>
+                                <h1 className="text-3xl md:text-5xl font-black tracking-tighter italic">Dükkanınızı Tanıyalım</h1>
+                                <p className="text-gray-400 text-base md:text-xl max-w-lg mx-auto leading-relaxed px-4">Başar Bulut ERP ile işletmenizi dijital dünyaya entegre edin. Saniyeler içinde başlayın.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-10 rounded-[3rem]">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem]">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
@@ -396,11 +396,11 @@ export default function OnboardingPage() {
                             <Button
                                 onClick={handleNext}
                                 disabled={loading || !shopData.name}
-                                className="w-full h-20 bg-white text-black text-2xl font-black rounded-[2.5rem] hover:bg-gray-200 transition-all hover:scale-[1.01] active:scale-[0.99] group shadow-2xl shadow-white/10"
+                                className="w-full h-16 md:h-20 bg-white text-black text-xl md:text-2xl font-black rounded-[1.5rem] md:rounded-[2.5rem] hover:bg-gray-200 transition-all hover:scale-[1.01] active:scale-[0.99] group shadow-2xl shadow-white/10"
                             >
                                 {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : (
                                     <div className="flex items-center gap-4">
-                                        BAŞLA <ChevronRight className="h-8 w-8 group-hover:translate-x-2 transition-transform" />
+                                        BAŞLA <ChevronRight className="h-6 w-6 md:h-8 md:w-8 group-hover:translate-x-2 transition-transform" />
                                     </div>
                                 )}
                             </Button>
@@ -417,14 +417,14 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-4xl font-black italic tracking-tighter">Sektörel Yapılandırma</h2>
-                                <p className="text-gray-400">Yapay zeka dükkanınız için en iyi modülleri ve terimleri belirledi.</p>
+                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Sektörel Yapılandırma</h2>
+                                <p className="text-gray-400 text-sm md:text-base">Yapay zeka dükkanınız için en iyi modülleri ve terimleri belirledi.</p>
                             </div>
 
                             {/* AI Analysis - Horizontal Section */}
                             <div className="w-full">
                                 {aiAnalysis ? (
-                                    <div className="p-8 bg-indigo-500/10 border border-indigo-500/20 rounded-[2.5rem] space-y-6">
+                                    <div className="p-5 md:p-8 bg-indigo-500/10 border border-indigo-500/20 rounded-[1.5rem] md:rounded-[2.5rem] space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3 text-indigo-400">
                                                 <Cpu className="h-6 w-6 animate-pulse" />
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
                                                 }
                                             }}
                                             className={cn(
-                                                "p-4 rounded-[2rem] border transition-all duration-300 text-left relative group",
+                                                "p-3 sm:p-4 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-300 text-left relative group",
                                                 selectedModules.includes(mod.id)
                                                     ? "bg-white/10 border-white/20 shadow-2xl scale-[1.02]"
                                                     : "bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100"
@@ -538,21 +538,21 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-4xl font-black italic tracking-tighter">Akıllı Entegrasyon</h2>
-                                <p className="text-gray-400">WhatsApp ve AI özelliklerini burada etkinleştirin.</p>
+                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Akıllı Entegrasyon</h2>
+                                <p className="text-gray-400 text-sm md:text-base">WhatsApp ve AI özelliklerini burada etkinleştirin.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 {/* WhatsApp Integration */}
-                                <div className="p-10 rounded-[3rem] bg-emerald-500/5 border border-emerald-500/10 space-y-8 relative overflow-hidden">
+                                <div className="p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-emerald-500/5 border border-emerald-500/10 space-y-6 md:space-y-8 relative overflow-hidden">
                                     <div className="flex items-center justify-between relative z-10">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-16 w-16 bg-emerald-500 rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/40">
-                                                <MessageSquare className="h-8 w-8 text-black" />
+                                        <div className="flex items-center gap-3 md:gap-4">
+                                            <div className="h-12 w-12 md:h-16 md:w-16 bg-emerald-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/40">
+                                                <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-black" />
                                             </div>
                                             <div>
-                                                <h3 className="text-2xl font-black italic">WhatsApp</h3>
-                                                <p className="text-emerald-500/60 text-xs font-bold uppercase tracking-widest">Bağlantı Paneli</p>
+                                                <h3 className="text-xl md:text-2xl font-black italic leading-none md:leading-normal">WhatsApp</h3>
+                                                <p className="text-emerald-500/60 text-[10px] font-bold uppercase tracking-widest">Entegrasyon</p>
                                             </div>
                                         </div>
                                         <Badge className={cn(
@@ -615,16 +615,16 @@ export default function OnboardingPage() {
                                 </div>
 
                                 {/* Gemini AI Integration */}
-                                <div className="p-10 rounded-[3rem] bg-indigo-500/5 border border-indigo-500/10 space-y-8 flex flex-col justify-between">
+                                <div className="p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-indigo-500/5 border border-indigo-500/10 space-y-6 md:space-y-8 flex flex-col justify-between">
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-16 w-16 bg-indigo-500 rounded-3xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
-                                                    <Cpu className="h-8 w-8 text-white" />
+                                            <div className="flex items-center gap-3 md:gap-4">
+                                                <div className="h-12 w-12 md:h-16 md:w-16 bg-indigo-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
+                                                    <Cpu className="h-6 w-6 md:h-8 md:w-8 text-white" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-2xl font-black italic">BAŞAR AI</h3>
-                                                    <p className="text-indigo-500/60 text-xs font-bold uppercase tracking-widest">Zeka Entegrasyonu</p>
+                                                    <h3 className="text-xl md:text-2xl font-black italic leading-none md:leading-normal">BAŞAR AI</h3>
+                                                    <p className="text-indigo-500/60 text-[10px] font-bold uppercase tracking-widest">Zeka Modeli</p>
                                                 </div>
                                             </div>
                                             <Switch checked={geminiStatus} onCheckedChange={setGeminiStatus} />
@@ -715,11 +715,11 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-4xl font-black italic tracking-tighter">Finansal Yapılandırma</h2>
-                                <p className="text-gray-400">Kasa ve banka hesaplarınızı oluşturun.</p>
+                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Finansal Yapılandırma</h2>
+                                <p className="text-gray-400 text-sm md:text-base">Kasa ve banka hesaplarınızı oluşturun.</p>
                             </div>
 
-                            <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-10 rounded-[3rem]">
+                            <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem]">
                                 {accounts.map((acc, index) => (
                                     <div key={acc.id} className="space-y-4 pb-6 border-b border-white/5 last:border-0 last:pb-0">
                                         <div className="grid grid-cols-12 gap-4 items-end">

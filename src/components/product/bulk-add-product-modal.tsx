@@ -12,7 +12,7 @@ import { parseBulkProductsWithAI, AIProductResult } from "@/lib/actions/gemini-a
 import { createProduct } from "@/lib/actions/product-actions";
 import {
     Sparkles, Loader2, Layers, Trash2, CheckCircle2,
-    AlertTriangle, RotateCcw, Plus, ArrowRight
+    AlertTriangle, RotateCcw, Plus, ArrowRight, PlusCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -166,15 +166,15 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
         <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) handleReset(); }}>
             <DialogTrigger asChild>
                 <Button
-                    className="gap-2 h-10 px-5 rounded-xl bg-[#111] border border-[#333] text-violet-400 hover:bg-[#18181A] transition-all  text-xs uppercase tracking-wider"
+                    className="gap-2 h-10 px-5 rounded-xl border border-blue-500/20 bg-muted hover:bg-muted/80 text-foreground transition-all text-xs uppercase tracking-wider gemini-aura-button"
                 >
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4 text-blue-500" />
                     BAŞAR AI Stok Ekle
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[900px] bg-[#111111] border border-[#333333] text-white p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-7 pb-0">
+            <DialogContent className="sm:max-w-[900px] bg-background border border-border text-foreground p-0 overflow-hidden shadow-2xl">
+                <DialogHeader className="p-5 sm:p-7 pb-0">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-violet-600 flex items-center justify-center shadow-md">
                             <Sparkles className="h-6 w-6 text-white" />
@@ -206,7 +206,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                     </div>
                 </DialogHeader>
 
-                <div className="p-7 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar">
+                <div className="p-5 sm:p-7 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar">
 
                     {/* STEP 1: INPUT */}
                     {step === "input" && (
@@ -223,7 +223,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                             variant="outline"
                                             size="sm"
                                             onClick={() => setDescription(s.text)}
-                                            className="h-8 rounded-full bg-[#18181A] border-[#333] text-[11px]  hover:bg-violet-600/10 hover:border-violet-500/50 hover:text-violet-400 text-muted-foreground transition-all"
+                                            className="h-8 rounded-full bg-muted border-border text-[11px]  hover:bg-violet-600/10 hover:border-violet-500/50 hover:text-violet-500 dark:hover:text-violet-400 text-muted-foreground transition-all"
                                         >
                                             {s.name} Ekle
                                         </Button>
@@ -240,7 +240,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                             key={i}
                                             type="button"
                                             onClick={() => setDescription(ex)}
-                                            className="w-full text-left px-4 py-3 rounded-lg bg-[#18181A] border border-[#222222] text-[12px] text-foreground hover:bg-[#222222] hover:border-[#444] hover:text-white transition-all font-medium leading-relaxed"
+                                            className="w-full text-left px-4 py-3 rounded-lg bg-muted border border-border text-[12px] text-foreground hover:bg-muted/80 hover:text-foreground transition-all font-medium leading-relaxed"
                                         >
                                             <span className="text-violet-400  mr-2">{i + 1}.</span>
                                             {ex}
@@ -259,7 +259,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                     onChange={e => setDescription(e.target.value)}
                                     placeholder="Örn: iPhone 11'den 17 Pro Max'e kadar hayalet camı, 10'ar adet, alış 1.5 dolar satış 200 TL"
                                     rows={5}
-                                    className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-5 py-4 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none transition-all leading-relaxed"
+                                    className="w-full bg-muted border border-border rounded-lg px-5 py-4 text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none transition-all leading-relaxed"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAnalyze(); }}
                                 />
                                 <div className="flex flex-col gap-1 mt-2">
@@ -289,10 +289,10 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                     {/* STEP 2: REVIEW TABLE */}
                     {step === "review" && (
                         <div className="space-y-4">
-                            <div className="overflow-x-auto rounded-lg border border-[#333333] bg-[#18181A]">
+                            <div className="overflow-x-auto rounded-lg border border-border bg-background">
                                 <table className="w-full text-[12px]">
                                     <thead>
-                                        <tr className="border-b border-[#333333] bg-[#111111]">
+                                        <tr className="border-b border-border bg-muted/30">
                                             <th className="text-left px-4 py-3 text-[10px]  text-muted-foreground uppercase tracking-widest w-8">#</th>
                                             <th className="text-left px-4 py-3 text-[10px]  text-muted-foreground/80 uppercase tracking-widest">Ürün Adı</th>
                                             <th className="text-left px-4 py-3 text-[10px]  text-muted-foreground/80 uppercase tracking-widest">Kategori</th>
@@ -321,7 +321,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                         value={row.name}
                                                         onChange={e => updateRow(row._id, "name", e.target.value)}
                                                         disabled={row._status === "saved"}
-                                                        className="h-8 bg-white/[0.03] border-border rounded-lg text-[12px] font-semibold min-w-[180px] disabled:opacity-60"
+                                                        className="h-8 bg-muted border-border rounded-lg text-[12px] font-semibold min-w-[180px] disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground font-medium max-w-[120px] truncate">
@@ -339,7 +339,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                                     value={row.buyPriceUsd}
                                                                     onChange={e => updateRow(row._id, "buyPriceUsd", Number(e.target.value))}
                                                                     disabled={row._status === "saved"}
-                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px]  text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
+                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px]  text-emerald-700 dark:text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
                                                                 />
                                                             </div>
                                                         )}
@@ -350,7 +350,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                                 value={row.buyPrice}
                                                                 onChange={e => updateRow(row._id, "buyPrice", Number(e.target.value))}
                                                                 disabled={row._status === "saved"}
-                                                                className="h-8 bg-white/[0.03] border-border rounded-lg text-[12px]  text-amber-300 w-24 text-right pl-5 disabled:opacity-60"
+                                                                className="h-8 bg-muted border-border rounded-lg text-[12px]  text-amber-600 dark:text-amber-300 w-24 text-right pl-5 disabled:opacity-60"
                                                             />
                                                         </div>
                                                     </div>
@@ -361,7 +361,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                         value={row.sellPrice}
                                                         onChange={e => updateRow(row._id, "sellPrice", Number(e.target.value))}
                                                         disabled={row._status === "saved"}
-                                                        className="h-8 bg-white/[0.03] border-emerald-500/20 rounded-lg text-[12px]  text-emerald-300 w-24 text-right disabled:opacity-60"
+                                                        className="h-8 bg-muted border-emerald-500/20 rounded-lg text-[12px]  text-emerald-600 dark:text-emerald-300 w-24 text-right disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -370,7 +370,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                         value={row.stock}
                                                         onChange={e => updateRow(row._id, "stock", Number(e.target.value))}
                                                         disabled={row._status === "saved"}
-                                                        className="h-8 bg-white/[0.03] border-border rounded-lg text-[12px]  text-blue-300 w-16 text-center disabled:opacity-60"
+                                                        className="h-8 bg-muted border-border rounded-lg text-[12px]  text-blue-600 dark:text-blue-300 w-16 text-center disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -379,7 +379,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                         onChange={e => updateRow(row._id, "location", e.target.value || undefined)}
                                                         disabled={row._status === "saved"}
                                                         placeholder="Raf..."
-                                                        className="h-8 bg-white/[0.03] border-border rounded-lg text-[12px] font-medium w-24 disabled:opacity-60"
+                                                        className="h-8 bg-muted border-border rounded-lg text-[12px] font-medium w-24 disabled:opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
@@ -415,7 +415,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                             <div className="flex items-center justify-between gap-4 pt-2">
                                 <div className="flex gap-3">
                                     <Button type="button" variant="ghost" onClick={handleReset}
-                                        className="gap-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] ">
+                                        className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl h-10 px-4 text-[12px] ">
                                         <RotateCcw className="h-4 w-4" /> Yeniden Yaz
                                     </Button>
                                     <Button type="button" variant="ghost" onClick={() => {
@@ -426,7 +426,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                         };
                                         setRows(prev => [...prev, newRow]);
                                     }}
-                                        className="gap-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-xl h-10 px-4 text-[12px] ">
+                                        className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl h-10 px-4 text-[12px] ">
                                         <Plus className="h-4 w-4" /> Satır Ekle
                                     </Button>
                                 </div>
@@ -436,16 +436,16 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                     onClick={handleSaveAll}
                                     disabled={isSavePending || pendingCount === 0}
                                     className={cn(
-                                        "h-12 px-8 rounded-xl  text-[13px] uppercase tracking-wider transition-all gap-2",
+                                        "h-12 px-8 rounded-xl text-[13px] uppercase tracking-wider transition-all gap-2 font-normal",
                                         pendingCount > 0
-                                            ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_24px_rgba(16,185,129,0.3)]"
+                                            ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_24px_rgba(59,130,246,0.15)]"
                                             : "bg-muted text-muted-foreground/80 cursor-not-allowed"
                                     )}
                                 >
                                     {isSavePending ? (
                                         <><Loader2 className="h-5 w-5 animate-spin" /> Kaydediliyor...</>
                                     ) : (
-                                        <><ArrowRight className="h-5 w-5" /> {pendingCount} Ürünü Kaydet</>
+                                        <><PlusCircle className="h-5 w-5 text-green-400" /> {pendingCount} Ürünü Kaydet</>
                                     )}
                                 </Button>
                             </div>

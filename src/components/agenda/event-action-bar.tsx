@@ -93,31 +93,29 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
     };
 
     const renderActionButton = () => {
-        // If event is already completed, show only the badge
         if (event.isCompleted) {
             return (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider w-fit">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black uppercase tracking-widest w-fit">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Tamamlandı
                 </div>
             );
         }
 
-        if (!isAgendaEvent) return null;   // no actions for SERVICE/SUPPLIER_TX source events
+        if (!isAgendaEvent) return null;
 
         if (isFinancial) {
             return (
                 <div
-                    className={cn("flex items-center gap-2", compact ? "flex-col items-start" : "flex-row")}
+                    className={cn("flex items-center gap-3", compact ? "flex-col sm:flex-row items-stretch sm:items-center" : "flex-row")}
                     onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                        <SelectTrigger className="h-8 text-[11px] bg-[#1a1a1a] border-[#333] min-w-[130px]">
+                        <SelectTrigger className="h-10 text-[11px] font-bold bg-background border-border min-w-[140px] rounded-xl">
                             <SelectValue placeholder="Kasa Seçin" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                        <SelectContent className="bg-card border-border rounded-xl">
                             {accounts.map(acc => (
-                                <SelectItem key={acc.id} value={acc.id} className="text-[11px]">
+                                <SelectItem key={acc.id} value={acc.id} className="text-[11px] font-bold">
                                     {acc.name} — ₺{Number(acc.balance).toLocaleString("tr-TR")}
                                 </SelectItem>
                             ))}
@@ -128,15 +126,15 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
                         disabled={!!busy}
                         onClick={handleRealize}
                         className={cn(
-                            "h-8 text-xs px-3 text-white font-semibold whitespace-nowrap",
-                            event.type === "PAYMENT" ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"
+                            "h-10 text-[10px] px-5 text-white font-black uppercase tracking-widest whitespace-nowrap rounded-xl shadow-lg transition-transform active:scale-95",
+                            event.type === "PAYMENT" ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20" : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
                         )}
                     >
                         {busy === "realize"
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             : event.type === "PAYMENT"
-                                ? <><Receipt className="h-3.5 w-3.5 mr-1.5" /> Ödeme Yapıldı</>
-                                : <><DollarSign className="h-3.5 w-3.5 mr-1.5" /> Tahsil Edildi</>
+                                ? <><Receipt className="h-3.5 w-3.5 mr-2" /> Ödemeyi Yap</>
+                                : <><DollarSign className="h-3.5 w-3.5 mr-2" /> Tahsil Et</>
                         }
                     </Button>
                 </div>
@@ -149,11 +147,11 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
                     size="sm"
                     disabled={!!busy}
                     onClick={handleComplete}
-                    className="h-8 text-xs px-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    className="h-10 text-[10px] px-5 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-transform"
                 >
                     {busy === "complete"
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <><Play className="h-3.5 w-3.5 mr-1.5" /> Servise Başlanıldı</>
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <><Play className="h-3.5 w-3.5 mr-2" /> Servise Başla</>
                     }
                 </Button>
             );
@@ -165,11 +163,11 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
                     size="sm"
                     disabled={!!busy}
                     onClick={handleComplete}
-                    className="h-8 text-xs px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
+                    className="h-10 text-[10px] px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-transform"
                 >
                     {busy === "complete"
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <><CheckCheck className="h-3.5 w-3.5 mr-1.5" /> Yapıldı ✓</>
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <><CheckCheck className="h-3.5 w-3.5 mr-2" /> Tamamla</>
                     }
                 </Button>
             );
@@ -179,31 +177,31 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
     };
 
     return (
-        <div className="space-y-2 mt-2">
+        <div className="space-y-3">
             {/* Primary Action */}
             {renderActionButton()}
 
             {/* Reschedule inline form */}
             {showReschedule && isAgendaEvent && !event.isCompleted && (
-                <div className="flex items-center gap-2 mt-1 p-2 bg-[#111] rounded-xl border border-[#2a2a2a]">
+                <div className="flex items-center gap-2 mt-2 p-3 bg-muted/60 rounded-2xl border border-border shadow-inner">
                     <input
                         type="date"
                         value={newDate}
                         onChange={e => setNewDate(e.target.value)}
-                        className="h-8 rounded-lg border border-[#333] bg-[#1a1a1a] text-xs text-white px-2 flex-1 outline-none"
+                        className="h-9 rounded-xl border border-border bg-background text-[11px] font-bold text-foreground px-3 flex-1 outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <Button
                         size="sm"
                         disabled={!!busy}
                         onClick={handleReschedule}
-                        className="h-8 text-xs px-3 bg-amber-600 hover:bg-amber-700 text-white"
+                        className="h-9 text-[10px] px-4 bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-wider rounded-xl shadow-md"
                     >
-                        {busy === "reschedule" ? <Loader2 className="h-3 w-3 animate-spin" /> : "Ertele"}
+                        {busy === "reschedule" ? <Loader2 className="h-3 w-3 animate-spin" /> : "GÜNCELLE"}
                     </Button>
                     <Button
                         size="sm" variant="ghost"
                         onClick={() => setShowReschedule(false)}
-                        className="h-8 w-8 p-0 text-muted-foreground/80 hover:text-white"
+                        className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground rounded-xl"
                     >
                         ✕
                     </Button>
@@ -212,22 +210,22 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
 
             {/* Secondary: Reschedule + Delete */}
             {isAgendaEvent && !event.isCompleted && (
-                <div className="flex items-center gap-1.5 pt-1">
+                <div className="flex items-center gap-2">
                     <Button
                         size="sm" variant="ghost"
                         disabled={!!busy}
                         onClick={() => setShowReschedule(v => !v)}
-                        className="h-7 text-[11px] px-2 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                        className="h-8 text-[10px] px-3 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 font-black uppercase tracking-widest rounded-xl transition-colors"
                     >
-                        <CalendarClock className="h-3.5 w-3.5 mr-1.5" /> Ertele
+                        <CalendarClock className="h-3.5 w-3.5 mr-2" /> Ertele
                     </Button>
                     <Button
                         size="sm" variant="ghost"
                         disabled={!!busy}
                         onClick={handleDelete}
-                        className="h-7 text-[11px] px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        className="h-8 text-[10px] px-3 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 font-black uppercase tracking-widest rounded-xl transition-colors"
                     >
-                        {busy === "delete" ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Trash2 className="h-3.5 w-3.5 mr-1.5" /> Sil</>}
+                        {busy === "delete" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Trash2 className="h-3.5 w-3.5 mr-2" /> Sil</>}
                     </Button>
                 </div>
             )}

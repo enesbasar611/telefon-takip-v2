@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   ClipboardList,
   CheckCircle2,
@@ -56,11 +56,12 @@ export function ShortageList() {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
+  const fetchSuppliers = useCallback(async () => {
+    const data = await getSuppliers();
+    setSuppliers(data);
+  }, []);
+
   useEffect(() => {
-    const fetchSuppliers = async () => {
-      const data = await getSuppliers();
-      setSuppliers(data);
-    };
     fetchSuppliers();
 
     const handleClickOutside = (event: MouseEvent) => {
@@ -70,7 +71,14 @@ export function ShortageList() {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [fetchSuppliers]);
+
+  // Refresh suppliers when tab changes to "lists" or "analysis"
+  useEffect(() => {
+    if (activeTab !== "main") {
+      fetchSuppliers();
+    }
+  }, [activeTab, fetchSuppliers]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -133,10 +141,8 @@ export function ShortageList() {
   };
 
   const handleSendToSupplier = async (supplier: any, item: any) => {
-    const success = assignProductToSupplier(supplier.id, supplier.name, supplier.phone, { productId: item.productId, name: item.name }, item.quantity);
-    if (success) {
-      await removeShortage(item.id, true);
-    }
+    assignProductToSupplier(supplier.id, supplier.name, supplier.phone, { productId: item.productId, name: item.name }, item.quantity);
+    await removeShortage(item.id, true);
   };
 
   const handleWhatsAppClick = (supplierId: string) => {

@@ -38,7 +38,7 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                         <div className="flex items-baseline gap-2">
                             <RevealFinancial
                                 amount={stats.totalValue}
-                                className="text-4xl  text-white tracking-tight"
+                                className="text-4xl text-foreground tracking-tight"
                             />
                         </div>
                         <p className="text-[10px] text-muted-foreground/80  mt-2 flex items-center gap-1">
@@ -60,7 +60,7 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                 <div className="flex flex-col">
                     <RevealFinancial
                         amount={stats.potentialProfit}
-                        className="text-2xl  text-white tracking-tight"
+                        className="text-2xl text-foreground tracking-tight"
                     />
                     <div className="flex items-center gap-1 mt-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -77,7 +77,7 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                             <Layers className="h-4 w-4 text-orange-500" />
                             <span className="text-[10px]  text-muted-foreground/80">TOPLAM ÜRÜN</span>
                         </div>
-                        <span className="text-xl  text-white">{stats.totalItems}</span>
+                        <span className="text-xl text-foreground font-black">{stats.totalItems}</span>
                     </div>
                 </Card>
 
@@ -87,7 +87,7 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                             <AlertTriangle className={`h-4 w-4 ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-muted-foreground/80'}`} />
                             <span className="text-[10px]  text-muted-foreground/80  uppercase">Kritik Stok</span>
                         </div>
-                        <span className={`text-xl  ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-white'}`}>
+                        <span className={`text-xl font-black ${stats.criticalCount > 0 ? 'text-rose-500' : 'text-foreground'}`}>
                             {stats.criticalCount}
                         </span>
                     </div>

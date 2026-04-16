@@ -36,8 +36,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214.3 32% 88%;
+    --input: 214.3 32% 88%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 1rem;
@@ -296,4 +296,124 @@
 
 .pause {
   animation-play-state: paused;
+}
+
+/* ✨ Google Gemini Style Border Beam Aura ✨ */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-aura {
+  to {
+    --angle: 360deg;
+  }
+}
+
+/* ✨ Premium Border Beam System — Adapted from Magic UI ✨ */
+.border-beam-container {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Modal Border Beam — Permanent and Subtle */
+.gemini-aura-modal {
+  position: relative;
+  overflow: hidden !important;
+}
+
+.gemini-aura-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0px;
+  padding: 1.5px;
+  /* Beam width */
+  background: conic-gradient(from var(--angle),
+      transparent 0deg,
+      transparent 280deg,
+      #3b82f6 300deg,
+      #8b5cf6 330deg,
+      #ec4899 360deg);
+  border-radius: inherit;
+  z-index: 100;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-aura 6s linear infinite;
+  opacity: 0.5;
+}
+
+/* Input Border Beam — Active on Focus */
+.gemini-aura-input {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.gemini-aura-input:focus-within {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px -10px rgba(139, 92, 246, 0.3);
+}
+
+.gemini-aura-input::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  background: conic-gradient(from var(--angle),
+      transparent 0deg,
+      transparent 280deg,
+      #3b82f6 300deg,
+      #8b5cf6 330deg,
+      #ec4899 360deg);
+  border-radius: inherit;
+  z-index: 10;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-aura 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gemini-aura-input:focus-within::after {
+  opacity: 1;
+}
+
+.gemini-aura-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  isolation: isolate;
+}
+
+.gemini-aura-button::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  background: conic-gradient(from var(--angle),
+      transparent 70%,
+      #3b82f6 80%,
+      #8b5cf6 90%,
+      #ec4899 100%);
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-aura 3s linear infinite;
+  opacity: 0.8;
+}
+
+.gemini-aura-button:hover::before {
+  opacity: 1;
+  filter: blur(0.5px);
+}
+
+.gemini-aura-button:hover {
+  box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.3);
 }

@@ -54,9 +54,10 @@ interface SupplierProfileProps {
     supplier: any;
     onBack: () => void;
     suppliers: any[];
+    shop?: any;
 }
 
-export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }: SupplierProfileProps) {
+export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, shop }: SupplierProfileProps) {
     const [supplier, setSupplier] = useState(initialSupplier);
     const [activeTab, setActiveTab] = useState("orders");
     const [isMalKabulOpen, setIsMalKabulOpen] = useState(false);
@@ -68,6 +69,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [initialPaymentOrderId, setInitialPaymentOrderId] = useState<string | undefined>(undefined);
     const [isDeleting, setIsDeleting] = useState(false);
     const [pendingOrdersToDelete, setPendingOrdersToDelete] = useState<any[]>([]);
     const [isPendingOrdersModalOpen, setIsPendingOrdersModalOpen] = useState(false);
@@ -83,10 +85,10 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
     };
 
     const stats = [
-        { label: "Toplam Alışveriş", value: `₺${Math.round(Number(supplier.totalShopping || 0)).toLocaleString("tr-TR")}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
-        { label: "Güncel Borç", value: `₺${Math.round(Number(supplier.balance || 0)).toLocaleString("tr-TR")}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
-        { label: "Geciken Ödemeler", value: "₺0", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
-        { label: "Aktif Siparişler", value: `${supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").length || 0} Adet`, icon: Truck, color: "text-purple-500", bg: "bg-purple-500/10" },
+        { id: "history", label: "Toplam Alışveriş", value: `₺${Math.round(Number(supplier.totalShopping || 0)).toLocaleString("tr-TR")}`, icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", trend: "+12%" },
+        { id: "cari", label: "Güncel Borç", value: `₺${Math.round(Number(supplier.balance || 0)).toLocaleString("tr-TR")}`, icon: Wallet, color: "text-rose-500", bg: "bg-rose-500/10" },
+        { id: "payment", label: "Toplam Ödenen", value: `₺${Math.round(Number(supplier.totalShopping || 0) - Number(supplier.balance || 0)).toLocaleString("tr-TR")}`, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { id: "orders", label: "Aktif Siparişler", value: `${supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").length || 0} Adet`, icon: Truck, color: "text-purple-500", bg: "bg-purple-500/10" },
     ];
 
     const handlePrintCari = () => {
@@ -253,7 +255,14 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
-                    <Card key={i} className="bg-card border-border/50 overflow-hidden group hover:border-border transition-all">
+                    <Card
+                        key={i}
+                        className="bg-card border-border/50 overflow-hidden group hover:border-blue-500/50 transition-all cursor-pointer select-none ring-offset-background active:scale-[0.98]"
+                        onClick={() => {
+                            if (stat.id === "payment") setIsPaymentOpen(true);
+                            else setActiveTab(stat.id);
+                        }}
+                    >
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                                 <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", stat.bg)}>
@@ -273,7 +282,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
             </div>
 
             {/* Tabs Section */}
-            <Tabs defaultValue="orders" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="bg-transparent border-b border-border/50 w-full justify-start rounded-none h-auto p-0 gap-8">
                     {[
                         { id: "orders", label: "Sipariş Listeleri", icon: Truck },
@@ -341,12 +350,16 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Button
-                                                                onClick={() => handleMalKabul(order)}
+                                                                onClick={() => {
+                                                                    setInitialPaymentOrderId(order.id);
+                                                                    setIsPaymentOpen(true);
+                                                                }}
+                                                                hidden={order.paymentStatus === "PAID"}
                                                                 variant="outline"
                                                                 size="sm"
                                                                 className="h-8 rounded-lg text-[10px]  uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
                                                             >
-                                                                Teslim Al
+                                                                Ödeme Yap
                                                             </Button>
                                                             <Button
                                                                 onClick={() => handleDetail(order)}
@@ -410,6 +423,18 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-2">
+                                                            <Button
+                                                                onClick={() => {
+                                                                    setInitialPaymentOrderId(order.id);
+                                                                    setIsPaymentOpen(true);
+                                                                }}
+                                                                disabled={order.paymentStatus === "PAID"}
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg text-[10px]  uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
+                                                            >
+                                                                {order.paymentStatus === "PAID" ? "Ödendi" : "Ödeme Yap"}
+                                                            </Button>
                                                             <Button
                                                                 onClick={() => handleDetail(order)}
                                                                 variant="ghost"
@@ -535,9 +560,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
 
             <SupplierPaymentModal
                 isOpen={isPaymentOpen}
-                onClose={() => setIsPaymentOpen(false)}
+                onClose={() => {
+                    setIsPaymentOpen(false);
+                    setInitialPaymentOrderId(undefined);
+                }}
                 supplierId={supplier.id}
                 supplierName={supplier.name}
+                initialOrderId={initialPaymentOrderId}
                 unpaidOrders={supplier.purchases?.filter((p: any) => p.paymentStatus !== "PAID")}
                 onSuccess={(updatedSupplier) => {
                     if (updatedSupplier) setSupplier(updatedSupplier);
@@ -589,6 +618,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers }
                 isOpen={isPurchaseFormOpen}
                 onClose={() => setIsPurchaseFormOpen(false)}
                 suppliers={suppliers}
+                shop={shop}
                 defaultSupplierId={supplier.id}
                 onSuccess={(newOrder) => {
                     setSupplier({

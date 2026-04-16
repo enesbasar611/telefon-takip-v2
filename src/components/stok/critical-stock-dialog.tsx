@@ -63,8 +63,8 @@ export function CriticalStockDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl bg-[#0a0a0a] border-border text-white p-0 overflow-hidden rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.8)]">
-                <DialogHeader className="p-8 border-b border-border/50 bg-white/[0.02]">
+            <DialogContent className="max-w-3xl bg-background border-border text-foreground p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+                <DialogHeader className="p-8 border-b border-border/50 bg-muted/10">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
                             <AlertTriangle className="h-6 w-6 text-rose-500" />
@@ -96,17 +96,17 @@ export function CriticalStockDialog({
                             </TableHeader>
                             <TableBody>
                                 {products.map((product) => (
-                                    <TableRow key={product.id} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group">
+                                    <TableRow key={product.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors group">
                                         <TableCell className="px-6 py-5">
                                             <div className="flex flex-col">
-                                                <span className=" text-sm text-foreground/90 group-hover:text-white transition-colors">{product.name}</span>
+                                                <span className=" text-sm text-foreground/90 group-hover:text-primary transition-colors">{product.name}</span>
                                                 <span className="text-[10px] text-muted-foreground/80  mt-1 tracking-tighter uppercase">{product.category?.name || "Kategorisiz"}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant="outline"
-                                                className="bg-rose-500/10 text-rose-500 border-rose-500/20  text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse px-3 py-1 rounded-full"
+                                                className="bg-rose-500/10 text-rose-500 border-rose-500/20  text-[11px] shadow-[0_0_15px_rgba(244,63,94,0.15)] px-3 py-1 rounded-full"
                                             >
                                                 {product.stock} Adet
                                             </Badge>
@@ -136,10 +136,10 @@ export function CriticalStockDialog({
                     )}
                 </div>
 
-                <div className="p-6 border-t border-border/50 bg-white/[0.01] flex justify-end">
+                <div className="p-6 border-t border-border bg-muted/10 flex justify-end">
                     <Button
                         variant="ghost"
-                        className="rounded-xl  text-xs px-8 text-muted-foreground/80 hover:text-white hover:bg-white/5"
+                        className="rounded-xl  text-xs px-8 text-muted-foreground/80 hover:text-foreground hover:bg-muted"
                         onClick={() => onOpenChange(false)}
                     >
                         Kapat
@@ -149,8 +149,3 @@ export function CriticalStockDialog({
         </Dialog>
     );
 }
-
-
-
-
-

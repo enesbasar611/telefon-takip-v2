@@ -65,7 +65,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         </Suspense>
       </div>
 
-      <div className="bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border border-border/40">
+      <div className="bg-card shadow-sm rounded-[2rem] overflow-hidden border border-border">
         <Suspense fallback={<TableSkeleton />}>
           <StockTableStream searchParams={searchParams} shop={shop} />
         </Suspense>

@@ -39,6 +39,7 @@ interface SupplierPaymentModalProps {
     unpaidOrders?: any[];
     suppliers?: any[];
     allPurchaseOrders?: any[];
+    initialOrderId?: string;
     onSuccess?: (updatedSupplier?: any) => void;
 }
 
@@ -50,6 +51,13 @@ const supplierPaymentSchema = z.object({
     purchaseOrderId: z.string().optional(),
     accountId: z.string().optional(),
     paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]).optional(),
+}).refine((data) => {
+    // Ödeme yaparken (EXPENSE) kasa/banka seçimi zorunlu
+    if (data.type === "EXPENSE" && !data.accountId) return false;
+    return true;
+}, {
+    message: "Ödeme yaparken bir kasa/hesap seçmelisiniz",
+    path: ["accountId"],
 });
 
 type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
@@ -62,6 +70,7 @@ export function SupplierPaymentModal({
     unpaidOrders: initialUnpaidOrders = [],
     suppliers = [],
     allPurchaseOrders = [],
+    initialOrderId,
     onSuccess
 }: SupplierPaymentModalProps) {
     const [isPending, startTransition] = useTransition();
@@ -87,6 +96,8 @@ export function SupplierPaymentModal({
             supplierId: initialSupplierId || "",
             type: "EXPENSE",
             description: "",
+            purchaseOrderId: initialOrderId || undefined,
+            paymentMethod: "CASH"
         }
     });
 
@@ -107,9 +118,20 @@ export function SupplierPaymentModal({
                 const amount = Math.round(Number(order.remainingAmount || order.totalAmount));
                 setValue("amount", amount);
                 setValue("description", `${order.orderNo} nolu sipariş ödemesi`);
+                setValue("type", "EXPENSE");
             }
         }
     }, [selectedOrderId, effectiveUnpaidOrders, setValue]);
+
+    // Pre-select initialOrderId if passed
+    useEffect(() => {
+        if (isOpen && initialOrderId) {
+            setValue("purchaseOrderId", initialOrderId);
+        } else if (isOpen && initialUnpaidOrders.length === 1 && !selectedOrderId) {
+            // Tek bir ödenmemiş sipariş varsa otomatik seç
+            setValue("purchaseOrderId", initialUnpaidOrders[0].id);
+        }
+    }, [isOpen, initialOrderId, initialUnpaidOrders, setValue, selectedOrderId]);
 
     const onSubmit = async (data: SupplierPaymentFormValues) => {
         startTransition(async () => {

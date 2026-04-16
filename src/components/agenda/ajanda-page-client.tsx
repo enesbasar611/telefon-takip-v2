@@ -1,24 +1,30 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ChevronLeft, ChevronRight, Activity, PenTool, Receipt, DollarSign, CheckCircle2, RefreshCw } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Activity, PenTool, Receipt, DollarSign, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid, CalendarEvent } from "./calendar-grid";
 import { DayDetailsModal } from "./day-details-modal";
 import { format, isToday, isSameDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getCalendarEventsAction, bulkDeleteAgendaEventsAction, clearAllAgendaEventsAction } from "@/lib/actions/agenda-actions";
+import { getCalendarEventsAction, bulkDeleteAgendaEventsAction, clearMonthAgendaEventsAction } from "@/lib/actions/agenda-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
 import { EventActionBar } from "./event-action-bar";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Trash2, CheckSquare, Square } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface AjandaPageClientProps {
     initialEvents: CalendarEvent[];
 }
+
+const TYPE_CONFIG: any = {
+    SERVICE: { colors: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+    PAYMENT: { colors: "bg-rose-500/10 text-rose-600 border-rose-500/20" },
+    COLLECTION: { colors: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+    TASK: { colors: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+};
 
 export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
     const router = useRouter();
@@ -30,6 +36,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+    const [isPending, startTransition] = useTransition();
 
     // Load accounts for financial actions
     useEffect(() => {
@@ -69,17 +76,18 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
     const handleModalClose = useCallback(async () => {
         setIsDayModalOpen(false);
         await refreshEvents();
-        router.refresh(); // also revalidate server components
+        router.refresh();
     }, [refreshEvents, router]);
 
-    const handleClearAll = async () => {
-        if (!window.confirm("TÜM TAKVİMİ SİLMEK İSTEDİĞİNİZDEN EMİN MİSİNİZ? Tüm servis, ödeme ve randevu kayıtları silinecek. Bu işlem geri alınamaz.")) return;
+    const handleClearMonth = async () => {
+        const monthName = format(currentDate, "MMMM", { locale: tr });
+        if (!window.confirm(`${monthName} ayına ait TÜM kayıtları takvimden kaldırmak istediğinizden emin misiniz? (Sistemden silinmez, sadece bu görünümden gizlenir)`)) return;
 
         setIsRefreshing(true);
         try {
-            const res = await clearAllAgendaEventsAction();
+            const res = await clearMonthAgendaEventsAction(currentDate.getFullYear(), currentDate.getMonth() + 1);
             if (res.success) {
-                toast.success("Takvim başarıyla temizlendi.");
+                toast.success(`${monthName} ayı başarıyla temizlendi.`);
                 await refreshEvents();
                 router.refresh();
             } else {
@@ -96,13 +104,13 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`${selectedIds.length} adet randevuyu silmek istediğinize emin misiniz?`)) return;
+        if (!confirm(`${selectedIds.length} adet kaydı takvimden kaldırmak istediğinize emin misiniz?`)) return;
 
         setIsBulkDeleting(true);
         try {
             const res = await bulkDeleteAgendaEventsAction(selectedIds);
             if (res.success) {
-                toast.success("Seçili randevular silindi.");
+                toast.success("Seçili kayıtlar takvimden kaldırıldı.");
                 await refreshEvents();
                 router.refresh();
             } else {
@@ -117,38 +125,28 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    const getEventIcon = (type: string) => {
-        switch (type) {
-            case 'SERVICE': return <PenTool className="h-4 w-4 text-blue-500" />;
-            case 'PAYMENT': return <Receipt className="h-4 w-4 text-red-500" />;
-            case 'COLLECTION': return <DollarSign className="h-4 w-4 text-emerald-500" />;
-            case 'TASK': return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
-            default: return <Activity className="h-4 w-4 text-muted-foreground/80" />;
-        }
-    };
-
     return (
-        <div className="flex flex-col lg:flex-row gap-6 mt-6 max-w-full overflow-x-hidden">
-            {/* Left Main Area: Calendar */}
-            <div className="flex-1 min-w-0 flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row gap-8 mt-4 max-w-full">
+            {/* Left Area: Calendar */}
+            <div className="flex-1 min-w-0 flex flex-col gap-6">
                 {/* Header Controls */}
-                <div className="flex items-center justify-between bg-[#111111] border border-[#222] p-4 rounded-3xl">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center bg-[#1a1a1a] rounded-xl border border-[#222] p-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-border p-5 rounded-[2.5rem] shadow-sm gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center bg-muted/50 rounded-2xl border border-border p-1">
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-                                className="h-8 w-8 text-muted-foreground hover:text-white"
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="w-36 text-center text-sm font-semibold uppercase tracking-wider text-white">
+                            <span className="w-32 sm:w-40 text-center text-[13px] font-bold uppercase tracking-widest text-foreground">
                                 {format(currentDate, "MMMM yyyy", { locale: tr })}
                             </span>
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-                                className="h-8 w-8 text-muted-foreground hover:text-white"
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -156,92 +154,88 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         <Button
                             onClick={() => handleMonthChange(new Date())}
                             variant="outline"
-                            className="h-10 border-[#333] bg-transparent hover:bg-[#222] text-foreground rounded-xl px-4 text-xs tracking-wider"
+                            className="h-11 border-border bg-background hover:bg-muted text-foreground font-black rounded-2xl px-5 text-[10px] tracking-[0.2em]"
                         >
                             BUGÜN
                         </Button>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Legend */}
-                        <div className="hidden md:flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500" /> Servis</span>
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Gelir</span>
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500" /> Ödeme</span>
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500" /> Görev</span>
-                        </div>
-
-                        {/* Manual Refresh */}
+                    <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-1">
                         <Button
                             onClick={refreshEvents}
                             variant="ghost"
                             size="icon"
-                            className={cn("h-10 w-10 text-muted-foreground/80 hover:text-white rounded-xl", isRefreshing && "animate-spin")}
+                            className={cn("h-11 w-11 text-muted-foreground hover:text-foreground rounded-2xl bg-muted/60 border border-border", isRefreshing && "animate-spin")}
                         >
                             <RefreshCw className="h-4 w-4" />
                         </Button>
 
                         <Button
-                            onClick={handleClearAll}
+                            onClick={handleClearMonth}
                             variant="ghost"
-                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl h-10 px-4 flex items-center gap-2 border border-red-500/20 transition-all font-semibold"
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 rounded-2xl h-11 px-6 flex items-center gap-2 border border-rose-500/20 transition-all font-black group"
                         >
-                            <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline text-xs uppercase tracking-wider">Takvimi Temizle</span>
+                            <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                            <span className="hidden sm:inline text-[10px] uppercase tracking-[0.15em] leading-none">Ayı Temizle</span>
                         </Button>
 
                         <Button
                             onClick={() => { setSelectedDate(new Date()); setIsDayModalOpen(true); }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 px-4 flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all font-semibold"
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-11 px-7 flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 transition-all font-black"
                         >
-                            <Plus className="h-4 w-4" /> <span className="hidden sm:inline text-xs uppercase tracking-wider">Yeni İşlem</span>
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline text-[10px] uppercase tracking-[0.15em] leading-none">Yeni İşlem</span>
                         </Button>
                     </div>
                 </div>
 
                 {/* Calendar Grid */}
-                <CalendarGrid
-                    currentDate={currentDate}
-                    events={events}
-                    onDayClick={(day) => {
-                        setSelectedDate(day);
-                        setIsDayModalOpen(true);
-                    }}
-                />
+                <div className={cn("transition-all duration-300", isRefreshing ? "opacity-30 blur-[1px] pointer-events-none" : "opacity-100")}>
+                    <CalendarGrid
+                        currentDate={currentDate}
+                        events={events}
+                        onDayClick={(day) => {
+                            setSelectedDate(day);
+                            setIsDayModalOpen(true);
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Right Side Agenda Panel */}
-            <div className="w-full lg:w-[320px] flex flex-col gap-4">
-                <div className="bg-[#111111] border border-[#222] rounded-3xl p-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold text-white">Bugünün Gündemi</h3>
-                            {todaysEvents.filter(e => !e.isCompleted).length > 0 && (
-                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                                    {todaysEvents.filter(e => !e.isCompleted).length}
-                                </span>
-                            )}
+            <div className="w-full lg:w-[380px] flex flex-col gap-6">
+                <div className="bg-card border border-border rounded-[3rem] p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-500/10 rounded-2xl">
+                                <Activity className="h-5 w-5 text-blue-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-foreground tracking-tight">Gündem</h3>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Bugünkü Planlar</p>
+                            </div>
                         </div>
-                        <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full">
-                            {format(new Date(), "d MMM yyyy", { locale: tr })}
-                        </span>
+                        <Badge variant="outline" className="bg-muted/80 border-border text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-tighter">
+                            {format(new Date(), "d MMMM yyyy", { locale: tr })}
+                        </Badge>
                     </div>
-                    <div className="mb-4 space-y-3">
+
+                    <div className="mb-8 space-y-4">
                         <div className="flex items-center justify-between">
-                            <p className="text-[11px] text-muted-foreground/80 font-medium tracking-tight">Toplam {todaysEvents.length} işlem / {todaysEvents.filter(e => e.isCompleted).length} tamamlandı</p>
+                            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
+                                {todaysEvents.length} Kayıt &nbsp;·&nbsp; {todaysEvents.filter(e => e.isCompleted).length} Tamam
+                            </p>
                             {todaysEvents.length > 0 && (
                                 <button
                                     onClick={() => {
                                         const allVisibleIds = todaysEvents.map(e => e.id);
                                         const allSelected = allVisibleIds.every(id => selectedIds.includes(id));
-                                        if (allSelected) {
-                                            setSelectedIds(prev => prev.filter(id => !allVisibleIds.includes(id)));
-                                        } else {
-                                            setSelectedIds(prev => Array.from(new Set([...prev, ...allVisibleIds])));
-                                        }
+                                        if (allSelected) setSelectedIds(prev => prev.filter(id => !allVisibleIds.includes(id)));
+                                        else setSelectedIds(prev => Array.from(new Set([...prev, ...allVisibleIds])));
                                     }}
-                                    className="text-[10px] text-blue-500 hover:text-blue-400 font-bold uppercase tracking-wider"
+                                    className="text-[10px] text-blue-500 hover:text-blue-600 font-black uppercase tracking-widest"
                                 >
-                                    {todaysEvents.every(e => selectedIds.includes(e.id)) ? "SEÇİMİ KALDIR" : "TÜMÜNÜ SEÇ"}
+                                    {todaysEvents.every(e => selectedIds.includes(e.id)) ? "Bırak" : "Seç"}
                                 </button>
                             )}
                         </div>
@@ -251,15 +245,15 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                 <Button
                                     onClick={handleBulkDelete}
                                     disabled={isBulkDeleting}
-                                    className="flex-1 h-9 bg-red-600/10 hover:bg-red-600 border border-red-500/20 text-red-500 hover:text-white text-[10px] font-black gap-2 transition-all shadow-lg"
+                                    className="flex-1 h-11 bg-rose-500/10 hover:bg-rose-500 border border-rose-500/20 text-rose-500 hover:text-white text-[10px] font-black gap-2 transition-all shadow-xl shadow-rose-500/10"
                                 >
-                                    {isBulkDeleting ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                    {selectedIds.length} ÖĞEYİ KALDIR
+                                    {isBulkDeleting ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                    {selectedIds.length} KALDIR
                                 </Button>
                                 <Button
                                     onClick={() => setSelectedIds([])}
                                     variant="ghost"
-                                    className="h-9 px-3 text-muted-foreground/80 hover:text-white bg-[#1a1a1a] border border-[#2a2a2a] text-[10px] font-bold"
+                                    className="h-11 px-5 bg-muted border border-border text-[10px] font-black uppercase tracking-widest"
                                 >
                                     VAZGEÇ
                                 </Button>
@@ -267,80 +261,66 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         )}
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {todaysEvents.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-center">
-                                <CheckCircle2 className="h-12 w-12 text-slate-700 mb-3" />
-                                <p className="text-muted-foreground text-sm">Bugün için planlanmış bir<br />işlem veya görev yok.</p>
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="h-20 w-20 rounded-[2rem] bg-muted/60 flex items-center justify-center mb-6">
+                                    <CheckCircle2 className="h-10 w-10 text-muted-foreground/20" />
+                                </div>
+                                <p className="text-muted-foreground text-sm font-bold opacity-60">Bugünlük planlanan<br />bir görev bulunmuyor.</p>
                             </div>
                         ) : (
-                            <div className="space-y-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
+                            <div className="space-y-4">
                                 {todaysEvents
                                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                     .map(event => {
                                         const isUpcoming = !event.isCompleted && new Date(event.date) > new Date();
-                                        const isManual = event.source === 'AGENDA';
+                                        const cfg = TYPE_CONFIG[event.type] || { colors: "bg-muted text-muted-foreground" };
 
                                         return (
-                                            <div key={event.id} className="relative flex items-center gap-3 group">
-                                                <button
-                                                    onClick={() => toggleSelect(event.id)}
-                                                    className={cn(
-                                                        "transition-all duration-200 shrink-0",
-                                                        selectedIds.includes(event.id) ? "text-blue-500 scale-110" : "text-slate-600 hover:text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {selectedIds.includes(event.id) ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
-                                                </button>
+                                            <div key={event.id} className="relative flex items-start gap-4 p-5 bg-muted/30 hover:bg-muted/50 border border-border rounded-[2rem] transition-all group overflow-hidden">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <button
+                                                        onClick={() => toggleSelect(event.id)}
+                                                        className={cn(
+                                                            "transition-all duration-200",
+                                                            selectedIds.includes(event.id) ? "text-blue-500 scale-125" : "text-muted-foreground/30 hover:text-blue-500"
+                                                        )}
+                                                    >
+                                                        {selectedIds.includes(event.id) ? <CheckSquare className="h-6 w-6" /> : <Square className="h-6 w-6" />}
+                                                    </button>
+                                                </div>
 
-                                                <div className="flex items-start gap-4 flex-1">
-                                                    <div className={cn(
-                                                        "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1a1a1a] shadow-[0_0_0_4px_#111] border transition-all duration-500",
-                                                        isUpcoming ? "border-blue-500 animate-pulse shadow-[0_0_12px_-2px_rgba(59,130,246,0.5)]" : "border-[#333]"
-                                                    )}>
-                                                        {getEventIcon(event.type)}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest opacity-60 tabular-nums">
+                                                            {format(new Date(event.date), "HH:mm")}
+                                                        </span>
+                                                        {isUpcoming && <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
                                                     </div>
-                                                    <div className={cn(
-                                                        "flex flex-col flex-1 p-3 bg-[#151515] hover:bg-[#1a1a1a] border rounded-2xl transition-all duration-300 cursor-pointer",
-                                                        isUpcoming ? "border-blue-500/50" : "border-[#222]"
-                                                    )}>
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className={cn("font-medium text-sm text-foreground/90", event.isCompleted && "line-through opacity-50")}>
-                                                                    {event.title}
-                                                                </span>
-                                                                {event.isCompleted && (
-                                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                                                                        BİTTİ
-                                                                    </span>
-                                                                )}
-                                                                {isUpcoming && (
-                                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30 animate-pulse">
-                                                                        YAKLAŞAN
-                                                                    </span>
-                                                                )}
-                                                                {isManual && (
-                                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-400 font-bold border border-purple-500/30">
-                                                                        RANDEVU
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-[10px] text-muted-foreground/80">{format(new Date(event.date), "HH:mm")}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-xs text-muted-foreground">{event.category || "Genel"}</span>
-                                                            {event.amount && event.amount > 0 && (
-                                                                <span className={cn(
-                                                                    "text-[11px] font-medium tracking-wide",
-                                                                    event.type === 'PAYMENT' ? 'text-red-400' :
-                                                                        event.type === 'COLLECTION' ? 'text-emerald-400' : 'text-muted-foreground'
-                                                                )}>
-                                                                    {event.type === 'PAYMENT' ? '-' : ''}₺{event.amount}
-                                                                </span>
-                                                            )}
-                                                        </div>
 
-                                                        {/* Sidebar Action Bar */}
+                                                    <h4 className={cn(
+                                                        "text-[15px] font-bold text-foreground leading-snug tracking-tight",
+                                                        event.isCompleted && "line-through opacity-40 grayscale"
+                                                    )}>
+                                                        {event.title}
+                                                    </h4>
+
+                                                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                                                        <span className={cn(
+                                                            "text-[9px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-widest",
+                                                            cfg.colors
+                                                        )}>
+                                                            {event.category || "Genel"}
+                                                        </span>
+                                                        {event.amount && (
+                                                            <span className="text-xs font-black text-foreground/80 tabular-nums border border-border px-2 px-1 rounded-lg">
+                                                                ₺{event.amount.toLocaleString('tr-TR')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-5 pt-5 border-t border-border/60">
                                                         <EventActionBar
                                                             event={event}
                                                             accounts={accounts}
@@ -353,8 +333,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                                         );
                                     })}
                             </div>
-                        )
-                        }
+                        )}
                     </div>
                 </div>
             </div>
@@ -365,6 +344,6 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                 date={selectedDate}
                 events={events.filter(e => isSameDay(new Date(e.date), selectedDate))}
             />
-        </div >
+        </div>
     );
 }

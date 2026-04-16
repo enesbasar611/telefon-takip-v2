@@ -41,9 +41,11 @@ import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
 import { CreateAccountModal } from "@/components/finance/create-account-modal";
+import { QuickProductCreateModal } from "@/components/supplier/quick-product-create-modal";
 import { format, isAfter, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
+import { getIndustryLabel } from "@/lib/industry-utils";
 
 interface PurchaseFormProps {
     isOpen: boolean;
@@ -51,6 +53,7 @@ interface PurchaseFormProps {
     suppliers: any[];
     onSuccess?: (newOrder: any) => void;
     defaultSupplierId?: string;
+    shop?: any;
 }
 
 interface OrderItem {
@@ -59,10 +62,13 @@ interface OrderItem {
     name: string;
     quantity: number;
     buyPrice: number;
+    buyPriceUsd?: number;
     vatRate: number;
+    currency: "TRY" | "USD";
 }
 
-export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSupplierId }: PurchaseFormProps) {
+export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSupplierId, shop }: PurchaseFormProps) {
+    const productLabel = getIndustryLabel(shop, "productLabel");
     const [selectedSupplierId, setSelectedSupplierId] = useState(defaultSupplierId || "");
 
     useEffect(() => {
@@ -73,8 +79,9 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
     const [orderNo, setOrderNo] = useState(`PO-${new Date().getFullYear()}-${Math.floor(Math.random() * 900 + 100)}`);
     const [items, setItems] = useState<OrderItem[]>([
-        { id: Math.random().toString(), name: "", quantity: 1, buyPrice: 0, vatRate: 20 }
+        { id: Math.random().toString(), name: "", quantity: 1, buyPrice: 0, vatRate: 20, currency: "TRY" }
     ]);
+    const [exchangeRate, setExchangeRate] = useState(35); // Varsayılan kur
     const [paymentStatus, setPaymentStatus] = useState<"PAID" | "UNPAID">("UNPAID");
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [accountId, setAccountId] = useState("");
@@ -82,6 +89,12 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
     const [loading, setLoading] = useState(false);
     const [searchResults, setSearchResults] = useState<{ [key: string]: any[] }>({});
     const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [dialogSearchResults, setDialogSearchResults] = useState<any[]>([]);
+    const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+    const [newProductItems, setNewProductItems] = useState<{ tempId: string; name: string; buyPrice: number; currency: "TL" | "USD" }[]>([]);
     const searchRef = useRef<HTMLDivElement>(null);
 
     // Fetch accounts on open
@@ -96,6 +109,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setActiveSearchId(null);
+                setSelectedIndex(-1);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -111,8 +125,37 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
         }
 
         const results = await searchProducts(query);
-        setSearchResults(prev => ({ ...prev, [id]: results }));
+        setDialogSearchResults(results);
+        setSelectedIndex(results.length > 0 ? 0 : -1);
+    };
+
+    const handleDialogKeyDown = (e: React.KeyboardEvent) => {
+        if (dialogSearchResults.length === 0) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev < dialogSearchResults.length - 1 ? prev + 1 : prev));
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
+        } else if (e.key === "Enter" && selectedIndex >= 0) {
+            e.preventDefault();
+            if (activeSearchId) {
+                selectProduct(activeSearchId, dialogSearchResults[selectedIndex]);
+                setIsSearchOpen(false);
+            }
+        }
+    };
+
+    const openSearch = (id: string, initialValue: string) => {
         setActiveSearchId(id);
+        setSearchQuery(initialValue);
+        setIsSearchOpen(true);
+        if (initialValue.length >= 2) {
+            handleSearch(id, initialValue);
+        } else {
+            setDialogSearchResults([]);
+        }
     };
 
     const selectProduct = (rowId: string, product: any) => {
@@ -120,15 +163,17 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
             ...i,
             name: product.name,
             productId: product.id,
-            buyPrice: Number(product.buyPrice) || i.buyPrice,
-            // You can also add vatRate if it exists on product, but usually it's category based. 
-            // For now just name and price.
+            buyPrice: product.buyPriceUsd && i.currency === "USD" ? Number(product.buyPriceUsd) : (Number(product.buyPrice) || i.buyPrice),
+            buyPriceUsd: Number(product.buyPriceUsd) || undefined,
+            // If product has USD price and we are in USD mode, use it.
+            // Otherwise use TL price.
         } : i));
         setActiveSearchId(null);
+        setSelectedIndex(-1);
     };
 
     const addItem = () => {
-        setItems([...items, { id: Math.random().toString(), name: "", quantity: 1, buyPrice: 0, vatRate: 20 }]);
+        setItems([...items, { id: Math.random().toString(), name: "", quantity: 1, buyPrice: 0, vatRate: 20, currency: "TRY" }]);
     };
 
     const removeItem = (id: string) => {
@@ -141,8 +186,14 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
         setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
     };
 
-    const subtotal = items.reduce((sum, i) => sum + (i.quantity * i.buyPrice), 0);
-    const vatTotal = items.reduce((sum, i) => sum + (i.quantity * i.buyPrice * (i.vatRate / 100)), 0);
+    const subtotal = items.reduce((sum, i) => {
+        const price = i.currency === "USD" ? (i.buyPrice * exchangeRate) : i.buyPrice;
+        return sum + (i.quantity * price);
+    }, 0);
+    const vatTotal = items.reduce((sum, i) => {
+        const price = i.currency === "USD" ? (i.buyPrice * exchangeRate) : i.buyPrice;
+        return sum + (i.quantity * price * (i.vatRate / 100));
+    }, 0);
     const total = subtotal + vatTotal;
 
     const handleSubmit = async () => {
@@ -155,18 +206,51 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
             return;
         }
 
-        setLoading(true);
-
         if (paymentStatus === "PAID" && !accountId) {
             toast.error("Peşin ödemeler için Kasa / Hesap seçmelisiniz.");
-            setLoading(false);
             return;
         }
+
+        // Check if there are new products (no productId)
+        const newItems = items.filter(i => !i.productId);
+        if (newItems.length > 0) {
+            setNewProductItems(newItems.map(i => ({
+                tempId: i.id,
+                name: i.name,
+                buyPrice: i.buyPrice,
+                currency: i.currency === "USD" ? "USD" : "TL"
+            })));
+            setQuickCreateOpen(true);
+            return;
+        }
+
+        await submitOrder();
+    };
+
+    const handleQuickCreateSuccess = async (mappedItems: { tempId: string; productId: string }[]) => {
+        // Update items with new product IDs
+        setItems(prev => prev.map(item => {
+            const mapped = mappedItems.find(m => m.tempId === item.id);
+            return mapped ? { ...item, productId: mapped.productId } : item;
+        }));
+        setQuickCreateOpen(false);
+
+        // Submit with the updated items directly (since setState is async, pass items explicitly)
+        const updatedItems = items.map(item => {
+            const mapped = mappedItems.find(m => m.tempId === item.id);
+            return mapped ? { ...item, productId: mapped.productId } : item;
+        });
+        await submitOrder(updatedItems);
+    };
+
+    const submitOrder = async (overrideItems?: OrderItem[]) => {
+        setLoading(true);
+        const finalItems = overrideItems || items;
 
         const res = await createPurchaseOrderAction({
             supplierId: selectedSupplierId,
             orderNo,
-            items: items.map(({ id, ...rest }) => rest),
+            items: finalItems.map(({ id, ...rest }) => rest),
             totalAmount: total,
             vatAmount: vatTotal,
             netAmount: subtotal,
@@ -258,7 +342,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
                                         <ShoppingBag className="h-4 w-4 text-emerald-400" />
                                     </div>
-                                    <h3 className="font-medium text-sm  text-white">Ürün / Parça Listesi</h3>
+                                    <h3 className="font-medium text-sm  text-white">{productLabel} Listesi</h3>
                                 </div>
                                 <Button onClick={addItem} size="sm" variant="outline" className="h-9 px-4 rounded-xl  text-[10px] gap-2 border-border hover:bg-white/5">
                                     <Plus className="h-3.5 w-3.5" />
@@ -271,7 +355,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                 <table className="w-full text-left hidden sm:table">
                                     <thead className="bg-white/5 border-b border-border/50">
                                         <tr className="text-[10px]  text-muted-foreground uppercase tracking-widest">
-                                            <th className="px-5 py-4">Ürün Adı / Açıklama</th>
+                                            <th className="px-5 py-4">{productLabel} Adı / Açıklama</th>
                                             <th className="px-5 py-4 text-center">Miktar</th>
                                             <th className="px-5 py-4 text-right">Alış Fiyatı</th>
                                             <th className="px-5 py-4 text-center">KDV (%)</th>
@@ -282,36 +366,20 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     <tbody className="divide-y divide-white/[0.03]">
                                         {items.map((item) => (
                                             <tr key={item.id} className="hover:bg-white/[0.01] transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="relative" ref={item.id === activeSearchId ? searchRef : null}>
-                                                        <Input
-                                                            value={item.name}
-                                                            onChange={e => handleSearch(item.id, e.target.value)}
-                                                            onFocus={() => {
-                                                                if (item.name.length >= 2) setActiveSearchId(item.id);
-                                                            }}
-                                                            className="h-10 bg-white/5 border-none rounded-lg text-sm  placeholder:text-muted-foreground/30"
-                                                            placeholder="Ürün adı yazınız..."
-                                                        />
-                                                        {activeSearchId === item.id && searchResults[item.id]?.length > 0 && (
-                                                            <div className="absolute top-full left-0 w-full mt-1 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-                                                                {searchResults[item.id].map((p) => (
-                                                                    <button
-                                                                        key={p.id}
-                                                                        onClick={() => selectProduct(item.id, p)}
-                                                                        className="w-full px-4 py-2 text-left hover:bg-white/5 flex items-center justify-between group"
-                                                                    >
-                                                                        <div>
-                                                                            <p className="text-xs  text-white group-hover:text-blue-400 transition-colors">{p.name}</p>
-                                                                            <p className="text-[10px] text-muted-foreground">Stok: {p.stock} | {p.category?.name}</p>
-                                                                        </div>
-                                                                        <div className="text-right">
-                                                                            <p className="text-[10px]  text-blue-400">₺{Number(p.sellPrice || 0).toLocaleString("tr-TR")}</p>
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                <td className="px-5 py-3 first:rounded-l-2xl last:rounded-r-2xl">
+                                                    <div className="relative group">
+                                                        <div
+                                                            onClick={() => openSearch(item.id, item.name)}
+                                                            className={cn(
+                                                                "h-12 w-full bg-white/5 border border-white/10 rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:bg-white/10 hover:border-blue-500/30",
+                                                                item.name ? "text-white" : "text-muted-foreground/30"
+                                                            )}
+                                                        >
+                                                            <span className="text-sm truncate max-w-[200px]">
+                                                                {item.name || `${productLabel} seçmek için tıklayın...`}
+                                                            </span>
+                                                            <Search className="h-4 w-4 text-muted-foreground/40 group-hover:text-blue-400 transition-colors" />
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 w-24">
@@ -322,27 +390,50 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                                         className="h-10 bg-white/5 border-none rounded-lg text-center "
                                                     />
                                                 </td>
-                                                <td className="px-4 py-3 w-32">
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground  text-xs">₺</span>
-                                                        <Input
-                                                            type="number"
-                                                            value={item.buyPrice}
-                                                            onChange={e => updateItem(item.id, "buyPrice", parseFloat(e.target.value) || 0)}
-                                                            className="h-10 bg-white/5 border-none rounded-lg text-right  pl-7"
-                                                        />
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Select value={item.currency} onValueChange={(val: "TRY" | "USD") => updateItem(item.id, "currency", val)}>
+                                                            <SelectTrigger className="w-[60px] h-10 bg-white/5 border-none rounded-lg text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-card border-border">
+                                                                <SelectItem value="TRY">₺</SelectItem>
+                                                                <SelectItem value="USD">$</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <div className="relative flex-1">
+                                                            <Input
+                                                                type="number"
+                                                                value={item.buyPrice}
+                                                                onChange={e => updateItem(item.id, "buyPrice", parseFloat(e.target.value) || 0)}
+                                                                className="h-10 bg-white/5 border-none rounded-lg text-right text-sm pr-3"
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 w-20">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.vatRate}
-                                                        onChange={e => updateItem(item.id, "vatRate", parseInt(e.target.value) || 0)}
-                                                        className="h-10 bg-white/5 border-none rounded-lg text-center "
-                                                    />
+                                                <td className="px-4 py-3 w-32">
+                                                    <div className="flex items-center bg-white/5 rounded-lg pr-3 border border-white/5">
+                                                        <Input
+                                                            type="number"
+                                                            value={item.vatRate}
+                                                            onChange={e => updateItem(item.id, "vatRate", parseInt(e.target.value) || 0)}
+                                                            className="h-10 bg-transparent border-none text-center text-sm w-16"
+                                                        />
+                                                        <span className="text-muted-foreground text-xs font-light">%</span>
+                                                    </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-right  text-sm text-foreground pr-5">
-                                                    ₺{(item.quantity * item.buyPrice * (1 + item.vatRate / 100)).toLocaleString("tr-TR")}
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex flex-col items-end gap-0.5">
+                                                        <p className="text-sm font-semibold text-white">
+                                                            {item.currency === "USD" ? "$" : "₺"}{(item.quantity * item.buyPrice * (1 + item.vatRate / 100)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+                                                        {item.currency === "USD" && (
+                                                            <p className="text-[10px] text-muted-foreground/60 leading-none">
+                                                                ≈ ₺{(item.quantity * item.buyPrice * exchangeRate * (1 + item.vatRate / 100)).toLocaleString("tr-TR")}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3 w-10">
                                                     <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-rose-500 transition-colors">
@@ -359,34 +450,20 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                     {items.map((item) => (
                                         <div key={item.id} className="p-4 space-y-4">
                                             <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-1 relative" ref={item.id === activeSearchId ? searchRef : null}>
+                                                <div className="flex-1 relative">
                                                     <Label className="text-[10px] text-muted-foreground uppercase mb-1 block">Ürün / Açıklama</Label>
-                                                    <Input
-                                                        value={item.name}
-                                                        onChange={e => handleSearch(item.id, e.target.value)}
-                                                        onFocus={() => {
-                                                            if (item.name.length >= 2) setActiveSearchId(item.id);
-                                                        }}
-                                                        className="h-11 bg-white/5 border-none rounded-xl text-sm"
-                                                        placeholder="Sıfır iPhone 15..."
-                                                    />
-                                                    {activeSearchId === item.id && searchResults[item.id]?.length > 0 && (
-                                                        <div className="absolute top-full left-0 w-full mt-1 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-                                                            {searchResults[item.id].map((p) => (
-                                                                <button
-                                                                    key={p.id}
-                                                                    onClick={() => selectProduct(item.id, p)}
-                                                                    className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center justify-between group"
-                                                                >
-                                                                    <div>
-                                                                        <p className="text-sm text-white group-hover:text-blue-400">{p.name}</p>
-                                                                        <p className="text-[10px] text-muted-foreground">Stok: {p.stock}</p>
-                                                                    </div>
-                                                                    <p className="text-xs text-blue-400">₺{Number(p.sellPrice).toLocaleString("tr-TR")}</p>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                    <div
+                                                        onClick={() => openSearch(item.id, item.name)}
+                                                        className={cn(
+                                                            "h-12 w-full bg-white/5 border border-white/10 rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:bg-white/10 hover:border-blue-500/30",
+                                                            item.name ? "text-white" : "text-muted-foreground/30"
+                                                        )}
+                                                    >
+                                                        <span className="text-sm truncate">
+                                                            {item.name || "Ürün seçin..."}
+                                                        </span>
+                                                        <Search className="h-4 w-4 text-muted-foreground/40" />
+                                                    </div>
                                                 </div>
                                                 <button onClick={() => removeItem(item.id)} className="mt-6 text-rose-500/50 hover:text-rose-500 p-2">
                                                     <Trash2 className="h-5 w-5" />
@@ -438,7 +515,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                 </div>
 
                                 <div className="p-4 bg-white/5 flex items-center justify-center">
-                                    <button onClick={addItem} className="text-[10px]  text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">+ YENİ ÜRÜN SATIRI EKLE</button>
+                                    <button onClick={addItem} className="text-[10px]  text-muted-foreground hover:text-white transition-colors uppercase tracking-widest">+ YENİ {productLabel.toUpperCase()} SATIRI EKLE</button>
                                 </div>
                             </div>
                         </div>
@@ -633,6 +710,120 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                     </div>
                 </div>
             </DialogContent>
+
+            {/* Ürün Arama Modalı */}
+            <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                <DialogContent className="max-w-2xl bg-[#09090b] border-white/10 rounded-3xl p-0 overflow-hidden shadow-[0_0_50px_-12px_rgba(59,130,246,0.3)] z-[9999]">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="text-xl font-semibold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Ürün Hızlı Arama</DialogTitle>
+                        <DialogDescription className="text-muted-foreground/60">Sipariş listesine eklemek istediğiniz ürünü seçin.</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="p-6 pt-2 space-y-4">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40 group-focus-within:text-blue-400 transition-colors" />
+                            <Input
+                                autoFocus
+                                placeholder="Ürün adı, parça kodu veya kategori yazın..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    handleSearch(activeSearchId!, e.target.value);
+                                }}
+                                onKeyDown={handleDialogKeyDown}
+                                className="h-14 pl-12 bg-white/5 border-white/10 rounded-2xl text-lg focus:ring-blue-500/20 focus:border-blue-500/40 transition-all placeholder:text-white/10 shadow-inner"
+                            />
+                        </div>
+
+                        <div className="max-h-[400px] overflow-y-auto pr-2 space-y-1 custom-scrollbar">
+                            {dialogSearchResults.length > 0 ? (
+                                <>
+                                    {dialogSearchResults.map((p, idx) => (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => {
+                                                selectProduct(activeSearchId!, p);
+                                                setIsSearchOpen(false);
+                                            }}
+                                            onMouseEnter={() => setSelectedIndex(idx)}
+                                            className={cn(
+                                                "w-full p-4 rounded-2xl text-left transition-all flex items-center justify-between group gap-4 border border-transparent mb-1",
+                                                selectedIndex === idx ? "bg-blue-500/10 border-blue-500/20" : "hover:bg-white/5"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                                                    <ShoppingBag className={cn("h-5 w-5 transition-colors", selectedIndex === idx ? "text-blue-400" : "text-muted-foreground/40")} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className={cn("font-medium transition-colors truncate", selectedIndex === idx ? "text-blue-400" : "text-white")}>
+                                                        {p.name}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-xs text-muted-foreground/60">{p.category?.name}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-white/10" />
+                                                        <span className={cn("text-xs", p.stock > 0 ? "text-emerald-400/80" : "text-amber-400/80")}>
+                                                            Stok: {p.stock}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <div className="text-sm font-semibold text-white">₺{Number(p.sellPrice || 0).toLocaleString("tr-TR")}</div>
+                                                <div className="text-[10px] text-muted-foreground/40 mt-0.5 uppercase tracking-tighter">SATIŞ</div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                    <div className="h-px bg-white/5 my-2" />
+                                    <button
+                                        onClick={() => {
+                                            setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery, productId: undefined } : i));
+                                            setIsSearchOpen(false);
+                                        }}
+                                        className="w-full p-4 rounded-2xl text-left hover:bg-white/5 transition-all flex items-center gap-4 text-blue-400 border border-transparent hover:border-blue-500/20"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        <span className="text-sm">"{searchQuery}" isminde yeni ürün olarak ekle</span>
+                                    </button>
+                                </>
+                            ) : searchQuery.length >= 2 ? (
+                                <div className="p-8 text-center space-y-4">
+                                    <div className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center mx-auto">
+                                        <AlertCircle className="h-6 w-6 text-muted-foreground/20" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground/60">"{searchQuery}" eşleşen ürün bulunamadı.</p>
+                                        <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">Yine de bu isimle devam edebilirsiniz</p>
+                                    </div>
+                                    <Button
+                                        onClick={() => {
+                                            setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery, productId: undefined } : i));
+                                            setIsSearchOpen(false);
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 h-10 px-6 rounded-xl text-xs uppercase tracking-widest"
+                                    >
+                                        YENİ ÜRÜN OLARAK EKLE
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center space-y-2">
+                                    <p className="text-sm text-muted-foreground/40 italic">Aramaya başlamak için en az 2 karakter girin...</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Yeni Ürün Oluşturma Modalı */}
+            <QuickProductCreateModal
+                isOpen={quickCreateOpen}
+                onClose={() => setQuickCreateOpen(false)}
+                items={newProductItems}
+                shop={shop}
+                onSuccess={handleQuickCreateSuccess}
+            />
         </Dialog>
     );
 }

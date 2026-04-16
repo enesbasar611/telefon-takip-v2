@@ -51,6 +51,7 @@ model Shop {
   supplierTransactions SupplierTransaction[]
   transactions         Transaction[]
   users                User[]
+  hiddenAgendaItems    HiddenAgendaItem[]
 }
 
 model RolePermission {
@@ -674,6 +675,16 @@ model AgendaEvent {
   shop        Shop            @relation(fields: [shopId], references: [id])
 
   @@index([shopId, date])
+}
+
+model HiddenAgendaItem {
+  id        String   @id @default(cuid())
+  sourceId  String
+  shopId    String
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, sourceId])
 }
 
 enum OrderStatus {

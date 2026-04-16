@@ -215,8 +215,7 @@ export function SupplierOrderProvider({ children }: { children: React.ReactNode 
             }
 
             if (existingSupplierName) {
-                toast.warning(`${product.name} zaten ${existingSupplierName} tedarikçisinin listesinde.`);
-                return false;
+                toast.info(`${product.name} ayrıca ${existingSupplierName} listesinde de bulunuyor.`);
             }
 
             // If not found elsewhere, add to new

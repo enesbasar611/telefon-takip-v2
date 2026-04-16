@@ -160,9 +160,16 @@ export async function getCalendarEventsAction(year: number, month: number) {
         const end = new Date(year, month, 10);        // end at ~10th of next month (covers next month days shown in grid)
 
         // Fetch manual agenda events
-        const agendaEvents = await prisma.agendaEvent.findMany({
-            where: { shopId, date: { gte: start, lte: end } }
-        });
+        const [agendaEvents, hiddenItems] = await Promise.all([
+            prisma.agendaEvent.findMany({
+                where: { shopId, date: { gte: start, lte: end } }
+            }),
+            prisma.hiddenAgendaItem.findMany({
+                where: { shopId }
+            })
+        ]);
+
+        const hiddenIds = new Set(hiddenItems.map(h => h.sourceId));
 
         // Fetch service tickets (exclude delivered, cancelled, and approved/repairing as they move to active service)
         const services = await prisma.serviceTicket.findMany({
@@ -191,6 +198,7 @@ export async function getCalendarEventsAction(year: number, month: number) {
 
         // Map AgendaEvents
         agendaEvents.forEach((a: any) => {
+            if (hiddenIds.has(a.id)) return;
             mappedEvents.push({
                 id: a.id,
                 title: a.title,
@@ -205,6 +213,7 @@ export async function getCalendarEventsAction(year: number, month: number) {
 
         // Map Services
         services.forEach((s: any) => {
+            if (hiddenIds.has(s.id)) return;
             mappedEvents.push({
                 id: s.id,
                 title: `${s.ticketNumber} - ${s.deviceModel}`,
@@ -218,6 +227,7 @@ export async function getCalendarEventsAction(year: number, month: number) {
 
         // Map Supplier Transactions
         supplierTx.forEach((tx: any) => {
+            if (hiddenIds.has(tx.id)) return;
             mappedEvents.push({
                 id: tx.id,
                 title: `${tx.supplier.name} - ${tx.description}`,
@@ -240,12 +250,16 @@ export async function getCalendarEventsAction(year: number, month: number) {
 export async function deleteAgendaEventAction(eventId: string) {
     try {
         const shopId = await getShopId();
-        await prisma.agendaEvent.delete({ where: { id: eventId, shopId } });
+        await prisma.hiddenAgendaItem.upsert({
+            where: { shopId_sourceId: { shopId, sourceId: eventId } },
+            update: {},
+            create: { shopId, sourceId: eventId }
+        });
         revalidatePath("/ajanda");
         return { success: true };
     } catch (error) {
-        console.error("Error deleting agenda event:", error);
-        return { success: false, error: "Silme işlemi başarısız." };
+        console.error("Error hiding agenda event:", error);
+        return { success: false, error: "İşlem başarısız." };
     }
 }
 
@@ -286,27 +300,45 @@ export async function completeAgendaEventAction(eventId: string) {
 export async function bulkDeleteAgendaEventsAction(eventIds: string[]) {
     try {
         const shopId = await getShopId();
-        await prisma.agendaEvent.deleteMany({
-            where: { id: { in: eventIds }, shopId }
+
+        await prisma.hiddenAgendaItem.createMany({
+            data: eventIds.map(id => ({ shopId, sourceId: id })),
+            skipDuplicates: true
         });
+
         revalidatePath("/ajanda");
         return { success: true };
     } catch (error) {
-        console.error("Error bulk deleting agenda events:", error);
-        return { success: false, error: "Toplu silme işlemi başarısız." };
+        console.error("Error bulk hiding agenda events:", error);
+        return { success: false, error: "Toplu işlem başarısız." };
     }
 }
 // ─── Clear All ─────────────────────────────────────────────────────────────
 export async function clearAllAgendaEventsAction() {
+    // This is generally not used by UI yet but implemented for completeness
+    return { success: false, error: "Bu işlem şu an desteklenmiyor." };
+}
+
+// ─── Clear Month ─────────────────────────────────────────────────────────────
+export async function clearMonthAgendaEventsAction(year: number, month: number) {
     try {
         const shopId = await getShopId();
-        await prisma.agendaEvent.deleteMany({
-            where: { shopId }
-        });
+
+        // Get all events for the month to hide them
+        const events = await getCalendarEventsAction(year, month);
+        const eventIds = events.map((e: any) => e.id);
+
+        if (eventIds.length > 0) {
+            await prisma.hiddenAgendaItem.createMany({
+                data: eventIds.map((id: string) => ({ shopId, sourceId: id })),
+                skipDuplicates: true
+            });
+        }
+
         revalidatePath("/ajanda");
         return { success: true };
     } catch (error) {
-        console.error("Error clearing agenda events:", error);
-        return { success: false, error: "Takvim temizleme işlemi başarısız." };
+        console.error("Error clearing month agenda events:", error);
+        return { success: false, error: "Ay temizleme işlemi başarısız." };
     }
 }

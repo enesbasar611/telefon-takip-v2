@@ -876,7 +876,7 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
 
     revalidatePath("/stok");
     revalidatePath("/cihaz-listesi");
-    return { success: true, count: results.length };
+    return { success: true, count: results.length, products: serializePrisma(results) };
   } catch (error) {
     console.error("Bulk create products error:", error);
     return { success: false, error: "Toplu kayıt işlemi başarısız oldu." };

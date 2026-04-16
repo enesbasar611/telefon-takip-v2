@@ -9,7 +9,7 @@ import { getShopId } from "@/lib/auth";
 export async function createPurchaseOrderAction(data: {
     supplierId: string;
     orderNo: string;
-    items: { productId?: string; name: string; quantity: number; buyPrice: number; vatRate?: number }[];
+    items: { productId?: string; name: string; quantity: number; buyPrice: number; buyPriceUsd?: number | null; vatRate?: number }[];
     totalAmount: number;
     vatAmount: number;
     netAmount: number;
@@ -43,6 +43,7 @@ export async function createPurchaseOrderAction(data: {
                             name: item.name,
                             quantity: item.quantity,
                             buyPrice: item.buyPrice,
+                            buyPriceUsd: item.buyPriceUsd,
                             vatRate: item.vatRate || 20,
                             shopId
                         })),

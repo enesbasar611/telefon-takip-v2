@@ -1,10 +1,11 @@
 "use client";
 
-import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2 } from "lucide-react";
+import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun } from "lucide-react";
 import { useAura } from "@/lib/context/aura-context";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ import { CreateTransactionModal } from "@/components/finance/create-transaction-
 
 export function Navbar({ shop }: { shop?: any }) {
   const { isFinancialVisible, toggleFinancialVisibility } = useUI();
+  const { setTheme } = useTheme();
   const { MapsWithAura } = useAura();
 
   return (
@@ -125,6 +127,25 @@ export function Navbar({ shop }: { shop?: any }) {
                   <DropdownMenuItem onClick={() => MapsWithAura("/ayarlar")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
                     <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
                   </DropdownMenuItem>
+
+                  {/* Theme Selection - Mobil Öncelikli ama genel eklendi */}
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase px-3 py-2 font-black tracking-widest">Tema Seçimi</DropdownMenuLabel>
+                  <div className="grid grid-cols-3 gap-1 p-1">
+                    <button onClick={() => setTheme("light")} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-muted transition-colors border border-transparent active:border-primary/20">
+                      <Sun className="h-4 w-4 text-orange-500" />
+                      <span className="text-[10px] font-bold">Açık</span>
+                    </button>
+                    <button onClick={() => setTheme("dark")} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-muted transition-colors border border-transparent active:border-primary/20">
+                      <Moon className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] font-bold">Koyu</span>
+                    </button>
+                    <button onClick={() => setTheme("system")} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-muted transition-colors border border-transparent active:border-primary/20">
+                      <MonitorSmartphone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-[10px] font-bold">Sistem</span>
+                    </button>
+                  </div>
+
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem
                     onClick={() => signOut({ callbackUrl: "/login" })}

@@ -215,9 +215,9 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[820px] bg-[#0a0a0a] border border-border text-white p-0 overflow-hidden shadow-2xl shadow-black/80">
+      <DialogContent className="sm:max-w-[820px] bg-background border border-border text-foreground p-0 overflow-hidden shadow-2xl shadow-foreground/10">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="p-8 space-y-6 max-h-[88vh] overflow-y-auto custom-scrollbar">
+          <div className="p-5 sm:p-8 space-y-6 max-h-[88vh] overflow-y-auto custom-scrollbar">
 
             <DialogHeader>
               <div className="flex items-center justify-between">
@@ -239,13 +239,13 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                   type="button"
                   onClick={() => setAiExpanded(prev => !prev)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border  text-[11px] tracking-wider uppercase transition-all",
+                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[11px] tracking-wider uppercase transition-all gemini-aura-button",
                     aiExpanded
-                      ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-[0_0_16px_theme(colors.violet.500/0.2)]"
-                      : "bg-white/[0.03] border-border text-muted-foreground hover:bg-white/[0.07] hover:text-white"
+                      ? "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-300 shadow-[0_0_16px_theme(colors.violet.500/0.1)]"
+                      : "bg-muted border-border text-foreground hover:bg-muted/80"
                   )}
                 >
-                  <Sparkles className={cn("h-4 w-4", aiExpanded && "text-violet-400 animate-pulse")} />
+                  <Sparkles className={cn("h-4 w-4", aiExpanded ? "text-violet-500 animate-pulse" : "text-blue-500")} />
                   AI ile Doldur
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", aiExpanded && "rotate-180")} />
                 </Button>
@@ -282,7 +282,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                   onChange={e => setAiDescription(e.target.value)}
                   placeholder={`Örnek: "iPhone 14 Pro ön cam 3 adet alış 850 TL satış 1200 TL, ekranlar kategorisinde, raf: A-2"\nVeya: "Samsung Galaxy Tab S9 batarya değişimi 5 adet, alış fiyatı 620, satış 900"`}
                   rows={4}
-                  className="w-full bg-black/40 border border-border rounded-xl px-4 py-3 text-[13px] font-medium text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none transition-all leading-relaxed"
+                  className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none transition-all leading-relaxed"
                   onKeyDown={e => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAIAnalyze();
                   }}
@@ -295,7 +295,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                     type="button"
                     onClick={handleAIAnalyze}
                     disabled={isAIPending || !aiDescription.trim()}
-                    className="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white  text-[12px] uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_28px_rgba(139,92,246,0.5)] disabled:opacity-40 gap-2"
+                    className="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white  text-[12px] uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_28px_rgba(139,92,246,0.4)] disabled:opacity-40 gap-2"
                   >
                     {isAIPending ? (
                       <>
@@ -332,12 +332,12 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                           value={dropdown.selectedValue}
                           onValueChange={(val) => handleCategorySelect(dropdown.level, val)}
                         >
-                          <SelectTrigger className="bg-white/5 border-border rounded-xl h-11 text-[13px] font-semibold text-white focus:ring-1 focus:ring-indigo-500/50 hover:bg-white/10 transition-colors w-full">
+                          <SelectTrigger className="bg-muted border-border rounded-xl h-11 text-[13px] font-semibold text-foreground focus:ring-1 focus:ring-indigo-500/50 hover:bg-muted/80 transition-colors w-full">
                             <SelectValue placeholder="Seçim Yapın..." />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#0f172a] border-border text-white shadow-2xl">
+                          <SelectContent className="bg-popover border-border text-popover-foreground shadow-2xl">
                             {dropdown.options.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id} className="text-[13px] font-medium py-2.5 cursor-pointer focus:bg-white/10 transition-colors">
+                              <SelectItem key={cat.id} value={cat.id} className="text-[13px] font-medium py-2.5 cursor-pointer focus:bg-muted transition-colors">
                                 {cat.name}
                               </SelectItem>
                             ))}
@@ -359,7 +359,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-4">
                   <div className="md:col-span-8 space-y-2">
                     <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-muted-foreground">{getIndustryLabel(shop, "productLabel")} Adı &amp; Kesin Tanımı</Label>
-                    <Input id="name" {...register("name")} placeholder={`Örn: ${getIndustryLabel(shop, "productLabel")} adı / modeli / türü`} className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="name" {...register("name")} placeholder={`Örn: ${getIndustryLabel(shop, "productLabel")} adı / modeli / türü`} className="bg-muted border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                     {errors.name && (
                       <p className="text-[11px] text-rose-500 font-medium">
                         {String(errors.name.message || "")}
@@ -370,12 +370,12 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                     <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
-                    <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                   </div>
                 </div>
 
                 {/* Industry Specific Fields */}
-                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/[0.05]">
+                <div className="bg-muted/30 p-6 rounded-2xl border border-border">
                   <FormFactory
                     fields={industryFields}
                     register={register}
@@ -387,12 +387,12 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
               </div>
 
               {/* Finansal Parametreler */}
-              <div className="space-y-5 bg-stone-900/30 p-5 rounded-2xl border border-border/50">
+              <div className="space-y-5 bg-muted/20 p-5 rounded-2xl border border-border">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                   <h4 className="font-medium text-[11px]  text-muted-foreground/80 uppercase tracking-widest flex items-center gap-2">
                     <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Finansal Parametreler
                   </h4>
-                  <div className="flex bg-black/40 p-1 rounded-xl border border-border/50">
+                  <div className="flex bg-muted/50 p-1 rounded-xl border border-border/50">
                     {(["TRY", "USD", "EUR"] as const).map((c) => (
                       <Button key={c} type="button" size="sm" variant={currency === c ? "default" : "ghost"}
                         onClick={() => setCurrency(c)}
@@ -400,7 +400,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                           ? c === "TRY" ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                             : c === "USD" ? "bg-emerald-500 hover:bg-emerald-400 text-black"
                               : "bg-blue-500 hover:bg-blue-400 text-black"
-                          : "text-muted-foreground/80 hover:text-white"}`}
+                          : "text-muted-foreground hover:text-foreground"}`}
                       >
                         {c === "TRY" ? "₺ TRY" : c === "USD" ? "$ USD" : "€ EUR"}
                       </Button>
@@ -410,7 +410,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                      <div className="p-1.5 rounded-md bg-stone-800 border border-stone-700">
+                      <div className="p-1.5 rounded-md bg-muted border border-border">
                         <DollarSign className="h-3.5 w-3.5 text-amber-400" />
                       </div>
                       Birim Tedarik Maliyeti ({currency})
@@ -421,7 +421,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                         value={watch("buyPrice")}
                         onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
                         prefix={currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
-                        className="bg-black/40 border-stone-800 rounded-xl h-12 pl-12 text-[15px]  text-white focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner"
+                        className="bg-muted/50 border-border rounded-xl h-12 pl-12 text-[15px]  text-foreground focus-visible:ring-1 focus-visible:ring-amber-500/50 transition-all shadow-inner"
                       />
                     </div>
                     {currency !== "TRY" && (
@@ -443,7 +443,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                         id="sellPrice"
                         value={watch("sellPrice")}
                         onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                        className="bg-black/40 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px]  text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner"
+                        className="bg-muted/50 border-emerald-500/20 rounded-xl h-12 pl-12 text-[15px]  text-emerald-700 dark:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-500/50 transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -458,35 +458,35 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-3 space-y-2">
                     <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-muted-foreground">Başlangıç Stoğu</Label>
-                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
+                    <Input id="stock" type="number" {...register("stock")} className="bg-muted border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-3 space-y-2">
                     <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                     </Label>
-                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
+                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-600 dark:text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
                   </div>
                   <div className="md:col-span-6 space-y-2">
                     <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-blue-400" /> Raf / Konum
                     </Label>
-                    <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-white/[0.03] border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-6 border-t border-border/50 bg-black/40 flex items-center justify-between rounded-b-2xl">
+          <div className="p-6 border-t border-border bg-muted/50 flex items-center justify-between rounded-b-2xl">
             <p className="text-[11px] font-medium text-muted-foreground/80 hidden md:block max-w-[300px]">
               * Kayıt tamamlandıktan sonra modal kapanmaz, seri varyant hızlıca ekleyebilirsiniz.
             </p>
             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px]  text-muted-foreground hover:text-white hover:bg-white/5 transition-all">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-12 px-6 rounded-xl text-[13px]  text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
                 İptal Et
               </Button>
-              <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-blue-500 hover:bg-blue-400 text-black font-extrabold px-8 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-                {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
+              <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-normal px-8 transition-all shadow-[0_0_20px_rgba(59,130,246,0.15)] flex items-center gap-2">
+                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-green-400" />}
                 ÜRÜNÜ SİSTEME KAYDET
               </Button>
             </div>

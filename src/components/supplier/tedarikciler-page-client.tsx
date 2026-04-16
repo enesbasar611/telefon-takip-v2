@@ -45,6 +45,7 @@ interface TedarikcilerPageClientProps {
     purchaseOrders: any[];
     aiAlerts: any[];
     criticalProducts: any[];
+    shop?: any;
 }
 
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -59,7 +60,7 @@ import { SupplierProfile } from "./supplier-profile";
 import { PurchaseForm } from "./purchase-form";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 
-export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurchaseOrders, aiAlerts, criticalProducts }: TedarikcilerPageClientProps) {
+export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurchaseOrders, aiAlerts, criticalProducts, shop }: TedarikcilerPageClientProps) {
     const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
 
     useEffect(() => {
@@ -85,6 +86,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 supplier={selectedSupplier}
                 onBack={() => setSelectedSupplierId(null)}
                 suppliers={suppliers}
+                shop={shop}
             />
         );
     }
@@ -424,13 +426,14 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => {
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setGlobalSelectedOrder(order);
                                                                     setIsGlobalPaymentOpen(true);
                                                                 }}
-                                                                className="h-8 text-xs  text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg text-[10px] uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
                                                                 disabled={order.paymentStatus === "PAID"}
                                                             >
                                                                 Ödeme Yap
@@ -658,6 +661,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 isOpen={isPurchaseFormOpen}
                 onClose={() => setIsPurchaseFormOpen(false)}
                 suppliers={suppliers}
+                shop={shop}
                 onSuccess={(newOrder) => {
                     setPurchaseOrders([newOrder, ...purchaseOrders]);
                 }}
@@ -678,11 +682,12 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 }}
                 supplierId={globalSelectedOrder?.supplierId || ""}
                 supplierName={globalSelectedOrder?.supplier?.name || "Bir Tedarikçi Seçin"}
+                initialOrderId={globalSelectedOrder?.id}
                 unpaidOrders={globalSelectedOrder ? [globalSelectedOrder] : []}
                 suppliers={suppliers}
                 allPurchaseOrders={purchaseOrders}
                 onSuccess={() => {
-                    // Refresh data or update local state
+                    // Refetch or update state
                     window.location.reload();
                 }}
             />

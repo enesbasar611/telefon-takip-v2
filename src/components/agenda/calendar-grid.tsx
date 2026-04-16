@@ -7,7 +7,6 @@ import {
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AgendaEventType } from "@prisma/client";
-import { Bookmark } from "lucide-react";
 
 // Mapped event model from action
 export type CalendarEvent = {
@@ -38,22 +37,22 @@ export function CalendarGrid({ currentDate, events, onDayClick }: CalendarGridPr
         end: endDate,
     });
 
-    const getEventColor = (type: AgendaEventType) => {
+    const getEventStyles = (type: AgendaEventType) => {
         switch (type) {
-            case 'SERVICE': return "bg-blue-500/15 text-blue-500 border-blue-500/30";
-            case 'PAYMENT': return "bg-red-500/15 text-red-500 border-red-500/30";
-            case 'COLLECTION': return "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
-            case 'TASK': return "bg-purple-500/15 text-purple-500 border-purple-500/30";
-            default: return "bg-slate-500/15 text-muted-foreground/80 border-slate-500/30";
+            case 'SERVICE': return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+            case 'PAYMENT': return "bg-rose-500/10 text-rose-600 border-rose-500/20";
+            case 'COLLECTION': return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+            case 'TASK': return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+            default: return "bg-muted text-muted-foreground border-border";
         }
     };
 
     return (
-        <div className="w-full max-w-full overflow-x-hidden bg-[#111111] border border-[#222222] rounded-3xl shadow-2xl">
+        <div className="w-full bg-card border border-border rounded-[2.5rem] shadow-sm overflow-hidden">
             {/* Days Header */}
-            <div className="grid grid-cols-7 border-b border-[#222222] bg-[#151515]">
-                {["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"].map((day) => (
-                    <div key={day} className="py-4 text-center text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+                {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((day) => (
+                    <div key={day} className="py-4 text-center text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase">
                         {day}
                     </div>
                 ))}
@@ -71,21 +70,24 @@ export function CalendarGrid({ currentDate, events, onDayClick }: CalendarGridPr
                             key={day.toString()}
                             onClick={() => onDayClick && onDayClick(day)}
                             className={cn(
-                                "min-h-[120px] p-2 border-r border-b border-[#222222]/50 transition-colors hover:bg-[#1a1a1a]/50 relative group cursor-pointer",
-                                !isCurrentMonth && "opacity-40",
-                                isCurrentDay && "bg-primary/5"
+                                "min-h-[100px] sm:min-h-[140px] p-2 sm:p-3 border-r border-b border-border/40 transition-all hover:bg-muted/30 relative group cursor-pointer",
+                                !isCurrentMonth && "opacity-20 pointer-events-none",
+                                isCurrentDay && "bg-blue-500/[0.03]"
                             )}
                         >
                             <div className="flex items-center justify-between">
                                 <span className={cn(
-                                    "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                                    isCurrentDay ? "bg-primary text-primary-foreground" : "text-foreground/80 group-hover:text-foreground"
+                                    "text-xs sm:text-sm font-black w-8 h-8 flex items-center justify-center rounded-xl transition-all",
+                                    isCurrentDay
+                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                                        : "text-foreground group-hover:bg-muted"
                                 )}>
                                     {format(day, "d")}
                                 </span>
                             </div>
 
-                            <div className="mt-2 space-y-1.5 h-[80px] overflow-y-auto no-scrollbar pb-2">
+                            {/* Events List */}
+                            <div className="mt-3 space-y-1.5 overflow-y-auto no-scrollbar pb-1 max-h-[60px] sm:max-h-[100px]">
                                 {dayEvents.map(event => {
                                     const isUpcoming = !event.isCompleted && isCurrentDay && new Date(event.date) > new Date();
 
@@ -93,31 +95,36 @@ export function CalendarGrid({ currentDate, events, onDayClick }: CalendarGridPr
                                         <div
                                             key={event.id}
                                             className={cn(
-                                                "px-2 py-1.5 rounded-lg text-xs font-medium truncate border backdrop-blur-sm shadow-sm transition-all hover:scale-[1.02]",
-                                                getEventColor(event.type),
-                                                event.isCompleted && "line-through opacity-50",
-                                                isUpcoming && "border-blue-500 animate-pulse ring-1 ring-blue-500/30 shadow-[0_0_8px_-2px_rgba(59,130,246,0.5)]"
+                                                "px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold truncate border shadow-sm transition-all hover:scale-[1.02] active:scale-95 relative",
+                                                getEventStyles(event.type),
+                                                event.isCompleted && "line-through opacity-40 grayscale",
+                                                isUpcoming && "ring-2 ring-blue-500/20"
                                             )}
                                         >
                                             <div className="flex items-center gap-1.5">
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                                                    isUpcoming ? "bg-blue-400" : "bg-current opacity-70"
+                                                    isUpcoming ? "bg-blue-500 animate-pulse" : "bg-current opacity-60"
                                                 )} />
-                                                <span className="truncate flex-1">{event.title}</span>
-
-                                                {/* Premium Ribbon Badge */}
-                                                {event.source === 'AGENDA' && (
-                                                    <div className="absolute top-0 right-0 w-6 h-6 overflow-hidden rounded-tr-lg pointer-events-none">
-                                                        <div className="absolute top-0 right-0 bg-blue-600 text-white text-[5px] font-black py-0.5 w-10 text-center rotate-45 translate-x-[13px] translate-y-[-1px] shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
-                                                            RND
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                <span className="truncate flex-1 tracking-tight">{event.title}</span>
                                             </div>
+
+                                            {/* Corner indicator for manual appointments */}
+                                            {event.source === 'AGENDA' && (
+                                                <div className="absolute top-0 right-0 h-1.5 w-1.5 bg-blue-500 rounded-bl-sm" title="Randevu" />
+                                            )}
                                         </div>
                                     );
                                 })}
+
+                                {/* Mobile Dots (visible if many events) */}
+                                {dayEvents.length > 3 && (
+                                    <div className="sm:hidden flex justify-center gap-0.5 mt-1">
+                                        <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                        <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                        <div className="w-1 h-1 rounded-full bg-blue-500/40" />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
