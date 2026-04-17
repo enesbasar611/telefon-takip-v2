@@ -201,10 +201,36 @@ export function Sidebar({ className, user, shop, onNavigate }: {
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
 
         <button onClick={() => handleNavigation("/")} className="flex items-center gap-4 group outline-none relative z-10 w-full">
-          <div className="h-12 w-12 shrink-0 rounded-2xl bg-black dark:bg-[#0A0A0A] border border-border flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-all duration-500 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
-            <Zap className="h-6 w-6 text-primary fill-primary animate-pulse shadow-primary drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={1} />
-          </div>
+          <motion.div
+            className="h-12 w-12 shrink-0 rounded-2xl bg-black dark:bg-[#0A0A0A] border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden p-2.5"
+            animate={{
+              scale: [1, 1.02, 1],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-30" />
+            <motion.img
+              src="/logo.svg"
+              className="h-full w-full object-contain relative z-10"
+              alt="Logo"
+              animate={{
+                filter: [
+                  "drop-shadow(0 0 4px rgba(124, 58, 237, 0.3))",
+                  "drop-shadow(0 0 10px rgba(124, 58, 237, 0.6))",
+                  "drop-shadow(0 0 4px rgba(124, 58, 237, 0.3))"
+                ]
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+          </motion.div>
           <div className="flex flex-col flex-1 min-w-0 items-start text-left">
             <h1 className="text-[17px] font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
               BAŞAR TEKNİK

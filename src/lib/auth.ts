@@ -5,6 +5,13 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
+import { sendApprovalCodeToAdmin } from "@/lib/mail";
+
+const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "qwerty61.enes@gmail.com";
+
+function generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma) as any,
@@ -51,6 +58,7 @@ export const authOptions: NextAuthOptions = {
                     name: user.name,
                     role: user.role,
                     shopId: user.shopId,
+                    isApproved: user.isApproved,
                     canSell: user.canSell,
                     canService: user.canService,
                     canStock: user.canStock,
@@ -66,6 +74,7 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id;
                 token.role = user.role;
                 token.shopId = user.shopId;
+                token.isApproved = user.isApproved;
                 token.canSell = user.canSell;
                 token.canService = user.canService;
                 token.canStock = user.canStock;
@@ -78,7 +87,6 @@ export const authOptions: NextAuthOptions = {
             }
 
             // Real-time synchronization: Check DB to ensure user is still active and roles are current
-            // This prevents "ghost sessions" for deleted or updated users
             if (token.id) {
                 const dbUser = await (prisma.user as any).findUnique({
                     where: { id: token.id },
@@ -86,6 +94,7 @@ export const authOptions: NextAuthOptions = {
                         id: true,
                         shopId: true,
                         role: true,
+                        isApproved: true,
                         canSell: true,
                         canService: true,
                         canStock: true,
@@ -104,6 +113,7 @@ export const authOptions: NextAuthOptions = {
                 // Always sync critical fields from DB to ensure permissions are real-time
                 token.shopId = dbUser.shopId;
                 token.role = dbUser.role;
+                token.isApproved = dbUser.isApproved;
                 token.canSell = dbUser.canSell;
                 token.canService = dbUser.canService;
                 token.canStock = dbUser.canStock;
@@ -121,6 +131,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = token.id;
                 session.user.role = token.role;
                 session.user.shopId = token.shopId;
+                session.user.isApproved = token.isApproved;
                 session.user.canSell = token.canSell;
                 session.user.canService = token.canService;
                 session.user.canStock = token.canStock;
@@ -134,33 +145,67 @@ export const authOptions: NextAuthOptions = {
     },
     events: {
         async signIn({ user }) {
-            // Automatically promote the specific email to SUPER_ADMIN
-            if (user.email === "qwerty61.enes@gmail.com") {
+            // Automatically promote & approve the Super Admin
+            if (user.email === SUPER_ADMIN_EMAIL) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
                         role: "SUPER_ADMIN" as Role,
+                        isApproved: true,
+                        verificationCode: null,
                         canFinance: true,
                         canDelete: true,
                         canEdit: true
                     }
                 });
+            } else {
+                // For non-admin users: if not approved and no code, generate one and email admin
+                const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+                if (dbUser && !dbUser.isApproved && !dbUser.verificationCode) {
+                    const code = generateVerificationCode();
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { verificationCode: code }
+                    });
+                    await sendApprovalCodeToAdmin(user.email!, code);
+                }
             }
         },
         async createUser({ user }) {
             // New users registered via OAuth (PrismaAdapter)
-            // If it's the super admin email, set SUPER_ADMIN, otherwise SHOP_MANAGER
-            const roleStr = user.email === "qwerty61.enes@gmail.com" ? "SUPER_ADMIN" : "SHOP_MANAGER";
+            const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+            const roleStr = isSuperAdmin ? "SUPER_ADMIN" : "SHOP_MANAGER";
 
-            await prisma.user.update({
-                where: { id: user.id },
-                data: {
-                    role: roleStr as Role,
-                    canFinance: true,
-                    canDelete: true,
-                    canEdit: true
-                }
-            });
+            if (isSuperAdmin) {
+                // Super Admin: auto-approve, no code needed
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        role: roleStr as Role,
+                        isApproved: true,
+                        verificationCode: null,
+                        canFinance: true,
+                        canDelete: true,
+                        canEdit: true
+                    }
+                });
+            } else {
+                // Regular user: generate code, email admin
+                const code = generateVerificationCode();
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        role: roleStr as Role,
+                        isApproved: false,
+                        verificationCode: code,
+                        canFinance: true,
+                        canDelete: true,
+                        canEdit: true
+                    }
+                });
+                // Send verification code to admin
+                await sendApprovalCodeToAdmin(user.email!, code);
+            }
         }
     },
     pages: {

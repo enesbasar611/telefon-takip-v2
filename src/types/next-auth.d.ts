@@ -6,11 +6,13 @@ declare module "next-auth" {
             id: string;
             role: string;
             shopId: string | null;
+            isApproved?: boolean;
             shopName?: string | null;
             canSell?: boolean;
             canService?: boolean;
             canStock?: boolean;
             canFinance?: boolean;
+            isShopActive?: boolean;
         } & DefaultSession["user"];
     }
 
@@ -18,6 +20,7 @@ declare module "next-auth" {
         id: string;
         role: string;
         shopId: string | null;
+        isApproved?: boolean;
         shopName?: string | null;
         canSell?: boolean;
         canService?: boolean;
@@ -31,10 +34,12 @@ declare module "next-auth/jwt" {
         id: string;
         role: string;
         shopId: string | null;
+        isApproved?: boolean;
         shopName?: string | null;
         canSell?: boolean;
         canService?: boolean;
         canStock?: boolean;
         canFinance?: boolean;
+        isShopActive?: boolean;
     }
 }

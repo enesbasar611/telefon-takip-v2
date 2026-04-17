@@ -33,6 +33,21 @@ export async function getAllShops() {
                 themeConfig: true,
                 _count: {
                     select: { users: true, customers: true, serviceTickets: true }
+                },
+                users: {
+                    select: {
+                        name: true,
+                        email: true,
+                        phone: true,
+                        role: true
+                    },
+                    where: {
+                        OR: [
+                            { role: "SHOP_MANAGER" },
+                            { role: "ADMIN" }
+                        ]
+                    },
+                    take: 1
                 }
             } as any
         });
@@ -104,44 +119,73 @@ export async function deleteShop(shopId: string) {
     try {
         await checkSuperAdmin();
 
-        // Cihaz hub bilgileri silinsin (ürünlere bağlı)
-        const products = await prisma.product.findMany({ where: { shopId }, select: { id: true } });
-        const productIds = products.map(p => p.id);
-
         await prisma.$transaction([
-            prisma.deviceHubInfo.deleteMany({ where: { productId: { in: productIds } } }),
+            // 1. Dependency heavy models (logs, items, movements)
+            prisma.serviceLog.deleteMany({ where: { shopId } }),
             prisma.serviceUsedPart.deleteMany({ where: { shopId } }),
-            prisma.serviceTicket.deleteMany({ where: { shopId } }),
-            prisma.saleItem.deleteMany({ where: { shopId } }),
-            prisma.sale.deleteMany({ where: { shopId } }),
+            prisma.inventoryMovement.deleteMany({ where: { shopId } }),
             prisma.returnTicket.deleteMany({ where: { shopId } }),
+            prisma.saleItem.deleteMany({ where: { shopId } }),
             prisma.purchaseOrderItem.deleteMany({ where: { shopId } }),
-
             prisma.supplierTransaction.deleteMany({ where: { shopId } }),
-            prisma.purchaseOrder.deleteMany({ where: { shopId } }),
 
+            // 2. Core business records
+            prisma.serviceTicket.deleteMany({ where: { shopId } }),
             prisma.attachment.deleteMany({ where: { shopId } }),
             prisma.transaction.deleteMany({ where: { shopId } }),
+            prisma.sale.deleteMany({ where: { shopId } }),
+            prisma.purchaseOrder.deleteMany({ where: { shopId } }),
 
-            prisma.dailySession.deleteMany({ where: { shopId } }),
-            prisma.financeAccount.deleteMany({ where: { shopId } }),
+            // 3. Entity metadata and secondary records
             prisma.debt.deleteMany({ where: { shopId } }),
-            prisma.shortageItem.deleteMany({ where: { shopId } }),
             prisma.stockAIAlert.deleteMany({ where: { shopId } }),
+            prisma.shortageItem.deleteMany({ where: { shopId } }),
             prisma.inventoryLog.deleteMany({ where: { shopId } }),
-            prisma.inventoryMovement.deleteMany({ where: { shopId } }),
-            prisma.product.deleteMany({ where: { shopId } }),
-            prisma.category.deleteMany({ where: { shopId } }),
-            prisma.supplier.deleteMany({ where: { shopId } }),
+            prisma.deviceHubInfo.deleteMany({ where: { shopId } }),
             prisma.notification.deleteMany({ where: { shopId } }),
             prisma.reminder.deleteMany({ where: { shopId } }),
             prisma.agendaEvent.deleteMany({ where: { shopId } }),
+            (prisma as any).hiddenAgendaItem.deleteMany({ where: { shopId } }),
+            prisma.dailySession.deleteMany({ where: { shopId } }),
+
+            // 4. Structural data
+            prisma.product.deleteMany({ where: { shopId } }),
+            prisma.category.deleteMany({ where: { shopId } }),
+            prisma.supplier.deleteMany({ where: { shopId } }),
             prisma.customer.deleteMany({ where: { shopId } }),
+            prisma.financeAccount.deleteMany({ where: { shopId } }),
             prisma.setting.deleteMany({ where: { shopId } }),
             prisma.receiptSettings.deleteMany({ where: { shopId } }),
 
-            prisma.session.deleteMany({ where: { user: { shopId } } }),
-            prisma.user.deleteMany({ where: { shopId } }),
+            // 5. Auth and User cleanup (Force re-approval on next login)
+            // PROTECT SUPER ADMIN: Prevent deleting super admin users even if they are in this shop
+            prisma.account.deleteMany({
+                where: {
+                    user: {
+                        shopId,
+                        role: { not: "SUPER_ADMIN" },
+                        email: { not: "qwerty61.enes@gmail.com" }
+                    }
+                }
+            }),
+            prisma.session.deleteMany({
+                where: {
+                    user: {
+                        shopId,
+                        role: { not: "SUPER_ADMIN" },
+                        email: { not: "qwerty61.enes@gmail.com" }
+                    }
+                }
+            }),
+            prisma.user.deleteMany({
+                where: {
+                    shopId,
+                    role: { not: "SUPER_ADMIN" },
+                    email: { not: "qwerty61.enes@gmail.com" }
+                }
+            }),
+
+            // 6. Finally the Shop itself
             prisma.shop.delete({ where: { id: shopId } })
         ]);
 

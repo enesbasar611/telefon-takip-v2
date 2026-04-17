@@ -17,13 +17,27 @@ import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
-import { getShopId } from "@/lib/auth";
+import { getShopId, getSession } from "@/lib/auth";
 
 export default async function DashboardLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    // Check approval status first (server-side, always fresh from DB via JWT callback)
+    const session = await getSession();
+    if (!session?.user) {
+        redirect("/login");
+    }
+
+    const isApproved = (session.user as any).isApproved;
+    const role = (session.user as any).role;
+    const isSuperAdmin = role === "SUPER_ADMIN";
+
+    if (!isApproved && !isSuperAdmin) {
+        redirect("/verify");
+    }
+
     // Ensure the user has a shop before rendering dashboard shell
     let shopId;
     try {

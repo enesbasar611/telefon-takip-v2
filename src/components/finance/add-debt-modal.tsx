@@ -311,28 +311,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                             <PhoneInput label="TELEFON" value={phoneValue} isLookingUp={isLookingUp} onChange={(val) => { setPhoneValue(val); setValue("customerPhone", val); }} />
                         </div>
 
-                        {/* EXISTING DEBTS SECTION */}
-                        {selectedCustomerInfo?.debts?.filter((d: any) => !d.isPaid).length > 0 && (
-                            <div className="space-y-3 pb-2 pt-2">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-2">
-                                    <History className="w-3 h-3 text-emerald-500" />
-                                    MEVCUT (ÖDENMEMİŞ) AÇIK KALEMLER
-                                </Label>
-                                <div className="space-y-2 max-h-32 overflow-y-auto scrollbar-hide border border-border/50 bg-card rounded-2xl p-2 shadow-inner">
-                                    {selectedCustomerInfo.debts.filter((d: any) => !d.isPaid).map((debt: any) => (
-                                        <div key={debt.id} className="flex justify-between items-center p-2 rounded-xl bg-muted/30 text-xs hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-slate-700">{debt.notes || "İsimsiz Borç"}</span>
-                                                <span className="text-[9px] text-muted-foreground">{new Date(debt.createdAt).toLocaleDateString('tr-TR')}</span>
-                                            </div>
-                                            <span className={cn("font-bold tracking-tight", debt.currency === "USD" ? "text-blue-600" : "text-emerald-600")}>
-                                                {debt.currency === "USD" ? "$" : "₺"}{Number(debt.remainingAmount).toLocaleString('tr-TR')}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        {/* Existing debts section removed as requested by user */}
 
                         {/* ADD ITEM SECTION */}
                         <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">

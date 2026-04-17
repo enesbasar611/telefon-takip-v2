@@ -14,8 +14,11 @@ import { NextAuthProvider } from "@/components/providers/session-provider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
 
 export const metadata: Metadata = {
-  title: "Takip V2 - Mobil Servis & ERP",
+  title: "BAŞAR TEKNİK - ERP & Servis Takip",
   description: "Profesyonel SaaS Mobil Servis ve ERP Sistemi",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default async function RootLayout({

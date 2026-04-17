@@ -5,33 +5,48 @@ export default withAuth(
     function middleware(req) {
         const token = req.nextauth.token;
         const isAuth = !!token;
-        const isOnboardingPage = req.nextUrl.pathname.startsWith("/onboarding");
+        const pathname = req.nextUrl.pathname;
+        const isOnboardingPage = pathname.startsWith("/onboarding");
+        const isVerifyPage = pathname.startsWith("/verify");
 
         if (isAuth) {
-            const hasShop = !!token.shopId;
             const role = token.role as string;
-            const pathname = req.nextUrl.pathname;
+            const isSuperAdmin = role === "SUPER_ADMIN";
+            const isApproved = token.isApproved;
+            const hasShop = !!token.shopId;
 
-            if (!hasShop && !isOnboardingPage) {
+            // 1. ACCESS VERIFICATION (CRITICAL FIRST STEP)
+            // If not approved and not super admin, must be on /verify
+            if (!isApproved && !isSuperAdmin) {
+                if (!isVerifyPage) {
+                    return NextResponse.redirect(new URL("/verify", req.url));
+                }
+                return NextResponse.next();
+            }
+
+            // If already approved but somehow on /verify, move them forward
+            if (isApproved && isVerifyPage) {
+                if (!hasShop) {
+                    return NextResponse.redirect(new URL("/onboarding", req.url));
+                }
+                return NextResponse.redirect(new URL("/dashboard", req.url));
+            }
+
+            // 2. ONBOARDING (RESTRICTED TO APPROVED USERS WITHOUT SHOP)
+            if (!hasShop && !isOnboardingPage && !isSuperAdmin) {
                 return NextResponse.redirect(new URL("/onboarding", req.url));
             }
 
-            // --- Passive Shop Protection ---
+            // 3. PASSIVE SHOP PROTECTION
             const isShopActive = token.isShopActive;
-            const isSuperAdmin = role === "SUPER_ADMIN";
-            if (!isShopActive && !isSuperAdmin && !isOnboardingPage) {
-                // If shop is passive and user is not Super Admin, block access.
-                // We redirect to a simple static page or back to log in with an error.
-                // For now, let's redirect to a "suspended" message or just login.
+            if (!isShopActive && !isSuperAdmin && !isOnboardingPage && !isVerifyPage) {
                 return NextResponse.redirect(new URL("/login?error=AccountSuspended", req.url));
             }
 
-
-            // --- Role & Permission Protection ---
+            // 4. ROLE & PERMISSION PROTECTION
             const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN" || role === "SHOP_MANAGER";
             const isManager = role === "MANAGER" || isAdmin;
 
-            // Restricted sections
             if ((pathname.startsWith("/personel") || pathname.startsWith("/ayarlar")) && !isManager) {
                 return NextResponse.redirect(new URL("/", req.url));
             }
@@ -64,7 +79,6 @@ export default withAuth(
 
 export const config = {
     matcher: [
-        "/((?!api|login|register|_next/static|_next/image|favicon.ico|onboarding|socket.io|public).*)",
-        "/onboarding",
+        "/((?!api|login|register|_next/static|_next/image|favicon.ico|socket.io|public).*)",
     ],
 };

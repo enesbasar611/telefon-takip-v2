@@ -13,6 +13,11 @@ export async function createShopOnboarding(data: { name: string; industry: strin
             return { success: false, error: "Yetkisiz işlem." };
         }
 
+        // Approval Check
+        if (!session.user.isApproved && session.user.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Erişim onayı alınmadan dükkan oluşturulamaz." };
+        }
+
         // Check if user already has a shop
         const existingUser = await prisma.user.findUnique({
             where: { id: session.user.id },
@@ -29,7 +34,8 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                     phone: data.phone,
                     isFirstLogin: true,
                     enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE"],
-                    themeConfig: null
+                    themeConfig: null,
+                    website: "basarteknik.tech"
                 } as any
             });
 
@@ -49,6 +55,7 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                         title: data.name.toUpperCase(),
                         phone: data.phone || "",
                         address: data.address || "",
+                        website: "basarteknik.tech",
                         subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
                     }
                 });
@@ -65,7 +72,8 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                 phone: data.phone,
                 users: {
                     connect: { id: session.user.id }
-                }
+                },
+                website: "basarteknik.tech"
             } as any
         });
 
@@ -78,6 +86,7 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                 title: data.name.toUpperCase(),
                 phone: data.phone || "",
                 address: data.address || "",
+                website: "basarteknik.tech",
                 subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
             }))
         });

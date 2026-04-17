@@ -64,7 +64,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-import { collectGlobalCustomerPayment, startTrackingDebt } from "@/lib/actions/debt-actions";
+import { collectGlobalCustomerPayment, startTrackingDebt, getCustomerStatement } from "@/lib/actions/debt-actions";
 import { cn } from "@/lib/utils";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { AddDebtModal } from "./add-debt-modal";
@@ -148,6 +148,23 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
     // Tracking Modal State
     const [trackingDebt, setTrackingDebt] = useState<Debt | null>(null);
     const [trackingDate, setTrackingDate] = useState("");
+
+    // Multi-select State for History
+    const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
+
+    const [paymentSummary, setPaymentSummary] = useState<{
+        customerName: string;
+        items: string[];
+        paidAmount: number;
+        currency: string;
+        remainingTRY: number;
+        remainingUSD: number;
+    } | null>(null);
+
+    const [statementData, setStatementData] = useState<{
+        debts: any[];
+        transactions: any[];
+    } | null>(null);
 
     // --- Data Aggregation & Calculations ---
     const now = useMemo(() => new Date(), []);
@@ -274,7 +291,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                 paymentMethod,
                 selectedAccountId || undefined,
                 rates?.usd || 32.5,
-                paymentNotes
+                paymentNotes,
+                selectedDebtIds
             );
 
             if (res.success) {
@@ -302,11 +320,26 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                     setWhatsappModalOpen(true);
                 }
 
+                // Prepare and show summary modal
+                const itemsNames = selectedDebtIds.length > 0
+                    ? historyCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id)).map((d: any) => d.notes || "İsimsiz Borç")
+                    : ["Genel Tahsilat"];
+
+                setPaymentSummary({
+                    customerName: paymentCustomer.name,
+                    items: itemsNames,
+                    paidAmount: amount,
+                    currency: paymentCurrency,
+                    remainingTRY: res.remainingTRY || 0,
+                    remainingUSD: res.remainingUSD || 0
+                });
+
                 setPaymentCustomer(null);
                 setPaymentAmount("");
                 setPaymentNotes("");
                 setPaymentMethod("CASH");
                 setSelectedAccountId("");
+                setSelectedDebtIds([]); // Reset selection after payment
                 router.refresh();
             } else {
                 toast.error(res.error || "Tahsilat sırasında bir hata oluştu.");
@@ -445,8 +478,35 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                             className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-muted/50 border border-border shadow-xl gap-2 text-xs hover:bg-muted transition-all text-foreground"
                         >
                             <Download className="w-4 h-4 text-indigo-400" />
-                            <span className="hidden sm:inline">Tabloyu İndir</span>
-                            <span className="sm:hidden">İndir</span>
+                            <span className="hidden sm:inline">Tabloyu İndir (Excel)</span>
+                            <span className="sm:hidden">Excel</span>
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                const data = aggregatedData.map(item => ({
+                                    Müşteri: item.name,
+                                    Telefon: item.phone || "-",
+                                    "Borç (TL)": item.totalRemainingTRY,
+                                    "Borç (USD)": item.totalRemainingUSD,
+                                    "Son İşlem": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
+                                }));
+                                const ws = XLSX.utils.json_to_sheet(data);
+                                const csv = XLSX.utils.sheet_to_csv(ws);
+                                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.setAttribute("download", "Veresiye_Listesi.csv");
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            variant="ghost"
+                            className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-muted/50 border border-border shadow-xl gap-2 text-xs hover:bg-muted transition-all text-foreground"
+                        >
+                            <FileText className="w-4 h-4 text-emerald-400" />
+                            <span className="hidden sm:inline">Dışarı Aktar (CSV)</span>
+                            <span className="sm:hidden">CSV</span>
                         </Button>
                     </div>
                 }
@@ -609,9 +669,25 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: idx * 0.03 }}
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     setHistoryCustomer(item);
                                                     setHistoryPage(1);
+                                                    setSelectedDebtIds([]);
+                                                    setStatementData(null);
+                                                    try {
+                                                        const res = await getCustomerStatement(item.customerId);
+                                                        if (res.success) {
+                                                            setStatementData({
+                                                                debts: res.debts || [],
+                                                                transactions: res.transactions || []
+                                                            });
+                                                        } else {
+                                                            toast.error(res.error || "Geçmiş verileri alınamadı.");
+                                                        }
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast.error("Bağlantı hatası: Geçmiş verileri yüklenemedi.");
+                                                    }
                                                 }}
                                                 className={cn(
                                                     "group relative p-5 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer hover:bg-slate-50 transition-all",
@@ -891,73 +967,198 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* --- History Modal (Paginated) --- */}
-            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) setHistoryCustomer(null); }}>
-                <AlertDialogContent className="max-w-[700px] h-[80vh] bg-white rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-2xl border-none">
-                    <div className="p-8 md:p-12 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-                        <div className="space-y-1">
-                            <AlertDialogTitle className="text-2xl font-black text-slate-900 uppercase">BORÇ GEÇMİŞİ</AlertDialogTitle>
-                            <AlertDialogDescription className="text-slate-500">{historyCustomer?.name} - Detaylı Alacak Listesi</AlertDialogDescription>
+            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setStatementData(null); } }}>
+                <AlertDialogContent className="max-w-[800px] h-[85vh] bg-white rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-2xl border-none">
+                    <div className="p-8 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                                <Users className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">{historyCustomer?.name}</h3>
+                                <p className="text-[10px] text-slate-400 font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 self-end md:self-auto">
+                        <div className="flex items-center gap-2">
                             <Button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!historyCustomer.phone) {
-                                        toast.error("Bu müşteriye ait bir telefon numarası bulunmuyor. Lütfen düzenleyerek ekleyin.");
-                                        return;
-                                    }
-                                    handleWhatsAppMessage(historyCustomer);
+                                onClick={() => {
+                                    if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
+                                    const data = [
+                                        ...statementData.debts.map(d => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
+                                        ...statementData.transactions.map(t => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: "TRY", Durum: "-" }))
+                                    ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
+
+                                    const ws = XLSX.utils.json_to_sheet(data);
+                                    const wb = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wb, ws, "Ekstre");
+                                    XLSX.writeFile(wb, `${historyCustomer?.name}_Ekstre.xlsx`);
                                 }}
-                                className="h-10 px-4 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                variant="outline" className="rounded-xl h-10 px-4 text-[10px] font-bold border-indigo-100 hover:bg-slate-100 gap-2"
                             >
-                                <MessageCircle className="w-4 h-4" />
-                                <span className="hidden sm:inline">WhatsApp Gönder</span>
+                                <Download className="w-3.5 h-3.5" /> EKSTRE (EXCEL)
                             </Button>
-                            <Button variant="ghost" onClick={() => setHistoryCustomer(null)} className="rounded-xl h-10 w-10 p-0 hover:bg-slate-200 text-slate-400">
-                                <PlusCircle className="w-5 h-5 rotate-45" />
+                            <Button
+                                onClick={() => {
+                                    if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
+                                    let msg = `*${historyCustomer?.name} - HESAP EKSTRESİ*\n\n`;
+                                    const combined = [
+                                        ...statementData.debts.map(d => ({ d: new Date(d.createdAt), text: `🔴 Borç: ${d.notes || 'Borç'} - ${d.currency === 'USD' ? '$' : '₺'}${d.amount}` })),
+                                        ...statementData.transactions.map(t => ({ d: new Date(t.createdAt), text: `🟢 Ödeme: ${t.amount} TL` }))
+                                    ].sort((a, b) => b.d.getTime() - a.d.getTime());
+
+                                    combined.forEach(item => {
+                                        msg += `📅 ${format(item.d, "dd.MM.yyyy")}\n${item.text}\n\n`;
+                                    });
+
+                                    msg += `*Güncel Borç:* ₺${Number(historyCustomer?.totalRemainingTRY).toLocaleString('tr-TR')}`;
+                                    if (Number(historyCustomer?.totalRemainingUSD) > 0) msg += ` / $${Number(historyCustomer?.totalRemainingUSD).toLocaleString('tr-TR')}`;
+
+                                    setWhatsappMessageContent(msg);
+                                    setWhatsappCustomer(historyCustomer);
+                                    setWhatsappModalOpen(true);
+                                }}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-10 px-4 text-[10px] font-bold gap-2"
+                            >
+                                <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP EKSTRE
                             </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setHistoryCustomer(null)} className="rounded-xl text-slate-400 rotate-45"><PlusCircle className="w-5 h-5" /></Button>
                         </div>
                     </div>
-                    <div className="p-8 overflow-y-auto flex-1 space-y-4 scrollbar-hide">
-                        {historyCustomer?.debtItems
-                            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                            .slice((historyPage - 1) * historyItemsPerPage, historyPage * historyItemsPerPage)
-                            .map((debt: any) => (
-                                <div key={debt.id} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-3xl border border-slate-100 hover:border-indigo-100 transition-all group">
-                                    <div className="flex items-center gap-5">
-                                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", debt.currency === 'USD' ? "bg-blue-100 text-blue-600" : "bg-emerald-100 text-emerald-600")}>
-                                            <FileText className="w-6 h-6" />
+                    <div className="px-8 py-4 overflow-y-auto flex-1 space-y-2 scrollbar-hide">
+                        {(() => {
+                            const items = [
+                                ...((historyCustomer as any)?.debtItems || []).map((d: any) => ({ ...d, listType: 'DEBT' })),
+                                ...(statementData?.transactions || []).map((t: any) => ({ ...t, listType: 'PAYMENT' }))
+                            ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                            const isDataLoading = !statementData;
+
+                            if (items.length === 0 && !isDataLoading) return <div className="text-center py-12 text-slate-400 font-bold uppercase text-[10px]">Veri Bulunamadı</div>;
+
+                            return (
+                                <>
+                                    {isDataLoading && (
+                                        <div className="flex items-center justify-center py-8 gap-3 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                                            <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tahsilat Verileri Yükleniyor...</span>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-black text-slate-900">{debt.notes || "İsimsiz Borç"}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium">{format(new Date(debt.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <span className={cn("text-lg font-black tabular-nums", debt.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
-                                            {debt.currency === 'USD' ? '$' : '₺'}{Number(debt.remainingAmount).toLocaleString('tr-TR')}
-                                        </span>
-                                        {debt.currency === 'USD' && (
-                                            <span className="text-[10px] font-bold text-slate-400 tabular-nums mt-0.5">
-                                                ~₺{Math.round(Number(debt.remainingAmount) * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
-                                            </span>
-                                        )}
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-2">
-                                            <Button variant="ghost" size="sm" onClick={() => { setEditingDebt(debt); setEditAmount(String(debt.amount)); setEditNotes(debt.notes || ""); setEditCurrency(debt.currency || "TRY"); }} className="h-7 w-7 p-0 text-slate-400 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200 rounded-lg"><Pencil className="w-3.5 h-3.5" /></Button>
-                                            <Button variant="ghost" size="sm" onClick={() => handleDeleteDebt(debt.id)} className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-slate-200 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        }
+                                    )}
+                                    {items.map((item: any) => (
+                                        item.listType === 'DEBT' ? (
+                                            <div
+                                                key={`debt-${item.id}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (item.isPaid) return;
+                                                    setSelectedDebtIds(prev =>
+                                                        prev.includes(item.id)
+                                                            ? prev.filter(id => id !== item.id)
+                                                            : [...prev, item.id]
+                                                    );
+                                                }}
+                                                className={cn(
+                                                    "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
+                                                    item.isPaid ? "bg-slate-100 opacity-60 grayscale cursor-default" :
+                                                        selectedDebtIds.includes(item.id)
+                                                            ? "bg-indigo-50 border-indigo-200"
+                                                            : "bg-slate-50/50 border-slate-100 hover:border-indigo-100"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    {!item.isPaid ? (
+                                                        <div className={cn(
+                                                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
+                                                            selectedDebtIds.includes(item.id)
+                                                                ? "bg-indigo-500 border-indigo-500 shadow-lg shadow-indigo-500/30"
+                                                                : "border-slate-300 bg-white"
+                                                        )}>
+                                                            {selectedDebtIds.includes(item.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                                        </div>
+                                                    ) : (
+                                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                                    )}
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-slate-900">{item.notes || "İsimsiz Borç"}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] text-slate-400">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                            {Number(item.amount) !== Number(item.remainingAmount) && (
+                                                                <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded italic">
+                                                                    Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex items-center gap-4">
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{item.isPaid ? "ÖDENDİ" : "KALAN"}:</span>
+                                                            <span className={cn("text-sm font-black tabular-nums", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
+                                                                {item.currency === 'USD' ? '$' : '₺'}{Number(item.remainingAmount).toLocaleString('tr-TR')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {!item.isPaid && (
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingDebt(item); setEditAmount(String(item.amount)); setEditNotes(item.notes || ""); setEditCurrency(item.currency || "TRY"); }} className="h-6 w-6 p-0 text-slate-400 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200 rounded-lg"><Pencil className="w-3 h-3" /></Button>
+                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteDebt(item.id); }} className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-slate-200 rounded-lg"><Trash2 className="w-3 h-3" /></Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div key={`tx-${item.id}`} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50 border border-emerald-100/50 transition-all border-dashed">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                                                        <TrendingUp className="w-3 h-3" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-emerald-800">{item.description || "Tahsilat"}</span>
+                                                        <span className="text-[9px] text-emerald-400 font-medium">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-black text-emerald-600 tabular-nums">
+                                                        + ₺{Number(item.amount).toLocaleString('tr-TR')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )
+                                    ))}
+                                </>
+                            );
+                        })()}
                     </div>
-                    <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
-                        <span className="text-[10px] font-black text-slate-400 uppercase">SAYFA {historyPage} / {Math.ceil((historyCustomer?.debtCount || 0) / historyItemsPerPage)}</span>
-                        <div className="flex gap-2">
-                            <Button disabled={historyPage === 1} onClick={() => setHistoryPage(p => p - 1)} variant="outline" className="rounded-xl h-10 px-4 text-[10px] font-bold">GERİ</Button>
-                            <Button disabled={historyPage >= Math.ceil((historyCustomer?.debtCount || 0) / historyItemsPerPage)} onClick={() => setHistoryPage(p => p + 1)} variant="outline" className="rounded-xl h-10 px-4 text-[10px] font-bold">İLERİ</Button>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SEÇİM</span>
+                            <span className="text-xs font-bold text-indigo-600">{selectedDebtIds.length} Kalem Seçildi</span>
                         </div>
+                        {selectedDebtIds.length > 0 && (
+                            <Button
+                                onClick={() => {
+                                    // Sum selected amounts
+                                    let sumTRY = 0;
+                                    let sumUSD = 0;
+                                    historyCustomer.debtItems.forEach((d: any) => {
+                                        if (selectedDebtIds.includes(d.id)) {
+                                            if (d.currency === 'USD') sumUSD += Number(d.remainingAmount);
+                                            else sumTRY += Number(d.remainingAmount);
+                                        }
+                                    });
+
+                                    setPaymentCustomer(historyCustomer);
+                                    setPaymentCurrency("TRY");
+                                    // Pre-fill with the total converted to TRY for easy payment
+                                    setPaymentAmount(String((sumTRY + (sumUSD * (rates?.usd || 32.5))).toFixed(2)));
+                                    setHistoryCustomer(null);
+                                }}
+                                className="h-12 px-8 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 text-[11px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                            >
+                                Seçilenleri Öde
+                            </Button>
+                        )}
+                        <Button variant="ghost" onClick={() => setHistoryCustomer(null)} className="rounded-xl h-10 px-4 text-[10px] uppercase font-bold text-slate-400">Kapat</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1098,20 +1299,77 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* --- Payment Summary Confirmation Dialog --- */}
+            <AlertDialog open={!!paymentSummary} onOpenChange={(o) => { if (!o) setPaymentSummary(null); }}>
+                <AlertDialogContent className="max-w-[500px] bg-white rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
+                    <div className="p-8 bg-emerald-500 text-white flex flex-col items-center gap-4 text-center">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-10 h-10 text-white" />
+                        </div>
+                        <div className="space-y-1">
+                            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">Tahsilat Başarılı</AlertDialogTitle>
+                            <p className="text-emerald-50 opacity-90 text-sm">Ödeme kaydı başarıyla oluşturuldu ve borçlardan düşüldü.</p>
+                        </div>
+                    </div>
+                    <div className="p-8 space-y-6">
+                        <div className="space-y-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ÖDEME YAPILAN KALEMLER</span>
+                            <div className="space-y-1.5">
+                                {paymentSummary?.items.map((it, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                        <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                                        {it}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+                                <span className="block text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Tahsil Edilen</span>
+                                <span className="text-lg font-black text-indigo-600 font-mono">
+                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{paymentSummary?.paidAmount.toLocaleString('tr-TR')}
+                                </span>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kalan Bakiye (TRY)</span>
+                                <span className="text-lg font-black text-slate-900 font-mono">
+                                    ₺{paymentSummary?.remainingTRY.toLocaleString('tr-TR')}
+                                </span>
+                            </div>
+                        </div>
+
+                        {paymentSummary?.remainingUSD > 0 && (
+                            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
+                                <span className="block text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1">Kalan Bakiye (USD)</span>
+                                <span className="text-lg font-black text-blue-600 font-mono">
+                                    ${paymentSummary?.remainingUSD.toLocaleString('tr-TR')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center">
+                        <Button onClick={() => setPaymentSummary(null)} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* --- WhatsApp Confirm Modal --- */}
-            {whatsappCustomer && (
-                <WhatsAppConfirmModal
-                    isOpen={whatsappModalOpen}
-                    onClose={() => {
-                        setWhatsappModalOpen(false);
-                        setWhatsappCustomer(null);
-                    }}
-                    phone={whatsappCustomer.phone || ""}
-                    customerName={whatsappCustomer.name}
-                    initialMessage={whatsappMessageContent}
-                />
-            )}
-        </div>
+            {
+                whatsappCustomer && (
+                    <WhatsAppConfirmModal
+                        isOpen={whatsappModalOpen}
+                        onClose={() => {
+                            setWhatsappModalOpen(false);
+                            setWhatsappCustomer(null);
+                        }}
+                        phone={whatsappCustomer.phone || ""}
+                        customerName={whatsappCustomer.name}
+                        initialMessage={whatsappMessageContent}
+                    />
+                )
+            }
+        </div >
     );
 }
 

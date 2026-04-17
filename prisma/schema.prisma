@@ -21,6 +21,7 @@ model Shop {
   industry             String                @default("GENERAL")
   themeConfig          Json?
   isFirstLogin         Boolean               @default(true)
+  website              String?               @default("basarteknik.tech")
   whatsappSessionId    String?
   agendaEvents         AgendaEvent[]
   attachments          Attachment[]
@@ -85,8 +86,12 @@ model User {
   canFinance      Boolean         @default(false)
   canDelete       Boolean         @default(false)
   canEdit         Boolean         @default(true)
-  shopId          String?
-  accounts        Account[]
+  shopId           String?
+  isApproved           Boolean         @default(false)
+  verificationCode     String?
+  verificationAttempts Int             @default(0)
+  lastVerificationSent DateTime?
+  accounts         Account[]
   closedSessions  DailySession[]  @relation("ClosedBy")
   openedSessions  DailySession[]  @relation("OpenedBy")
   inventoryLogs   InventoryLog[]
@@ -120,6 +125,7 @@ model Customer {
   debts          Debt[]
   sales          Sale[]
   tickets        ServiceTicket[]
+  transactions   Transaction[]
 
   @@unique([shopId, phone])
 }
@@ -438,9 +444,11 @@ model Transaction {
   financeAccountId String?
   dailySessionId   String?
   category         String?
+  customerId       String?
   createdAt        DateTime        @default(now())
   shopId           String
   attachments      Attachment[]
+  customer         Customer?       @relation(fields: [customerId], references: [id])
   dailySession     DailySession?   @relation(fields: [dailySessionId], references: [id])
   financeAccount   FinanceAccount? @relation(fields: [financeAccountId], references: [id])
   sale             Sale?           @relation(fields: [saleId], references: [id])
@@ -654,7 +662,7 @@ model ReceiptSettings {
   phone     String   @default("+90 (5xx) xxx xx xx")
   address   String?
   footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
-  website   String   @default("v2.basarteknik.com")
+  website   String   @default("basarteknik.tech")
   updatedAt DateTime @updatedAt
   terms     String?
   shopId    String

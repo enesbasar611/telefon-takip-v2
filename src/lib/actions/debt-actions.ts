@@ -240,14 +240,20 @@ export async function collectGlobalCustomerPayment(
   paymentMethod: "CASH" | "CARD" | "TRANSFER" = "CASH",
   accountId?: string,
   usdRate: number = 32.5,
-  notes?: string
+  notes?: string,
+  debtIds?: string[]
 ) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
 
     const unpaidDebts = await prisma.debt.findMany({
-      where: { customerId, shopId, isPaid: false },
+      where: {
+        customerId,
+        shopId,
+        isPaid: false,
+        ...(debtIds && debtIds.length > 0 ? { id: { in: debtIds } } : {})
+      },
       orderBy: { createdAt: "asc" }
     });
 
@@ -315,7 +321,9 @@ export async function collectGlobalCustomerPayment(
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,
-          shopId
+          shopId,
+          customerId,
+          category: "Tahsilat"
         }
       });
 
@@ -341,6 +349,28 @@ export async function collectGlobalCustomerPayment(
     return { success: true, remainingTRY: totalRemainingTRY, remainingUSD: totalRemainingUSD };
   } catch (error) {
     console.error("collectGlobalCustomerPayment error:", error);
-    return { success: false, error: "Tahsilat kaydedilemedi." };
+    return { success: false, error: "Tahsilat yapılamadı." };
+  }
+}
+
+export async function getCustomerStatement(customerId: string) {
+  try {
+    const shopId = await getShopId();
+    const debts = await prisma.debt.findMany({
+      where: { customerId, shopId },
+      orderBy: { createdAt: "desc" }
+    });
+    const transactions = await prisma.transaction.findMany({
+      where: { customerId, shopId },
+      orderBy: { createdAt: "desc" }
+    });
+    return {
+      success: true,
+      debts: serializePrisma(debts),
+      transactions: serializePrisma(transactions)
+    };
+  } catch (error) {
+    console.error("getCustomerStatement error:", error);
+    return { success: false, error: "Ekstre verileri alınamadı." };
   }
 }
