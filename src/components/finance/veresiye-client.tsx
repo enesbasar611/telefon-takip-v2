@@ -1021,7 +1021,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                             >
                                 <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP EKSTRE
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setHistoryCustomer(null)} className="rounded-xl text-slate-400 rotate-45"><PlusCircle className="w-5 h-5" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setHistoryCustomer(null)} className="rounded-xl text-slate-400 font-bold hover:bg-slate-100 transition-colors">
+                                <Search className="w-5 h-5 rotate-45 hidden" /> {/* Keeping logic for now if needed */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                            </Button>
                         </div>
                     </div>
                     <div className="px-8 py-4 overflow-y-auto flex-1 space-y-2 scrollbar-hide">
@@ -1328,22 +1331,22 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                             <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
                                 <span className="block text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Tahsil Edilen</span>
                                 <span className="text-lg font-black text-indigo-600 font-mono">
-                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{paymentSummary?.paidAmount.toLocaleString('tr-TR')}
+                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{(paymentSummary?.paidAmount ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                                 <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kalan Bakiye (TRY)</span>
                                 <span className="text-lg font-black text-slate-900 font-mono">
-                                    ₺{paymentSummary?.remainingTRY.toLocaleString('tr-TR')}
+                                    ₺{(paymentSummary?.remainingTRY ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
                         </div>
 
-                        {paymentSummary?.remainingUSD > 0 && (
+                        {(paymentSummary?.remainingUSD ?? 0) > 0 && (
                             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
                                 <span className="block text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1">Kalan Bakiye (USD)</span>
                                 <span className="text-lg font-black text-blue-600 font-mono">
-                                    ${paymentSummary?.remainingUSD.toLocaleString('tr-TR')}
+                                    ${(paymentSummary?.remainingUSD ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
                         )}
