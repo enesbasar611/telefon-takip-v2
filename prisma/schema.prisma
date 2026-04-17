@@ -535,6 +535,8 @@ model Debt {
   customerId      String
   amount          Decimal   @db.Decimal(10, 2)
   remainingAmount Decimal   @db.Decimal(10, 2)
+  currency        String    @default("TRY")
+  exchangeRate    Decimal?  @db.Decimal(10, 4)
   dueDate         DateTime?
   isPaid          Boolean   @default(false)
   isTracking      Boolean   @default(false)
@@ -781,4 +783,3 @@ model IndustryTemplate {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
-

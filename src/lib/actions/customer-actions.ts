@@ -327,3 +327,32 @@ export async function deleteCustomer(id: string, options?: {
     return { success: false, error: error.message || "Müşteri silinemedi." };
   }
 }
+
+export async function resolveCustomerForDebt(data: { name: string; phone?: string }) {
+  try {
+    const shopId = await getShopId();
+    const sanitizedPhone = data.phone ? formatPhoneRaw(data.phone) : "";
+
+    // If phone exists, try to find existing customer
+    if (sanitizedPhone) {
+      const existing = await prisma.customer.findFirst({
+        where: { shopId, phone: sanitizedPhone }
+      });
+      if (existing) return { success: true, customerId: existing.id };
+    }
+
+    // Otherwise create a new one
+    const newCustomer = await prisma.customer.create({
+      data: {
+        name: formatProperCase(data.name),
+        phone: sanitizedPhone || undefined,
+        shopId,
+      }
+    });
+
+    return { success: true, customerId: newCustomer.id };
+  } catch (error) {
+    console.error("resolveCustomerForDebt error:", error);
+    return { success: false, error: "Müşteri çözümlenemedi." };
+  }
+}

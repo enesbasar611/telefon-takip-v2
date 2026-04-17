@@ -17,11 +17,19 @@ export async function syncAllRates(providedShopId?: string) {
 
     if (!response.ok) throw new Error("API hatası");
     const data = await response.json();
-    const parseTR = (val: string) => val ? val.replace(/\./g, '').replace(',', '.') : "1";
+    const parseTR = (val: string) => val ? val.replace(/\./g, '').replace(',', '.') : null;
 
-    const usdRate = parseTR(data.USD?.Satış);
-    const eurRate = parseTR(data.EUR?.Satış);
-    const gaRate = parseTR(data["gram-altin"]?.Satış);
+    const usdRateStr = parseTR(data.USD?.Satış);
+    const eurRateStr = parseTR(data.EUR?.Satış);
+    const gaRateStr = parseTR(data["gram-altin"]?.Satış);
+
+    if (!usdRateStr || isNaN(Number(usdRateStr)) || Number(usdRateStr) < 10) {
+      throw new Error("Invalid rate payload from API");
+    }
+
+    const usdRate = usdRateStr;
+    const eurRate = eurRateStr || usdRate; // fallback to usd
+    const gaRate = gaRateStr || "3000";
 
     await prisma.$transaction([
       prisma.setting.upsert({ where: { shopId_key: { shopId, key: "exchange_rate_usd" } }, update: { value: usdRate }, create: { shopId, key: "exchange_rate_usd", value: usdRate } }),
@@ -70,9 +78,9 @@ export const getExchangeRates = async (shopId: string) => {
   }
 
   return {
-    usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
-    eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
-    ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
+    usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "34"),
+    eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "37"),
+    ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "3000"),
     lastUpdate
   };
 };

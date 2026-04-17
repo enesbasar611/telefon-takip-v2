@@ -769,7 +769,7 @@ export async function getPOSInitialData() {
     const [products, customers, categories] = await Promise.all([
       prisma.product.findMany({
         where: { shopId },
-        include: { category: true },
+        include: { category: { include: { parent: true } } },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.customer.findMany({

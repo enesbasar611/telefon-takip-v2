@@ -55,9 +55,10 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
             return;
         }
 
-        const confirmName = prompt(`Silme işlemini onaylamak için dükkan adını yazın: ${shop.name}`);
-        if (confirmName !== shop.name) {
-            toast.error("Dükkan adı eşleşmedi, silme iptal edildi.");
+        const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const confirmName = prompt(`Silme işlemini onaylamak için lütfen şu kodu girin: ${randomCode}`);
+        if (confirmName !== randomCode) {
+            toast.error("Kod eşleşmedi, silme iptal edildi.");
             return;
         }
 
