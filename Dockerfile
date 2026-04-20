@@ -2,38 +2,33 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# ... önceki satırlar (npx prisma generate gibi)
-
-# Build aşamasında Prisma'nın hata vermemesi için sahte URL'ler veriyoruz
-
-# Build aşamasında Prisma ve Next.js'in veritabanı kontrolünü devre dışı bırakıyoruz
-RUN DATABASE_URL="postgresql://username:password@localhost:5432/postgres" \
-    DIRECT_URL="postgresql://username:password@localhost:5432/postgres" \
-    NEXT_TELEMETRY_DISABLED=1 \
-    SKIP_ENV_VALIDATION=1 \
-    npm run build
-
-# ... sonraki satırlar
-
-# Install dependencies for Prisma and build
+# Build için gerekli sistem paketleri
 RUN apt-get update && apt-get install -y openssl python3 make g++
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Bağımlılıkları yükle
 RUN npm install
 
 COPY . .
 
-# Generate Prisma client and build Next.js
+# 1. Prisma Client oluştur
 RUN npx prisma generate
-RUN npm run build
+
+# 2. Next.js Build (Sahte URL'ler ve Puppeteer koruması ile)
+RUN NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=production \
+    DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    npm run build
 
 # Stage 2: Run
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Install browser dependencies for WhatsApp (Puppeteer)
+# Puppeteer/Chromium için gerekli kütüphaneler
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-ipafont-gothic \
@@ -42,21 +37,22 @@ RUN apt-get update && apt-get install -y \
     fonts-kacst \
     fonts-freefont-ttf \
     libxss1 \
+    openssl \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-ENV NODE_ENV production
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
-ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/chromium
+ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PORT=5000
+ENV HOSTNAME="0.0.0.0"
 
-# Copy necessary files from builder
+# Builder'dan gelen dosyaları kopyala
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
 
-# Expose the port (matches package.json script)
 EXPOSE 5000
-ENV PORT = 5000
-ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]
