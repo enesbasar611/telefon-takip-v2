@@ -2,6 +2,16 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
+# ... önceki satırlar (npx prisma generate gibi)
+
+# Build aşamasında Prisma'nın hata vermemesi için sahte URL'ler veriyoruz
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    NEXTAUTH_SECRET="placeholder" \
+    npm run build
+
+# ... sonraki satırlar
+
 # Install dependencies for Prisma and build
 RUN apt-get update && apt-get install -y openssl python3 make g++
 
@@ -43,7 +53,7 @@ COPY --from=builder /app/.next/static ./.next/static
 
 # Expose the port (matches package.json script)
 EXPOSE 5000
-ENV PORT 5000
+ENV PORT = 5000
 ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]
