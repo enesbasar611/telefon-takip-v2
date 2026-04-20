@@ -287,9 +287,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
   };
 
   const closeReceiptAndReload = () => {
+    const hasDevice = lastSale?.items?.some((item: any) => item.product?.deviceInfo !== null);
     setShowReceipt(false);
-    setLastSale(null);
-    router.replace("/satis"); // URL'i temizle
+
+    if (hasDevice && lastSale?.items?.[0]?.productId) {
+      router.push(`/cihaz-listesi?deviceId=${lastSale.items[0].productId}`);
+    } else {
+      setLastSale(null);
+      router.replace("/satis");
+    }
   };
 
   return (
@@ -368,34 +374,50 @@ export function POSInterface({ products: initialProducts, customers, categories,
           {/* Grid Area */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/5 relative">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {filteredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  disabled={product.stock <= 0}
-                  className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-square sm:aspect-[1/1.2]"
-                >
-                  <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-emerald-50 text-[9px] sm:text-[10px] font-bold text-emerald-600 border border-emerald-500/20 shadow-sm z-10 transition-transform group-hover:scale-105">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
-                    {product.stock} Adet
-                  </div>
+              {filteredProducts.map((product) => {
+                const sellPrice = product.sellPrice;
+                const priceStr = formatCurrency(sellPrice);
+                // Dynamic font size logic for price
+                const getPriceSize = (len: number) => {
+                  if (len > 9) return "text-sm sm:text-base font-bold";
+                  if (len > 7) return "text-base sm:text-xl font-bold";
+                  return "text-lg sm:text-2xl lg:text-3xl font-black";
+                };
 
-                  <div className="text-[8px] sm:text-[10px] text-primary mb-1 sm:mb-2 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity z-10 mt-1">
-                    <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                    <span className="truncate pr-1">
-                      {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
-                    </span>
-                  </div>
-
-                  <div className="mt-auto flex flex-col gap-0.5 sm:gap-1 z-10 w-full overflow-hidden">
-                    <div className="text-foreground text-lg sm:text-2xl lg:text-3xl font-black tabular-nums truncate w-full">₺{formatCurrency(product.sellPrice)}</div>
-                    <div className="text-muted-foreground text-[11px] sm:text-[13px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.5em] sm:h-[2.8em]">
-                      {product.name}
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    disabled={product.stock <= 0}
+                    className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]"
+                  >
+                    {/* Top Row: Category & Stock */}
+                    <div className="flex items-start justify-between gap-2 mb-auto z-10">
+                      <div className="text-[8px] sm:text-[10px] text-primary flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity min-w-0 flex-1">
+                        <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                        <span className="truncate">
+                          {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
+                        </span>
+                      </div>
+                      <div className="shrink-0 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-emerald-500/10 text-[8px] sm:text-[10px] font-bold text-emerald-600 border border-emerald-500/20 shadow-sm transition-transform group-hover:scale-105">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
+                        {product.stock}
+                      </div>
                     </div>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
-                </button>
-              ))}
+
+                    {/* Bottom Row: Price & Title */}
+                    <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
+                      <div className={cn("text-foreground tabular-nums truncate w-full leading-tight", getPriceSize(priceStr.length))}>
+                        ₺{priceStr}
+                      </div>
+                      <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">
+                        {product.name}
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

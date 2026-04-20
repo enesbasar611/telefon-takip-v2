@@ -21,6 +21,8 @@ import { getShopInfo } from "@/lib/actions/receipt-settings";
 interface DeviceReceiptModalProps {
     device: any;
     children?: React.ReactNode;
+    defaultOpen?: boolean;
+    onClose?: () => void;
 }
 
 type FormType = "purchase" | "sale";
@@ -252,11 +254,22 @@ function ThermalReceipt({
     );
 }
 
-export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps) {
-    const [open, setOpen] = useState(false);
+export function DeviceReceiptModal({ device, children, defaultOpen = false, onClose }: DeviceReceiptModalProps) {
+    const [open, setOpen] = useState(defaultOpen);
     const [formType, setFormType] = useState<FormType>("purchase");
     const [printFormat, setPrintFormat] = useState<PrintFormat>("a4");
     const [shopInfo, setShopInfo] = useState<any>(null);
+
+    // Sync with defaultOpen
+    useEffect(() => {
+        if (defaultOpen) setOpen(true);
+    }, [defaultOpen]);
+
+    // Handle manual close
+    const handleOpenChange = (val: boolean) => {
+        setOpen(val);
+        if (!val && onClose) onClose();
+    };
 
     useEffect(() => {
         const fetchShop = async () => {
@@ -378,7 +391,7 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 {children || (
                     <button
@@ -390,12 +403,12 @@ export function DeviceReceiptModal({ device, children }: DeviceReceiptModalProps
                 )}
             </DialogTrigger>
 
-            <DialogContent className="max-w-[1100px] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
+            <DialogContent className="max-w-[1100px] p-0 bg-background text-foreground border border-border/60 shadow-2xl rounded-2xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
 
                 {/* Left Side: Form Inputs */}
                 <div className="w-full md:w-80 border-r border-border/60 flex flex-col bg-background/20 shrink-0">
                     <div className="p-5 border-b border-border/60">
-                        <h3 className="font-medium text-sm  text-white uppercase tracking-widest">Sözleşme Bilgileri</h3>
+                        <h3 className="font-medium text-sm text-foreground uppercase tracking-widest">Sözleşme Bilgileri</h3>
                         <p className="text-[10px] text-muted-foreground/80 font-medium">Baskı öncesi detayları doldurun.</p>
                     </div>
 

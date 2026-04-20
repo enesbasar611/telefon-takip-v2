@@ -5,24 +5,76 @@ import { formatTitleCase, formatProperCase, formatUppercase } from "@/lib/format
 import { revalidatePath } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 
-export async function getDeviceList() {
+export async function getDeviceList(params?: { month?: string; startDate?: string; endDate?: string }) {
   try {
     const shopId = await getShopId();
+
+    let whereClause: any = {
+      shopId,
+      deviceInfo: { isNot: null }
+    };
+
+    let start: Date | undefined;
+    let end: Date | undefined;
+
+    if (params?.startDate && params?.endDate) {
+      start = new Date(params.startDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(params.endDate);
+      end.setHours(23, 59, 59, 999);
+    } else if (params?.month) {
+      const [year, month] = params.month.split("-").map(Number);
+      start = new Date(year, month - 1, 1);
+      end = new Date(year, month, 0, 23, 59, 59);
+    }
+
+    if (start && end) {
+      whereClause = {
+        AND: [
+          { shopId },
+          { deviceInfo: { isNot: null } },
+          {
+            OR: [
+              { stock: { gt: 0 } }, // In stock
+              {
+                saleItems: {
+                  some: {
+                    sale: {
+                      createdAt: {
+                        gte: start,
+                        lte: end
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      };
+    }
+
     const devices = await prisma.product.findMany({
-      where: {
-        shopId,
-        deviceInfo: { isNot: null }
-      },
+      where: whereClause,
       include: {
         category: true,
         deviceInfo: true,
+        saleItems: {
+          take: 1,
+          include: {
+            sale: {
+              include: { customer: true }
+            }
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
     const mapped = devices.map((d: any) => ({
       ...d,
-      brand: d.name.split(" ")[0]
+      brand: d.name.split(" ")[0],
+      sale: d.saleItems?.[0]?.sale || null
     }));
     return serializePrisma(mapped);
   } catch (error) {

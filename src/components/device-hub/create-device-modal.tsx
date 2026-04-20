@@ -296,6 +296,11 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       amber: active ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground/80",
       purple: active ? "bg-purple-500 text-white" : "bg-muted text-muted-foreground/80",
     };
+    const colorText: Record<string, string> = {
+      emerald: active ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-muted-foreground/80",
+      amber: active ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground/80",
+      purple: active ? "text-purple-600 dark:text-purple-400 font-bold" : "text-muted-foreground/80",
+    };
     const dotBg: Record<string, string> = {
       emerald: "bg-emerald-500", amber: "bg-amber-500", purple: "bg-purple-500",
     };
@@ -309,7 +314,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <h4 className={`text-[14px]  leading-tight ${active ? "text-white" : "text-muted-foreground/80"}`}>{title}</h4>
+          <h4 className={`text-[14px] leading-tight ${colorText[color]}`}>{title}</h4>
           <p className="text-[10px] text-muted-foreground/80 font-medium mt-0.5 leading-snug">{desc}</p>
         </div>
         {active && <div className={`absolute top-3 right-3 h-2 w-2 rounded-full ${dotBg[color]}`} />}
@@ -317,7 +322,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     );
   };
 
-  const inputCls = "bg-background border-border rounded-xl h-11 text-[13px] font-medium dark:text-white placeholder:text-slate-600";
+  const inputCls = "bg-background border-border rounded-xl h-11 text-[13px] font-medium text-foreground placeholder:text-muted-foreground/50";
   const labelCls = "text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-0.5";
   const sectionCls = "p-5 rounded-2xl bg-card border border-border/60 space-y-4";
 
@@ -329,11 +334,11 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-[#0B0F19] text-foreground/90 border border-border/60 shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
+      <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-background text-foreground border border-border shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
         {/* Header */}
         <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
           <div>
-            <DialogTitle className="font-medium text-[21px]  text-white leading-tight">Yeni Cihaz Kaydı</DialogTitle>
+            <DialogTitle className="font-medium text-[21px] text-foreground leading-tight">Yeni Cihaz Kaydı</DialogTitle>
             <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
           </div>
         </div>
@@ -658,7 +663,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input
                     {...register("buyPrice")}
                     placeholder="0"
-                    className="bg-background border-border rounded-xl h-11 text-[15px]  pl-8 dark:text-white"
+                    className="bg-background border-border rounded-xl h-11 text-[15px] pl-8 text-foreground"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("buyPrice", formatted, { shouldValidate: true });
@@ -727,7 +732,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           {/* Footer */}
-          <div className="px-7 py-5 border-t border-border/60 bg-[#0B0F19] flex sm:flex-row flex-col gap-4 justify-between items-center sm:sticky bottom-0 z-50">
+          <div className="px-7 py-5 border-t border-border bg-background/80 backdrop-blur-sm flex sm:flex-row flex-col gap-4 justify-between items-center sm:sticky bottom-0 z-50">
             <p className="text-[11px] text-slate-600 font-medium sm:text-left text-center">
               Otomatik kategori:{" "}
               <span className="text-muted-foreground ">

@@ -16,13 +16,19 @@ import { getMonthlySalesComparisonHtml } from "@/lib/device-utils";
 import { DeviceExportButton } from "@/components/device-hub/device-export-button";
 import { DeviceImportModal } from "@/components/device-hub/device-import-modal";
 import { getIndustryLabel } from "@/lib/industry-utils";
+import { DeviceMonthSelector } from "@/components/device-hub/device-month-selector";
+import { DeviceDateRangeSelector } from "@/components/device-hub/device-date-range-selector";
 
 export const dynamic = "force-dynamic";
 
-export default async function DeviceHubPage() {
+export default async function DeviceHubPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+  const deviceId = searchParams.deviceId as string;
+  const month = searchParams.month as string;
+  const startDateParam = searchParams.startDate as string;
+  const endDateParam = searchParams.endDate as string;
   const shopId = await getShopId();
   const [devices, categories, expiringDevices] = await Promise.all([
-    getDeviceList(),
+    getDeviceList({ month, startDate: startDateParam, endDate: endDateParam }),
     getCategories(),
     getExpiringDevices(),
   ]);
@@ -31,47 +37,63 @@ export default async function DeviceHubPage() {
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const assetLabelUpper = assetLabel.toLocaleUpperCase('tr-TR');
 
-  // Metrics
-  const newDevices = devices.filter((d: any) => d.deviceInfo?.condition === "NEW");
-  const usedDevices = devices.filter((d: any) => d.deviceInfo?.condition === "USED");
-  const intlDevices = devices.filter((d: any) => d.deviceInfo?.condition === "INTERNATIONAL");
+  // Filtering Boundaries
+  let startBound: Date;
+  let endBound: Date;
 
-  // ... (rest of data fetching)
+  if (startDateParam && endDateParam) {
+    startBound = new Date(startDateParam);
+    startBound.setHours(0, 0, 0, 0);
+    endBound = new Date(endDateParam);
+    endBound.setHours(23, 59, 59, 999);
+  } else {
+    const activeMonth = month || new Date().toISOString().substring(0, 7);
+    startBound = new Date(`${activeMonth}-01T00:00:00`);
+    endBound = new Date(startBound);
+    endBound.setMonth(endBound.getMonth() + 1);
+  }
 
-  // Today's Sales
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const todaySalesItems = await prisma.saleItem.findMany({
-    where: {
-      shopId,
-      sale: { createdAt: { gte: startOfToday } },
-      product: { deviceInfo: { isNot: null } }
-    }
+  // Separation
+  const stockDevices = devices.filter((d: any) => d.stock > 0);
+  const soldDevices = devices.filter((d: any) => d.stock === 0 && d.sale);
+
+  // Filtered Sold Devices (based on period)
+  const filteredSoldDevices = soldDevices.filter((d: any) => {
+    const saleDate = new Date(d.sale.createdAt);
+    return saleDate >= startBound && saleDate < endBound;
   });
-  const todaySalesTotal = todaySalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
-  const todayCount = todaySalesItems.length;
 
-  // Monthly Sales Detail for Modal
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-  const monthlySalesItems = await prisma.saleItem.findMany({
+  // Metrics
+  const newDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "NEW");
+  const usedDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "USED");
+  const intlDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "INTERNATIONAL");
+
+  // Financial Stock Metrics
+  const totalStokMaliyeti = stockDevices.reduce((acc: number, d: any) => acc + (Number(d.buyPrice) * d.stock), 0);
+  const beklenenKar = stockDevices.reduce((acc: number, d: any) => acc + (Number(d.sellPrice) - Number(d.buyPrice)) * d.stock, 0);
+
+  // Financial Sales Metrics (Selected Period)
+  const periodTotalSatis = filteredSoldDevices.reduce((acc: number, d: any) => acc + Number(d.sellPrice), 0);
+  const periodToplamKar = filteredSoldDevices.reduce((acc: number, d: any) => acc + (Number(d.sellPrice) - Number(d.buyPrice)), 0);
+
+  // Period Sales Detail for Graphs
+  const periodSalesItems = await prisma.saleItem.findMany({
     where: {
       shopId,
-      sale: { createdAt: { gte: startOfMonth } },
+      sale: { createdAt: { gte: startBound, lt: endBound } },
       product: { deviceInfo: { isNot: null } }
     },
     include: { product: { include: { deviceInfo: true } }, sale: true },
     orderBy: { sale: { createdAt: "desc" } }
   });
 
-  const monthlyTotal = monthlySalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
-  const monthlyCount = monthlySalesItems.length;
+  const periodTotal = periodSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+  const periodCount = periodSalesItems.length;
 
-  // Last Month Comparison
-  const lastMonthStart = new Date(startOfMonth);
+  // Comparison logic (simplified, relative to startBound)
+  const lastMonthStart = new Date(startBound);
   lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
-  const lastMonthEnd = new Date(startOfMonth);
+  const lastMonthEnd = new Date(startBound);
   const lastMonthSalesItems = await prisma.saleItem.findMany({
     where: {
       shopId,
@@ -80,54 +102,20 @@ export default async function DeviceHubPage() {
     }
   });
   const lastMonthTotal = lastMonthSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
-  const comparisonHtml = getMonthlySalesComparisonHtml(monthlyTotal, lastMonthTotal);
-
-  // Financial Stock Metrics
-  const totalStokMaliyeti = devices.reduce((acc: number, d: any) => acc + (d.stock > 0 ? Number(d.buyPrice) * d.stock : 0), 0);
-  const beklenenKar = devices.reduce((acc: number, d: any) => acc + (d.stock > 0 ? (Number(d.sellPrice) - Number(d.buyPrice)) * d.stock : 0), 0);
-
-  // Sales Graph Data (Last 7 Days)
-  const last7Days = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-
-  const salesGraphData = await Promise.all(last7Days.map(async (date) => {
-    const nextDay = new Date(date);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const dailyTotal = monthlySalesItems
-      .filter(item => new Date(item.sale.createdAt) >= date && new Date(item.sale.createdAt) < nextDay)
-      .reduce((acc, curr) => acc + Number(curr.totalPrice), 0);
-
-    return {
-      date: date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
-      total: dailyTotal,
-    };
-  }));
+  const comparisonHtml = getMonthlySalesComparisonHtml(periodTotal, lastMonthTotal);
 
   // Missing Items Analysis
   const soldRecentLimit = new Date();
   soldRecentLimit.setDate(soldRecentLimit.getDate() - 30);
-  const soldRecently = await prisma.saleItem.findMany({
-    where: {
-      shopId,
-      sale: { createdAt: { gte: soldRecentLimit } },
-      product: { deviceInfo: { isNot: null } }
-    },
-    include: { product: { include: { deviceInfo: true } } }
-  });
-
   const missingItemsMap = new Map();
-  soldRecently.forEach((item: any) => {
+  // ... (Missing items logic remains similar but uses stockDevices)
+  periodSalesItems.forEach((item: any) => {
     const key = `${item.product.name}-${item.product.deviceInfo?.color}-${item.product.deviceInfo?.storage}`;
     if (!missingItemsMap.has(key)) {
-      const stockAvailable = devices.some((d: any) =>
+      const stockAvailable = stockDevices.some((d: any) =>
         d.name === item.product.name &&
         d.deviceInfo?.color === item.product.deviceInfo?.color &&
-        d.deviceInfo?.storage === item.product.deviceInfo?.storage &&
-        d.stock > 0
+        d.deviceInfo?.storage === item.product.deviceInfo?.storage
       );
       if (!stockAvailable) {
         missingItemsMap.set(key, {
@@ -139,7 +127,34 @@ export default async function DeviceHubPage() {
       }
     }
   });
-  const missingItems = Array.from(missingItemsMap.values());
+  // Purchases in period
+  const periodPurchases = await prisma.product.findMany({
+    where: {
+      shopId,
+      createdAt: { gte: startBound, lt: endBound },
+      deviceInfo: { isNot: null }
+    }
+  });
+
+  const missingItems = Array.from(missingItemsMap.values());  // Sales Graph Data (Selected Period)
+  const daysInPeriod = Math.ceil((endBound.getTime() - startBound.getTime()) / (1000 * 60 * 60 * 24));
+  const salesGraphData = Array.from({ length: daysInPeriod }).map((_, i) => {
+    const dayDate = new Date(startBound);
+    dayDate.setDate(dayDate.getDate() + i);
+
+    const dailySales = periodSalesItems.filter((item: any) => new Date(item.sale.createdAt).toDateString() === dayDate.toDateString());
+    const dailyTotal = dailySales.reduce((acc: number, curr: any) => acc + Number(curr.totalPrice), 0);
+    const dailyCount = dailySales.length;
+
+    const dailyPurchases = periodPurchases.filter((p: any) => new Date(p.createdAt).toDateString() === dayDate.toDateString()).length;
+
+    return {
+      date: dayDate.getDate().toString(),
+      total: dailyTotal,
+      salesCount: dailyCount,
+      purchaseCount: dailyPurchases
+    };
+  });
 
   return (
     <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
@@ -152,8 +167,13 @@ export default async function DeviceHubPage() {
         iconColor="text-blue-500"
         actions={
           <>
+            <DeviceDateRangeSelector initialMonth={month} />
             <DeviceImportModal />
-            <DeviceExportButton devices={devices} />
+            <DeviceExportButton
+              devices={devices}
+              categories={categories}
+              selectedMonth={month}
+            />
             <CreateDeviceModal categories={categories} />
           </>
         }
@@ -165,19 +185,22 @@ export default async function DeviceHubPage() {
           <MonitorSmartphone className="h-4 w-4 text-muted-foreground/80" />
           <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
-        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-          <MetricCard icon={MonitorSmartphone} label={`TOPLAM ${assetLabelUpper}`} value={devices.length.toString()} subLabel={`${assetLabel} Adet`} color="blue" />
-          {(shop?.industry === 'PHONE_REPAIR' || shop?.industry === 'COMPUTER_REPAIR') ? (
-            <>
-              <MetricCard icon={BadgeCheck} label={`SIFIR ${assetLabelUpper}`} value={newDevices.length.toString()} subLabel="Sıfır Stok" color="emerald" />
-              <MetricCard icon={RotateCcw} label={`2. EL ${assetLabelUpper}`} value={usedDevices.length.toString()} subLabel="İkinci El" color="amber" />
-              <MetricCard icon={Globe} label="YURTDIŞI" value={intlDevices.length.toString()} subLabel="Dual SIM" color="purple" />
-            </>
-          ) : (
-            <MetricCard icon={TrendingUp} label="AKTİF STOK" value={devices.length.toString()} subLabel="Toplam Ürün" color="emerald" />
-          )}
-          <ExpiringWarrantiesModal devices={expiringDevices} count={expiringDevices.length} />
-          <DeviceAiStockAdviceModal missingItems={missingItems} />
+        <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 scrollbar-none sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-5">
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={MonitorSmartphone} label={`STOKTAKİ ${assetLabelUpper}`} value={stockDevices.length.toString()} subLabel={`${assetLabel} Adet`} color="blue" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={BadgeCheck} label={`SIFIR ${assetLabelUpper}`} value={newDevicesStock.length.toString()} subLabel="Sıfır Stok" color="emerald" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={RotateCcw} label={`2. EL ${assetLabelUpper}`} value={usedDevicesStock.length.toString()} subLabel="İkinci El" color="amber" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={Globe} label="YURTDIŞI" value={intlDevicesStock.length.toString()} subLabel="Dual SIM" color="purple" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel={`Beklenen Kar: + ${beklenenKar.toLocaleString("tr-TR")} ₺`} color="rose" />
+          </div>
         </div>
       </div>
 
@@ -185,24 +208,42 @@ export default async function DeviceHubPage() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Coins className="h-4 w-4 text-muted-foreground/80" />
-          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Finansal Göstergeler</h2>
+          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Finansal Göstergeler ({startDateParam ? `${startDateParam} - ${endDateParam}` : (month || "Bu Ay")})</h2>
         </div>
-        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard icon={Wallet} label="STOK MALİYETİ" value={`${totalStokMaliyeti.toLocaleString("tr-TR")} ₺`} subLabel="Toplam Alış" color="rose" />
-          <MetricCard icon={TrendingUp} label="BEKLENEN KAR" value={`${beklenenKar.toLocaleString("tr-TR")} ₺`} subLabel="Satış Potansiyeli" color="emerald" />
-          <MetricCard icon={CreditCard} label="BUGÜNKÜ SATIŞ" value={`${todaySalesTotal.toLocaleString("tr-TR")} ₺`} subLabel={`${todayCount} İşlem`} color="blue" />
-          <DeviceMonthlySalesModal
-            monthlyTotal={monthlyTotal}
-            monthlyCount={monthlyCount}
-            chartData={salesGraphData}
-            items={monthlySalesItems}
-            comparisonHtml={comparisonHtml}
-          />
+        <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 scrollbar-none sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-5">
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={TrendingUp} label="BEKLENEN KAR" value={`${beklenenKar.toLocaleString("tr-TR")} ₺`} subLabel="Stok Potansiyeli" color="emerald" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={CreditCard} label="DÖNEM SATIŞI" value={`${periodTotalSatis.toLocaleString("tr-TR")} ₺`} subLabel={`${periodCount} Cihaz`} color="blue" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <MetricCard icon={Zap} label="DÖNEM KARI" value={`${periodToplamKar.toLocaleString("tr-TR")} ₺`} subLabel="Net Cihaz Karı" color="emerald" />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <DeviceMonthlySalesModal
+              monthlyTotal={periodTotalSatis}
+              monthlyCount={periodCount}
+              chartData={salesGraphData}
+              items={periodSalesItems}
+              comparisonHtml={comparisonHtml}
+            />
+          </div>
+          <div className="min-w-[200px] sm:min-w-0">
+            <DeviceAiStockAdviceModal
+              missingItems={missingItems}
+              monthlySales={periodSalesItems}
+              stockDevices={stockDevices}
+            />
+          </div>
         </div>
       </div>
 
       {/* Main Content: Filterable Table Client */}
-      <DeviceListClient initialDevices={devices} />
+      <DeviceListClient
+        initialDevices={devices}
+        initialDeviceId={deviceId}
+      />
     </div>
   );
 }
@@ -217,7 +258,7 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
   };
 
   return (
-    <div className="bg-[#121629] p-5 rounded-2xl flex flex-col gap-3 border border-border/60 shadow-lg group transition-all duration-300">
+    <div className="bg-card p-5 rounded-2xl flex flex-col gap-3 border border-border/60 shadow-lg group transition-all duration-300">
       <div className="flex justify-between items-start">
         <div className={`p-2.5 rounded-xl transition-colors ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           <Icon className="h-5 w-5" />
@@ -227,7 +268,7 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
         </div>
       </div>
       <div className="mt-2">
-        <h3 className="font-medium text-[26px]  text-white leading-none tracking-tight">{value}</h3>
+        <h3 className="font-medium text-[26px]  text-foreground leading-none tracking-tight">{value}</h3>
         <p className="text-[11px] text-muted-foreground/80  tracking-wide mt-2">{subLabel}</p>
       </div>
     </div>

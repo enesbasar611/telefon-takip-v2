@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 
 interface DeviceExportButtonProps {
     devices: any[];
+    categories?: any[];
+    selectedMonth?: string;
 }
 
-export function DeviceExportButton({ devices }: DeviceExportButtonProps) {
+export function DeviceExportButton({ devices, categories, selectedMonth }: DeviceExportButtonProps) {
     const handleExport = () => {
         if (!devices || devices.length === 0) return;
 
@@ -46,7 +48,9 @@ export function DeviceExportButton({ devices }: DeviceExportButtonProps) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
 
-        const fileName = `cihaz-hub-stok-${new Date().toISOString().split("T")[0]}.csv`;
+        const fileName = selectedMonth
+            ? `cihaz-hub-stok-${selectedMonth}.csv`
+            : `cihaz-hub-stok-${new Date().toISOString().split("T")[0]}.csv`;
 
         link.setAttribute("href", url);
         link.setAttribute("download", fileName);
