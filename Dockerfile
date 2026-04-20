@@ -2,7 +2,7 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Build için gerekli sistem paketleri
+# Gerekli sistem paketleri
 RUN apt-get update && apt-get install -y openssl python3 make g++
 
 COPY package*.json ./
@@ -16,8 +16,7 @@ COPY . .
 # 1. Prisma Client oluştur
 RUN npx prisma generate
 
-# 2. Next.js Build (Sahte URL'ler ve Puppeteer koruması ile)
-# ... npx prisma generate satırından sonra
+# 2. Next.js Build (Tüm korumalar tek komutta)
 RUN NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     PRISMA_SKIP_DATABASE_CHECK=1 \
@@ -30,19 +29,16 @@ RUN NEXT_TELEMETRY_DISABLED=1 \
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Puppeteer/Chromium için gerekli kütüphaneler
+# Puppeteer ve çalışma zamanı paketleri
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
     libxss1 \
     openssl \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Ortam değişkenlerini "=" ile tanımlayalım (Warningleri siler)
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
