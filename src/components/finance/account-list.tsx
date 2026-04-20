@@ -14,6 +14,8 @@ interface Account {
     name: string;
     type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
     balance: number;
+    initialBalance?: number;
+    availableBalance?: number;
     limit?: number;
     billingDay?: number;
 }
@@ -62,8 +64,23 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                     </Badge>
                                 </div>
                                 <div>
-                                    <h3 className="font-medium text-sm  tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-2xl  tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+                                    <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
+                                    <p className="text-2xl tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+
+                                    {account.type === "CREDIT_CARD" && account.limit && (
+                                        <div className="mt-3 space-y-1.5 ">
+                                            <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground/60">
+                                                <span>LİMİT: ₺{Number(account.limit).toLocaleString('tr-TR')}</span>
+                                                <span className="text-emerald-500">BOŞ: ₺{Number(account.availableBalance || 0).toLocaleString('tr-TR')}</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-rose-500 rounded-full"
+                                                    style={{ width: `${Math.min(100, (Number(account.balance) / Number(account.limit)) * 100)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="mt-5 pt-5 border-t border-border/40 flex items-center gap-3">
                                     <AccountDetailModal account={account} />

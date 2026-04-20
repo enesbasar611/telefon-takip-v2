@@ -56,7 +56,13 @@ export async function getAccounts() {
   }
 }
 
-export async function createAccount(data: { name: string; type: "CASH" | "BANK" | "POS" | "CREDIT_CARD"; initialBalance?: number }) {
+export async function createAccount(data: {
+  name: string;
+  type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
+  initialBalance?: number;
+  limit?: number;
+  billingDay?: number;
+}) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -66,6 +72,10 @@ export async function createAccount(data: { name: string; type: "CASH" | "BANK" 
         name: data.name,
         type: data.type,
         balance: data.initialBalance || 0,
+        initialBalance: data.initialBalance || 0,
+        availableBalance: data.type === "CREDIT_CARD" ? (data.limit || 0) - (data.initialBalance || 0) : (data.initialBalance || 0),
+        limit: data.limit,
+        billingDay: data.billingDay,
         isDefault: false,
         shopId
       }
@@ -81,7 +91,8 @@ export async function createAccount(data: { name: string; type: "CASH" | "BANK" 
           financeAccountId: account.id,
           userId,
           shopId,
-          category: "AÇILIŞ"
+          category: "AÇILIŞ",
+          runningBalance: data.initialBalance
         }
       });
     }
@@ -89,6 +100,7 @@ export async function createAccount(data: { name: string; type: "CASH" | "BANK" 
     revalidatePath("/satis/kasa");
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
+    console.error("Account creation error:", error);
     return { success: false, error: "Hesap oluşturulamadı." };
   }
 }
@@ -138,6 +150,25 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
     }
 
     const transaction = await prisma.$transaction(async (tx) => {
+      // 1. Get the account to update its balance and calculate running balance
+      const account = await tx.financeAccount.findUnique({
+        where: { id: targetAccountId! }
+      });
+
+      if (!account) throw new Error("Hesap bulunamadı.");
+
+      const oldBalance = Number(account.balance);
+      const newBalance = data.type === 'INCOME' ? oldBalance + data.amount : oldBalance - data.amount;
+
+      // 2. Calculate New Available Balance if it's a Credit Card
+      let newAvailableBalance = account.availableBalance ? Number(account.availableBalance) : null;
+      if (account.type === "CREDIT_CARD") {
+        // Credit card available balance is limit - balance (but here balance is used as current spendable amount)
+        // Actually, let's stick to: balance = money in account/available limit.
+        // If it's a credit card, availableBalance = balance.
+        newAvailableBalance = newBalance;
+      }
+
       const t = await tx.transaction.create({
         data: {
           type: data.type,
@@ -150,6 +181,7 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
           userId,
           shopId,
           createdAt: data.date ? new Date(data.date) : new Date(),
+          runningBalance: newBalance,
           attachments: {
             create: data.attachments?.map(att => ({
               url: att.url,
@@ -166,9 +198,8 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
       await tx.financeAccount.update({
         where: { id: targetAccountId! },
         data: {
-          balance: {
-            [data.type === 'INCOME' ? 'increment' : 'decrement']: data.amount
-          }
+          balance: newBalance,
+          availableBalance: newAvailableBalance
         }
       });
 
@@ -249,28 +280,46 @@ export async function updateManualTransaction(
         }
       });
 
-      // 2. Adjust account balances
+      // 4. Adjust account balances and running balances
       if (oldTx.financeAccountId !== data.accountId || Number(oldTx.amount) !== data.amount || oldTx.type !== data.type) {
+        // Reverse old transaction
         if (oldTx.financeAccountId) {
-          await tx.financeAccount.update({
-            where: { id: oldTx.financeAccountId },
-            data: {
-              balance: {
-                [oldTx.type === 'INCOME' ? 'decrement' : 'increment']: oldTx.amount
+          const oldAccount = await tx.financeAccount.findUnique({ where: { id: oldTx.financeAccountId } });
+          if (oldAccount) {
+            const reversedBalance = oldTx.type === 'INCOME' ? Number(oldAccount.balance) - Number(oldTx.amount) : Number(oldAccount.balance) + Number(oldTx.amount);
+            await tx.financeAccount.update({
+              where: { id: oldTx.financeAccountId },
+              data: {
+                balance: reversedBalance,
+                availableBalance: oldAccount.type === 'CREDIT_CARD' ? reversedBalance : oldAccount.availableBalance
               }
-            }
-          });
+            });
+          }
         }
 
-        if (data.accountId) {
-          await tx.financeAccount.update({
-            where: { id: data.accountId },
-            data: {
-              balance: {
-                [data.type === 'INCOME' ? 'increment' : 'decrement']: data.amount
+        // Apply new transaction
+        const targetAccountId = data.accountId || oldTx.financeAccountId;
+        if (targetAccountId) {
+          const targetAccount = await tx.financeAccount.findUnique({ where: { id: targetAccountId } });
+          if (targetAccount) {
+            const newBalance = (data.type || oldTx.type) === 'INCOME'
+              ? Number(targetAccount.balance) + (data.amount || Number(oldTx.amount))
+              : Number(targetAccount.balance) - (data.amount || Number(oldTx.amount));
+
+            await tx.financeAccount.update({
+              where: { id: targetAccountId },
+              data: {
+                balance: newBalance,
+                availableBalance: targetAccount.type === 'CREDIT_CARD' ? newBalance : targetAccount.availableBalance
               }
-            }
-          });
+            });
+
+            // Update transaction with new running balance
+            await tx.transaction.update({
+              where: { id: t.id },
+              data: { runningBalance: newBalance }
+            });
+          }
         }
       }
 
@@ -352,7 +401,13 @@ export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "
   });
 }
 
-export async function updateAccount(id: string, data: { name: string; type: any; balance?: number }) {
+export async function updateAccount(id: string, data: {
+  name: string;
+  type: any;
+  balance?: number;
+  limit?: number;
+  billingDay?: number;
+}) {
   try {
     const shopId = await getShopId();
     const account = await prisma.financeAccount.update({
@@ -360,13 +415,16 @@ export async function updateAccount(id: string, data: { name: string; type: any;
       data: {
         name: data.name,
         type: data.type,
-        ...(data.balance !== undefined ? { balance: data.balance } : {})
+        ...(data.balance !== undefined ? { balance: data.balance } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
+        ...(data.billingDay !== undefined ? { billingDay: data.billingDay } : {}),
       }
     });
 
     revalidatePath("/satis/kasa");
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
+    console.error("Account update error:", error);
     return { success: false, error: "Hesap güncellenemedi." };
   }
 }
@@ -380,7 +438,12 @@ export async function getDailySummary() {
     const [accounts, todayIncomeAgg, todayExpenseAgg, totalReceivablesAgg, totalPayablesAgg] = await Promise.all([
       prisma.financeAccount.findMany({ where: { shopId } }),
       prisma.transaction.aggregate({
-        where: { shopId, type: 'INCOME', createdAt: { gte: today } },
+        where: {
+          shopId,
+          type: 'INCOME',
+          createdAt: { gte: today },
+          category: { not: "AÇILIŞ" } // Exclude opening balances from income
+        },
         _sum: { amount: true }
       }),
       prisma.transaction.aggregate({

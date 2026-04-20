@@ -242,7 +242,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-[1000px] border-none p-0 overflow-hidden bg-background/40 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
+      <DialogContent className="max-w-[1000px] border-none p-0 overflow-hidden bg-background md:bg-background/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
         {/* Header Gradient Stripe */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50" />
 

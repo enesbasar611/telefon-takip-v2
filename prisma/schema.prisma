@@ -454,6 +454,7 @@ model Transaction {
   sale             Sale?           @relation(fields: [saleId], references: [id])
   shop             Shop            @relation(fields: [shopId], references: [id])
   user             User            @relation(fields: [userId], references: [id])
+  runningBalance   Decimal?        @db.Decimal(12, 2)
 }
 
 model Attachment {
@@ -473,11 +474,13 @@ model FinanceAccount {
   id           String        @id @default(cuid())
   name         String
   type         AccountType   @default(CASH)
-  balance      Decimal       @default(0) @db.Decimal(12, 2)
-  isDefault    Boolean       @default(false)
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  balance          Decimal       @default(0) @db.Decimal(12, 2)
+  initialBalance   Decimal       @default(0) @db.Decimal(12, 2)
+  availableBalance Decimal?      @db.Decimal(12, 2)
+  isDefault        Boolean       @default(false)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   shopId       String
   billingDay   Int?
   limit        Decimal?      @db.Decimal(12, 2)

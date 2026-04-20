@@ -87,8 +87,11 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                     <SortableHeader label="AÇIKLAMA" field="description" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                 </TableHead>
                                 <TableHead className="font-medium text-[10px]  text-muted-foreground uppercase opacity-60">SORUMLU</TableHead>
-                                <TableHead className="font-medium pr-10">
+                                <TableHead className="font-medium pr-8">
                                     <SortableHeader label="TUTAR" field="amount" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
+                                </TableHead>
+                                <TableHead className="font-medium pr-10">
+                                    <SortableHeader label="BAKİYE" field="runningBalance" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
                                 </TableHead>
                                 <TableHead />
                             </TableRow>
@@ -133,23 +136,20 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                                 <span className="text-[10px]  uppercase tracking-tight">{t.user?.name || 'SİSTEM'}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right pr-10">
+                                        <TableCell className="text-right pr-8">
                                             <div className="flex flex-col items-end">
-                                                <div className={cn("flex items-center gap-1.5 text-base  tracking-tighter", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
-                                                    {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
+                                                <div className={cn("flex items-center gap-1.5 text-base  tracking-tighter font-semibold", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
+                                                    {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                     {t.type === 'INCOME' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-1.5">
-                                                    {t.attachments && t.attachments.length > 0 && (
-                                                        <Badge variant="outline" className="text-[9px]  px-2 py-0.5 border-none rounded-lg bg-blue-500/10 text-blue-500 uppercase tracking-widest gap-1">
-                                                            <Paperclip className="h-2.5 w-2.5" />
-                                                            {t.attachments.length}
-                                                        </Badge>
-                                                    )}
-                                                    <Badge variant="outline" className={cn("text-[9px]  px-2 py-0.5 border-none rounded-lg uppercase tracking-widest", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
-                                                        {t.type === 'INCOME' ? 'TAHSİLAT' : 'ÖDEME'}
-                                                    </Badge>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right pr-10">
+                                            <div className="flex flex-col items-end">
+                                                <div className="text-[11px] font-medium text-foreground opacity-80 bg-muted/30 px-3 py-1 rounded-lg border border-border/40">
+                                                    ₺{Number(t.runningBalance || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                 </div>
+                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1">İŞLEM SONRASI</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="pr-10">

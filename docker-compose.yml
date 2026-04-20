@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      image: ghcr.io/enesbasar611/telefon-takip-v2:latest
     container_name: telefon-takip
     restart: always
     ports:

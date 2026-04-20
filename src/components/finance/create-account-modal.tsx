@@ -46,13 +46,17 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
             result = await updateAccount(selectedAccount.id, {
                 name: formData.get("name") as string,
                 type: formData.get("type") as any,
-                balance: Number(formData.get("initialBalance")) || 0
+                balance: Number(formData.get("initialBalance")) || 0,
+                limit: Number(formData.get("limit")) || 0,
+                billingDay: Number(formData.get("billingDay")) || 1
             });
         } else if (view === "FORM") {
             result = await createAccount({
                 name: formData.get("name") as string,
                 type: formData.get("type") as any,
-                initialBalance: Number(formData.get("initialBalance")) || 0
+                initialBalance: Number(formData.get("initialBalance")) || 0,
+                limit: Number(formData.get("limit")) || 0,
+                billingDay: Number(formData.get("billingDay")) || 1
             });
         } else if (view === "BALANCE" && selectedAccount) {
             const amount = Number(formData.get("amount"));
@@ -196,6 +200,19 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
                                         </Label>
                                         <Input id="initialBalance" name="initialBalance" type="number" step="0.01" defaultValue={selectedAccount?.balance || "0"} className="h-14 rounded-[1.5rem] text-lg bg-muted/20 border-border/40 px-6 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all text-white font-semibold" />
                                     </div>
+
+                                    {(selectedAccount?.type === "CREDIT_CARD" || true) && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-4">
+                                                <Label htmlFor="limit" className="font-medium text-[11px] text-muted-foreground ml-1 uppercase tracking-[0.2em]">KART LİMİTİ</Label>
+                                                <Input id="limit" name="limit" type="number" step="0.01" defaultValue={selectedAccount?.limit || "0"} className="h-14 rounded-[1.5rem] text-xs bg-muted/20 border-border/40 px-6 shadow-inner text-white" />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <Label htmlFor="billingDay" className="font-medium text-[11px] text-muted-foreground ml-1 uppercase tracking-[0.2em]">HESAP KESİM GÜNÜ</Label>
+                                                <Input id="billingDay" name="billingDay" type="number" min="1" max="31" defaultValue={selectedAccount?.billingDay || "1"} className="h-14 rounded-[1.5rem] text-xs bg-muted/20 border-border/40 px-6 shadow-inner text-white" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             ) : (
                                 <>
