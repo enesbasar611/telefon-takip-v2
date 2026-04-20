@@ -6,10 +6,11 @@ WORKDIR /app
 
 # Build aşamasında Prisma'nın hata vermemesi için sahte URL'ler veriyoruz
 
-RUN NEXT_TELEMETRY_DISABLED=1 \
-    PRISMA_SKIP_DATABASE_CHECK=1 \
-    DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
-    DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+# Build aşamasında Prisma ve Next.js'in veritabanı kontrolünü devre dışı bırakıyoruz
+RUN DATABASE_URL="postgresql://username:password@localhost:5432/postgres" \
+    DIRECT_URL="postgresql://username:password@localhost:5432/postgres" \
+    NEXT_TELEMETRY_DISABLED=1 \
+    SKIP_ENV_VALIDATION=1 \
     npm run build
 
 # ... sonraki satırlar
