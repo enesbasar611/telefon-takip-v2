@@ -5,9 +5,11 @@ WORKDIR /app
 # ... önceki satırlar (npx prisma generate gibi)
 
 # Build aşamasında Prisma'nın hata vermemesi için sahte URL'ler veriyoruz
-RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+
+RUN NEXT_TELEMETRY_DISABLED=1 \
+    PRISMA_SKIP_DATABASE_CHECK=1 \
+    DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
     DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
-    NEXTAUTH_SECRET="placeholder" \
     npm run build
 
 # ... sonraki satırlar
