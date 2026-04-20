@@ -25,3 +25,5 @@ jobs:
           push: true
           # Buraya dikkat: kullanıcı adın enesbasar611 olarak güncellendi
           tags: ghcr.io/enesbasar611/telefon-takip-v2:latest
+
+          

@@ -1,37 +1,21 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      image: ghcr.io/enesbasar611/telefon-takip-v2:latest
+    # Build kısmını sildik, çünkü imaj hazır olarak GitHub'dan gelecek
+    image: ghcr.io/enesbasar611/telefon-takip-v2:latest
     container_name: telefon-takip
     restart: always
     ports:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://user:password@db:5432/telefontakip?schema=public
-      - NEXTAUTH_URL=http://your-vps-ip:5000
-      - NEXTAUTH_SECRET=your-secret-here
-      - GOOGLE_API_KEY=your-api-key
+      # DATABASE_URL'i direkt buraya yazabilirsin veya .env dosyasından çekebilirsin
+      - DATABASE_URL=postgresql://neondb_owner:npg_3BDNheXV2xSL@ep-still-shadow-alqclhl0.c-3.eu-central-1.aws.neon.tech/telefoncu-app-db?sslmode=require&channel_binding=require
+      - NEXTAUTH_URL=https://basarteknik.tech # Burayı domaininle güncelle
+      - NEXTAUTH_SECRET=senin_gizli_anahtarin
+      - GOOGLE_API_KEY=senin_google_keyin
     volumes:
       - whatsapp-auth:/app/.whatsapp-auth
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15-alpine
-    container_name: telefon-takip-db
-    restart: always
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=telefontakip
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432" # Changed to avoid conflict if host has postgres
+    # db servisi ve depends_on kalktı çünkü artık NeonDB (dış servis) kullanıyoruz
 
 volumes:
-  postgres-data:
   whatsapp-auth:
