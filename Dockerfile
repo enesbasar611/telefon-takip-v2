@@ -17,8 +17,10 @@ COPY . .
 RUN npx prisma generate
 
 # 2. Next.js Build (Sahte URL'ler ve Puppeteer koruması ile)
+# ... npx prisma generate satırından sonra
 RUN NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
+    PRISMA_SKIP_DATABASE_CHECK=1 \
     DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
     DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
