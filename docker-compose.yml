@@ -1,21 +1,27 @@
 services:
   app:
-    # Build kısmını sildik, çünkü imaj hazır olarak GitHub'dan gelecek
     image: ghcr.io/enesbasar611/telefon-takip-v2:latest
     container_name: telefon-takip
     restart: always
     ports:
       - "5000:5000"
+    labels:
+      - "traefik.enable=true"
+      # Domain yönlendirmesi
+      - "traefik.http.routers.telefon-takip.rule=Host(`basarteknik.tech`)"
+      # SSL (HTTPS) ayarları - senin traefik ayarlarındaki entrypoint adın neyse (genelde websecure)
+      - "traefik.http.routers.telefon-takip.entrypoints=websecure"
+      - "traefik.http.routers.telefon-takip.tls=true"
+      # İçerideki portu Traefik'e tanıtıyoruz
+      - "traefik.http.services.telefon-takip.loadbalancer.server.port=5000"
     environment:
       - NODE_ENV=production
-      # DATABASE_URL'i direkt buraya yazabilirsin veya .env dosyasından çekebilirsin
       - DATABASE_URL=postgresql://neondb_owner:npg_3BDNheXV2xSL@ep-still-shadow-alqclhl0.c-3.eu-central-1.aws.neon.tech/telefoncu-app-db?sslmode=require&channel_binding=require
-      - NEXTAUTH_URL=https://basarteknik.tech # Burayı domaininle güncelle
-      - NEXTAUTH_SECRET=senin_gizli_anahtarin
+      - NEXTAUTH_URL=https://basarteknik.tech
+      - NEXTAUTH_SECRET=senin_gizli_anahtarin # Burayı gerçek secret ile değiştir kanka
       - GOOGLE_API_KEY=senin_google_keyin
     volumes:
       - whatsapp-auth:/app/.whatsapp-auth
-    # db servisi ve depends_on kalktı çünkü artık NeonDB (dış servis) kullanıyoruz
 
 volumes:
   whatsapp-auth:
