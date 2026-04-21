@@ -24,15 +24,14 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { LayoutDashboard } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 import { PageHeader } from "@/components/ui/page-header";
 import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
 
 export default async function DashboardPage() {
-  const shop = await getShop();
-  const categories = await getCategories();
+  const [shop, categories] = await Promise.all([
+    getShop(),
+    getCategories()
+  ]);
   const industryConf = getIndustryConfig(shop?.industry);
   const showService = isModuleEnabled(shop, "SERVICE");
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
@@ -43,7 +42,7 @@ export default async function DashboardPage() {
       <DashboardOnboardingClient categories={categories} shop={shop} />
 
       {/* Desktop Dashboard View */}
-      <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10 animate-in fade-in duration-700">
+      <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
         <PageHeader
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
           description={`${industryConf.name} operasyon ve finans takip merkezi • ${format(new Date(), "d MMMM yyyy", { locale: tr })}`}

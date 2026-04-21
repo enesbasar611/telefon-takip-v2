@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUI } from "@/lib/context/ui-context";
-import { useAura } from "@/lib/context/aura-context";
 
 interface Category {
     id: string;
@@ -62,7 +61,6 @@ export function AICategoryCreator({
     onProductsUpdated
 }: AICategoryCreatorProps) {
     const { setAiLoading, setAiInputFocused } = useUI();
-    const { triggerAura } = useAura();
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<"input" | "review">("input");
     const [description, setDescription] = useState("");
@@ -73,25 +71,17 @@ export function AICategoryCreator({
     useEffect(() => {
         const loading = isAIPending || isSavePending;
         setAiLoading(loading);
-        if (loading) {
-            triggerAura("analyzing");
-        } else if (step === "review" && rows.length > 0) {
-            // Keep it analyzing if we are still processing? No, let's keep it focus low opacity or idle.
-            // But if it's done, maybe trigger success once.
-        }
-    }, [isAIPending, isSavePending, setAiLoading, triggerAura, step, rows.length]);
+    }, [isAIPending, isSavePending, setAiLoading]);
 
     const handleAnalyze = () => {
         if (!description.trim()) {
             toast.warning("Açıklama boş olamaz.");
-            triggerAura("error");
             return;
         }
         startAI(async () => {
             const result = await parseCategoryTreeWithAI(description);
             if (!result.success) {
                 toast.error(result.error);
-                triggerAura("error");
                 return;
             }
             const newRows: NodeRow[] = result.data.map((item, i) => ({
@@ -102,7 +92,6 @@ export function AICategoryCreator({
             }));
             setRows(newRows);
             setStep("review");
-            triggerAura("success");
             toast.success(`${newRows.length} kategori ve ${newRows.reduce((a, r) => a + r.products.length, 0)} ürün tespit edildi!`);
         });
     };
@@ -261,8 +250,8 @@ export function AICategoryCreator({
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
                                     rows={5}
-                                    onFocus={() => { setAiInputFocused(true); triggerAura("focus"); }}
-                                    onBlur={() => { setAiInputFocused(false); triggerAura("idle"); }}
+                                    onFocus={() => { setAiInputFocused(true); }}
+                                    onBlur={() => { setAiInputFocused(false); }}
                                     placeholder="Örn: Şarj Aletleri > Type-C > 27W — 10 adet şarj aleti, alış 1.5 dolar satış 500 TL..."
                                     className="w-full bg-zinc-50 dark:bg-[#18181A] border border-zinc-200 dark:border-[#333333] rounded-2xl px-5 py-4 text-sm text-foreground dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 resize-none leading-relaxed shadow-inner"
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAnalyze(); }}

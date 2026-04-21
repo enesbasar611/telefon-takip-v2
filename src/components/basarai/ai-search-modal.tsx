@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Sparkles, Search, Loader2 } from "lucide-react";
-import { useAura } from "@/lib/context/aura-context";
 import { useUI } from "@/lib/context/ui-context";
 import { useEffect } from "react";
 
@@ -17,19 +16,18 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
     const [query, setQuery] = useState("");
     const [isPending, startTransition] = useTransition();
     const { setAiInputFocused, setAiLoading } = useUI();
-    const { triggerAura } = useAura();
     const router = useRouter();
 
     useEffect(() => {
         setAiLoading(isPending);
     }, [isPending, setAiLoading]);
 
-    // Ensure aura is reset when modal closes
+    // Cleanup: Removed triggerAura logic
     useEffect(() => {
         if (!open) {
-            triggerAura("idle");
+            // reset logic no longer applicable
         }
-    }, [open, triggerAura]);
+    }, [open]);
 
     const handleSearch = () => {
         if (!query.trim()) return;
@@ -67,11 +65,9 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             }}
                             onFocus={() => {
                                 setAiInputFocused(true);
-                                triggerAura("focus");
                             }}
                             onBlur={() => {
                                 setAiInputFocused(false);
-                                triggerAura("idle");
                             }}
                             placeholder="Aramak istediğiniz şeyi yazın..."
                             className="bg-[#18181A] border-[#333333] text-white placeholder:text-muted-foreground/80 h-12 text-sm"

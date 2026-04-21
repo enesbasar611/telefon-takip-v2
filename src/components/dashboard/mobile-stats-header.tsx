@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { Wrench, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useAura } from "@/lib/context/aura-context";
 
 import { StatDetailModal, StatType } from "./modals/stat-detail-modal";
 
@@ -25,7 +24,6 @@ interface MobileStatsHeaderProps {
 export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps) {
     const [selectedType, setSelectedType] = useState<StatType | null>(null);
     const router = useRouter();
-    const { MapsWithAura } = useAura();
 
     const cards = [
         {
@@ -65,7 +63,7 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
 
     const handleClick = (card: any) => {
         if (card.href) {
-            MapsWithAura(card.href);
+            router.push(card.href);
             return;
         }
         if (card.type) {

@@ -1,7 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun } from "lucide-react";
-import { useAura } from "@/lib/context/aura-context";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -29,7 +29,7 @@ import { CreateTransactionModal } from "@/components/finance/create-transaction-
 export function Navbar({ shop }: { shop?: any }) {
   const { isFinancialVisible, toggleFinancialVisibility } = useUI();
   const { setTheme } = useTheme();
-  const { MapsWithAura } = useAura();
+  const router = useRouter();
 
   return (
     <>
@@ -51,10 +51,12 @@ export function Navbar({ shop }: { shop?: any }) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => MapsWithAura("/cihaz-listesi")}
+            asChild
             className="md:hidden h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all shrink-0"
           >
-            <MonitorSmartphone className="h-5 w-5" />
+            <Link href="/cihaz-listesi">
+              <MonitorSmartphone className="h-5 w-5" />
+            </Link>
           </Button>
 
           {/* Action Containers - Only visible on Desktop */}
@@ -121,11 +123,15 @@ export function Navbar({ shop }: { shop?: any }) {
                 <DropdownMenuContent align="end" className="bg-card border-border text-foreground p-2 min-w-[200px] shadow-xl rounded-2xl">
                   <DropdownMenuLabel className="text-xs  text-muted-foreground p-3">Kullanıcı Hesabı</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem onClick={() => MapsWithAura("/profil")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                    <User className="h-4 w-4 text-primary" /> Profil Detayları
+                  <DropdownMenuItem asChild className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+                    <Link href="/profil" className="flex items-center gap-3 w-full">
+                      <User className="h-4 w-4 text-primary" /> Profil Detayları
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => MapsWithAura("/ayarlar")} className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
-                    <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
+                  <DropdownMenuItem asChild className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group">
+                    <Link href="/ayarlar" className="flex items-center gap-3 w-full">
+                      <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
+                    </Link>
                   </DropdownMenuItem>
 
                   {/* Theme Selection - Mobil Öncelikli ama genel eklendi */}

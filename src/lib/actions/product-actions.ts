@@ -22,7 +22,11 @@ async function checkStockAndAddShortage(productId: string, productName: string) 
   }
 }
 
-export async function getProducts(options: {
+import { cache } from "react";
+
+// ... existing code ...
+
+export const getProducts = cache(async function getProducts(options: {
   search?: string,
   categoryId?: string,
   categoryName?: string,
@@ -90,9 +94,9 @@ export async function getProducts(options: {
     console.error("Error fetching products:", error);
     return [];
   }
-}
+});
 
-export async function searchProducts(query: string) {
+export const searchProducts = cache(async function searchProducts(query: string) {
   try {
     if (!query || query.length < 2) return [];
     const shopId = await getShopId();
@@ -130,9 +134,9 @@ export async function searchProducts(query: string) {
     console.error("Search products error:", error);
     return [];
   }
-}
+});
 
-export async function getCategories() {
+export const getCategories = cache(async function getCategories() {
   try {
     const shopId = await getShopId();
     const categories = await prisma.category.findMany({
@@ -142,7 +146,7 @@ export async function getCategories() {
   } catch (error) {
     return [];
   }
-}
+});
 
 export async function createProduct(rawData: z.input<typeof productSchema>) {
   try {

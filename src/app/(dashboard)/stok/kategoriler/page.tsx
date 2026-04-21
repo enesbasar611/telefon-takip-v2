@@ -5,14 +5,14 @@ import { CategoryManagementClient } from "@/components/product/category-manageme
 
 import { PageHeader } from "@/components/ui/page-header";
 
-export const dynamic = 'force-dynamic';
-
 export default async function KategorilerPage() {
-    const categories = await getAllCategories();
-    const products = await getProducts();
+    const [categories, products] = await Promise.all([
+        getAllCategories(),
+        getProducts()
+    ]);
 
     return (
-        <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-500">
+        <div className="flex flex-col gap-10 pb-20">
             <PageHeader
                 title="Kategori Yönetimi"
                 description="Stok hiyerarşinizi ve ürün ağacınızı bu dinamik merkezden şekillendirin."

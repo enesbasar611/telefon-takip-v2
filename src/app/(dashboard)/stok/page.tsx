@@ -10,8 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
 import { getShop } from "@/lib/actions/setting-actions";
 
-export const dynamic = 'force-dynamic';
-
 function TableSkeleton() {
   return (
     <div className="space-y-4 p-8 bg-card rounded-2xl">
@@ -36,11 +34,13 @@ function CardSkeleton() {
 }
 
 export default async function StokPage({ searchParams }: { searchParams: any }) {
-  const categories = await getCategories();
-  const shop = await getShop();
+  const [categories, shop] = await Promise.all([
+    getCategories(),
+    getShop()
+  ]);
 
   return (
-    <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-10 pb-20">
       <PageHeader
         title="Envanter Yönetimi"
         description="Mağaza içerisindeki tüm ürün stoklarının, değerlerinin ve hareketlerinin stratejik merkezi."

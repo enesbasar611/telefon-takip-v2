@@ -37,7 +37,6 @@ import { getInventoryFormFields, extractCoreAndAttributes, getIndustryLabel } fr
 import { FormFactory } from "@/components/common/form-factory";
 
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
-import { useAura } from "@/lib/context/aura-context";
 
 const productSchema = z.object({
   name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
@@ -66,7 +65,6 @@ interface CreateProductModalProps {
 
 export function CreateProductModal({ categories, shop, autoOpen = false }: CreateProductModalProps) {
   const { rates: exchangeRates } = useDashboardData();
-  const { triggerAura } = useAura();
   const [open, setOpen] = useState(autoOpen);
   const [isPending, startTransition] = useTransition();
   const [isAIPending, startAITransition] = useTransition();
@@ -107,18 +105,15 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
     }
     startAITransition(async () => {
       setAiStatus("idle");
-      triggerAura("analyzing");
       const result = await parseProductWithAI(aiDescription);
       if (!result.success) {
         setAiStatus("error");
-        triggerAura("error");
         toast.error(result.error || "AI analizi başarısız oldu.");
         return;
       }
 
       const { data } = result;
       setAiStatus("success");
-      triggerAura("success");
       // Auto-fill the form fields
       if (data.name) setValue("name", data.name, { shouldValidate: true });
       if (data.buyPrice) setValue("buyPrice", String(data.buyPrice), { shouldValidate: true });
@@ -165,7 +160,6 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
 
       if (result.success) {
         toast.success("Ürün başarıyla eklendi.");
-        triggerAura("success");
         setAiDescription("");
         setAiStatus("idle");
         reset(); // Reset form for next entry

@@ -10,7 +10,6 @@ import { Sparkles, RefreshCcw, Loader2, Table, Check, AlertTriangle, ArrowLeft, 
 import { parseBulkUpdateWithAI, AIUpdateOperation, AIUpdateResponse, enhanceAndClarifyIntent, AIIntentClarification } from "@/lib/actions/gemini-actions";
 import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
 import { useUI } from "@/lib/context/ui-context";
-import { useAura } from "@/lib/context/aura-context";
 import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 
@@ -18,7 +17,6 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
     const [command, setCommand] = useState("");
     const [isPending, startTransition] = useTransition();
     const { setAiInputFocused, setAiLoading } = useUI();
-    const { triggerAura } = useAura();
     const [aiResponse, setAiResponse] = useState<AIUpdateResponse | null>(null);
     const [clarification, setClarification] = useState<AIIntentClarification | null>(null);
 
@@ -26,12 +24,12 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setAiLoading(isPending);
     }, [isPending, setAiLoading]);
 
-    // Ensure aura is reset when modal closes
+    // Ensure aura logic is removed
     useEffect(() => {
         if (!open) {
-            triggerAura("idle");
+            // idle reset no longer needed
         }
-    }, [open, triggerAura]);
+    }, [open]);
 
     const updates = aiResponse?.updates || null;
 
@@ -119,11 +117,9 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     }}
                                     onFocus={() => {
                                         setAiInputFocused(true);
-                                        triggerAura("focus");
                                     }}
                                     onBlur={() => {
                                         setAiInputFocused(false);
-                                        triggerAura("idle");
                                     }}
                                     placeholder="Örn: Tüm şarj aletlerinin satış fiyatını %10 artır."
                                     className="w-full bg-[#18181A] border border-[#333333] rounded-lg px-4 py-3 text-[13px] text-white placeholder:text-muted-foreground/80 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed h-32"

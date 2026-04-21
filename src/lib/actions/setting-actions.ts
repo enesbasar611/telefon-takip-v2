@@ -3,8 +3,9 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
+import { cache } from "react";
 
-export async function getSettings() {
+export const getSettings = cache(async function getSettings() {
   try {
     const shopId = await getShopId();
     const settings = await prisma.setting.findMany({ where: { shopId } });
@@ -12,9 +13,9 @@ export async function getSettings() {
   } catch (error) {
     return [];
   }
-}
+});
 
-export async function getShop() {
+export const getShop = cache(async function getShop() {
   try {
     const shopId = await getShopId();
     const shop = await prisma.shop.findUnique({
@@ -25,7 +26,7 @@ export async function getShop() {
     console.error("getShop error:", error);
     return null;
   }
-}
+});
 
 export async function updateSetting(key: string, value: string, revalidate = true) {
   try {
