@@ -22,14 +22,14 @@ export function FinanceDashboard({ summary }: { summary: any }) {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                 {cards.map((stat, i) => (
-                    <Card key={i} className="border-border/40 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem]">
+                    <Card key={i} className="border-zinc-200 dark:border-zinc-800 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem]">
                         <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-[0.03] rounded-full bg-foreground group-hover:opacity-[0.06] transition-opacity" />
                         <CardContent className="p-8">
                             <div className="flex items-center justify-between mb-4">
                                 <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} border border-current/10`}>
                                     <stat.icon className="h-6 w-6" />
                                 </div>
-                                <Badge variant="outline" className="text-[9px]  tracking-widest uppercase px-3 py-1 bg-background rounded-full border-border/40">GÜNCEL DURUM</Badge>
+                                <Badge variant="outline" className="text-[9px]  tracking-widest uppercase px-3 py-1 bg-background rounded-full border-zinc-200 dark:border-zinc-800">GÜNCEL DURUM</Badge>
                             </div>
                             <p className="text-[10px]  text-muted-foreground tracking-[0.2em] uppercase mb-1 opacity-60">{stat.label}</p>
                             <div className="mt-1 flex items-baseline gap-2">

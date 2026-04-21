@@ -36,8 +36,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 32% 88%;
-    --input: 214.3 32% 88%;
+    --border: 214.3 32% 82%;
+    --input: 214.3 32% 82%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 1rem;
@@ -317,103 +317,84 @@
   isolation: isolate;
 }
 
-/* Modal Border Beam — Permanent and Subtle */
-.gemini-aura-modal {
-  position: relative;
-  overflow: hidden !important;
+@property --glow-deg {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
 
-.gemini-aura-modal::before {
-  content: '';
-  position: absolute;
-  inset: 0px;
-  padding: 1.5px;
-  /* Beam width */
-  background: conic-gradient(from var(--angle),
-      transparent 0deg,
-      transparent 280deg,
-      #3b82f6 300deg,
-      #8b5cf6 330deg,
-      #ec4899 360deg);
-  border-radius: inherit;
-  z-index: 100;
-  pointer-events: none;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: rotate-aura 6s linear infinite;
-  opacity: 0.5;
+@keyframes aura-glow {
+  0% {
+    --glow-deg: 0deg;
+  }
+
+  100% {
+    --glow-deg: 360deg;
+  }
 }
 
-/* Input Border Beam — Active on Focus */
-.gemini-aura-input {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.gemini-aura-input:focus-within {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 20px -10px rgba(139, 92, 246, 0.3);
-}
-
-.gemini-aura-input::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  padding: 1.5px;
-  background: conic-gradient(from var(--angle),
-      transparent 0deg,
-      transparent 280deg,
-      #3b82f6 300deg,
-      #8b5cf6 330deg,
-      #ec4899 360deg);
-  border-radius: inherit;
-  z-index: 10;
-  pointer-events: none;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: rotate-aura 3s linear infinite;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.gemini-aura-input:focus-within::after {
-  opacity: 1;
-}
-
+.gemini-aura-modal,
 .gemini-aura-button {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --clr-1: #4285F4;
+  /* Blue */
+  --clr-2: #9B72CB;
+  /* Purple */
+  --clr-3: #D96570;
+  /* Red/Pink */
+  --clr-4: #F4AF4E;
+  /* Yellow/Orange */
+  --border-width: 1.5px;
   isolation: isolate;
 }
 
+/* Button specific positioning */
+.gemini-aura-button {
+  position: relative;
+}
+
+/* Moving Border — Shared Logic */
+.gemini-aura-modal::before,
 .gemini-aura-button::before {
-  content: '';
+  content: "";
   position: absolute;
-  inset: -1px;
-  padding: 1.5px;
-  background: conic-gradient(from var(--angle),
-      transparent 70%,
-      #3b82f6 80%,
-      #8b5cf6 90%,
-      #ec4899 100%);
+  inset: calc(var(--border-width) * -1);
+  padding: var(--border-width);
+  background: conic-gradient(from var(--glow-deg),
+      var(--clr-1),
+      var(--clr-2),
+      var(--clr-3),
+      var(--clr-4),
+      var(--clr-1));
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+  animation: aura-glow 4s linear infinite;
+}
+
+/* Button Background Glow — confied to buttons only for modal stability */
+.gemini-aura-button::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  background: conic-gradient(from var(--glow-deg),
+      var(--clr-1),
+      var(--clr-2),
+      var(--clr-3),
+      var(--clr-4),
+      var(--clr-1));
+  filter: blur(20px);
+  opacity: 0.12;
   border-radius: inherit;
   z-index: -1;
   pointer-events: none;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: rotate-aura 3s linear infinite;
-  opacity: 0.8;
+  animation: aura-glow 4s linear infinite;
+  transition: opacity 0.3s ease;
 }
 
-.gemini-aura-button:hover::before {
-  opacity: 1;
-  filter: blur(0.5px);
-}
-
-.gemini-aura-button:hover {
-  box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.3);
+.gemini-aura-button:hover::after {
+  opacity: 0.25;
 }

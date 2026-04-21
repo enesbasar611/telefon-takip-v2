@@ -403,21 +403,33 @@ export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "
 
 export async function updateAccount(id: string, data: {
   name: string;
-  type: any;
+  type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
   balance?: number;
   limit?: number;
   billingDay?: number;
 }) {
   try {
     const shopId = await getShopId();
+
+    // Get current account to calculate available balance if needed
+    const current = await prisma.financeAccount.findUnique({
+      where: { id, shopId }
+    });
+    if (!current) throw new Error("Hesap bulunamadı.");
+
+    const newLimit = data.limit ?? Number(current.limit || 0);
+    const newBalance = data.balance ?? Number(current.balance);
+    const newType = data.type ?? current.type;
+
     const account = await prisma.financeAccount.update({
       where: { id, shopId },
       data: {
         name: data.name,
-        type: data.type,
-        ...(data.balance !== undefined ? { balance: data.balance } : {}),
-        ...(data.limit !== undefined ? { limit: data.limit } : {}),
-        ...(data.billingDay !== undefined ? { billingDay: data.billingDay } : {}),
+        type: newType,
+        balance: newBalance,
+        limit: newLimit,
+        billingDay: data.billingDay ?? current.billingDay,
+        availableBalance: newType === "CREDIT_CARD" ? newLimit - newBalance : newBalance
       }
     });
 
@@ -805,5 +817,123 @@ export async function paySupplierDebt(data: {
   } catch (error) {
     console.error("Pay supplier debt error:", error);
     return { success: false, error: "Ödeme gerçekleştirilemedi." };
+  }
+}
+
+export async function deleteAccount(id: string) {
+  try {
+    const shopId = await getShopId();
+
+    const account = await prisma.financeAccount.findUnique({
+      where: { id, shopId },
+      include: {
+        transactions: { take: 1 }
+      }
+    });
+
+    if (!account) return { success: false, error: "Hesap bulunamadı." };
+
+    // Prevent deleting Central Cashbox
+    if (account.isDefault || account.name.toLowerCase().includes("merkez")) {
+      return { success: false, error: "Merkezi Kasa silinemez." };
+    }
+
+    // Check for existing transactions
+    if (account.transactions.length > 0) {
+      return {
+        success: false,
+        error: "İşlem geçmişi olan hesaplar silinemez. Önce işlemleri başka bir hesaba taşımalı veya silmelisiniz."
+      };
+    }
+
+    await prisma.financeAccount.delete({
+      where: { id, shopId }
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true };
+  } catch (error) {
+    console.error("Account deletion error:", error);
+    return { success: false, error: "Hesap silinemedi." };
+  }
+}
+
+export async function deleteTransaction(id: string) {
+  try {
+    const shopId = await getShopId();
+
+    await prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id, shopId },
+        include: { financeAccount: true }
+      });
+
+      if (!transaction) throw new Error("İşlem bulunamadı.");
+
+      // Reverse balance
+      if (transaction.financeAccountId) {
+        const amount = Number(transaction.amount);
+        const balanceChange = transaction.type === 'INCOME' ? -amount : amount;
+
+        await tx.financeAccount.update({
+          where: { id: transaction.financeAccountId },
+          data: {
+            balance: { increment: balanceChange },
+            availableBalance: transaction.financeAccount?.type === 'CREDIT_CARD' ? { increment: balanceChange } : undefined
+          }
+        });
+      }
+
+      await tx.transaction.delete({
+        where: { id, shopId }
+      });
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true };
+  } catch (error) {
+    console.error("Delete transaction error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "İşlem silinemedi." };
+  }
+}
+
+export async function deleteTransactions(ids: string[]) {
+  try {
+    const shopId = await getShopId();
+
+    await prisma.$transaction(async (tx) => {
+      for (const id of ids) {
+        const transaction = await tx.transaction.findUnique({
+          where: { id, shopId },
+          include: { financeAccount: true }
+        });
+
+        if (!transaction) continue;
+
+        // Reverse balance
+        if (transaction.financeAccountId) {
+          const amount = Number(transaction.amount);
+          const balanceChange = transaction.type === 'INCOME' ? -amount : amount;
+
+          await tx.financeAccount.update({
+            where: { id: transaction.financeAccountId },
+            data: {
+              balance: { increment: balanceChange },
+              availableBalance: transaction.financeAccount?.type === 'CREDIT_CARD' ? { increment: balanceChange } : undefined
+            }
+          });
+        }
+
+        await tx.transaction.delete({
+          where: { id, shopId }
+        });
+      }
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true };
+  } catch (error) {
+    console.error("Bulk delete transactions error:", error);
+    return { success: false, error: "İşlemler silinemedi." };
   }
 }

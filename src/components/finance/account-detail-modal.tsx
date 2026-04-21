@@ -65,10 +65,10 @@ export function AccountDetailModal({ account }: { account: Account }) {
                     DETAYLARI GÖR
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[1000px] h-[85vh] border-border/40 p-0 overflow-hidden bg-background/80 backdrop-blur-3xl flex flex-col rounded-[2.5rem] shadow-2xl">
+            <DialogContent className="sm:max-w-[1000px] h-[85vh] border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-background/80 backdrop-blur-3xl flex flex-col rounded-[2.5rem] shadow-2xl">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500" />
 
-                <div className="p-10 pb-6 border-b border-border/40 shrink-0 bg-muted/10">
+                <div className="p-10 pb-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-muted/10">
                     <DialogHeader className="flex flex-row items-center justify-between space-y-0 text-left">
                         <div className="flex items-center gap-6">
                             <div className={cn("h-16 w-16 rounded-3xl flex items-center justify-center border text-2xl shadow-xl transition-transform hover:scale-110 duration-500", colors[account.type])}>
@@ -175,7 +175,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             </div>
                         )}
 
-                        <div className="p-8 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
+                        <div className="p-8 rounded-3xl bg-card border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
                             <h4 className="font-medium text-[10px]  text-muted-foreground uppercase flex items-center gap-2 mb-3 tracking-widest">
                                 <Activity className="h-4 w-4 text-blue-400" /> İŞLEM ANALİZİ
                             </h4>
@@ -214,7 +214,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                     </TabsList>
                                 </Tabs>
                             </div>
-                            <div className="h-[350px] w-full p-6 bg-card/50 rounded-[2.5rem] border border-border/40 shadow-inner relative group">
+                            <div className="h-[350px] w-full p-6 bg-card/50 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-inner relative group">
                                 {loading ? (
                                     <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[1px] z-10 rounded-[2.5rem]">
                                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -252,7 +252,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             <h4 className="font-medium text-sm  flex items-center gap-2 uppercase tracking-tight">
                                 <PieIcon className="h-4 w-4 text-purple-500" /> KATEGORİ DAĞILIMI
                             </h4>
-                            <div className="h-[350px] w-full p-6 bg-card/50 rounded-[2.5rem] border border-border/40 shadow-inner flex flex-col">
+                            <div className="h-[350px] w-full p-6 bg-card/50 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-inner flex flex-col">
                                 <div className="flex-1 min-h-[220px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
@@ -298,11 +298,11 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                 TÜMÜNÜ GÖR
                             </Button>
                         </div>
-                        <div className="rounded-[2rem] border border-border/40 overflow-hidden bg-card/50">
+                        <div className="rounded-[2rem] border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-card/50">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="border-b border-border/40 bg-muted/20">
+                                        <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-muted/20">
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">TARİH</th>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">AÇIKLAMA</th>
                                             <th className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">TÜR/KATEGORİ</th>

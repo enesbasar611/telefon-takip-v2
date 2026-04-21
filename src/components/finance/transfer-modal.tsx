@@ -71,7 +71,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                     <ArrowRightLeft className="h-3.5 w-3.5" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] border-border/40 p-0 overflow-hidden bg-background/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+            <DialogContent className="sm:max-w-[450px] border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-background/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
                 <form onSubmit={handleSubmit} className="p-10">
@@ -89,7 +89,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                         </div>
 
                         {/* Source Account Card */}
-                        <div className="p-6 rounded-[2rem] bg-muted/30 border border-border/40 relative overflow-hidden group shadow-inner">
+                        <div className="p-6 rounded-[2rem] bg-muted/30 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group shadow-inner">
                             <div className="absolute top-0 right-0 h-16 w-16 translate-x-4 -translate-y-4 opacity-[0.03] rounded-full bg-blue-500 group-hover:scale-125 transition-transform duration-500" />
                             <div className="flex items-center justify-between relative z-10">
                                 <div className="flex items-center gap-4">
@@ -116,10 +116,10 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                         <div className="space-y-4">
                             <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-[0.2em] ml-1">HEDEF HESAP</Label>
                             <Select onValueChange={(v) => setSelectedToId(v)} required>
-                                <SelectTrigger className="h-14 rounded-[1.5rem] border-border/40 bg-background/50 backdrop-blur-sm text-sm  shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                <SelectTrigger className="h-14 rounded-[1.5rem] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm text-sm  shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all">
                                     <SelectValue placeholder="Gönderilecek hesabı seçin" />
                                 </SelectTrigger>
-                                <SelectContent className="rounded-[1.5rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
+                                <SelectContent className="rounded-[1.5rem] border-zinc-200 dark:border-zinc-800 bg-background/95 backdrop-blur-xl p-2">
                                     {otherAccounts.map((a) => {
                                         const Icon = icons[a.type] || Wallet;
                                         return (
@@ -155,7 +155,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                         min="1"
                                         max={fromAccount.balance}
                                         placeholder="0.00"
-                                        className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-lg  pl-12 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        className="h-14 rounded-[1.5rem] border-zinc-200 dark:border-zinc-800 bg-muted/20 text-lg  pl-12 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
                                     />
                                     <ArrowRight className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500 opacity-50 transition-transform group-hover:translate-x-1" />
                                 </div>
@@ -168,7 +168,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                     name="description"
                                     required
                                     placeholder="Örn: Nakit transferi, Bankaya yatırılan..."
-                                    className="h-14 rounded-[1.5rem] border-border/40 bg-muted/20 text-xs  px-6 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    className="h-14 rounded-[1.5rem] border-zinc-200 dark:border-zinc-800 bg-muted/20 text-xs  px-6 shadow-inner focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 />
                             </div>
                         </div>
@@ -179,7 +179,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                             type="button"
                             variant="ghost"
                             onClick={() => setOpen(false)}
-                            className="flex-1 h-14 text-xs  rounded-[1.5rem] hover:bg-muted transition-colors uppercase tracking-widest border border-border/40"
+                            className="flex-1 h-14 text-xs  rounded-[1.5rem] hover:bg-muted transition-colors uppercase tracking-widest border border-zinc-200 dark:border-zinc-800"
                         >
                             İPTAL
                         </Button>

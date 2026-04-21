@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, ArrowUpRight, ArrowDownRight, Paperclip, Pencil } from "lucide-react";
+import { History, Search, ArrowUpRight, ArrowDownRight, Paperclip, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { CreateTransactionModal } from "./create-transaction-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -14,10 +14,27 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { Checkbox } from "@/components/ui/checkbox";
+import { deleteTransaction, deleteTransactions } from "@/lib/actions/finance-actions";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function TransactionHistory({ transactions }: { transactions: any[] }) {
     const [search, setSearch] = useState("");
     const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const filtered = transactions.filter((t) => {
         const matchSearch =
@@ -32,9 +49,52 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
     const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filtered, "createdAt", "desc");
     const paymentLabels: Record<string, string> = { CASH: "NAKİT", CARD: "KART", TRANSFER: "HAVALE" };
 
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(sortedData.map(t => t.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectRow = (id: string, checked: boolean) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(i => i !== id));
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+        const res = await deleteTransaction(deleteId);
+        setIsDeleting(false);
+        if (res.success) {
+            toast.success("İşlem başarıyla silindi");
+            setDeleteId(null);
+        } else {
+            toast.error(res.error || "İşlem silinemedi");
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        setIsDeleting(true);
+        const res = await deleteTransactions(selectedIds);
+        setIsDeleting(false);
+        if (res.success) {
+            toast.success(`${selectedIds.length} işlem başarıyla silindi`);
+            setSelectedIds([]);
+            setIsBulkDeleteOpen(false);
+        } else {
+            toast.error(res.error || "İşlemler silinemedi");
+        }
+    };
+
     return (
-        <Card className="border-border/40 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm rounded-[2rem]">
-            <div className="p-5 md:p-8 border-b border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm rounded-[2rem]">
+            <div className="p-5 md:p-8 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
                         <History className="h-5 w-5 text-blue-500" />
@@ -45,16 +105,26 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                     </div>
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    {selectedIds.length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setIsBulkDeleteOpen(true)}
+                            className="h-10 rounded-xl gap-2 shadow-lg shadow-rose-500/10 uppercase tracking-widest px-4 transition-all hover:scale-[1.02] active:scale-95 animate-in fade-in slide-in-from-right-4"
+                        >
+                            <Trash2 className="h-4 w-4" /> {selectedIds.length} SEÇİLİ SİL
+                        </Button>
+                    )}
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="İşlem veya kullanıcı ara..."
-                            className="pl-10 h-11 md:h-10 w-full rounded-xl text-xs border-border/40 bg-muted/20"
+                            className="pl-10 h-11 md:h-10 w-full rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20 focus-visible:ring-blue-500/20"
                         />
                     </div>
-                    <div className="flex items-center gap-1 p-1 bg-muted/40 border border-border/40 rounded-xl overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-1 p-1 bg-muted/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar">
                         {["ALL", "CASH", "CARD", "TRANSFER"].map((method) => (
                             <Button
                                 key={method}
@@ -77,7 +147,14 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                     <Table>
                         <TableHeader className="font-medium bg-muted/10">
                             <TableRow className="border-border/40 hover:bg-transparent h-[60px]">
-                                <TableHead className="font-medium pl-10">
+                                <TableHead className="w-[50px] pl-10">
+                                    <Checkbox
+                                        checked={selectedIds.length === sortedData.length && sortedData.length > 0}
+                                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                        className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                    />
+                                </TableHead>
+                                <TableHead>
                                     <SortableHeader label="TARİH" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                 </TableHead>
                                 <TableHead>
@@ -107,6 +184,13 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                 sortedData.map((t) => (
                                     <TableRow key={t.id} className="border-border/10 hover:bg-muted/10 transition-all duration-300 group h-20">
                                         <TableCell className="pl-10">
+                                            <Checkbox
+                                                checked={selectedIds.includes(t.id)}
+                                                onCheckedChange={(checked) => handleSelectRow(t.id, !!checked)}
+                                                className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
                                             <div className="flex flex-col">
                                                 <span className="text-[11px] ">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</span>
                                                 <span className="text-[9px] text-muted-foreground  opacity-60">{format(new Date(t.createdAt), "HH:mm")}</span>
@@ -146,21 +230,31 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                         </TableCell>
                                         <TableCell className="text-right pr-10">
                                             <div className="flex flex-col items-end">
-                                                <div className="text-[11px] font-medium text-foreground opacity-80 bg-muted/30 px-3 py-1 rounded-lg border border-border/40">
+                                                <div className="text-[11px] font-medium text-foreground opacity-80 bg-muted/30 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
                                                     ₺{Number(t.runningBalance || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                 </div>
                                                 <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1">İŞLEM SONRASI</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="pr-10">
-                                            <CreateTransactionModal
-                                                initialData={t}
-                                                trigger={
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 transition-all opacity-0 group-hover:opacity-100">
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                }
-                                            />
+                                            <div className="flex items-center justify-end gap-1">
+                                                <CreateTransactionModal
+                                                    initialData={t}
+                                                    trigger={
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 transition-all opacity-0 group-hover:opacity-100">
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    }
+                                                />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setDeleteId(t.id)}
+                                                    className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -222,20 +316,76 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                             </Button>
                                         }
                                     />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setDeleteId(t.id)}
+                                        className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-rose-500 gap-2 hover:bg-rose-500/10 hover:border-rose-500/20"
+                                    >
+                                        <Trash2 className="h-3 w-3" /> Sil
+                                    </Button>
                                 </div>
                             </div>
                         ))
                     )}
                 </div>
             </CardContent>
-            <div className="p-6 border-t border-border/40 flex items-center justify-between bg-muted/5">
+            <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-muted/5">
                 <p className="text-[10px]  text-muted-foreground tracking-[0.2em] uppercase opacity-60">
                     {filtered.length} / {transactions.length} İŞLEM LİSTELENİYOR
                 </p>
-                <div className="h-1.5 w-32 rounded-full bg-muted overflow-hidden relative border border-border/40">
+                <div className="h-1.5 w-32 rounded-full bg-muted overflow-hidden relative border border-zinc-200 dark:border-zinc-800">
                     <div className="absolute top-0 left-0 h-full bg-blue-500/40 w-full animate-pulse" />
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent className="rounded-[2rem] border-border/40">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-3 text-rose-500">
+                            <AlertCircle className="h-5 w-5" /> İşlemi Sil
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu finansal hareketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve ilgili hesap bakiyesi otomatik olarak güncellenecektir.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel className="rounded-xl uppercase tracking-widest text-[10px] font-bold h-12">İPTAL</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="rounded-xl uppercase tracking-widest text-[10px] font-bold h-12 bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            {isDeleting ? "SİLİNİYOR..." : "EVET, SİL"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+                <AlertDialogContent className="rounded-[2rem] border-border/40">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-3 text-rose-500">
+                            <AlertCircle className="h-5 w-5" /> {selectedIds.length} İşlemi Sil
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Seçili olan {selectedIds.length} finansal hareketi toplu olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm ilgili hesap bakiyeleri otomatik olarak güncellenecektir.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel className="rounded-xl uppercase tracking-widest text-[10px] font-bold h-12">İPTAL</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleBulkDelete}
+                            disabled={isDeleting}
+                            className="rounded-xl uppercase tracking-widest text-[10px] font-bold h-12 bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            {isDeleting ? "SİLİNİYOR..." : "EVET, TOPLU SİL"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 }

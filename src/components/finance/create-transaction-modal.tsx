@@ -242,9 +242,9 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-[1000px] border-none p-0 overflow-hidden bg-background md:bg-background/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
+      <DialogContent className="max-w-[1000px] border border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-white/95 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
         {/* Header Gradient Stripe */}
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50" />
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50 opacity-80" />
 
         {/* Left Side: Form */}
         <div className="flex-[1.4] p-8 md:p-12 overflow-y-auto custom-scrollbar">
@@ -272,7 +272,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Type Toggles */}
-            <div className="flex gap-4 p-1.5 bg-muted/30 rounded-[1.8rem] border border-border/40 backdrop-blur-md">
+            <div className="flex gap-4 p-1.5 bg-muted/40 rounded-[1.8rem] border border-border/10 backdrop-blur-md">
               <button
                 type="button"
                 onClick={() => setValue("type", "INCOME")}
@@ -307,7 +307,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <PlusCircle className="h-3 w-3" /> İŞLEM TÜRÜ
                 </Label>
                 <Select onValueChange={(val) => setValue("category", val)} defaultValue="GENEL">
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner hover:bg-muted/30 transition-all">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none hover:bg-zinc-100/80 transition-all font-medium">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 shadow-2xl">
@@ -331,7 +331,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     value={watch("amount")}
                     onChange={(v) => setValue("amount", String(v), { shouldValidate: true })}
                     placeholder="0,00"
-                    className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-2xl pl-12 shadow-inner group-hover:bg-muted/30 transition-all"
+                    className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-2xl pl-12 shadow-none group-hover:bg-zinc-100/80 transition-all font-bold tracking-tighter"
                   />
                 </div>
               </div>
@@ -343,7 +343,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <CreditCard className="h-3 w-3" /> ÖDEME YÖNTEMİ
                 </Label>
                 <Select onValueChange={(val) => setValue("paymentMethod", val as any)} defaultValue="CASH">
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
@@ -366,7 +366,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   } />
                 </div>
                 <Select onValueChange={(val) => setValue("accountId", val)} value={watch("accountId")}>
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs shadow-inner">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 min-w-[300px]">
@@ -398,7 +398,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
               <Input
                 type="date"
                 {...register("date")}
-                className="h-14 rounded-[1.2rem] bg-muted/20 border-border/40  text-xs px-6 shadow-inner"
+                className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs px-6 shadow-none"
               />
             </div>
 
@@ -410,7 +410,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 id="description"
                 {...register("description")}
                 placeholder="İşlem detaylarını buraya yazın..."
-                className="min-h-[100px] rounded-[1.2rem] bg-muted/20 border-border/40  text-xs p-5 shadow-inner focus-visible:ring-primary/20 transition-all"
+                className="min-h-[100px] rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs p-5 shadow-none focus-visible:ring-primary/20 transition-all font-medium"
               />
               {errors.description && <p className="text-[10px]  text-rose-500 ml-2 italic">{errors.description.message}</p>}
             </div>
@@ -479,7 +479,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
               )}
             </div>
 
-            <div className="flex gap-4 pt-4 sticky bottom-0 bg-background/50 backdrop-blur-sm -mx-2 px-2 pb-2">
+            {/* Modal Actions */}
+            <div className="flex gap-4 pt-4 sticky bottom-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md -mx-2 px-2 pb-2">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">İPTAL</Button>
               <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
                 {isPending ? (
@@ -496,7 +497,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
         </div>
 
         {/* Right Side: Sidebar */}
-        <div className="flex-[0.6] bg-muted/10 border-l border-border/20 p-8 md:p-10 flex flex-col h-full overflow-hidden">
+        <div className="flex-[0.6] bg-zinc-50/50 dark:bg-zinc-900/30 border-l border-zinc-200 dark:border-zinc-800 p-8 md:p-10 flex flex-col h-full overflow-hidden">
           <div className="space-y-10 h-full overflow-y-auto custom-scrollbar pr-2">
 
             {/* Balances Section */}
@@ -509,7 +510,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
               <div className="space-y-4">
                 {accounts.length > 0 ? accounts.map((acc) => (
-                  <div key={acc.id} className="p-5 rounded-[1.5rem] bg-background/50 border border-border/40 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
+                  <div key={acc.id} className="p-5 rounded-[1.5rem] bg-background/50 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 transition-all group-hover:scale-110" />
                     <div className="relative z-10">
                       <p className="text-[10px]  text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
@@ -582,7 +583,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             </div>
 
             {/* Financial Summary Box */}
-            <div className="p-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/20 relative overflow-hidden group">
+            <div className="p-8 rounded-[2rem] bg-blue-500/5 border border-blue-500/20 relative overflow-hidden group">
               <TrendingUp className="absolute -right-4 -bottom-4 h-24 w-24 text-indigo-500/10 group-hover:rotate-12 transition-transform duration-700" />
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
