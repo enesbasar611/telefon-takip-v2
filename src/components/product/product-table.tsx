@@ -79,11 +79,11 @@ export function ProductTable({ data }: ProductTableProps) {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-amber-600 dark:text-amber-400">₺{Number(product.buyPrice).toLocaleString("tr-TR")}</span>
+                  <div className="flex items-center gap-1.5">
                     {product.buyPriceUsd != null && (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 ">${Number(product.buyPriceUsd).toLocaleString("en-US")}</span>
+                      <span className="text-[11px] font-semibold text-blue-500">${product.buyPriceUsd} =</span>
                     )}
+                    <span className="font-semibold text-white">₺{Number(product.buyPrice).toLocaleString("tr-TR")}</span>
                   </div>
                 </TableCell>
                 <TableCell className=" text-emerald-600 dark:text-emerald-400">₺{Number(product.sellPrice).toLocaleString("tr-TR")}</TableCell>

@@ -29,11 +29,13 @@ import { PriceInput } from "@/components/ui/price-input";
 import { formatCurrency } from "@/lib/utils";
 import { getInventoryFormFields, extractCoreAndAttributes, getIndustryLabel } from "@/lib/industry-utils";
 import { FormFactory } from "@/components/common/form-factory";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 const productSchema = z.object({
     name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
     categoryId: z.string().min(1, "Kategori seçiniz"),
     buyPrice: z.string().min(1, "Alış fiyatı gereklidir"),
+    buyPriceUsd: z.string().optional(),
     sellPrice: z.string().min(1, "Satış fiyatı gereklidir"),
     stock: z.string().min(1, "Stok miktarı gereklidir"),
     criticalStock: z.string().min(1, "Kritik stok gereklidir"),
@@ -52,6 +54,7 @@ interface EditProductModalProps {
 }
 
 export function EditProductModal({ product, categories, isOpen, onClose, shop }: EditProductModalProps) {
+    const { rates: exchangeRates } = useDashboardData();
     const [isPending, startTransition] = useTransition();
 
     const industryFields = getInventoryFormFields(shop);
@@ -74,6 +77,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                 name: product.name,
                 categoryId: product.categoryId,
                 buyPrice: product.buyPrice.toString(),
+                buyPriceUsd: product.buyPriceUsd?.toString() || "",
                 sellPrice: product.sellPrice.toString(),
                 stock: product.stock.toString(),
                 criticalStock: product.criticalStock.toString(),
@@ -84,6 +88,14 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
         }
     }, [product, reset]);
 
+    const handleUsdChange = (usdVal: number) => {
+        setValue("buyPriceUsd", String(usdVal));
+        if (usdVal > 0 && exchangeRates?.usd) {
+            const tlVal = Math.ceil(usdVal * exchangeRates.usd);
+            setValue("buyPrice", String(tlVal));
+        }
+    };
+
     const onSubmit = async (data: any) => {
         startTransition(async () => {
             const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
@@ -92,6 +104,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                 name: name || data.name,
                 categoryId: data.categoryId,
                 buyPrice: Number(data.buyPrice),
+                buyPriceUsd: data.buyPriceUsd ? Number(data.buyPriceUsd) : null,
                 sellPrice: Number(data.sellPrice),
                 stock: Number(data.stock),
                 criticalStock: Number(data.criticalStock),
@@ -166,14 +179,26 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="buyPrice" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Alış Fiyatı</Label>
-                                    <PriceInput
-                                        id="buyPrice"
-                                        value={watch("buyPrice")}
-                                        onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
-                                        className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="buyPrice" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Alış Fiyatı (TL)</Label>
+                                        <PriceInput
+                                            id="buyPrice"
+                                            value={watch("buyPrice")}
+                                            onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
+                                            className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="buyPriceUsd" className="font-medium text-[10px]  text-blue-400 uppercase tracking-widest">Dollar Alış ($)</Label>
+                                        <PriceInput
+                                            id="buyPriceUsd"
+                                            value={watch("buyPriceUsd")}
+                                            onChange={(v) => handleUsdChange(Number(v))}
+                                            prefix="$"
+                                            className="bg-blue-500/5 border-blue-500/20 rounded-xl h-12 text-sm text-blue-400"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="sellPrice" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">

@@ -360,12 +360,15 @@ export function StockListTable({ products, categories, shop }: { products: any[]
                       <span className="text-[14px] font-semibold text-foreground transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[9px]  uppercase tracking-widest text-muted-foreground/80">Maliyet:</span>
-                        <RevealFinancial amount={product.buyPrice} className="text-[12px]  text-muted-foreground" />
-                        {product.buyPriceUsd && (
-                          <span className="text-[10px] text-blue-400/90  bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                            ${product.buyPriceUsd}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 bg-muted/20 px-2 py-0.5 rounded-lg border border-border/50">
+                          {product.buyPriceUsd && (
+                            <>
+                              <span className="text-[10px] font-semibold text-blue-400/90">${product.buyPriceUsd}</span>
+                              <span className="text-[9px] text-muted-foreground/50">=</span>
+                            </>
+                          )}
+                          <RevealFinancial amount={product.buyPrice} className="text-[11px]  text-muted-foreground" />
+                        </div>
                       </div>
                     </div>
                   </TableCell>

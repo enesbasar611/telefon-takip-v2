@@ -182,9 +182,15 @@ export function ProductDetailDrawer({
                                     {/* Financial Info Box */}
                                     <div className="p-4 rounded-2xl bg-card border border-border/50 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-wider">Birim Maliyet</span>
+                                            <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-wider">Birim Maliyet (TL)</span>
                                             <RevealFinancial amount={product.buyPrice} className="text-sm  text-white" />
                                         </div>
+                                        {product.buyPriceUsd && (
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px]  text-blue-400 uppercase tracking-wider">Birim Maliyet (USD)</span>
+                                                <span className="text-sm font-semibold text-blue-400">${product.buyPriceUsd}</span>
+                                            </div>
+                                        )}
                                         <div className="h-px bg-white/5" />
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-wider">Toplam Envanter Değeri</span>

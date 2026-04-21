@@ -141,8 +141,11 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
   const onSubmit = async (data: any) => {
     startTransition(async () => {
       let finalBuyPrice = Number(data.buyPrice);
-      if (currency === "USD") finalBuyPrice *= exchangeRates.usd;
-      if (currency === "EUR") finalBuyPrice *= exchangeRates.eur;
+      let buyPriceUsd = currency === "USD" ? Number(data.buyPrice) : null;
+
+      if (currency === "USD") finalBuyPrice = Math.ceil(finalBuyPrice * exchangeRates.usd);
+      else if (currency === "EUR") finalBuyPrice = Math.ceil(finalBuyPrice * exchangeRates.eur);
+      else finalBuyPrice = Math.ceil(finalBuyPrice);
 
       const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
 
@@ -150,6 +153,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
         name: name || data.name,
         categoryId: data.categoryId,
         buyPrice: finalBuyPrice,
+        buyPriceUsd,
         sellPrice: Number(data.sellPrice),
         stock: Number(data.stock),
         criticalStock: Number(data.criticalStock),
