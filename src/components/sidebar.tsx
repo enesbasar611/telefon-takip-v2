@@ -29,7 +29,8 @@ import {
   Search,
   RefreshCcw,
   Activity,
-  ListTree
+  ListTree,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -60,9 +61,9 @@ const getMenuItems = (shop: any, userRole?: string) => {
       href: "/servis",
       module: "SERVICE",
       subItems: [
-        { label: `${labels.serviceTicket} Merkezi` || "Servis Merkezi", href: "/servis" },
-        { label: `${labels.serviceTicket} Listesi` || "Servis Listesi", href: "/servis/liste" },
-        { label: `Yeni ${labels.customerAsset} Girişi` || "Yeni Cihaz Girişi", href: "/servis/yeni" },
+        { label: `Yeni ${labels.customerAsset} Girişi`, href: "/servis/yeni" },
+        { label: `${labels.serviceTicket} Merkezi`, href: "/servis" },
+        { label: `${labels.serviceTicket} Listesi`, href: "/servis/liste" },
       ]
     },
     {

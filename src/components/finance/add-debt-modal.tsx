@@ -89,7 +89,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
         const timer = setTimeout(async () => {
             const results = await findCustomerByName(nameValue);
-            setCustomerSuggestions(results);
+            setCustomerSuggestions(results || []);
         }, 400);
 
         return () => clearTimeout(timer);
@@ -296,7 +296,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                     />
                                 </div>
                                 <AnimatePresence>
-                                    {customerSuggestions.length > 0 && (
+                                    {customerSuggestions?.length > 0 && (
                                         <motion.div className="absolute top-full left-0 w-full bg-popover border border-border mt-2 rounded-2xl shadow-2xl z-[100] max-h-48 overflow-y-auto p-2">
                                             {customerSuggestions.map((c) => (
                                                 <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)} className="w-full text-left p-3 hover:bg-indigo-500 hover:text-white rounded-xl transition-all flex justify-between items-center text-sm">
@@ -379,20 +379,20 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                         </div>
 
                         {/* SUMMARY */}
-                        <div className="p-6 rounded-[2.5rem] bg-slate-900 text-white shadow-2xl relative overflow-hidden">
+                        <div className="p-6 rounded-[2.5rem] bg-card dark:bg-zinc-900 border border-border/50 shadow-lg relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-10"><FileText className="w-24 h-24 rotate-12" /></div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
                                 <div className="space-y-1">
-                                    <span className="block text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Topl. TL</span>
-                                    <span className="text-xl font-mono">₺{totalTRY.toLocaleString('tr-TR')}</span>
+                                    <span className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Topl. TL</span>
+                                    <span className="text-xl font-mono text-foreground">₺{totalTRY.toLocaleString('tr-TR')}</span>
                                 </div>
                                 <div className="space-y-1">
-                                    <span className="block text-[10px] text-blue-400 font-bold uppercase tracking-widest">Topl. USD</span>
-                                    <span className="text-xl font-mono">${totalUSD.toLocaleString('tr-TR')}</span>
+                                    <span className="block text-[10px] text-blue-500 font-bold uppercase tracking-widest">Topl. USD</span>
+                                    <span className="text-xl font-mono text-foreground">${totalUSD.toLocaleString('tr-TR')}</span>
                                 </div>
                                 <div className="col-span-2 md:col-span-1 space-y-1 md:text-right">
-                                    <span className="block text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Genel Toplam (TL)</span>
-                                    <span className="text-2xl font-black text-emerald-400">₺{grandTotalTRY.toLocaleString('tr-TR')}</span>
+                                    <span className="block text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Genel Toplam (TL)</span>
+                                    <span className="text-2xl font-black text-emerald-500">₺{grandTotalTRY.toLocaleString('tr-TR')}</span>
                                 </div>
                             </div>
                         </div>
@@ -410,7 +410,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                     <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
                         <DialogFooter className="flex-row gap-3">
                             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
-                            <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl gap-3 shadow-xl border border-white/10 group">
+                            <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl gap-3 shadow-xl border border-indigo-500/20 group">
                                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />}
                                 <span className="font-inter font-light uppercase text-xs">Hesaba Geçir</span>
                             </Button>

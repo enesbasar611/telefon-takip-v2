@@ -163,3 +163,30 @@ export async function deleteAIAlert(id: string) {
         return { success: false, error: String(error) };
     }
 }
+export async function resolveAIAlertsForProduct(productId: string) {
+    try {
+        const shopId = await getShopId();
+        const product = await prisma.product.findUnique({
+            where: { id: productId, shopId }
+        });
+
+        if (!product) return { success: false };
+
+        // If stock is now above critical, remove CRITICAL and LOW_STOCK alerts
+        if (product.stock > product.criticalStock) {
+            await (prisma as any).stockAIAlert.deleteMany({
+                where: {
+                    productId: product.id,
+                    type: { in: ["CRITICAL", "LOW_STOCK"] },
+                    shopId
+                }
+            });
+        }
+
+        revalidatePath("/stok/stok-ai");
+        return { success: true };
+    } catch (error) {
+        console.error("Resolve AI Alerts error:", error);
+        return { success: false };
+    }
+}

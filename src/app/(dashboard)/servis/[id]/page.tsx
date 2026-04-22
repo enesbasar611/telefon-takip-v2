@@ -28,6 +28,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ServicePartManager } from "@/components/service/service-part-manager";
 import { ServiceDetailActions } from "@/components/service/service-detail-actions";
+import { TechnicalServiceAnalysisModal } from "@/components/service/technical-service-analysis-modal";
 import { PatternLock } from "@/components/ui/pattern-lock";
 
 export const dynamic = 'force-dynamic';
@@ -81,8 +82,9 @@ export default async function ServiceDetailPage({ params }: { params: { id: stri
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" className="text-[10px]  text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all">
-                        PROFİLİ DÜZENLE
+                    <TechnicalServiceAnalysisModal />
+                    <Button variant="ghost" className="text-[10px]  text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all font-bold">
+                        DÜZENLE
                     </Button>
                 </div>
             </div>

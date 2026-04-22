@@ -47,7 +47,7 @@ export function FormFactory({
     onPatternClick,
 }: FormFactoryProps) {
     const baseInput = cn(
-        "h-14 bg-card border-border/50 rounded-2xl px-5 text-sm transition-all",
+        "h-14 bg-muted/20 border-border/60 rounded-2xl px-5 text-sm transition-all text-foreground focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/10",
         inputClassName
     );
 
@@ -133,13 +133,14 @@ export function FormFactory({
                                 {field.validate === "pattern" && onPatternClick && (
                                     <Button
                                         type="button"
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => onPatternClick(field.key)}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 p-0 rounded-xl hover:bg-primary/10 text-primary transition-colors"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-all border-none font-bold text-[10px] gap-2"
                                         title="Desen Çiz"
                                     >
-                                        <Grid className="h-4 w-4" />
+                                        <Grid className="h-3.5 w-3.5" />
+                                        DESEN
                                     </Button>
                                 )}
                             </div>

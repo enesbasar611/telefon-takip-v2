@@ -26,6 +26,8 @@ import { findCustomerByPhone } from "@/lib/actions/customer-lookup-actions";
 import { ServiceReceiptModal } from "./service-receipt-modal";
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
+import { PatternLock } from "@/components/ui/pattern-lock";
+import { Trash, CheckCircle2, Grid } from "lucide-react";
 
 interface CreateServiceModalProps {
   trigger?: ReactNode;
@@ -41,6 +43,8 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+  const [tempPattern, setTempPattern] = useState<number[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -101,6 +105,7 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
         imei,
         problemDesc: data.problemDesc,
         estimatedCost: Number(data.estimatedCost),
+        devicePassword: data.devicePassword,
         attributes,
       });
 
@@ -175,7 +180,7 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
                 <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="customerName" {...register("customerName", { required: "Müşteri adı gereklidir" })} placeholder="Ali Yılmaz" className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm" />
+                  <Input id="customerName" {...register("customerName", { required: "Müşteri adı gereklidir" })} placeholder="Ali Yılmaz" className="h-12 md:h-14 bg-muted/30 border-border/60 rounded-xl md:rounded-2xl pl-12 text-sm text-foreground focus:ring-2 focus:ring-primary/20" />
                 </div>
                 {errors.customerName && <p className="text-[10px] text-red-500 ml-1">{errors.customerName.message as string}</p>}
               </div>
@@ -199,6 +204,7 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
               control={control}
               errors={errors}
               twoCol={true}
+              onPatternClick={() => setIsPatternModalOpen(true)}
             />
 
             {/* Problem Description */}
@@ -277,6 +283,12 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
                     <span className="text-lg font-black text-emerald-600 tabular-nums">{formatCurrency(diagnosticResult.estimatedTotalPrice)}</span>
                   </div>
                 </div>
+                {diagnosticResult.summaryReport && (
+                  <div className="pt-3 border-t border-blue-100/30">
+                    <span className="text-[10px] font-bold text-blue-100 dark:text-blue-400 uppercase block mb-1">🔍 BAŞAR AI SEKTÖREL ANALİZ RAPORU</span>
+                    <p className="text-[11px] text-blue-900/80 dark:text-blue-100/80 leading-relaxed italic">"{diagnosticResult.summaryReport}"</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -308,6 +320,37 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
       {createdTicket && (
         <ServiceReceiptModal isOpen={showReceipt} onClose={() => { setShowReceipt(false); setCreatedTicket(null); }} ticket={createdTicket} />
       )}
+
+      <Dialog open={isPatternModalOpen} onOpenChange={setIsPatternModalOpen}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center text-lg font-semibold">
+              Kilit Deseni Çiz
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center space-y-6 pt-4 pb-2">
+            <PatternLock
+              onComplete={(pattern) => {
+                setTempPattern(pattern);
+              }}
+              initialPattern={tempPattern}
+            />
+            <div className="flex items-center gap-4 mt-6">
+              <Button type="button" variant="outline" size="sm" onClick={() => setTempPattern([])} className="gap-2">
+                <Trash className="w-4 h-4" /> Temizle
+              </Button>
+              <Button type="button" size="sm" onClick={() => {
+                if (tempPattern.length > 0) {
+                  setValue("devicePassword", "DESEN:" + tempPattern.join(","), { shouldDirty: true });
+                  setIsPatternModalOpen(false);
+                }
+              }} className="gap-2 bg-primary hover:bg-primary/90 text-white">
+                <CheckCircle2 className="w-4 h-4" /> Kaydet
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

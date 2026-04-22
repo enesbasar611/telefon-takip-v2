@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +29,11 @@ import {
     Sparkles,
     ArrowRight,
     ShoppingBasket,
+    Calendar,
+    History,
+    Filter,
+    Layers,
+    ListFilter
 } from "lucide-react";
 import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
 import { SupplierAnalysisModal } from "@/components/supplier/supplier-analysis-modal";
@@ -73,8 +79,25 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
     const [isGlobalMalKabulOpen, setIsGlobalMalKabulOpen] = useState(false);
     const [isGlobalDetailOpen, setIsGlobalDetailOpen] = useState(false);
     const [isGlobalPaymentOpen, setIsGlobalPaymentOpen] = useState(false);
+    const [isGroupedByDay, setIsGroupedByDay] = useState(false);
     const [globalSelectedOrder, setGlobalSelectedOrder] = useState<any>(null);
-    const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
+
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    // React to URL changes for selected supplier
+    const selectedSupplierId = searchParams.get("id");
+
+    const setSelectedSupplierId = (id: string | null) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (id) {
+            params.set("id", id);
+        } else {
+            params.delete("id");
+        }
+        router.push(`${pathname}?${params.toString()}`);
+    };
     const { totalItemCount } = useSupplierOrders();
 
     const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
@@ -137,6 +160,16 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
         time: o.createdAt,
         dot: o.status === "DELIVERED" ? "bg-emerald-500" : "bg-blue-500",
     }));
+
+    // Grouping Logic
+    const groupedOrders = isGroupedByDay
+        ? purchaseOrders.reduce((groups: any, order: any) => {
+            const date = format(new Date(order.createdAt), "yyyy-MM-dd");
+            if (!groups[date]) groups[date] = [];
+            groups[date].push(order);
+            return groups;
+        }, {})
+        : null;
 
     return (
         <div className="flex flex-col gap-10 animate-in fade-in duration-700">
@@ -289,7 +322,10 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                 {initials}
                                                             </div>
                                                             <div>
-                                                                <p className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className=" text-sm text-foreground group-hover:text-blue-400 transition-colors">{supplier.name}</p>
+                                                                    <span className="text-[10px] text-muted-foreground/40 font-mono">#{supplier.id.slice(-6).toUpperCase()}</span>
+                                                                </div>
                                                                 <p className="text-[10px] font-medium text-muted-foreground">{supplier.phone || supplier.email || "—"}</p>
                                                             </div>
                                                         </div>
@@ -346,7 +382,10 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                     {initials}
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="font-semibold text-sm text-foreground">{supplier.name}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-sm text-foreground">{supplier.name}</p>
+                                                        <span className="text-[9px] text-muted-foreground/40 font-mono">#{supplier.id.slice(-6).toUpperCase()}</span>
+                                                    </div>
                                                     <p className="text-[10px] text-muted-foreground">{supplier.phone || supplier.email || "İletişim yok"}</p>
                                                 </div>
                                                 <Badge className="bg-blue-500/10 text-blue-400 border-none text-[8px] px-2 rounded-lg">
@@ -395,13 +434,88 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                 Henüz satın alma kaydı yok.
                                             </TableCell>
                                         </TableRow>
+                                    ) : isGroupedByDay ? (
+                                        Object.entries(groupedOrders).map(([date, orders]: [string, any]) => (
+                                            <div key={date} className="contents">
+                                                <TableRow className="bg-white/[0.02] border-none hover:bg-white/[0.02]">
+                                                    <TableCell colSpan={7} className="px-6 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Calendar className="h-3 w-3 text-blue-400" />
+                                                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">
+                                                                {format(new Date(date), "dd MMMM yyyy", { locale: tr })}
+                                                            </span>
+                                                            <div className="h-px flex-1 bg-white/[0.05] ml-2" />
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                                {orders.map((order: any, idx: number) => {
+                                                    const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
+                                                    const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
+                                                    return (
+                                                        <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
+                                                            <TableCell className="px-6 py-4 text-sm font-bold text-foreground">#{order.orderNo}</TableCell>
+                                                            <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
+                                                            <TableCell>
+                                                                <Badge className={cn(
+                                                                    "text-[9px] border px-2 py-0.5 rounded-lg",
+                                                                    order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                                        order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                                            "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                                                )}>
+                                                                    {order.paymentStatus === "PAID" ? "Ödendi" :
+                                                                        order.paymentStatus === "PARTIAL" ? "Kısmi" : "Ödenmedi"}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge className={cn("text-[9px] border px-2 py-0.5 rounded-lg", statusInfo.color)}>{statusInfo.label}</Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-sm text-foreground">
+                                                                ₺{Math.round(Number(order.totalAmount || 0)).toLocaleString("tr-TR")}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs font-medium text-muted-foreground">
+                                                                {format(new Date(order.createdAt), "HH:mm", { locale: tr })}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    {(order.status === "PENDING" || order.status === "ORDERED") && (
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setGlobalSelectedOrder(order);
+                                                                                setIsGlobalMalKabulOpen(true);
+                                                                            }}
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 rounded-lg text-[10px] uppercase text-blue-400 border-blue-500/20 hover:bg-blue-500/10 border"
+                                                                        >
+                                                                            Teslim Al
+                                                                        </Button>
+                                                                    )}
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            setGlobalSelectedOrder(order);
+                                                                            setIsGlobalDetailOpen(true);
+                                                                        }}
+                                                                        className="h-8 text-xs text-muted-foreground hover:bg-white/5 rounded-lg"
+                                                                    >
+                                                                        İncele
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </div>
+                                        ))
                                     ) : (
                                         purchaseOrders.slice(0, 8).map((order: any, idx: number) => {
                                             const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
                                             const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
                                             return (
                                                 <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
-                                                    <TableCell className="px-6 py-4  text-sm text-foreground">{orderNum}</TableCell>
+                                                    <TableCell className="px-6 py-4 text-sm font-bold text-foreground">#{order.orderNo}</TableCell>
                                                     <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
                                                     <TableCell>
                                                         <Badge className={cn(
@@ -452,7 +566,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                 }}
                                                                 className="h-8 text-xs  text-blue-400 hover:bg-blue-500/10 rounded-lg"
                                                             >
-                                                                {order.status === "PENDING" || order.status === "ORDERED" ? "Tahsil Et" : "İncele"}
+                                                                {order.status === "PENDING" || order.status === "ORDERED" ? "Teslim Al" : "İncele"}
                                                             </Button>
                                                         </div>
                                                     </TableCell>
@@ -541,8 +655,25 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                 {/* RIGHT Sidebar */}
                 <div className="space-y-5">
                     <Card className="bg-card border-border/50 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-border/50">
-                            <h2 className="font-medium text-sm  text-foreground">Hızlı Aksiyonlar</h2>
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.05]">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                    <ListFilter className="h-4 w-4 text-blue-400" />
+                                </div>
+                                <h2 className="font-medium text-sm text-foreground">Son Satın Alma Emirleri</h2>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsGroupedByDay(!isGroupedByDay)}
+                                className={cn(
+                                    "h-8 rounded-lg text-[10px] uppercase font-bold tracking-widest gap-2 transition-all",
+                                    isGroupedByDay ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-white/5 text-muted-foreground hover:text-foreground border border-white/5"
+                                )}
+                            >
+                                <Layers className="h-3 w-3" />
+                                {isGroupedByDay ? "GRUPLAMAYI KALDIR" : "GÜNLÜK GRUPLA"}
+                            </Button>
                         </div>
                         <CardContent className="p-4 space-y-2">
                             {[

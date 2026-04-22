@@ -22,8 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit, Loader2, Package, Barcode, TrendingUp, AlertTriangle, MapPin } from "lucide-react";
+import { Edit, Loader2, Package, Barcode, TrendingUp, AlertTriangle, MapPin, Settings2 } from "lucide-react";
 import { updateProduct } from "@/lib/actions/product-actions";
+import { resolveAIAlertsForProduct } from "@/lib/actions/stock-ai-actions";
 import { toast } from "sonner";
 import { PriceInput } from "@/components/ui/price-input";
 import { formatCurrency } from "@/lib/utils";
@@ -114,6 +115,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
             });
 
             if (result.success) {
+                await resolveAIAlertsForProduct(product.id);
                 toast.success("Ürün başarıyla güncellendi.");
                 onClose();
             } else {
@@ -124,29 +126,37 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[550px] bg-card border-border/50 text-white p-0 overflow-hidden">
+            <DialogContent className="sm:max-w-[650px] bg-card border-border/50 p-0 overflow-hidden shadow-2xl rounded-3xl">
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="p-8 space-y-8">
+                    <div className="p-6 md:p-8 space-y-6 md:space-y-8 max-h-[80vh] overflow-y-auto scrollbar-hide">
                         <DialogHeader>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                    <Edit className="h-5 w-5 text-blue-500" />
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
+                                    <Edit className="h-6 w-6 text-blue-500" />
                                 </div>
-                                <DialogTitle className="font-medium text-xl ">{getIndustryLabel(shop, "inventory")} Düzenle</DialogTitle>
+                                <div>
+                                    <DialogTitle className="font-bold text-2xl text-foreground tracking-tight">{getIndustryLabel(shop, "inventory")} Düzenle</DialogTitle>
+                                    <DialogDescription className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-widest mt-1">
+                                        Ürün Detaylarını ve Stok Durumunu Yönetin
+                                    </DialogDescription>
+                                </div>
                             </div>
-                            <DialogDescription className="text-xs font-medium text-gray-400">
-                                "{product?.name}" bilgilerini güncelleyin.
-                            </DialogDescription>
                         </DialogHeader>
 
                         <div className="grid gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">{getIndustryLabel(shop, "productLabel")} Adı</Label>
-                                <Input id="name" {...register("name")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
-                                {errors.name && <p className="text-[10px] text-rose-500 ">{String(errors.name.message || "")}</p>}
+                            <div className="space-y-2.5">
+                                <Label htmlFor="name" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">{getIndustryLabel(shop, "productLabel")} Adı</Label>
+                                <Input id="name" {...register("name")} className="bg-muted/30 border-border/60 rounded-2xl h-14 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 text-foreground" />
+                                {errors.name && <p className="text-[10px] text-rose-500 font-bold ">{String(errors.name.message || "")}</p>}
                             </div>
 
-                            <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/[0.05] space-y-4">
+                            <div className="bg-muted/30 p-6 md:p-8 rounded-[2rem] border border-border/60 space-y-5 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                    <Package className="h-24 w-24 text-blue-500 -mr-8 -mt-8" />
+                                </div>
+                                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <Settings2 className="h-3 w-3 text-blue-500" /> Teknik Özellikler
+                                </h4>
                                 <FormFactory
                                     fields={industryFields}
                                     register={register}
@@ -156,92 +166,92 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Kategori</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2.5">
+                                    <Label className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Kategori</Label>
                                     <Select onValueChange={(val) => setValue("categoryId", val)} defaultValue={product?.categoryId}>
-                                        <SelectTrigger className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm ">
+                                        <SelectTrigger className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium">
                                             <SelectValue placeholder="Seçiniz" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-card border-border/50 text-white">
+                                        <SelectContent className="bg-card border-border/50">
                                             {categories.map((cat) => (
-                                                <SelectItem key={cat.id} value={cat.id} className="text-xs  py-3">{cat.name}</SelectItem>
+                                                <SelectItem key={cat.id} value={cat.id} className="text-xs py-3">{cat.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="barcode" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="barcode" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                         <Barcode className="h-3 w-3" /> Barkod
                                     </Label>
-                                    <Input id="barcode" {...register("barcode")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
+                                    <Input id="barcode" {...register("barcode")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="buyPrice" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Alış Fiyatı (TL)</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2.5">
+                                        <Label htmlFor="buyPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Alış (TL)</Label>
                                         <PriceInput
                                             id="buyPrice"
                                             value={watch("buyPrice")}
                                             onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
-                                            className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
+                                            className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="buyPriceUsd" className="font-medium text-[10px]  text-blue-400 uppercase tracking-widest">Dollar Alış ($)</Label>
+                                    <div className="space-y-2.5">
+                                        <Label htmlFor="buyPriceUsd" className="font-bold text-[10px] text-blue-500/70 uppercase tracking-[0.2em] ml-1">Dollar ($)</Label>
                                         <PriceInput
                                             id="buyPriceUsd"
                                             value={watch("buyPriceUsd")}
                                             onChange={(v) => handleUsdChange(Number(v))}
                                             prefix="$"
-                                            className="bg-blue-500/5 border-blue-500/20 rounded-xl h-12 text-sm text-blue-400"
+                                            className="bg-blue-500/5 border-blue-500/20 rounded-2xl h-14 text-sm text-blue-500 font-bold"
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="sellPrice" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="sellPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                         <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış Fiyatı
                                     </Label>
                                     <PriceInput
                                         id="sellPrice"
                                         value={watch("sellPrice")}
                                         onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                                        className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm "
+                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="stock" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest">Mevcut Stok</Label>
-                                    <Input id="stock" type="number" {...register("stock")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="stock" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Mevcut Stok</Label>
+                                    <Input id="stock" type="number" {...register("stock")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="criticalStock" className="font-medium text-[10px]  text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        <AlertTriangle className="h-3 w-3 text-rose-500" /> Kritik Limit
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="criticalStock" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                                        <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                                     </Label>
-                                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
+                                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="location" className="font-medium text-[10px]  text-gray-500 flex items-center gap-2 uppercase tracking-widest">
-                                    <MapPin className="h-3 w-3 text-blue-500" /> Raf / Konum
+                            <div className="space-y-2.5">
+                                <Label htmlFor="location" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">
+                                    <MapPin className="h-3.5 w-3.5 text-blue-500" /> Raf / Konum Bilgisi
                                 </Label>
-                                <Input id="location" {...register("location")} placeholder="Raf No, Kutu No vb." className="bg-white/[0.03] border-border/50 rounded-xl h-12 text-sm " />
+                                <Input id="location" {...register("location")} placeholder="Örn: A-12, Arka Depo" className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-8 border-t border-border/50 bg-white/[0.01] flex items-center justify-end gap-3">
-                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="h-12 rounded-xl text-xs  text-gray-500 hover:text-white">
-                            İptal
+                    <div className="p-6 md:p-8 border-t border-border/40 bg-accent/5 flex flex-col md:flex-row items-center justify-end gap-4 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="w-full md:w-auto h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent/20">
+                            Değişiklikleri İptal Et
                         </Button>
-                        <Button type="submit" disabled={isPending} className="h-12 rounded-xl bg-blue-500 text-black  px-8 hover:bg-blue-400">
-                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4 mr-2" />}
-                            GÜNCELLEMEYİ KAYDET
+                        <Button type="submit" disabled={isPending} className="w-full md:w-auto h-14 rounded-2xl bg-blue-600 text-white px-10 hover:bg-blue-700 shadow-lg shadow-blue-500/20 text-[11px] font-bold uppercase tracking-widest gap-3">
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                            GÜNCELLEMEYİ TAMAMLA
                         </Button>
                     </div>
                 </form>

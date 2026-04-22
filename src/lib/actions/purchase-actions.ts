@@ -11,6 +11,7 @@ export async function createPurchaseOrderAction(data: {
     orderNo: string;
     items: { productId?: string; name: string; quantity: number; buyPrice: number; buyPriceUsd?: number | null; vatRate?: number }[];
     totalAmount: number;
+    paidAmount?: number;
     vatAmount: number;
     netAmount: number;
     description?: string;
@@ -34,7 +35,7 @@ export async function createPurchaseOrderAction(data: {
                     netAmount: data.netAmount,
                     description: data.description,
                     status: "PENDING",
-                    remainingAmount: data.paymentStatus === "PAID" ? 0 : data.totalAmount,
+                    remainingAmount: data.paidAmount !== undefined ? (data.totalAmount - data.paidAmount) : (data.paymentStatus === "PAID" ? 0 : data.totalAmount),
                     paymentStatus: data.paymentStatus || "UNPAID",
                     paymentMethod: data.paymentMethod || "CASH",
                     items: {
@@ -51,17 +52,19 @@ export async function createPurchaseOrderAction(data: {
                 },
                 include: {
                     items: true,
+                    supplier: true,
                 },
             });
 
-            if (data.paymentStatus === "PAID" && data.accountId) {
-                // Peşin ödeme işlemi, tedarikçi ekstresine ve kasaya yansıtılır
+            if ((data.paymentStatus === "PAID" || data.paymentStatus === "PARTIAL") && data.accountId) {
+                const amountToPay = data.paidAmount || data.totalAmount;
+                // Ödeme işlemi, tedarikçi ekstresine ve kasaya yansıtılır
                 await tx.supplierTransaction.create({
                     data: {
                         supplierId: data.supplierId,
-                        amount: Math.round(data.totalAmount),
+                        amount: Math.round(amountToPay),
                         type: "EXPENSE",
-                        description: `${data.orderNo} nolu sipariş peşin ödemesi`,
+                        description: `${data.orderNo} nolu sipariş ${data.paymentStatus === "PARTIAL" ? "kısmi " : ""}ödemesi`,
                         purchaseOrderId: o.id,
                         shopId
                     }
@@ -70,8 +73,8 @@ export async function createPurchaseOrderAction(data: {
                 await tx.transaction.create({
                     data: {
                         type: "EXPENSE",
-                        amount: Math.round(data.totalAmount),
-                        description: `[Peşin Satın Alma] ${data.orderNo} nolu sipariş`,
+                        amount: Math.round(amountToPay),
+                        description: `[${data.paymentStatus === "PARTIAL" ? "Kısmi " : "Peşin"} Satın Alma] ${data.orderNo} nolu sipariş`,
                         paymentMethod: data.paymentMethod || "CASH",
                         financeAccountId: data.accountId,
                         userId,
@@ -82,7 +85,7 @@ export async function createPurchaseOrderAction(data: {
 
                 await tx.financeAccount.update({
                     where: { id: data.accountId },
-                    data: { balance: { decrement: data.totalAmount } }
+                    data: { balance: { decrement: amountToPay } }
                 });
             }
 
@@ -252,7 +255,18 @@ export async function createSupplierTransactionAction(data: {
     }
 }
 
-export async function receivePurchaseOrderAction(orderId: string, receivedItems: { itemId: string; receivedQuantity: number; buyPrice?: number; buyPriceUsd?: number | null }[]) {
+export async function receivePurchaseOrderAction(
+    orderId: string,
+    receivedItems: {
+        itemId: string;
+        receivedQuantity: number;
+        buyPrice?: number;
+        buyPriceUsd?: number | null;
+        addToStock?: boolean;
+        categoryId?: string;
+        sellPrice?: number;
+    }[]
+) {
     try {
         const shopId = await getShopId();
         const result = await prisma.$transaction(async (tx: any) => {
@@ -266,11 +280,37 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
             let newTotalAmount = 0;
 
             // 1. Update received quantities for items
-            for (const rItem of receivedItems) {
+            for (const rItem of (receivedItems as any)) {
                 const item = order.items.find((i: any) => i.id === rItem.itemId);
                 if (item) {
                     const priceToUse = rItem.buyPrice ?? Number(item.buyPrice);
                     newTotalAmount += rItem.receivedQuantity * priceToUse;
+
+                    let productId = item.productId;
+
+                    // 2a. If we need to create a new product for this entry
+                    if (!productId && rItem.addToStock && rItem.categoryId && rItem.sellPrice) {
+                        const newProduct = await tx.product.create({
+                            data: {
+                                name: item.name,
+                                categoryId: rItem.categoryId,
+                                buyPrice: priceToUse,
+                                buyPriceUsd: rItem.buyPriceUsd || null,
+                                sellPrice: rItem.sellPrice,
+                                stock: 0, // Will be incremented below
+                                criticalStock: 1,
+                                shopId,
+                                supplierId: order.supplierId
+                            }
+                        });
+                        productId = newProduct.id;
+
+                        // Update the purchase order item with the newly created productId
+                        await tx.purchaseOrderItem.update({
+                            where: { id: rItem.itemId },
+                            data: { productId }
+                        });
+                    }
 
                     await tx.purchaseOrderItem.update({
                         where: { id: rItem.itemId, shopId },
@@ -282,12 +322,12 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                     });
 
                     // 2. Update Product stock if productId exists
-                    if (item.productId && rItem.receivedQuantity > 0) {
-                        const product = await tx.product.findUnique({ where: { id: item.productId, shopId } });
+                    if (productId && rItem.receivedQuantity > 0) {
+                        const product = await tx.product.findUnique({ where: { id: productId, shopId } });
                         const oldPrice = Number(product.buyPrice);
 
                         await tx.product.update({
-                            where: { id: item.productId, shopId },
+                            where: { id: productId, shopId },
                             data: {
                                 stock: { increment: rItem.receivedQuantity },
                                 buyPrice: priceToUse,
@@ -309,7 +349,7 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                         // Create InventoryMovement
                         await tx.inventoryMovement.create({
                             data: {
-                                productId: item.productId,
+                                productId: productId,
                                 quantity: rItem.receivedQuantity,
                                 type: "PURCHASE",
                                 notes: priceNote,
@@ -318,9 +358,8 @@ export async function receivePurchaseOrderAction(orderId: string, receivedItems:
                         });
 
                         // Auto-remove from Shortage List as some stock arrived?
-                        // Actually, if we received SOME, we remove old entry, but if we still have MISSING below, we'll re-add it.
                         await tx.shortageItem.deleteMany({
-                            where: { productId: item.productId, shopId }
+                            where: { productId: productId, shopId }
                         });
                     }
 

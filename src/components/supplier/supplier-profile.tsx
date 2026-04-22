@@ -73,6 +73,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
     const [isDeleting, setIsDeleting] = useState(false);
     const [pendingOrdersToDelete, setPendingOrdersToDelete] = useState<any[]>([]);
     const [isPendingOrdersModalOpen, setIsPendingOrdersModalOpen] = useState(false);
+    const [isGroupedByDay, setIsGroupedByDay] = useState(true);
 
     // Keep state in sync if initialSupplier changes (though rare in this setup)
     useEffect(() => {
@@ -116,6 +117,37 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
         setIsDeleting(false);
     };
 
+    const getGroupedOrders = (purchases: any[]) => {
+        if (!isGroupedByDay) return purchases;
+
+        const groups: Record<string, any> = {};
+        purchases.forEach(p => {
+            const date = format(new Date(p.createdAt), "yyyy-MM-dd");
+            if (!groups[date]) {
+                groups[date] = {
+                    id: date,
+                    date,
+                    orders: [],
+                    totalAmount: 0,
+                    paidAmount: 0,
+                    remainingAmount: 0,
+                    items: [],
+                    paymentStatus: "PAID",
+                    status: "COMPLETED"
+                };
+            }
+            groups[date].orders.push(p);
+            groups[date].totalAmount += Number(p.totalAmount);
+            groups[date].remainingAmount += Number(p.remainingAmount);
+            if (p.items) groups[date].items.push(...p.items);
+
+            if (p.paymentStatus !== "PAID") groups[date].paymentStatus = "PARTIAL";
+            if (p.status !== "COMPLETED") groups[date].status = p.status;
+        });
+
+        return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Back Button & Header */}
@@ -141,7 +173,10 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                                <h1 className="font-medium text-2xl  text-foreground tracking-tight">{supplier.name}</h1>
+                                <div className="flex items-baseline gap-3">
+                                    <h1 className="font-medium text-2xl  text-foreground tracking-tight">{supplier.name}</h1>
+                                    <span className="text-xs text-muted-foreground/40 font-mono">#{supplier.id.slice(-6).toUpperCase()}</span>
+                                </div>
                                 <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]  uppercase tracking-wider py-0.5 px-2 rounded-lg">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Onaylı Tedarikçi
@@ -306,6 +341,21 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                         <Card className="bg-card border-border/50 overflow-hidden">
                             <div className="p-6 border-b border-border/50 flex items-center justify-between">
                                 <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Aktif ve Bekleyen Siparişler</h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-muted-foreground mr-2">GÜNLÜK GRUPLA</span>
+                                    <button
+                                        onClick={() => setIsGroupedByDay(!isGroupedByDay)}
+                                        className={cn(
+                                            "w-10 h-5 rounded-full transition-all relative border border-border",
+                                            isGroupedByDay ? "bg-blue-600 border-blue-500" : "bg-white/5"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                            isGroupedByDay ? "left-[calc(100%-18px)]" : "left-1"
+                                        )} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -317,21 +367,42 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").length === 0 ? (
+                                        {getGroupedOrders(supplier.purchases?.filter((p: any) => p.status !== "COMPLETED") || []).length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
                                                     Aktif sipariş bulunmuyor.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            supplier.purchases?.filter((p: any) => p.status !== "COMPLETED").map((order: any) => (
+                                            getGroupedOrders(supplier.purchases?.filter((p: any) => p.status !== "COMPLETED") || []).map((order: any) => (
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
-                                                    <td className="px-6 py-4 text-sm  text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
-                                                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm  text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-foreground group-hover:text-blue-400">
+                                                        {isGroupedByDay ? (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-black text-blue-500">{order.orders.length} SİPARİŞ</span>
+                                                                <span className="text-[9px] text-muted-foreground truncate w-40">
+                                                                    {order.items.slice(0, 3).map((i: any) => i.name).join(", ")}
+                                                                    {order.items.length > 3 && "..."}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            `#${order.orderNo}`
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                                                        {isGroupedByDay ? format(new Date(order.date), "dd MMMM yyyy", { locale: tr }) : format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-foreground">
+                                                        ₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}
+                                                        {isGroupedByDay && (
+                                                            <div className="text-[10px] text-emerald-500 font-medium">
+                                                                Ödenen: ₺{Math.round(order.totalAmount - order.remainingAmount).toLocaleString("tr-TR")}
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px]  border-none px-2 rounded-xl",
+                                                            "text-[10px] border-none px-2 rounded-xl",
                                                             order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
                                                                 order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
                                                         )}>
@@ -340,36 +411,51 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px]  border-none px-2 rounded-xl",
+                                                            "text-[10px] border-none px-2 rounded-xl",
                                                             order.status === "PENDING" ? "bg-amber-500/10 text-amber-500" :
-                                                                order.status === "ON_WAY" ? "bg-blue-500/10 text-blue-500" : "bg-slate-500/10 text-muted-foreground"
+                                                                order.status === "ON_WAY" ? "bg-blue-500/10 text-blue-500" : "bg-emerald-500/10 text-emerald-500"
                                                         )}>
-                                                            {order.status === "PENDING" ? "Beklemede" : order.status === "ON_WAY" ? "Yolda" : order.status}
+                                                            {order.status === "PENDING" ? "Beklemede" : order.status === "ON_WAY" ? "Yolda" : "Tamamlandı"}
                                                         </Badge>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Button
-                                                                onClick={() => {
-                                                                    setInitialPaymentOrderId(order.id);
-                                                                    setIsPaymentOpen(true);
-                                                                }}
-                                                                hidden={order.paymentStatus === "PAID"}
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg text-[10px]  uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
-                                                            >
-                                                                Ödeme Yap
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() => handleDetail(order)}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg text-[10px]  uppercase text-muted-foreground hover:bg-white/5"
-                                                            >
-                                                                Detay
-                                                            </Button>
-                                                        </div>
+                                                        {!isGroupedByDay && (
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        setInitialPaymentOrderId(order.id);
+                                                                        setIsPaymentOpen(true);
+                                                                    }}
+                                                                    hidden={order.paymentStatus === "PAID"}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-lg text-[10px] uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
+                                                                >
+                                                                    Ödeme Yap
+                                                                </Button>
+                                                                <Button
+                                                                    onClick={() => handleDetail(order)}
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-lg text-[10px] uppercase text-muted-foreground hover:bg-white/5"
+                                                                >
+                                                                    Detay
+                                                                </Button>
+                                                                {(order.status === "PENDING" || order.status === "ON_WAY") && (
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            setSelectedOrder(order);
+                                                                            setIsMalKabulOpen(true);
+                                                                        }}
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-8 rounded-lg text-[10px] uppercase text-blue-500 hover:bg-blue-500/10 border border-blue-500/20"
+                                                                    >
+                                                                        Teslim Al
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))
@@ -382,8 +468,23 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
 
                     <TabsContent value="history" className="m-0">
                         <Card className="bg-card border-border/50 overflow-hidden">
-                            <div className="p-6 border-b border-border/50">
+                            <div className="p-6 border-b border-border/50 flex items-center justify-between">
                                 <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-muted-foreground mr-2">GÜNLÜK GRUPLA</span>
+                                    <button
+                                        onClick={() => setIsGroupedByDay(!isGroupedByDay)}
+                                        className={cn(
+                                            "w-10 h-5 rounded-full transition-all relative border border-border",
+                                            isGroupedByDay ? "bg-blue-600 border-blue-500" : "bg-white/5"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                            isGroupedByDay ? "left-[calc(100%-18px)]" : "left-1"
+                                        )} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -395,21 +496,42 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {supplier.purchases?.filter((p: any) => p.status === "COMPLETED").length === 0 ? (
+                                        {getGroupedOrders(supplier.purchases?.filter((p: any) => p.status === "COMPLETED") || []).length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
+                                                <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
                                                     Henüz geçmiş işlem kaydı bulunmuyor.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            supplier.purchases?.filter((p: any) => p.status === "COMPLETED").map((order: any) => (
+                                            getGroupedOrders(supplier.purchases?.filter((p: any) => p.status === "COMPLETED") || []).map((order: any) => (
                                                 <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
-                                                    <td className="px-6 py-4 text-sm  text-foreground group-hover:text-blue-400">#{order.orderNo}</td>
-                                                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}</td>
-                                                    <td className="px-6 py-4 text-sm  text-foreground">₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}</td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-foreground group-hover:text-blue-400">
+                                                        {isGroupedByDay ? (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-black text-blue-500">{order.orders.length} SİPARİŞ</span>
+                                                                <span className="text-[9px] text-muted-foreground truncate w-40">
+                                                                    {order.items.slice(0, 3).map((i: any) => i.name).join(", ")}
+                                                                    {order.items.length > 3 && "..."}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            `#${order.orderNo}`
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                                                        {isGroupedByDay ? format(new Date(order.date), "dd MMMM yyyy", { locale: tr }) : format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-foreground">
+                                                        ₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}
+                                                        {isGroupedByDay && (
+                                                            <div className="text-[10px] text-emerald-500 font-medium">
+                                                                Ödenen: ₺{Math.round(order.totalAmount - order.remainingAmount).toLocaleString("tr-TR")}
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <Badge className={cn(
-                                                            "text-[10px]  border-none px-2 rounded-xl",
+                                                            "text-[10px] border-none px-2 rounded-xl",
                                                             order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
                                                                 order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
                                                         )}>
@@ -417,33 +539,35 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                                         </Badge>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <Badge className="text-[10px]  border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                                                        <Badge className="text-[10px] border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                                                             Tamamlandı
                                                         </Badge>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <Button
-                                                                onClick={() => {
-                                                                    setInitialPaymentOrderId(order.id);
-                                                                    setIsPaymentOpen(true);
-                                                                }}
-                                                                disabled={order.paymentStatus === "PAID"}
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg text-[10px]  uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
-                                                            >
-                                                                {order.paymentStatus === "PAID" ? "Ödendi" : "Ödeme Yap"}
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() => handleDetail(order)}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg text-[10px]  uppercase text-muted-foreground hover:bg-white/5"
-                                                            >
-                                                                Detay
-                                                            </Button>
-                                                        </div>
+                                                        {!isGroupedByDay && (
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        setInitialPaymentOrderId(order.id);
+                                                                        setIsPaymentOpen(true);
+                                                                    }}
+                                                                    disabled={order.paymentStatus === "PAID"}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-lg text-[10px] uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
+                                                                >
+                                                                    {order.paymentStatus === "PAID" ? "Ödendi" : "Ödeme Yap"}
+                                                                </Button>
+                                                                <Button
+                                                                    onClick={() => handleDetail(order)}
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-lg text-[10px] uppercase text-muted-foreground hover:bg-white/5"
+                                                                >
+                                                                    Detay
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))

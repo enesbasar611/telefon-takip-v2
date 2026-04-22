@@ -27,6 +27,15 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { receivePurchaseOrderAction } from "@/lib/actions/purchase-actions";
+import { getCategories } from "@/lib/actions/product-actions";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface MalKabulModalProps {
     isOpen: boolean;
@@ -40,12 +49,18 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
     const [currencies, setCurrencies] = useState<Record<string, "TRY" | "USD">>({});
     const [loading, setLoading] = useState(false);
     const [usdRate, setUsdRate] = useState<number>(33.0);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [addToStock, setAddToStock] = useState<Record<string, boolean>>({});
+    const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
+    const [sellPrices, setSellPrices] = useState<Record<string, number>>({});
 
     useEffect(() => {
         fetch("https://api.exchangerate-api.com/v4/latest/USD")
             .then(res => res.json())
             .then(data => setUsdRate(data.rates.TRY))
             .catch(() => setUsdRate(33.0));
+
+        getCategories().then(setCategories);
     }, []);
 
     useEffect(() => {
@@ -97,7 +112,10 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                 itemId: item.id,
                 receivedQuantity,
                 buyPrice: finalPriceTry,
-                buyPriceUsd: (hasNewPrice && isUsd) ? priceInput : null
+                buyPriceUsd: (hasNewPrice && isUsd) ? priceInput : null,
+                addToStock: addToStock[item.id] || false,
+                categoryId: itemCategories[item.id],
+                sellPrice: sellPrices[item.id]
             };
         });
 
@@ -161,33 +179,33 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
 
                     {/* Top Info Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-white/5 border-none p-4 rounded-2xl flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
-                                <Package className="h-5 w-5 text-blue-400" />
+                        <Card className="bg-background border-2 border-border/60 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+                            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-blue-600" />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Tedarikçi</p>
-                                <p className="text-sm  truncate text-foreground">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Tedarikçi</p>
+                                <p className="text-sm truncate text-foreground font-semibold">{order.supplier?.name || "Bilinmeyen Tedarikçi"}</p>
                             </div>
                         </Card>
 
-                        <Card className="bg-white/5 border-none p-4 rounded-2xl flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                <Wallet className="h-5 w-5 text-emerald-400" />
+                        <Card className="bg-background border-2 border-border/60 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+                            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                <Wallet className="h-5 w-5 text-emerald-600" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Güncel Değer</p>
-                                <p className="text-sm  truncate">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Güncel Değer</p>
+                                <p className="text-sm truncate text-foreground font-semibold">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                             </div>
                         </Card>
 
-                        <Card className="bg-white/5 border-none p-4 rounded-2xl flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
-                                <Truck className="h-5 w-5 text-purple-400" />
+                        <Card className="bg-background border-2 border-border/60 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+                            <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                                <Truck className="h-5 w-5 text-purple-600" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[10px]  text-muted-foreground uppercase tracking-widest">Sevkiyat Detayları</p>
-                                <p className="text-sm  truncate">{order.shippingInfo || "BELİRTİLMEMİŞ"}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Sevkiyat Detayları</p>
+                                <p className="text-sm truncate text-foreground font-semibold">{order.shippingInfo || "BELİRTİLMEMİŞ"}</p>
                             </div>
                         </Card>
                     </div>
@@ -211,12 +229,12 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                             <table className="w-full text-left">
                                 <thead className="bg-white/[0.02] border-b border-border/50">
                                     <tr>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase">Ürün Adı</th>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-28">Stok Durumu</th>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center">Sipariş</th>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-28">Gelen</th>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-center w-32">Alış Fiyatı ($)</th>
-                                        <th className="px-4 py-4 text-[10px]  text-muted-foreground uppercase text-right">Durum</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase">Ürün Adı</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-28">Stok Durumu</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center">Sipariş</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-28">Gelen</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-32">Alış Fiyatı ($)</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-right">Durum</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -232,7 +250,20 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm  text-foreground">{item.name}</p>
-                                                        <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[150px]">ID: {item.productId || "Manuel Giriş"}</p>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[150px]">ID: {item.productId || "Manuel Giriş"}</p>
+                                                            {!item.productId && (
+                                                                <div className="flex items-center gap-1.5 ml-1">
+                                                                    <Checkbox
+                                                                        id={`add-stock-${item.id}`}
+                                                                        checked={addToStock[item.id]}
+                                                                        onCheckedChange={(checked) => setAddToStock(prev => ({ ...prev, [item.id]: !!checked }))}
+                                                                        className="h-3 w-3 border-blue-500/50 data-[state=checked]:bg-blue-500"
+                                                                    />
+                                                                    <label htmlFor={`add-stock-${item.id}`} className="text-[9px] font-bold text-blue-500 cursor-pointer uppercase tracking-tighter">Stoğa Ekle</label>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-center">
@@ -250,7 +281,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         type="number"
                                                         value={received}
                                                         onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                                        className="h-10 rounded-xl bg-white/5 border-border text-center  text-sm"
+                                                        className="h-10 rounded-xl bg-background border-2 border-border/60 text-center text-sm font-bold text-foreground focus:border-blue-500"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-4 w-32 align-top">
@@ -279,20 +310,46 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4 text-right">
-                                                    <div className="flex items-center justify-end">
-                                                        {status === "MATCH" ? (
-                                                            <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                                            </div>
-                                                        ) : status === "MISSING" ? (
-                                                            <div className="h-8 w-8 rounded-full bg-rose-500/20 flex items-center justify-center">
-                                                                <XCircle className="h-4 w-4 text-rose-500" />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {addToStock[item.id] && !item.productId && (
+                                                            <div className="flex flex-col gap-1 w-32 p-2 bg-blue-500/5 border border-blue-500/10 rounded-xl animate-in fade-in slide-in-from-right-2">
+                                                                <Select
+                                                                    value={itemCategories[item.id]}
+                                                                    onValueChange={(val) => setItemCategories(prev => ({ ...prev, [item.id]: val }))}
+                                                                >
+                                                                    <SelectTrigger className="h-7 text-[9px] bg-background border-border/50 rounded-lg">
+                                                                        <SelectValue placeholder="Kategori Seç" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="bg-[#0F172A] border-border text-white">
+                                                                        {categories.map((c: any) => (
+                                                                            <SelectItem key={c.id} value={c.id} className="text-[10px]">{c.name}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Satış Fiyatı"
+                                                                    value={sellPrices[item.id] || ""}
+                                                                    onChange={(e) => setSellPrices(prev => ({ ...prev, [item.id]: parseFloat(e.target.value) }))}
+                                                                    className="h-7 text-[10px] bg-background border-border/50 rounded-lg text-right"
+                                                                />
                                                             </div>
                                                         )}
+                                                        <div className="flex items-center justify-end">
+                                                            {status === "MATCH" ? (
+                                                                <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                                                </div>
+                                                            ) : status === "MISSING" ? (
+                                                                <div className="h-8 w-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+                                                                    <XCircle className="h-4 w-4 text-rose-500" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>

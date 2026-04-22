@@ -356,7 +356,7 @@ export function ShortageList() {
                       </div>
 
                       <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
-                        <span className="text-[10px]  text-gray-300 leading-tight truncate flex-1">{item.name}</span>
+                        <span className="text-[10px] font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">

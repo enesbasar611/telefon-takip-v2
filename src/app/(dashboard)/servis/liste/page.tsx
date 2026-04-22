@@ -10,6 +10,7 @@ import { ServiceStatus } from "@prisma/client";
 import { getShop } from "@/lib/actions/setting-actions";
 import { getIndustryConfig, getIndustryLabel } from "@/lib/industry-utils";
 import { PageHeader } from "@/components/ui/page-header";
+import { TechnicalServiceAnalysisModal } from "@/components/service/technical-service-analysis-modal";
 
 export const dynamic = 'force-dynamic';
 
@@ -40,15 +41,18 @@ export default async function ServisListePage() {
         description={`Toplam ${counts.all} kayıt üzerinden operasyonel takip ve yönetim.`}
         icon={Icon}
         actions={
-          <CreateServiceModal
-            shop={shop}
-            trigger={
-              <Button className="gap-2 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
-                <Plus className="h-4 w-4" />
-                Yeni Kayıt
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-3">
+            <TechnicalServiceAnalysisModal />
+            <CreateServiceModal
+              shop={shop}
+              trigger={
+                <Button className="gap-2 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
+                  <Plus className="h-4 w-4" />
+                  Yeni Kayıt
+                </Button>
+              }
+            />
+          </div>
         }
       />
 

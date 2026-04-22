@@ -25,6 +25,7 @@ import {
   Clock,
   Package,
   Lock,
+  History as HistoryIcon,
 } from "lucide-react";
 import { createCustomerMuted } from "@/lib/actions/customer-actions";
 import { parseServiceDiagnosticWithAI } from "@/lib/actions/gemini-actions";
@@ -763,6 +764,17 @@ export default function NewServicePage() {
                         <span className="text-2xl sm:text-3xl font-black text-emerald-500 tracking-tighter leading-none">₺{diagnosticResult.estimatedTotalPrice}</span>
                       </div>
                     </div>
+                    {diagnosticResult.summaryReport && (
+                      <div className="pt-6 border-t border-blue-500/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <HistoryIcon className="h-3.5 w-3.5 text-blue-500/60" />
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">🔍 BAŞAR AI SEKTÖREL ANALİZ RAPORU</span>
+                        </div>
+                        <p className="text-xs text-foreground/80 leading-relaxed italic border-l-2 border-blue-500/30 pl-4 py-1 bg-blue-500/5 rounded-r-xl">
+                          "{diagnosticResult.summaryReport}"
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

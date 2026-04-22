@@ -703,7 +703,8 @@ export async function parseServiceDiagnosticWithAI(
   "estimatedTotalPrice": number,
   "repairTimeRange": "string (örn: 1-2 saat)",
   "riskLevel": "Düşük | Orta | Yüksek",
-  "professionalNote": "string (teknik tavsiye)"
+  "professionalNote": "string (teknik tavsiye)",
+  "summaryReport": "string (Tüm teknik servisle alakalı analiz raporu özeti: Kronik sorunlar, başarı oranı tahmini ve dükkanın geçmiş tecrübelerine göre tavsiye)"
 }`;
 
     // Get current inventory names and prices for context
@@ -713,19 +714,31 @@ export async function parseServiceDiagnosticWithAI(
         take: 300
     });
 
-    const inventoryContext = products.map(p => `${p.name} (Fiyat: ${p.sellPrice} TL, Stok: ${p.stock})`).join(", ");
+    // Get last 50 services for general trend analysis
+    const pastTickets = await prisma.serviceTicket.findMany({
+        where: { shopId },
+        select: { deviceModel: true, problemDesc: true, status: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+    });
+
+    const inventoryContext = products.map(p => `${p.name} (TL: ${p.sellPrice}, Stok: ${p.stock})`).join(", ");
+    const historyContext = pastTickets.map(t => `${t.deviceModel}: ${t.problemDesc} (${t.status})`).join(" | ");
 
     const systemPrompt = `Sen profesyonel bir teknik servis danışmanısın. 
 Kullanıcının girdiği arıza açıklamasına göre bir ön teşhis koy.
 
-GÜNCEL DÜKKAN STOĞU (Bu listeden eşleştirme yap):
+GÜNCEL DÜKKAN STOĞU:
 ${inventoryContext}
 
+DÜKKAN GEÇMİŞİ (Son 50 Kayıt):
+${historyContext}
+
 Kurallar:
-1. Gerekli parçaları belirlerken yukarıdaki GÜNCEL DÜKKAN STOĞU listesini kontrol et.
-2. Eğer parça stokta varsa: name olarak dükkandaki tam adı kullan, estimatedPrice olarak dükkan fiyatını al ve inStock: true set et.
-3. Eğer parça stokta YOKSA: name olarak genel adını yaz, inStock: false set et, piyasa fiyatını tahmin et.
-4. MUADİL: Eğer parça stokta yoksa ama dükkan stoğunda benzer/muadil olabilecek bir parça varsa (örn: iPhone 7 ekranı yerine iPhone 8 ekranı veya farklı kalite), "alternative" alanına dükkandaki o parçanın adını yaz.
+1. Gerekli parçaları belirlerken GÜNCEL DÜKKAN STOĞU listesini kontrol et.
+2. DÜKKAN GEÇMİŞİ verilerini kullanarak kronik sorunları tespit et ve "summaryReport" alanında dükkan sahibine özel bir özet sun.
+3. Eğer parça stokta varsa: name olarak dükkandaki tam adı kullan, estimatedPrice olarak dükkan fiyatını al ve inStock: true set et.
+4. Eğer parça stokta YOKSA: name olarak genel adını yaz, inStock: false set et, piyasa fiyatını tahmin et.
 5. SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `SEKTÖR: ${industry || 'Bilinmiyor'}\nARIZA AÇIKLAMASI: ${problemDescription}\nCİHAZ MODELİ: ${deviceModel || 'Bilinmiyor'}`;
@@ -828,6 +841,69 @@ KULLANICI VERİLERİ (Son 30 Gün):
     }
 }
 
+/**
+ * Technical Service Analysis Report
+ */
+export async function getTechnicalServiceAnalysis(): Promise<{ success: boolean; analysis?: string; error?: string }> {
+    try {
+        const { getShopId } = await import("@/lib/auth");
+        const shopId = await getShopId();
+
+        // Get last 30 days of service tickets
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const tickets = await prisma.serviceTicket.findMany({
+            where: {
+                shopId,
+                createdAt: { gte: thirtyDaysAgo }
+            },
+            include: {
+                usedParts: { include: { product: true } }
+            },
+            orderBy: { createdAt: "desc" },
+            take: 100 // Last 100 for context
+        });
+
+        if (tickets.length === 0) {
+            return { success: false, error: "Analiz için yeterli servis kaydı bulunamadı." };
+        }
+
+        // Aggregate some data
+        const statusSummary = tickets.reduce((acc: any, t) => {
+            acc[t.status] = (acc[t.status] || 0) + 1;
+            return acc;
+        }, {});
+
+        const commonProblems = tickets.map(t => t.problemDesc).slice(0, 20);
+        const deviceModels = tickets.map(t => `${t.deviceBrand} ${t.deviceModel}`).slice(0, 20);
+
+        const systemPrompt = `Sen BAŞAR AI Teknik Servis Analistisin. Teknik servis operasyonlarını analiz edip dükkan sahibine yol gösterecek bir özet rapor sun.
+Asla JSON veya süslü parantez kullanma. Doğrudan düz metin ve markdown (listeler, kalın yazılar) kullan.
+Kısa, öz ve aksiyon odaklı ol.
+
+RAPOR AKIŞI:
+1. 🔧 OPERASYON: Genel durum özeti.
+2. 📱 CİHAZ/ARIZA: En çok gelen cihazlar ve kronikleşen arızalar.
+3. 💸 KARLILIK: Servis ücretleri ve maliyetler üzerine kısa bir yorum.
+4. 🚀 TAVSİYE: Teknik servis hızını veya kalitesini artıracak 2 altın kural.
+
+ANALİZ VERİLERİ (Son 30 Gün):
+- Toplam Kayıt: ${tickets.length}
+- Durum Dağılımı: ${JSON.stringify(statusSummary)}
+- Örnek Arızalar: ${commonProblems.join(", ")}
+- Örnek Cihazlar: ${deviceModels.join(", ")}`;
+
+        const result = await callGemini(shopId, [systemPrompt, "Teknik servis genel analiz raporu oluştur."], "text");
+        if ("error" in result) return { success: false, error: result.error };
+
+        return { success: true, analysis: result.text };
+    } catch (error) {
+        console.error("Technical Service Analysis Error:", error);
+        return { success: false, error: "Teknik servis verileri analiz edilirken bir hata oluştu." };
+    }
+}
+
 // ── API KEY VALIDATION ──────────────────────────────────────────────────────
 
 /**
@@ -841,7 +917,7 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
     try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Simple ping request
         const result = await model.generateContent("Merhaba, sistem bağlantı testi. Sadece 'OK' cevabı ver.");

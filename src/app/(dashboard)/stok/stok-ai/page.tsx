@@ -113,17 +113,17 @@ export default function StockAIPage() {
     return (
         <div className="flex flex-col gap-6 p-4 md:p-8 animate-in fade-in duration-700 max-w-full overflow-x-hidden">
             {/* Header Section */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden px-6 py-10 md:p-12 rounded-[2rem] md:rounded-[3.5rem] bg-gradient-to-br from-blue-600/[0.05] to-transparent border border-border/50">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden px-6 py-10 md:p-12 rounded-[2rem] md:rounded-[3.5rem] bg-gradient-to-br from-blue-600/[0.08] to-transparent border border-blue-500/10 shadow-sm">
                 <div className="absolute top-[-50%] left-[-10%] h-[200%] w-[50%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none rotate-45" />
                 <section className="relative z-10 space-y-3">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center">
-                            <Brain className="h-5 w-5 text-blue-500" />
+                            <Brain className="h-5 w-5 text-blue-600 dark:text-blue-500" />
                         </div>
-                        <Badge className="bg-blue-600/10 text-blue-500 border-none px-3 py-1 text-[10px] uppercase tracking-widest font-bold">BAŞAR AI ANALİZ</Badge>
+                        <Badge className="bg-blue-600/10 text-blue-600 dark:text-blue-500 border-none px-3 py-1 text-[10px] uppercase tracking-widest font-bold">BAŞAR AI ANALİZ</Badge>
                     </div>
-                    <h1 className="font-bold text-3xl md:text-5xl text-white tracking-tighter leading-none">
-                        Stok <span className="text-blue-500">Önerileri</span>
+                    <h1 className="font-bold text-3xl md:text-5xl text-foreground tracking-tighter leading-none">
+                        Stok <span className="text-blue-600 dark:text-blue-500">Önerileri</span>
                     </h1>
                     <p className="text-muted-foreground font-medium max-w-xl text-sm md:text-base leading-relaxed line-clamp-2">
                         Veri odaklı kararlar alarak dükkan verimliliğini artırın.
@@ -144,13 +144,13 @@ export default function StockAIPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <main className="lg:col-span-2 space-y-4">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Aktif Kayıtlar</h2>
-                        <span className="text-[10px] bg-white/5 border border-border/50 px-3 py-1 rounded-full text-white">{alerts.length} LİSTE</span>
+                        <h2 className="text-[11px] font-bold text-muted-foreground/80 uppercase tracking-[0.2em]">Aktif Kayıtlar</h2>
+                        <span className="text-[10px] bg-muted border border-border px-3 py-1 rounded-full text-foreground/80 font-semibold">{alerts.length} LİSTE</span>
                     </div>
 
                     {loading ? (
                         <div className="space-y-4">
-                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full rounded-3xl bg-white/[0.03]" />)}
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full rounded-3xl bg-accent/5" />)}
                         </div>
                     ) : alerts.length === 0 ? (
                         <Card className="rounded-[2.5rem] border-dashed py-16 bg-transparent">
@@ -164,7 +164,7 @@ export default function StockAIPage() {
                         alerts.map((alert) => {
                             const style = getTypeStyles(alert.type);
                             return (
-                                <Card key={alert.id} className={cn("rounded-[2rem] bg-white/[0.02] border-border/50 group hover:bg-white/[0.03] transition-all duration-300", style.glow, style.border)}>
+                                <Card key={alert.id} className={cn("rounded-[2rem] bg-card border-border/50 group hover:shadow-lg transition-all duration-300", style.glow, style.border)}>
                                     <CardContent className="p-5 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                                         <div className="flex items-center gap-4 md:gap-6 w-full">
                                             <div className={cn("h-12 w-12 md:h-14 md:w-14 rounded-2xl flex items-center justify-center border shrink-0", style.bg, style.color, style.border)}>
@@ -175,18 +175,18 @@ export default function StockAIPage() {
                                                     <span className={cn("text-[9px] font-bold uppercase tracking-widest", style.color)}>{style.label}</span>
                                                     <span className="text-[9px] text-muted-foreground uppercase tracking-tighter">{format(new Date(alert.createdAt), "dd MMM HH:mm", { locale: tr })}</span>
                                                 </div>
-                                                <h3 className="font-bold text-sm md:text-base text-slate-100 leading-tight line-clamp-2">{alert.message}</h3>
+                                                <h3 className="font-bold text-sm md:text-base text-foreground leading-tight line-clamp-2">{alert.message}</h3>
                                                 {alert.product && (
-                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 truncate">REF: {alert.product.name} ({alert.product.stock} Adet)</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground/70 uppercase truncate">REF: {alert.product.name} ({alert.product.stock} Adet)</p>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 w-full md:w-auto">
-                                            <Button variant="ghost" className="h-12 w-12 rounded-xl bg-white/5 border border-border/50 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10" onClick={() => handleDelete(alert.id)}>
+                                            <Button variant="ghost" className="h-12 w-12 rounded-xl bg-accent/5 border border-border/50 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10" onClick={() => handleDelete(alert.id)}>
                                                 <Trash2 className="h-5 w-5" />
                                             </Button>
                                             <Button
-                                                className="h-12 px-6 rounded-xl bg-white text-black hover:bg-white/90 text-[10px] font-bold uppercase tracking-widest flex-1 gap-2 shrink-0"
+                                                className="h-12 px-6 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-[10px] font-bold uppercase tracking-widest flex-1 gap-2 shrink-0 shadow-lg shadow-blue-500/20"
                                                 onClick={async () => {
                                                     if (!alert.product) return;
                                                     if (alert.type === "CRITICAL") {
@@ -233,28 +233,28 @@ export default function StockAIPage() {
                     </Card>
 
                     {deepAnalysis && (
-                        <Card className="rounded-[2rem] bg-white/[0.04] border-blue-500/20 overflow-hidden animate-in slide-in-from-bottom">
-                            <CardHeader className="p-6 border-b border-border/50 bg-blue-600/[0.03]">
-                                <CardTitle className="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Card className="rounded-[2rem] bg-blue-600/[0.02] border-blue-500/20 overflow-hidden animate-in slide-in-from-bottom shadow-sm">
+                            <CardHeader className="p-6 border-b border-border/50 bg-blue-600/[0.05]">
+                                <CardTitle className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5" /> STRATEJİK RAPOR
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-6">
-                                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap line-clamp-10 mb-6">{deepAnalysis}</p>
+                                <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap mb-6">{deepAnalysis}</p>
                                 <Button variant="outline" onClick={() => setDeepAnalysis(null)} className="w-full rounded-xl text-[10px] font-bold uppercase tracking-widest h-10">Kapat</Button>
                             </CardContent>
                         </Card>
                     )}
 
                     {!deepAnalysis && (
-                        <Card className="rounded-[2rem] bg-white/[0.01] border border-border/50">
+                        <Card className="rounded-[2rem] bg-card border border-border shadow-md">
                             <CardContent className="p-8 flex flex-col gap-4">
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                    <Zap className="h-4 w-4 text-blue-500" /> Tahmini Öngörü
+                                    <Zap className="h-4 w-4 text-blue-600" /> Tahmini Öngörü
                                 </h4>
-                                <p className="text-[10px] text-slate-500 uppercase leading-relaxed font-bold">15 günlük gelecek raporu oluşturulsun mu?</p>
-                                <Button onClick={handleDeepAnalysis} disabled={isAnalyzing} className="w-full rounded-xl h-12 bg-white/5 border border-border/50 hover:bg-white/10 text-[10px] font-bold uppercase tracking-widest gap-2">
-                                    {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4 text-blue-500" />}
+                                <p className="text-[11px] text-foreground/70 uppercase leading-relaxed font-bold">15 günlük gelecek raporu oluşturulsun mu?</p>
+                                <Button onClick={handleDeepAnalysis} disabled={isAnalyzing} className="w-full rounded-xl h-12 bg-blue-600/5 border border-blue-600/20 hover:bg-blue-600/10 text-blue-600 text-[10px] font-bold uppercase tracking-widest gap-2 transition-all">
+                                    {isAnalyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
                                     STRATEJİK RAPORU BAŞLAT
                                 </Button>
                             </CardContent>
