@@ -168,14 +168,14 @@ export function SupplierPaymentModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md max-w-full w-full h-full sm:h-auto overflow-y-auto bg-[#0B101B] border-border/50 p-6 sm:rounded-3xl rounded-none">
+            <DialogContent className="sm:max-w-md max-w-full w-full h-full sm:h-auto overflow-y-auto bg-card border-border/50 p-6 sm:rounded-3xl rounded-none">
                 <DialogHeader className="mb-6">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
                             <CreditCard className="h-6 w-6 text-emerald-400" />
                         </div>
                         <div>
-                            <DialogTitle className="font-medium text-xl  text-white">Cari İşlem / Ödeme</DialogTitle>
+                            <DialogTitle className="font-medium text-xl  text-foreground">Cari İşlem / Ödeme</DialogTitle>
                             <p className="text-xs font-semibold text-muted-foreground mt-1">
                                 {initialSupplierName || "Tedarikçi"} hesabına işlem giriyorsunuz.
                             </p>
@@ -192,10 +192,10 @@ export function SupplierPaymentModal({
                                 name="supplierId"
                                 render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
-                                        <SelectTrigger className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-sm  text-white focus:ring-emerald-500">
+                                        <SelectTrigger className="bg-accent/5 border-border/50 h-12 rounded-xl text-sm  text-foreground focus:ring-emerald-500">
                                             <SelectValue placeholder="Tedarikçi Seçin" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-[#0B101B] border-border rounded-xl">
+                                        <SelectContent className="bg-card border-border rounded-xl">
                                             {suppliers.map((s: any) => (
                                                 <SelectItem key={s.id} value={s.id} className="text-xs ">
                                                     {s.name} (Borç: ₺{Math.round(Number(s.balance)).toLocaleString("tr-TR")})
@@ -217,7 +217,7 @@ export function SupplierPaymentModal({
                                 "flex items-center justify-center gap-2 h-11 rounded-xl text-xs  transition-all border",
                                 selectedType === "EXPENSE"
                                     ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
-                                    : "bg-white/[0.02] border-border/50 text-muted-foreground hover:bg-white/[0.04] hover:text-white"
+                                    : "bg-accent/5 border-border/50 text-muted-foreground hover:bg-accent/10 hover:text-foreground"
                             )}
                         >
                             Borç Öde (Ödeme)
@@ -229,7 +229,7 @@ export function SupplierPaymentModal({
                                 "flex items-center justify-center gap-2 h-11 rounded-xl text-xs  transition-all border",
                                 selectedType === "INCOME"
                                     ? "bg-rose-500/10 border-rose-500/50 text-rose-400"
-                                    : "bg-white/[0.02] border-border/50 text-muted-foreground hover:bg-white/[0.04] hover:text-white"
+                                    : "bg-accent/5 border-border/50 text-muted-foreground hover:bg-accent/10 hover:text-foreground"
                             )}
                         >
                             Borç Ekle (Alım)
@@ -243,10 +243,10 @@ export function SupplierPaymentModal({
                             name="purchaseOrderId"
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-sm  text-white focus:ring-emerald-500">
+                                    <SelectTrigger className="bg-accent/5 border-border/50 h-12 rounded-xl text-sm  text-foreground focus:ring-emerald-500">
                                         <SelectValue placeholder="Manuel İşlem (Sipariş Seçilmedi)" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#0B101B] border-border rounded-xl">
+                                    <SelectContent className="bg-card border-border rounded-xl">
                                         <SelectItem value="manual" className="text-xs  text-muted-foreground">Manuel İşlem / Genel Ödeme</SelectItem>
                                         {effectiveUnpaidOrders.map((order: any) => (
                                             <SelectItem key={order.id} value={order.id} className="text-xs ">
@@ -268,10 +268,10 @@ export function SupplierPaymentModal({
                                     name="paymentMethod"
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value || "CASH"}>
-                                            <SelectTrigger className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-sm text-white focus:ring-emerald-500">
+                                            <SelectTrigger className="bg-accent/5 border-border/50 h-12 rounded-xl text-sm text-foreground focus:ring-emerald-500">
                                                 <SelectValue placeholder="Seçiniz" />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-[#0B101B] border-border rounded-xl">
+                                            <SelectContent className="bg-card border-border rounded-xl">
                                                 <SelectItem value="CASH" className="text-xs">NAKİT</SelectItem>
                                                 <SelectItem value="CARD" className="text-xs">KREDİ KARTI</SelectItem>
                                                 <SelectItem value="TRANSFER" className="text-xs">HAVALE/EFT</SelectItem>
@@ -295,10 +295,10 @@ export function SupplierPaymentModal({
                                     name="accountId"
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-sm text-white focus:ring-emerald-500">
+                                            <SelectTrigger className="bg-accent/5 border-border/50 h-12 rounded-xl text-sm text-foreground focus:ring-emerald-500">
                                                 <SelectValue placeholder="Kasa Seçin" />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-[#0B101B] border-border rounded-xl min-w-[240px]">
+                                            <SelectContent className="bg-card border-border rounded-xl min-w-[240px]">
                                                 {accounts.map(acc => (
                                                     <SelectItem key={acc.id} value={acc.id} className="text-xs p-3">
                                                         <div className="flex items-center justify-between w-full min-w-[200px]">
@@ -324,7 +324,7 @@ export function SupplierPaymentModal({
                             value={watch("amount")}
                             onChange={(v) => setValue("amount", v, { shouldValidate: true })}
                             placeholder="0,00"
-                            className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-lg  text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            className="bg-accent/5 border-border/50 h-12 rounded-xl text-lg  text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-emerald-500"
                         />
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>
@@ -335,13 +335,13 @@ export function SupplierPaymentModal({
                             id="description"
                             {...register("description")}
                             placeholder="Örn: 102 nolu fatura ödemesi, elden nakit vb."
-                            className="bg-white/[0.03] border-border/50 h-12 rounded-xl text-sm  text-white placeholder:text-slate-600 focus-visible:ring-emerald-500"
+                            className="bg-accent/5 border-border/50 h-12 rounded-xl text-sm  text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-emerald-500"
                         />
                         {errors.description && <p className="text-[10px] text-red-400">{errors.description.message}</p>}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground hover:text-white  h-11 px-6 rounded-xl hover:bg-white/5">
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground hover:text-foreground  h-11 px-6 rounded-xl hover:bg-accent/10">
                             İptal
                         </Button>
                         <Button type="submit" disabled={isPending} className={cn(

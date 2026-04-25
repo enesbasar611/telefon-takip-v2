@@ -55,7 +55,7 @@ export const getExchangeRates = async (shopId: string) => {
       return prisma.setting.findMany({
         where: {
           shopId: sId,
-          key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update"] }
+          key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] }
         }
       });
     },
@@ -73,7 +73,7 @@ export const getExchangeRates = async (shopId: string) => {
     await syncAllRates(shopId).catch(() => { });
     // Sync sonrası güncel veriyi tekrar çek (cache'i bypass ederek)
     settings = await prisma.setting.findMany({
-      where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update"] } }
+      where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] } }
     });
   }
 
@@ -81,6 +81,8 @@ export const getExchangeRates = async (shopId: string) => {
     usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "34"),
     eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "37"),
     ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "3000"),
+    dealerProfit: parseFloat(settings.find(s => s.key === "dealer_profit_tl")?.value || "200"),
+    customerProfit: parseFloat(settings.find(s => s.key === "customer_profit_tl")?.value || "700"),
     lastUpdate
   };
 };

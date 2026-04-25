@@ -34,6 +34,7 @@ import { MalKabulModal } from "./mal-kabul-modal";
 import { SupplierPaymentModal } from "./supplier-payment-modal";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 import { TedarikciCariEkstreModal } from "./tedarikci-cari-ekstre-modal";
+import { SupplierPaymentHistoryModal } from "./supplier-payment-history-modal";
 import { EditSupplierModal } from "./edit-supplier-modal";
 import { deleteSupplier } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
@@ -65,6 +66,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
     const [isIbanOpen, setIsIbanOpen] = useState(false);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isEkstreOpen, setIsEkstreOpen] = useState(false);
+    const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -294,7 +296,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                         key={i}
                         className="bg-card border-border/50 overflow-hidden group hover:border-blue-500/50 transition-all cursor-pointer select-none ring-offset-background active:scale-[0.98]"
                         onClick={() => {
-                            if (stat.id === "payment") setIsPaymentOpen(true);
+                            if (stat.id === "payment") setIsPaymentHistoryOpen(true);
                             else setActiveTab(stat.id);
                         }}
                     >
@@ -703,23 +705,29 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                 supplier={supplier}
             />
 
+            <SupplierPaymentHistoryModal
+                isOpen={isPaymentHistoryOpen}
+                onClose={() => setIsPaymentHistoryOpen(false)}
+                supplier={supplier}
+            />
+
             <Dialog open={isIbanOpen} onOpenChange={setIsIbanOpen}>
-                <DialogContent className="max-w-md w-11/12 sm:w-full bg-[#0F172A] border-border p-8 flex flex-col items-center justify-center text-center rounded-3xl">
+                <DialogContent className="max-w-md w-11/12 sm:w-full bg-card border-border p-8 flex flex-col items-center justify-center text-center rounded-3xl">
                     <DialogTitle className="font-medium sr-only">IBAN Bilgisi</DialogTitle>
                     <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 shadow-inner shadow-indigo-500/20 border border-indigo-500/20">
                         <Landmark className="h-8 w-8 text-indigo-400" />
                     </div>
-                    <h2 className="font-medium text-2xl  text-white mb-2">{supplier.name}</h2>
+                    <h2 className="font-medium text-2xl  text-foreground mb-2">{supplier.name}</h2>
                     <p className="text-sm  text-indigo-400 mb-8">{supplier.bankName || "Banka Adı Girilmemiş"}</p>
 
-                    <div className="bg-[#0B101B] border border-border rounded-2xl py-8 px-4 sm:px-8 w-full">
+                    <div className="bg-accent/5 border border-border rounded-2xl py-8 px-4 sm:px-8 w-full">
                         <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest mb-4">IBAN NUMARASI</p>
-                        <p className="text-[17px] sm:text-2xl font-mono  text-white tracking-widest break-all">
+                        <p className="text-[17px] sm:text-2xl font-mono  text-foreground tracking-widest break-all">
                             {supplier.iban}
                         </p>
                     </div>
 
-                    <Button onClick={() => setIsIbanOpen(false)} className="w-full mt-8 h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white  transition-all">
+                    <Button onClick={() => setIsIbanOpen(false)} className="w-full mt-8 h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-medium">
                         Kapat
                     </Button>
                 </DialogContent>

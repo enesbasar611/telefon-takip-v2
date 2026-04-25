@@ -157,6 +157,54 @@ export function CustomersTab({ formData, onChange, savingKeys }: CustomersTabPro
                     </div>
                 </div>
 
+                {/* ---------- KAR ORANLARI (DÖVİZ ÇEVİRİCİ) ---------- */}
+                <div className="space-y-4 pt-4">
+                    <div className="flex items-center gap-2 border-b border-border pb-2">
+                        <Settings2 className="w-5 h-5 text-blue-500" />
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">Döviz Çevirici Kar Oranları (TL)</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-sm font-semibold">Bayi Karı (TL)</Label>
+                                {savingKeys.has("dealer_profit_tl") && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    type="number" min="0" placeholder="Örn: 200"
+                                    value={formData.dealer_profit_tl ?? "200"}
+                                    onChange={(e) => onChange("dealer_profit_tl", e.target.value)}
+                                    onBlur={(e) => onChange("dealer_profit_tl", e.target.value, true)}
+                                    className="bg-white dark:bg-[#151515] h-12 pl-10"
+                                />
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground font-medium text-sm">
+                                    ₺
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">Bayi seçildiğinde ücrete eklenecek miktar.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-sm font-semibold">Müşteri Karı (TL)</Label>
+                                {savingKeys.has("customer_profit_tl") && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    type="number" min="0" placeholder="Örn: 700"
+                                    value={formData.customer_profit_tl ?? "700"}
+                                    onChange={(e) => onChange("customer_profit_tl", e.target.value)}
+                                    onBlur={(e) => onChange("customer_profit_tl", e.target.value, true)}
+                                    className="bg-white dark:bg-[#151515] h-12 pl-10"
+                                />
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground font-medium text-sm">
+                                    ₺
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">Müşteri seçildiğinde ücrete eklenecek miktar.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200 dark:border-[#222] rounded-2xl p-5 mt-4 text-xs text-muted-foreground">
                     <strong className="text-slate-800 dark:text-slate-200">Nasıl Çalışır?</strong><br />
                     Puan kazanma oranları (TL eşikleri) geçmiş ödemeleri etkilemez. Ayrıca müşteri bu puanları kullanıp

@@ -41,6 +41,7 @@ export async function updateSetting(key: string, value: string, revalidate = tru
       revalidatePath("/ayarlar");
       revalidateTag("settings");
       revalidateTag(`settings-${shopId}`);
+      revalidateTag(`rates-${shopId}`);
     }
     return { success: true };
   } catch (error) {
@@ -63,6 +64,7 @@ export async function bulkUpdateSettings(settings: Record<string, string>) {
     revalidatePath("/ayarlar");
     revalidateTag("settings");
     revalidateTag(`settings-${shopId}`);
+    revalidateTag(`rates-${shopId}`);
     return { success: true };
   } catch (error) {
     return { success: false, error: "Ayarlar güncellenirken hata oluştu." };

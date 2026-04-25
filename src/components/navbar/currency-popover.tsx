@@ -5,6 +5,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 interface CurrencyPopoverProps {
     type: "usd" | "eur" | "ga";
@@ -13,29 +15,57 @@ interface CurrencyPopoverProps {
 }
 
 export function CurrencyPopover({ type, rate, trigger }: CurrencyPopoverProps) {
+    const { rates } = useDashboardData();
     const [val, setVal] = useState<string>("");
     const [tlVal, setTlVal] = useState<string>("");
+    const [markupType, setMarkupType] = useState<"none" | "dealer" | "customer">("none");
+
+    const dealerProfit = rates?.dealerProfit || 0;
+    const customerProfit = rates?.customerProfit || 0;
+
+    const currentProfit = markupType === "dealer" ? dealerProfit : markupType === "customer" ? customerProfit : 0;
 
     const title = type === "usd" ? "Dolar Çevirici" : type === "eur" ? "Euro Çevirici" : "Altın Çevirici";
     const label = type === "usd" ? "Dolar Miktarı" : type === "eur" ? "Euro Miktarı" : "Gram Altın";
 
-    const onValChange = (v: string) => {
-        setVal(v);
-        const num = parseFloat(v);
+    const calculateTl = (unitVal: string, profit: number) => {
+        const num = parseFloat(unitVal);
         if (!isNaN(num)) {
-            setTlVal((num * rate).toFixed(2));
+            setTlVal((num * rate + profit).toFixed(2));
         } else {
             setTlVal("");
         }
     };
 
-    const onTlChange = (v: string) => {
-        setTlVal(v);
-        const num = parseFloat(v);
+    const calculateUnit = (totalTl: string, profit: number) => {
+        const num = parseFloat(totalTl);
         if (!isNaN(num)) {
-            setVal((num / rate).toFixed(2));
+            const unit = (num - profit) / rate;
+            setVal(unit.toFixed(2));
         } else {
             setVal("");
+        }
+    };
+
+    const onValChange = (v: string) => {
+        setVal(v);
+        calculateTl(v, currentProfit);
+    };
+
+    const onTlChange = (v: string) => {
+        setTlVal(v);
+        calculateUnit(v, currentProfit);
+    };
+
+    const handleMarkupChange = (type: "dealer" | "customer") => {
+        const newType = markupType === type ? "none" : type;
+        setMarkupType(newType);
+
+        const newProfit = newType === "dealer" ? dealerProfit : newType === "customer" ? customerProfit : 0;
+
+        // Recalculate TL based on current Unit valuation
+        if (val) {
+            calculateTl(val, newProfit);
         }
     };
 
@@ -83,6 +113,38 @@ export function CurrencyPopover({ type, rate, trigger }: CurrencyPopoverProps) {
                                     className="h-10 rounded-xl bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/20 text-sm font-bold pr-10"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground opacity-50 uppercase">TRY</span>
+                            </div>
+                        </div>
+
+                        {/* Markup Options */}
+                        <div className="pt-2 flex items-center justify-between gap-4 border-t border-border/40 mt-2">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`dealer-${type}`}
+                                    checked={markupType === "dealer"}
+                                    onCheckedChange={() => handleMarkupChange("dealer")}
+                                    className="rounded-md"
+                                />
+                                <label
+                                    htmlFor={`dealer-${type}`}
+                                    className="text-[10px] font-bold uppercase leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                    Bayi
+                                </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`customer-${type}`}
+                                    checked={markupType === "customer"}
+                                    onCheckedChange={() => handleMarkupChange("customer")}
+                                    className="rounded-md"
+                                />
+                                <label
+                                    htmlFor={`customer-${type}`}
+                                    className="text-[10px] font-bold uppercase leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                    Müşteri
+                                </label>
                             </div>
                         </div>
                     </div>

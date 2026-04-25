@@ -72,7 +72,7 @@ export function FormFactory({
                 if (field.validate === "imei") {
                     validationRules.validate = (val: string) => {
                         if (!val) return true; // not required unless field.required
-                        if (!/^\d{15}$/.test(val)) return "IMEI numarası tam olarak 15 haneli rakamlardan oluşmalıdır";
+                        if (!/^\d{11}$/.test(val)) return "IMEI numarası tam olarak 11 haneli rakamlardan oluşmalıdır";
                         return true;
                     };
                 }
@@ -123,6 +123,7 @@ export function FormFactory({
                                     id={field.key}
                                     type={field.type === "number" ? "number" : "text"}
                                     placeholder={field.placeholder}
+                                    maxLength={field.maxLength}
                                     {...register(field.key, validationRules)}
                                     className={cn(
                                         baseInput,

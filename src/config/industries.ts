@@ -50,6 +50,7 @@ export interface FieldDef {
     validate?: 'imei' | 'phone' | 'pattern' | 'none';
     /** Maps to core ServiceTicket columns for backward compat */
     coreMapping?: 'deviceBrand' | 'deviceModel' | 'imei';
+    maxLength?: number;
 }
 
 export interface IndustryConfig {
@@ -100,7 +101,7 @@ export const industries: Record<IndustryType, IndustryConfig> = {
         serviceFormFields: [
             { key: "deviceBrand", label: "Marka", type: "select", options: ["Apple", "Samsung", "Xiaomi", "Huawei", "Oppo", "Vivo", "Realme", "Infinix", "Techno", "Poco", "General Mobile", "Casper", "Reeder", "Asus", "Sony", "Nokia", "Motorola", "Pixel", "Meizu", "OnePlus", "Honor", "TCL", "ZTE", "Lenovo", "LG", "Diğer"], required: true, placeholder: "Marka seçin...", coreMapping: "deviceBrand" },
             { key: "deviceModel", label: "Model", type: "text", required: true, placeholder: "iPhone 14 Pro, Galaxy S23...", coreMapping: "deviceModel" },
-            { key: "imei", label: "IMEI Numarası", type: "text", placeholder: "15 haneli IMEI numarası", validate: "imei", coreMapping: "imei" },
+            { key: "imei", label: "IMEI Numarası", type: "text", placeholder: "11 haneli IMEI numarası", validate: "imei", coreMapping: "imei", maxLength: 11 },
             { key: "batteryHealth", label: "Pil Sağlığı (%)", type: "number", placeholder: "85" },
             { key: "cosmeticCondition", label: "Kozmetik Durum", type: "select", options: ["Çok İyi", "İyi", "Orta", "Kötü"] },
             { key: "devicePassword", label: "Cihaz Şifresi", type: "text", placeholder: "Şifre veya Desen", validate: "pattern" },

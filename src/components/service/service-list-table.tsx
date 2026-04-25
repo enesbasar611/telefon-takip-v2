@@ -253,10 +253,10 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[220px] bg-card border border-border/50 text-white p-2 rounded-2xl backdrop-blur-3xl">
+              <DropdownMenuContent align="end" className="w-[220px] bg-card border border-border/50 p-2 rounded-2xl backdrop-blur-3xl shadow-2xl">
                 <DropdownMenuLabel className="text-xs  text-gray-500 p-3">Operasyon Paneli</DropdownMenuLabel>
                 <DropdownMenuItem
-                  className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
+                  className="text-sm gap-3 p-4 cursor-pointer focus:bg-accent rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
                     setShowManagement(true);
@@ -265,12 +265,12 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   <Search className="h-4 w-4 text-blue-500" /> Detayları Gör
                 </DropdownMenuItem>
                 <Link href={`/musteriler/${ticket.customerId}`}>
-                  <DropdownMenuItem className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl">
+                  <DropdownMenuItem className="text-sm gap-3 p-4 cursor-pointer focus:bg-accent rounded-xl">
                     <UserCircle className="h-4 w-4 text-blue-500" /> Müşteri Profili
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem
-                  className="text-sm  gap-3 p-4 cursor-pointer focus:bg-white/5 rounded-xl"
+                  className="text-sm gap-3 p-4 cursor-pointer focus:bg-accent rounded-xl"
                   onSelect={() => {
                     setSelectedTicket(ticket);
                     setShowManagement(true);
@@ -333,7 +333,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
           onClick={() => setStatusFilter("ALL")}
           className={cn(
             "h-10 px-8 rounded-xl text-xs  transition-all",
-            statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-white"
+            statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
           )}
         >
           TÜMÜ
@@ -347,8 +347,8 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
               size="sm"
               onClick={() => setStatusFilter(key)}
               className={cn(
-                "h-10 px-8 rounded-xl text-xs  transition-all gap-3 shrink-0",
-                statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-white"
+                "h-10 px-8 rounded-xl text-xs transition-all gap-3 shrink-0",
+                statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
               )}
             >
               <div className={cn("h-2 w-2 rounded-full", config.color)} />
@@ -364,7 +364,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
             placeholder={`Müşteri, Fiş No veya ${identifierLabel} Ara...`}
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="pl-10 h-12 bg-white/[0.02] border-border/50 rounded-2xl text-xs  text-white focus:bg-white/[0.05] transition-all"
+            className="pl-10 h-12 bg-accent/10 border-border/50 rounded-2xl text-xs text-foreground focus:bg-accent/20 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -382,7 +382,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="capitalize text-xs font-medium focus:bg-white/10 focus:text-white"
+                      className="capitalize text-xs font-medium focus:bg-accent focus:text-foreground"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
                         column.toggleVisibility(!!value)
@@ -479,7 +479,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col gap-1">
                     <span className="text-xs  bg-card border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
-                    <h3 className="font-medium  text-white text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
+                    <h3 className="font-medium text-foreground text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
                     <p className="text-xs text-muted-foreground/80 ">{ticket.customer?.name}</p>
                   </div>
                   <Badge className={`${config.color} border-none text-xs  px-3 py-1`}>
@@ -607,7 +607,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className=" text-xs bg-white/[0.02] border border-border/50 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className="text-xs bg-accent/10 border border-border/50 rounded-2xl h-12 px-8 hover:bg-accent/20 transition-all"
           >
             ÖNCEKİ
           </Button>
@@ -616,7 +616,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className=" text-xs bg-white/[0.02] border border-border/50 rounded-2xl h-12 px-8 hover:bg-white/5 transition-all"
+            className="text-xs bg-accent/10 border border-border/50 rounded-2xl h-12 px-8 hover:bg-accent/20 transition-all"
           >
             SONRAKİ
           </Button>
@@ -639,8 +639,12 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                 if (!deleteId) return;
                 setIsDeleting(true);
                 try {
-                  await deleteServiceTicket(deleteId);
-                  toast.success("Servis kaydı başarıyla silindi.");
+                  const res = await deleteServiceTicket(deleteId);
+                  if (res.success) {
+                    toast.success("Servis kaydı başarıyla silindi.");
+                  } else {
+                    toast.error(res.error || "Silme işlemi sırasında bir hata oluştu.");
+                  }
                 } catch (error) {
                   toast.error("Silme işlemi sırasında bir hata oluştu.");
                 } finally {

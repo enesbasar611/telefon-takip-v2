@@ -419,3 +419,101 @@ export async function receivePurchaseOrderAction(
         return { success: false, error: "Stok girişi yapılamadı." };
     }
 }
+
+export async function deletePendingOrdersForSupplierAction(supplierId: string) {
+    try {
+        const shopId = await getShopId();
+
+        // Find all pending or on-way orders for this supplier
+        const pendingOrders = await prisma.purchaseOrder.findMany({
+            where: {
+                supplierId,
+                shopId,
+                status: { in: ["PENDING", "ON_WAY"] }
+            },
+            include: {
+                transactions: true,
+                items: true
+            }
+        });
+
+        if (pendingOrders.length === 0) {
+            return { success: true, message: "Silinecek bekleyen sipariş bulunamadı." };
+        }
+
+        // Delete them in a transaction
+        await prisma.$transaction(async (tx) => {
+            for (const order of pendingOrders) {
+                // Check for transactions (payments)
+                // If there are transactions, we might want to prevent deletion or handle them.
+                // However, the request is to "sil" (delete) pending orders.
+                // In deleteSupplier, it just deletes them.
+
+                // 1. Delete PurchaseOrderItems (cascade delete is on PurchaseOrder.items in schema)
+                // Actually, schema shows items: PurchaseOrderItem[] in PurchaseOrder
+                // and order: PurchaseOrder in PurchaseOrderItem with onDelete: Cascade
+
+                // 2. Delete SupplierTransactions related to these orders
+                await tx.supplierTransaction.deleteMany({
+                    where: { purchaseOrderId: order.id, shopId }
+                });
+
+                // 3. Delete the order itself
+                await tx.purchaseOrder.delete({
+                    where: { id: order.id, shopId }
+                });
+            }
+        });
+
+        revalidatePath("/tedarikciler");
+        return { success: true, count: pendingOrders.length };
+    } catch (error) {
+        console.error("Delete pending orders error:", error);
+        return { success: false, error: "Bekleyen siparişler silinemedi." };
+    }
+}
+
+export async function deletePurchaseOrdersAction(orderIds: string[]) {
+    try {
+        const shopId = await getShopId();
+
+        if (!orderIds || orderIds.length === 0) {
+            return { success: false, error: "Silinecek sipariş seçilmedi." };
+        }
+
+        // Find orders to verify shopId
+        const orders = await prisma.purchaseOrder.findMany({
+            where: {
+                id: { in: orderIds },
+                shopId
+            }
+        });
+
+        if (orders.length === 0) {
+            return { success: false, error: "Sipariş bulunamadı." };
+        }
+
+        // Delete in a transaction
+        await prisma.$transaction(async (tx) => {
+            for (const order of orders) {
+                // Delete SupplierTransactions related to these orders
+                await tx.supplierTransaction.deleteMany({
+                    where: { purchaseOrderId: order.id, shopId }
+                });
+
+                // Delete the order itself (cascade handles items)
+                await tx.purchaseOrder.delete({
+                    where: { id: order.id, shopId }
+                });
+            }
+        });
+
+        revalidatePath("/tedarikciler");
+        return { success: true, count: orders.length };
+    } catch (error) {
+        console.error("Delete purchase orders error:", error);
+        return { success: false, error: "Siparişler silinemedi." };
+    }
+}
+
+

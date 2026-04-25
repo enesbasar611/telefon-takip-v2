@@ -63,7 +63,7 @@ const MAX_SIZE_MB = 3;
 const serviceSchema = z.object({
   customerName: z.string()
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
-    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s]+$/, "Sadece harflerden oluşmalıdır"),
+    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.]+$/, "Müşteri adı geçersiz karakterler içeriyor"),
   customerPhone: z.string()
     .min(1, "Telefon no giriniz"),
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").or(z.literal("")).optional(),

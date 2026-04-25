@@ -411,13 +411,20 @@ export async function addServiceLogWithNote(ticketId: string, status: ServiceSta
 export async function assignTechnician(ticketId: string, technicianId: string) {
   try {
     const shopId = await getShopId();
+
+    // Fetch technician name for logging
+    const technician = await prisma.user.findUnique({
+      where: { id: technicianId, shopId },
+      select: { name: true }
+    });
+
     const ticket = await prisma.serviceTicket.update({
       where: { id: ticketId, shopId },
       data: {
         technicianId,
         logs: {
           create: {
-            message: `Teknisyen atandı.`,
+            message: `Teknisyen atandı: ${technician?.name || 'Bilinmeyen'}`,
             status: ServiceStatus.PENDING,
             shopId
           }
@@ -600,6 +607,7 @@ export async function orderAndAddPartToService(data: {
   warrantyMonths?: number;
   warrantyDays?: number;
 }) {
+  const formattedName = toTitleCase(data.name);
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -650,7 +658,7 @@ export async function orderAndAddPartToService(data: {
           amountUsd: data.buyPriceUsd || null,
           exchangeRate: currentRate,
           type: "INCOME", // Borç artışı
-          description: `Servis #${data.ticketId} için parça tedariği: ${data.name}`,
+          description: `Servis #${data.ticketId} için parça tedariği: ${formattedName}`,
           shopId
         }
       });
@@ -684,7 +692,7 @@ export async function orderAndAddPartToService(data: {
         data: {
           ticketId: data.ticketId,
           status: ServiceStatus.WAITING_PART,
-          message: `Parça tedarikçiden borç ile eklendi: ${data.name} (Maliyet: ₺${data.buyPrice}${data.buyPriceUsd ? ` / $${data.buyPriceUsd}` : ""})`,
+          message: `Parça tedarikçiden borç ile eklendi: ${formattedName} (Maliyet: ₺${data.buyPrice}${data.buyPriceUsd ? ` / $${data.buyPriceUsd}` : ""})`,
           shopId
         }
       });
@@ -835,33 +843,80 @@ export async function queryServiceStatus(ticketNumber: string, phone: string) {
 
 export async function deleteServiceTicket(id: string) {
   const shopId = await getShopId();
-  const usedParts = await prisma.serviceUsedPart.findMany({ where: { ticketId: id, shopId } });
 
-  // Restore stock before deletion
-  for (const part of usedParts) {
-    await prisma.product.update({
-      where: { id: part.productId, shopId },
-      data: {
-        stock: { increment: part.quantity },
-        movements: {
-          create: {
-            quantity: part.quantity,
-            type: "ADJUSTMENT",
-            notes: `Servis silindiği için stok iade edildi: ${id}`,
-            serviceTicketId: id,
-            shopId
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Stok iadesi için kullanılan parçaları bul
+      const usedParts = await tx.serviceUsedPart.findMany({ where: { ticketId: id, shopId } });
+
+      // Stokları geri yükle
+      for (const part of usedParts) {
+        await tx.product.update({
+          where: { id: part.productId, shopId },
+          data: {
+            stock: { increment: part.quantity },
+            movements: {
+              create: {
+                quantity: part.quantity,
+                type: "ADJUSTMENT",
+                notes: `Servis silindiği için stok iade edildi: ${id}`,
+                serviceTicketId: id,
+                shopId
+              }
+            }
+          }
+        });
+      }
+
+      // 2. Tedarikçi Borçlarını/İşlemlerini Bul ve Geri Al
+      // orderAndAddPartToService tarafından oluşturulan işlemleri açıklama üzerinden buluyoruz
+      const supplierTransactions = await tx.supplierTransaction.findMany({
+        where: {
+          shopId,
+          description: {
+            contains: `Servis #${id}`
           }
         }
+      });
+
+      for (const st of supplierTransactions) {
+        // Borç artışını (INCOME) geri al
+        await tx.supplier.update({
+          where: { id: st.supplierId, shopId },
+          data: {
+            balance: { decrement: st.amount },
+            balanceUsd: { decrement: st.amountUsd || 0 }
+          }
+        });
       }
+
+      // 3. İlgili tüm kayıtları sil
+      // Tedarikçi işlemleri
+      if (supplierTransactions.length > 0) {
+        await tx.supplierTransaction.deleteMany({
+          where: {
+            shopId,
+            description: {
+              contains: `Servis #${id}`
+            }
+          }
+        });
+      }
+
+      await tx.serviceLog.deleteMany({ where: { ticketId: id, shopId } });
+      await tx.serviceUsedPart.deleteMany({ where: { ticketId: id, shopId } });
+      await tx.inventoryMovement.deleteMany({ where: { serviceTicketId: id, shopId } });
+      await tx.serviceTicket.delete({ where: { id, shopId } });
     });
+
+    revalidatePath("/servis");
+    revalidatePath("/stok");
+    revalidatePath("/tedarikciler");
+    revalidatePath("/");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete service ticket error:", error);
+    return { success: false, error: "Servis kaydı silinemedi." };
   }
-
-  await prisma.serviceLog.deleteMany({ where: { ticketId: id, shopId } });
-  await prisma.serviceUsedPart.deleteMany({ where: { ticketId: id, shopId } });
-  await prisma.inventoryMovement.deleteMany({ where: { serviceTicketId: id, shopId } });
-  await prisma.serviceTicket.delete({ where: { id, shopId } });
-
-  revalidatePath("/servis");
-  revalidatePath("/stok");
-  revalidatePath("/");
 }

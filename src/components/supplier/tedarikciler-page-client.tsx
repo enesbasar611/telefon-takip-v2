@@ -33,9 +33,22 @@ import {
     History,
     Filter,
     Layers,
-    ListFilter
+    ListFilter,
+    Trash2,
+    RefreshCcw
 } from "lucide-react";
 import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
+import { deletePendingOrdersForSupplierAction } from "@/lib/actions/purchase-actions";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SupplierAnalysisModal } from "@/components/supplier/supplier-analysis-modal";
 import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
 import { MalKabulModal } from "@/components/supplier/mal-kabul-modal";
@@ -45,6 +58,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { SupplierPaymentModal } from "./supplier-payment-modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { deletePurchaseOrdersAction } from "@/lib/actions/purchase-actions";
 
 interface TedarikcilerPageClientProps {
     suppliers: any[];
@@ -81,6 +96,10 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
     const [isGlobalPaymentOpen, setIsGlobalPaymentOpen] = useState(false);
     const [isGroupedByDay, setIsGroupedByDay] = useState(false);
     const [globalSelectedOrder, setGlobalSelectedOrder] = useState<any>(null);
+    const [deleteConfirmSupplier, setDeleteConfirmSupplier] = useState<{ id: string, name: string, count: number } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+    const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<{ ids: string[] } | null>(null);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -336,9 +355,29 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className="text-sm  text-foreground">
-                                                            {activeOrders.length > 0 ? `${activeOrders.length} sipariş` : "—"}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-foreground">
+                                                                {activeOrders.length > 0 ? `${activeOrders.length} sipariş` : "—"}
+                                                            </span>
+                                                            {activeOrders.length > 0 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeleteConfirmSupplier({
+                                                                            id: supplier.id,
+                                                                            name: supplier.name,
+                                                                            count: activeOrders.length
+                                                                        });
+                                                                    }}
+                                                                    title="Bekleyen Siparişleri Sil"
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="text-xs font-medium text-muted-foreground">
                                                         {lastOrder ? format(new Date(lastOrder.createdAt), "dd MMM yyyy", { locale: tr }) : "—"}
@@ -395,7 +434,26 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                             <div className="flex items-center justify-between text-[10px] mt-1 pt-3 border-t border-border/10">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-muted-foreground uppercase tracking-tighter">Aktif Sipariş</span>
-                                                    <span className="text-foreground font-medium">{activeOrders.length} Sipariş</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-foreground font-medium">{activeOrders.length} Sipariş</span>
+                                                        {activeOrders.length > 0 && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-rose-500"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setDeleteConfirmSupplier({
+                                                                        id: supplier.id,
+                                                                        name: supplier.name,
+                                                                        count: activeOrders.length
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-col gap-1 items-end text-right">
                                                     <span className="text-muted-foreground uppercase tracking-tighter">Güvenilirlik</span>
@@ -422,8 +480,21 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                             <Table>
                                 <TableHeader>
                                     <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                        <TableHead className="w-[50px] px-6">
+                                            <Checkbox
+                                                checked={selectedOrderIds.length === purchaseOrders.length && purchaseOrders.length > 0}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedOrderIds(purchaseOrders.map(o => o.id));
+                                                    } else {
+                                                        setSelectedOrderIds([]);
+                                                    }
+                                                }}
+                                                className="border-white/20 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                            />
+                                        </TableHead>
                                         {["Sipariş No", "Tedarikçi", "Ödeme", "Durum", "Toplam Tutar", "Tarih", "İşlem"].map((h) => (
-                                            <TableHead key={h} className="font-medium px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
+                                            <TableHead key={h} className="font-medium px-4 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</TableHead>
                                         ))}
                                     </TableRow>
                                 </TableHeader>
@@ -450,9 +521,21 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                 </TableRow>
                                                 {orders.map((order: any, idx: number) => {
                                                     const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
-                                                    const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
                                                     return (
-                                                        <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
+                                                        <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group/order">
+                                                            <TableCell className="px-6">
+                                                                <Checkbox
+                                                                    checked={selectedOrderIds.includes(order.id)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        if (checked) {
+                                                                            setSelectedOrderIds(prev => [...prev, order.id]);
+                                                                        } else {
+                                                                            setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
+                                                                        }
+                                                                    }}
+                                                                    className="border-white/10 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                                                />
+                                                            </TableCell>
                                                             <TableCell className="px-6 py-4 text-sm font-bold text-foreground">#{order.orderNo}</TableCell>
                                                             <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
                                                             <TableCell>
@@ -475,8 +558,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                             <TableCell className="text-xs font-medium text-muted-foreground">
                                                                 {format(new Date(order.createdAt), "HH:mm", { locale: tr })}
                                                             </TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-center gap-2">
+                                                            <TableCell className="px-6">
+                                                                <div className="flex items-center justify-end gap-2">
                                                                     {(order.status === "PENDING" || order.status === "ORDERED") && (
                                                                         <Button
                                                                             onClick={(e) => {
@@ -493,14 +576,27 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                     )}
                                                                     <Button
                                                                         variant="ghost"
-                                                                        size="sm"
+                                                                        size="icon"
                                                                         onClick={() => {
                                                                             setGlobalSelectedOrder(order);
                                                                             setIsGlobalDetailOpen(true);
                                                                         }}
-                                                                        className="h-8 text-xs text-muted-foreground hover:bg-white/5 rounded-lg"
+                                                                        className="h-8 w-8 text-muted-foreground hover:bg-white/5 rounded-lg"
+                                                                        title="İncele"
                                                                     >
-                                                                        İncele
+                                                                        <ArrowRight className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setBulkDeleteConfirm({ ids: [order.id] });
+                                                                        }}
+                                                                        title="Siparişi Sil"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
                                                                     </Button>
                                                                 </div>
                                                             </TableCell>
@@ -510,11 +606,23 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                             </div>
                                         ))
                                     ) : (
-                                        purchaseOrders.slice(0, 8).map((order: any, idx: number) => {
+                                        purchaseOrders.slice(0, 15).map((order: any, idx: number) => {
                                             const statusInfo = ORDER_STATUS_MAP[order.status] || { label: order.status, color: "bg-slate-500/10 text-muted-foreground border-slate-500/20" };
-                                            const orderNum = `TPR-${String(idx + 1001).padStart(3, "0")}`;
                                             return (
-                                                <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all">
+                                                <TableRow key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-all group/order">
+                                                    <TableCell className="px-6">
+                                                        <Checkbox
+                                                            checked={selectedOrderIds.includes(order.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setSelectedOrderIds(prev => [...prev, order.id]);
+                                                                } else {
+                                                                    setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
+                                                                }
+                                                            }}
+                                                            className="border-white/10 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                                        />
+                                                    </TableCell>
                                                     <TableCell className="px-6 py-4 text-sm font-bold text-foreground">#{order.orderNo}</TableCell>
                                                     <TableCell className="font-medium text-sm text-foreground">{order.supplier?.name || "—"}</TableCell>
                                                     <TableCell>
@@ -537,8 +645,8 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                     <TableCell className="text-xs font-medium text-muted-foreground">
                                                         {format(new Date(order.createdAt), "dd MMM yyyy", { locale: tr })}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
+                                                    <TableCell className="px-6">
+                                                        <div className="flex items-center justify-end gap-2">
                                                             <Button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -554,7 +662,7 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={() => {
                                                                     if (order.status === "PENDING" || order.status === "ORDERED") {
                                                                         setGlobalSelectedOrder(order);
@@ -564,9 +672,22 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                                                                         setIsGlobalDetailOpen(true);
                                                                     }
                                                                 }}
-                                                                className="h-8 text-xs  text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                                className="h-8 w-8 text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                                                                title={order.status === "PENDING" || order.status === "ORDERED" ? "Teslim Al" : "İncele"}
                                                             >
-                                                                {order.status === "PENDING" || order.status === "ORDERED" ? "Teslim Al" : "İncele"}
+                                                                {order.status === "PENDING" || order.status === "ORDERED" ? <TrendingUp className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setBulkDeleteConfirm({ ids: [order.id] });
+                                                                }}
+                                                                title="Siparişi Sil"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
                                                     </TableCell>
@@ -799,10 +920,12 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
             />
             <MalKabulModal
                 isOpen={isGlobalMalKabulOpen}
-                onClose={() => {
-                    setIsGlobalMalKabulOpen(false);
-                    setGlobalSelectedOrder(null);
-                }}
+                onClose={() => setIsGlobalMalKabulOpen(false)}
+                order={globalSelectedOrder}
+            />
+            <PurchaseOrderDetailModal
+                isOpen={isGlobalDetailOpen}
+                onClose={() => setIsGlobalDetailOpen(false)}
                 order={globalSelectedOrder}
             />
             <SupplierPaymentModal
@@ -822,12 +945,125 @@ export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurch
                     window.location.reload();
                 }}
             />
-            {globalSelectedOrder && isGlobalDetailOpen && (
-                <PurchaseOrderDetailModal
-                    isOpen={isGlobalDetailOpen}
-                    onClose={() => setIsGlobalDetailOpen(false)}
-                    order={globalSelectedOrder}
-                />
+
+            <AlertDialog open={!!deleteConfirmSupplier} onOpenChange={(open) => !open && setDeleteConfirmSupplier(null)}>
+                <AlertDialogContent className="bg-card border-border sm:rounded-3xl shadow-2xl">
+                    <AlertDialogHeader>
+                        <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4">
+                            <Trash2 className="h-6 w-6 text-rose-500" />
+                        </div>
+                        <AlertDialogTitle className="text-xl font-bold text-foreground">Bekleyen Siparişleri İptal Et</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+                            <strong className="text-foreground">{deleteConfirmSupplier?.name}</strong> adlı tedarikçiye ait <strong className="text-rose-500">{deleteConfirmSupplier?.count} adet</strong> bekleyen sipariş tamamen silinecektir. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-6 gap-3">
+                        <AlertDialogCancel className="h-11 rounded-xl border-border bg-accent/5 hover:bg-accent/10 text-xs font-bold transition-all">VAZGEÇ</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!deleteConfirmSupplier || isDeleting) return;
+
+                                setIsDeleting(true);
+                                const res = await deletePendingOrdersForSupplierAction(deleteConfirmSupplier.id);
+                                setIsDeleting(false);
+
+                                if (res.success) {
+                                    toast.success(`${res.count} adet sipariş silindi.`);
+                                    setDeleteConfirmSupplier(null);
+                                    router.refresh();
+                                } else {
+                                    toast.error(res.error || "Siparişler silinemedi.");
+                                }
+                            }}
+                            className="h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border-none text-xs font-bold shadow-lg shadow-rose-600/20 transition-all px-6"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <RefreshCcw className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                            )}
+                            SİPARİŞLERİ SİL
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!bulkDeleteConfirm} onOpenChange={(open) => !open && setBulkDeleteConfirm(null)}>
+                <AlertDialogContent className="bg-card border-border sm:rounded-3xl shadow-2xl">
+                    <AlertDialogHeader>
+                        <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4">
+                            <Trash2 className="h-6 w-6 text-rose-500" />
+                        </div>
+                        <AlertDialogTitle className="text-xl font-bold text-foreground">Seçili Siparişleri Sil</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+                            Seçilen <strong className="text-rose-500">{bulkDeleteConfirm?.ids.length} adet</strong> sipariş tamamen silinecektir. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-6 gap-3">
+                        <AlertDialogCancel className="h-11 rounded-xl border-border bg-accent/5 hover:bg-accent/10 text-xs font-bold transition-all">VAZGEÇ</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!bulkDeleteConfirm || isDeleting) return;
+
+                                setIsDeleting(true);
+                                const res = await deletePurchaseOrdersAction(bulkDeleteConfirm.ids);
+                                setIsDeleting(false);
+
+                                if (res.success) {
+                                    toast.success(`${res.count} adet sipariş silindi.`);
+                                    setBulkDeleteConfirm(null);
+                                    setSelectedOrderIds([]);
+                                    router.refresh();
+                                } else {
+                                    toast.error(res.error || "Siparişler silinemedi.");
+                                }
+                            }}
+                            className="h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border-none text-xs font-bold shadow-lg shadow-rose-600/20 transition-all px-6"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <RefreshCcw className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                            )}
+                            SİPARİŞLERİ SİL
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {selectedOrderIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-card/95 backdrop-blur-xl border border-border shadow-[0_20px_50px_rgba(0,0,0,0.3)] px-6 py-4 rounded-3xl flex items-center gap-6">
+                        <div className="flex items-center gap-3 pr-6 border-r border-border/50">
+                            <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <PackageSearch className="h-4 w-4 text-blue-400" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground tracking-tight">
+                                <span className="text-blue-500">{selectedOrderIds.length}</span> Sipariş Seçildi
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                onClick={() => setSelectedOrderIds([])}
+                                variant="ghost"
+                                className="h-10 px-4 rounded-xl text-xs font-bold text-muted-foreground hover:bg-white/5 transition-all"
+                            >
+                                SEÇİMİ TEMİZLE
+                            </Button>
+                            <Button
+                                onClick={() => setBulkDeleteConfirm({ ids: selectedOrderIds })}
+                                className="h-10 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/20 flex items-center gap-2"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                SEÇİLENLERİ SİL
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

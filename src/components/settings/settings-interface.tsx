@@ -99,8 +99,8 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
 
       startTransition(async () => {
         try {
-          // Pass false to skip revalidatePath and prevent page flicker
-          const result = await updateSetting(key, value, false);
+          // Pass true to revalidatePath and reflect changes immediately
+          const result = await updateSetting(key, value, true);
           if (result.success) {
             setSavedData(prev => ({ ...prev, [key]: value }));
           } else {

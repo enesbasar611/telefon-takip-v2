@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import {
     Dialog,
     DialogContent,
@@ -44,7 +45,8 @@ import {
     ArrowRight,
     Lock,
     Grid3x3,
-    Sparkles
+    Sparkles,
+    RotateCcw
 } from "lucide-react";
 import { getLoyaltyTier } from "@/lib/loyalty-utils";
 import { PatternLock } from "@/components/ui/pattern-lock";
@@ -104,7 +106,9 @@ const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: s
 };
 
 export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose, isQuickDeliver }: ServiceManagementModalProps) {
+    const { data: session } = useSession();
     const router = useRouter();
+    const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
     const [ticket, setTicket] = useState<any>(initialTicket);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -471,13 +475,6 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         >
                             <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
                         </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={onClose}
-                            className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-white/5 text-muted-foreground"
-                        >
-                            <X className="h-5 w-5 md:h-6 md:w-6" />
-                        </Button>
                     </div>
                 </div>
 
@@ -505,7 +502,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                                             {ticket.devicePassword.startsWith("DESEN:") ? (
                                                 <div className="space-y-3">
-                                                    <div className="bg-black/40 rounded-2xl p-2 border border-blue-500/10 inline-block">
+                                                    <div className="bg-accent/40 rounded-2xl p-2 border border-blue-500/10 inline-block">
                                                         <PatternLock
                                                             readOnly
                                                             width={120}
@@ -518,7 +515,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         <Grid3x3 className="h-3.5 w-3.5 text-blue-500" />
                                                         <div className="flex flex-col">
                                                             <span className="text-[9px] text-blue-500/60 uppercase">Ekran Deseni</span>
-                                                            <span className="text-xs font-bold tracking-[0.2em] text-blue-400">
+                                                            <span className="text-xs font-bold tracking-[0.2em] text-blue-600 dark:text-blue-400">
                                                                 {ticket.devicePassword.replace("DESEN:", "").split(",").join("-")}
                                                             </span>
                                                         </div>
@@ -531,7 +528,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="text-[9px] text-amber-500/60 uppercase">Kilit Şifresi</span>
-                                                        <span className="text-sm font-bold text-amber-200 tracking-wider">
+                                                        <span className="text-sm font-bold text-amber-600 dark:text-amber-200 tracking-wider">
                                                             {ticket.devicePassword}
                                                         </span>
                                                     </div>
@@ -562,8 +559,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     <Select
                                         value={ticket.technician?.id || ""}
                                         onValueChange={handleAssignTech}
+                                        disabled={!!ticket.technicianId && !isAdmin}
                                     >
-                                        <SelectTrigger className="h-10 bg-card border-border/50 text-xs  text-foreground rounded-xl px-4">
+                                        <SelectTrigger className="h-10 bg-card border-border/50 text-xs  text-foreground rounded-xl px-4 disabled:opacity-75">
                                             <SelectValue placeholder="Teknisyen Seçin" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-background border-border text-foreground rounded-xl">
@@ -583,7 +581,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
                                 <h3 className="font-medium text-[10px]  uppercase tracking-widest text-amber-500/80">Arıza Detayı</h3>
                             </div>
-                            <p className="text-xs text-amber-200/70 font-medium leading-relaxed italic">
+                            <p className="text-xs text-amber-600 dark:text-amber-200/70 font-medium leading-relaxed italic">
                                 "{ticket.problemDesc}"
                             </p>
                         </div>
@@ -603,14 +601,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                             className="h-12 bg-background border-border/50 pl-12 pr-6 rounded-2xl text-xs font-medium focus:border-blue-500/30"
                                         />
                                         {searchQuery && (
-                                            <div className="absolute top-full left-0 right-0 mt-3 bg-[#0c0c0e] border border-border rounded-3xl shadow-2xl z-[100] max-h-[400px] overflow-y-auto p-2 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="absolute top-full left-0 right-0 mt-3 bg-card border border-border rounded-3xl shadow-2xl z-[100] max-h-[400px] overflow-y-auto p-2 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
                                                 {searchResults.length > 0 ? (
                                                     <div className="space-y-1">
                                                         <p className="text-[9px]  text-slate-600 uppercase tracking-widest px-4 py-2">Eşleşen Ürünler</p>
                                                         {searchResults.map(p => (
-                                                            <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-4 flex items-center justify-between hover:bg-white/[0.03] active:bg-white/[0.05] rounded-2xl transition-all group/item border border-transparent hover:border-border/50">
+                                                            <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-4 flex items-center justify-between hover:bg-accent/10 active:bg-accent/20 rounded-2xl transition-all group/item border border-transparent hover:border-border/50">
                                                                 <div className="flex flex-col text-left gap-1">
-                                                                    <span className="text-sm  text-slate-100 group-hover/item:text-blue-400 transition-colors">{p.name}</span>
+                                                                    <span className="text-sm  text-foreground group-hover/item:text-blue-500 transition-colors">{p.name}</span>
                                                                     <div className="flex items-center gap-2">
                                                                         <span className={cn(
                                                                             "text-[10px]  px-2 py-0.5 rounded-md",
@@ -706,12 +704,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             </Link>
                                                         </div>
                                                         <Select value={manualPart.supplierId} onValueChange={(v) => setManualPart({ ...manualPart, supplierId: v })}>
-                                                            <SelectTrigger className="h-14 bg-black/40 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
+                                                            <SelectTrigger className="h-14 bg-accent/20 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
                                                                 <SelectValue placeholder="Tedarikçi Seçin" />
                                                             </SelectTrigger>
-                                                            <SelectContent className="bg-card border-border text-white rounded-2xl overflow-hidden">
+                                                            <SelectContent className="bg-card border-border text-foreground rounded-2xl overflow-hidden">
                                                                 {suppliers.map(s => (
-                                                                    <SelectItem key={s.id} value={s.id} className="p-4 focus:bg-white/5 transition-colors cursor-pointer border-b border-white/[0.02] last:border-0">
+                                                                    <SelectItem key={s.id} value={s.id} className="p-4 focus:bg-accent transition-colors cursor-pointer border-b border-border/50 last:border-0">
                                                                         <div className="flex flex-col gap-0.5">
                                                                             <span className="">{s.name}</span>
                                                                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
@@ -751,6 +749,22 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     </div>
                                                 </div>
 
+                                                <div className="flex items-center gap-2 px-1">
+                                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">GÜNCEL KUR: ₺{rates.usd.toFixed(2)}</p>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 rounded-lg hover:bg-accent/50 text-blue-500"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            fetchRates();
+                                                            toast.success("Kurlar güncellendi.");
+                                                        }}
+                                                    >
+                                                        <RotateCcw className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+
                                                 <div className="grid grid-cols-2 gap-6">
                                                     <div className="space-y-2">
                                                         <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Maliyet (Alış)</p>
@@ -770,7 +784,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                         setManualPart({ ...manualPart, buyPrice: val, buyPriceUsd: String(Number(val) / rates.usd) });
                                                                     }
                                                                 }}
-                                                                className="h-14 bg-black/40 border-border/50 pl-12 pr-6 rounded-2xl text-sm  text-white transition-all focus:border-blue-500/30 tabular-nums"
+                                                                className="h-14 bg-accent/20 border-border/50 pl-12 pr-6 rounded-2xl text-sm  text-foreground transition-all focus:border-blue-500/30 tabular-nums"
                                                             />
                                                         </div>
                                                         {manualPart.currency === "USD" && (
@@ -783,10 +797,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     <div className="space-y-2">
                                                         <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Garanti Süresi</p>
                                                         <Select value={manualPart.warrantyType} onValueChange={(v) => setManualPart({ ...manualPart, warrantyType: v })}>
-                                                            <SelectTrigger className="h-14 bg-black/40 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
+                                                            <SelectTrigger className="h-14 bg-accent/20 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
                                                                 <SelectValue />
                                                             </SelectTrigger>
-                                                            <SelectContent className="bg-card border-border text-white rounded-2xl">
+                                                            <SelectContent className="bg-card border-border text-foreground rounded-2xl">
                                                                 <SelectItem value="15_DAYS" className="p-4">15 Gün</SelectItem>
                                                                 <SelectItem value="1_MONTH" className="p-4">1 Ay</SelectItem>
                                                                 <SelectItem value="3_MONTHS" className="p-4">3 Ay</SelectItem>
@@ -805,7 +819,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             placeholder="Örn: 90"
                                                             value={manualPart.warrantyValue}
                                                             onChange={(e) => setManualPart({ ...manualPart, warrantyValue: e.target.value })}
-                                                            className="h-14 bg-black/40 border-border/50 px-6 rounded-2xl text-sm  text-white focus:border-blue-500/30"
+                                                            className="h-14 bg-accent/20 border-border/50 px-6 rounded-2xl text-sm  text-foreground focus:border-blue-500/30"
                                                         />
                                                     </div>
                                                 )}
@@ -840,7 +854,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         </SelectTrigger>
                                         <SelectContent className="bg-background border-border text-foreground rounded-2xl p-1 z-[100]">
                                             {Object.entries(statusConfig).map(([key, config]) => (
-                                                <SelectItem key={key} value={key} className="text-[10px]  py-3 focus:bg-white/5 rounded-xl">
+                                                <SelectItem key={key} value={key} className="text-[10px]  py-3 focus:bg-accent rounded-xl">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn("h-2 w-2 rounded-full", config.dot)} />
                                                         <span>{config.label}</span>
@@ -857,7 +871,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     placeholder="İşlem notu veya teknik detay giriniz..."
                                     value={techNote}
                                     onChange={(e) => setTechNote(e.target.value)}
-                                    className="h-20 bg-background border-border/50 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-slate-800"
+                                    className="h-20 bg-background border-border/50 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-muted-foreground/50"
                                 />
                                 {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
                                     <Button
@@ -906,7 +920,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         <PriceInput
                                                             value={Number(p.costPrice)}
                                                             onChange={(v) => handleUpdatePart(p.id, { costPrice: v })}
-                                                            className="h-8 bg-black/40 border-border/50 text-right  text-[11px] text-amber-500/60 rounded-lg pr-3 pl-8"
+                                                            className="h-8 bg-accent/20 border-border/50 text-right  text-[11px] text-amber-600 dark:text-amber-500/60 rounded-lg pr-3 pl-8"
                                                         />
                                                     </div>
                                                 </div>
@@ -917,7 +931,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                         <PriceInput
                                                             value={Number(p.unitPrice)}
                                                             onChange={(v) => handleUpdatePart(p.id, { unitPrice: v })}
-                                                            className="h-8 bg-black border-border/50 text-right  text-[11px] text-emerald-500 rounded-lg pr-3 pl-8"
+                                                            className="h-8 bg-accent/40 border-border/50 text-right  text-[11px] text-emerald-600 dark:text-emerald-500 rounded-lg pr-3 pl-8"
                                                         />
                                                     </div>
                                                 </div>
@@ -931,7 +945,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             else handleUpdatePart(p.id, { warrantyMonths: Number(v.slice(1)), warrantyDays: 0 as any });
                                                         }}
                                                     >
-                                                        <SelectTrigger className="h-8 bg-black border-border/50 text-[10px]  text-blue-400 px-3 w-24 rounded-lg">
+                                                        <SelectTrigger className="h-8 bg-accent/20 border-border/50 text-[10px]  text-blue-500 dark:text-blue-400 px-3 w-24 rounded-lg">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent className="bg-background border-border text-foreground">
@@ -1132,8 +1146,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 setIsDeleting(true);
                                 try {
                                     const res = await deleteServiceTicket(ticket.id);
-                                    toast.success("Servis kaydı başarıyla silindi.");
-                                    onClose();
+                                    if (res.success) {
+                                        toast.success("Servis kaydı başarıyla silindi.");
+                                        onClose();
+                                    } else {
+                                        toast.error(res.error || "Silme işlemi sırasında bir hata oluştu.");
+                                    }
                                 } catch (error) {
                                     toast.error("Silme işlemi sırasında bir hata oluştu.");
                                 } finally {
