@@ -436,12 +436,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
               {filteredProducts.map((product) => {
                 const sellPrice = product.sellPrice;
                 const priceStr = formatCurrency(sellPrice);
-                // Dynamic font size logic for price
-                const getPriceSize = (len: number) => {
-                  if (len > 9) return "text-sm sm:text-base font-bold";
-                  if (len > 7) return "text-base sm:text-xl font-bold";
-                  return "text-lg sm:text-2xl lg:text-3xl font-black";
-                };
+                // Standardized font size for price to avoid truncation
+                const priceSizeClass = "text-lg sm:text-xl font-black";
 
                 return (
                   <button
@@ -466,7 +462,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
 
                     {/* Bottom Row: Price & Title */}
                     <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
-                      <div className={cn("text-foreground tabular-nums truncate w-full leading-tight", getPriceSize(priceStr.length))}>
+                      <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
                         ₺{priceStr}
                       </div>
                       <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">

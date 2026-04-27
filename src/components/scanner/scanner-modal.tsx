@@ -5,6 +5,7 @@ import { useScanner } from "@/hooks/use-scanner";
 import { Smartphone, QrCode, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { useRouter } from "next/navigation";
 
 interface ScannerModalProps {
     open: boolean;
@@ -16,6 +17,18 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
     const { initializeScannerRoom, isConnected, socket } = useScanner();
     const [qrUrl, setQrUrl] = useState("");
     const [recentScans, setRecentScans] = useState<{ id: string; name: string; time: string; device: string }[]>([]);
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!open) return;
+
+        // Detect mobile/tablet and redirect
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && qrUrl) {
+            router.push(qrUrl);
+            onOpenChange(false);
+        }
+    }, [open, qrUrl, router, onOpenChange]);
 
     useEffect(() => {
         if (open && shopIdOrUserId) {

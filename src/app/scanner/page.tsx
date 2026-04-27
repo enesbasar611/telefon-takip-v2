@@ -11,8 +11,9 @@ export default function MobileScannerPage() {
     const { socket, isConnected } = useSocket();
     const [roomId, setRoomId] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
-    const [history, setHistory] = useState<{ id: string; name: string; time: string; status: 'success' | 'error' }[]>([]);
+    const [history, setHistory] = useState<{ id: string; name: string; barcode: string; time: string; status: 'success' | 'error' }[]>([]);
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const lastScannedBarcode = useRef<string>("");
 
     const playBeep = () => {
         try {
@@ -73,6 +74,7 @@ export default function MobileScannerPage() {
                     setHistory(prev => [{
                         id: Math.random().toString(36).substring(7),
                         name: productName || "Bilinmeyen Ürün",
+                        barcode: lastScannedBarcode.current || "",
                         time: now,
                         status: 'success' as const
                     }, ...prev].slice(0, 50));
@@ -83,6 +85,7 @@ export default function MobileScannerPage() {
                     setHistory(prev => [{
                         id: Math.random().toString(36).substring(7),
                         name: message || "Hata Oluştu",
+                        barcode: lastScannedBarcode.current || "",
                         time: now,
                         status: 'error' as const
                     }, ...prev].slice(0, 50));
@@ -97,6 +100,14 @@ export default function MobileScannerPage() {
             };
         }
     }, [socket, isConnected, roomId]);
+
+    const handleReScan = (barcode: string) => {
+        if (socket && roomId && barcode) {
+            playBeep();
+            socket.emit("barcode_scanned", { roomId, barcode });
+            toast.info("Barkod tekrar gönderildi...");
+        }
+    };
 
     const startScanning = async () => {
         if (!roomId) {
@@ -121,6 +132,7 @@ export default function MobileScannerPage() {
                         scannerRef.current?.stop().then(() => {
                             setIsScanning(false);
                             playBeep();
+                            lastScannedBarcode.current = decodedText;
                             socket.emit("barcode_scanned", { roomId, barcode: decodedText });
                             if (navigator.vibrate) navigator.vibrate(100);
                         });
@@ -157,8 +169,8 @@ export default function MobileScannerPage() {
     }
 
     return (
-        <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md bg-neutral-900 rounded-3xl p-6 shadow-2xl border border-neutral-800 space-y-8">
+        <div className="min-h-screen bg-neutral-950 flex flex-col items-center p-4 py-10 overflow-y-auto">
+            <div className="w-full max-w-md bg-neutral-900 rounded-3xl p-6 shadow-2xl border border-neutral-800 space-y-8 flex-shrink-0">
 
                 <div className="text-center space-y-2">
                     <ShieldCheck className="w-16 h-16 mx-auto text-green-500" />
@@ -244,6 +256,13 @@ export default function MobileScannerPage() {
                         <p className="text-xs text-neutral-500 text-center px-4">
                             Okutulan barkod saniyeler içinde sepetinize düşecektir.
                         </p>
+
+                        <button
+                            onClick={() => window.location.href = '/satis'}
+                            className="w-full py-4 text-sm font-semibold text-neutral-400 hover:text-white border border-neutral-800 rounded-2xl transition-all active:scale-95"
+                        >
+                            Satış Ekranına Dön
+                        </button>
                     </div>
                 )}
             </div>
@@ -261,14 +280,25 @@ export default function MobileScannerPage() {
                                 Temizle
                             </button>
                         </div>
-                        <div className="max-h-[300px] overflow-y-auto divide-y divide-neutral-800/50">
+                        <div className="max-h-[500px] overflow-y-auto divide-y divide-neutral-800/50">
                             {history.map((item) => (
-                                <div key={item.id} className="px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
+                                <div
+                                    key={item.id}
+                                    onClick={() => item.status === 'success' && handleReScan(item.barcode)}
+                                    className="px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group active:bg-blue-500/10"
+                                >
                                     <div className="flex flex-col">
-                                        <span className={`text-sm font-medium ${item.status === 'success' ? 'text-neutral-200' : 'text-red-400'}`}>
-                                            {item.name}
-                                        </span>
-                                        <span className="text-[10px] text-neutral-500">{item.time}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-sm font-medium ${item.status === 'success' ? 'text-neutral-200' : 'text-red-400'}`}>
+                                                {item.name}
+                                            </span>
+                                            {item.status === 'success' && (
+                                                <span className="text-[10px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                    Yinele
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] text-neutral-500">{item.time} {item.barcode && `· ${item.barcode}`}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {item.status === 'success' ? (
