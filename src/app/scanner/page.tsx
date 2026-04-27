@@ -14,6 +14,7 @@ export default function MobileScannerPage() {
     const [history, setHistory] = useState<{ id: string; name: string; barcode: string; time: string; status: 'success' | 'error' }[]>([]);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const lastScannedBarcode = useRef<string>("");
+    const hasAutoStarted = useRef(false);
 
     const playBeep = () => {
         try {
@@ -114,6 +115,7 @@ export default function MobileScannerPage() {
             toast.error("Oda bağlantısı yok! QR kodunu tekrar okutun.");
             return;
         }
+        if (scannerRef.current || isScanning) return;
 
         try {
             setIsScanning(true);
@@ -130,6 +132,7 @@ export default function MobileScannerPage() {
                     if (socket && roomId) {
                         // Barkodu bulur bulmaz durdur
                         scannerRef.current?.stop().then(() => {
+                            scannerRef.current = null;
                             setIsScanning(false);
                             playBeep();
                             lastScannedBarcode.current = decodedText;
@@ -152,10 +155,24 @@ export default function MobileScannerPage() {
     const stopScanning = () => {
         if (scannerRef.current) {
             scannerRef.current.stop().then(() => {
+                scannerRef.current = null;
                 setIsScanning(false);
             });
         }
     };
+
+    useEffect(() => {
+        if (!roomId || !isConnected || hasAutoStarted.current) return;
+        hasAutoStarted.current = true;
+        startScanning();
+    }, [roomId, isConnected]);
+
+    useEffect(() => {
+        return () => {
+            scannerRef.current?.stop().catch(() => { });
+            scannerRef.current = null;
+        };
+    }, []);
 
     if (!isConnected) {
         return (

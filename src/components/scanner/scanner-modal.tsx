@@ -6,6 +6,7 @@ import { Smartphone, QrCode, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRouter } from "next/navigation";
+import { buildScannerUrl } from "@/lib/scanner-url";
 
 interface ScannerModalProps {
     open: boolean;
@@ -34,16 +35,24 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
         if (open && shopIdOrUserId) {
             initializeScannerRoom(shopIdOrUserId);
 
+            const setFallbackUrl = () => {
+                setQrUrl(buildScannerUrl({
+                    roomId: shopIdOrUserId,
+                    browserOrigin: window.location.origin,
+                }));
+            };
+
             // Fetch server's actual LAN IP to make QR reachable by mobile
             fetch("/api/network-info")
                 .then(r => r.json())
                 .then(data => {
-                    const host = data.origin || window.location.origin;
-                    setQrUrl(`${host}/scanner?room=${shopIdOrUserId}`);
+                    setQrUrl(buildScannerUrl({
+                        roomId: shopIdOrUserId,
+                        browserOrigin: window.location.origin,
+                        networkInfo: data,
+                    }));
                 })
-                .catch(() => {
-                    setQrUrl(`${window.location.origin}/scanner?room=${shopIdOrUserId}`);
-                });
+                .catch(setFallbackUrl);
         }
     }, [open, shopIdOrUserId, initializeScannerRoom]);
 
@@ -78,14 +87,14 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                 </DialogHeader>
 
                 <div className="flex flex-col items-center justify-center py-6 space-y-6">
-                    {!isConnected ? (
-                        <div className="flex flex-col items-center space-y-4 py-8">
-                            <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                            <p className="text-sm text-neutral-500">Sunucu bağlantısı bekleniyor...</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex flex-col items-center space-y-4">
+                    <>
+                        {!isConnected && (
+                            <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-amber-500">
+                                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                                <p className="text-xs font-medium">Sunucu bağlantısı bekleniyor, QR hazır.</p>
+                            </div>
+                        )}
+                        <div className="flex flex-col items-center space-y-4">
                                 <div className="bg-white p-4 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800">
                                     {qrUrl ? (
                                         <QRCodeSVG value={qrUrl} size={180} />
@@ -133,8 +142,7 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                                     </div>
                                 </div>
                             )}
-                        </>
-                    )}
+                    </>
                 </div>
             </DialogContent>
         </Dialog>

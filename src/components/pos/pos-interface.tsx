@@ -196,18 +196,19 @@ export function POSInterface({ products: initialProducts, customers, categories,
   };
 
   const addToCart = (product: any) => {
-    const existing = cart.find((item) => item.id === product.id);
-    if (existing) {
-      if (existing.quantity >= product.stock) {
-        toast({ title: "Stok Yetersiz", variant: "destructive" });
-        return;
+    setCart((currentCart) => {
+      const existing = currentCart.find((item) => item.id === product.id);
+      if (existing) {
+        if (existing.quantity >= product.stock) {
+          toast({ title: "Stok Yetersiz", variant: "destructive" });
+          return currentCart;
+        }
+        return currentCart.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
       }
-      setCart(cart.map((item) =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      ));
-    } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
-    }
+      return [...currentCart, { ...product, quantity: 1 }];
+    });
   };
 
   const addBarcodeMatchToCart = (value: string) => {
@@ -215,19 +216,19 @@ export function POSInterface({ products: initialProducts, customers, categories,
     if (!normalizedValue) return false;
 
     const product = products.find((p: any) => p.barcode?.toUpperCase() === normalizedValue);
-    if (!product) return false;
+    if (!product) return null;
 
     addToCart(product);
     setSearchTerm("");
     toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
-    return true;
+    return product;
   };
 
   const { initializeScannerRoom, sendSuccessFeedback, sendErrorFeedback } = useScanner(
     (barcode: string) => {
-      const isFound = addBarcodeMatchToCart(barcode);
-      if (isFound) {
-        sendSuccessFeedback("Ürün");
+      const scannedProduct = addBarcodeMatchToCart(barcode);
+      if (scannedProduct) {
+        sendSuccessFeedback(scannedProduct.name);
       } else {
         sendErrorFeedback("Ürün bulunamadı");
       }
@@ -756,7 +757,6 @@ export function POSInterface({ products: initialProducts, customers, categories,
     </div>
   );
 }
-
 
 
 

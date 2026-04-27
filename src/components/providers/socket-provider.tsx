@@ -29,8 +29,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
-            transports: ['websocket'], // KRİTİK: Traefik için polling tamamen devre dışı
-            upgrade: false,
+            transports: ['websocket', 'polling'],
+            upgrade: true,
             rememberUpgrade: true,
             reconnection: true,
             reconnectionAttempts: Infinity,
