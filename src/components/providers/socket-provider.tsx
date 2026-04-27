@@ -25,15 +25,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const socketUrl = window.location.origin;
 
-        console.log("Initializing socket connection to:", socketUrl);
+        console.log("[SOCKET] Başlatılıyor:", socketUrl);
 
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
-            transports: ['websocket'], // SKIP POLLING: Best for Traefik/Docker environments
-            upgrade: false, // Don't try to upgrade, start with websocket
+            transports: ['websocket'], // KRİTİK: Traefik için polling tamamen devre dışı
+            upgrade: false,
             rememberUpgrade: true,
             reconnection: true,
-            reconnectionAttempts: Infinity, // Keep trying forever
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 2000,
             reconnectionDelayMax: 10000,
             timeout: 20000,
@@ -41,23 +41,36 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         socketInstance.on("connect", () => {
-            console.log("Socket connected:", socketInstance.id);
+            const transport = (socketInstance as any).io?.engine?.transport?.name || "Bilinmiyor";
+            console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Transport: ${transport}`);
             setIsConnected(true);
+            toast.success("Barkod sunucusuna bağlandı");
         });
 
-        socketInstance.on("connect_error", (err: Error) => {
-            console.error("Socket connection error:", err.message);
+        socketInstance.on("connect_error", (err: any) => {
+            console.error("[SOCKET] BAĞLANTI HATASI:", err.message);
+            // Mobil cihazlarda debug'ı kolaylaştırmak için toast
+            if (window.innerWidth < 768) {
+                toast.error(`Bağlantı Hatası: ${err.message}`);
+            }
             setIsConnected(false);
         });
 
-        socketInstance.on("disconnect", (reason: string) => {
-            console.log("Socket disconnected:", reason);
+        socketInstance.on("disconnect", (reason: any) => {
+            console.warn("[SOCKET] BAĞLANTI KOPTU:", reason);
             setIsConnected(false);
         });
+
+        // Debug: Sunucuya özel ping gönder
+        const pingInterval = setInterval(() => {
+            if (socketInstance.connected) {
+                socketInstance.emit("ping_status", { time: new Date().toISOString() });
+            }
+        }, 15000);
 
         setSocket(socketInstance);
-
         return () => {
+            clearInterval(pingInterval);
             socketInstance.disconnect();
         };
     }, []);
