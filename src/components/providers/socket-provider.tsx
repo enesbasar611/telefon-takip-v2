@@ -2,11 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import io from "socket.io-client";
-import type { Socket } from "socket.io-client";
 import { toast } from "sonner";
 
 interface SocketContextType {
-    socket: Socket | null;
+    socket: any | null;
     isConnected: boolean;
 }
 
@@ -20,7 +19,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const [socket, setSocket] = useState<any | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
