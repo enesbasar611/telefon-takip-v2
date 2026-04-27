@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Barcode } from "@/components/barcode/barcode";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ interface BarcodeLabelPrintDialogProps {
 export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChange }: BarcodeLabelPrintDialogProps) {
   const [settings, setSettings] = useState(defaultBarcodeLabelSettings);
   const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
+  const [previewBounds, setPreviewBounds] = useState({ width: 0, height: 0 });
 
   const printableProducts = useMemo(() => {
     if (products && products.length > 0) return products;
@@ -68,16 +70,26 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
     Math.floor((297 - pagePaddingMm * 2 + labelGapMm) / (dimensions.height + labelGapMm))
   );
   const labelsPerPage = a4Columns * a4Rows;
+  const isSinglePreview = queue.length === 1;
+  const previewPageWidthMm = isSinglePreview ? dimensions.width : 210;
+  const previewPageHeightMm = isSinglePreview ? dimensions.height : 297;
+  const previewPageWidthPx = previewPageWidthMm * 96 / 25.4;
+  const previewPageHeightPx = previewPageHeightMm * 96 / 25.4;
 
-  const autoScale = useMemo(() => {
-    if (queue.length <= 1) return 0.9;
-    if (queue.length <= 4) return 0.75;
-    if (queue.length <= 12) return 0.6;
-    if (queue.length <= 24) return 0.45;
-    return 0.35;
-  }, [queue.length]);
+  useEffect(() => {
+    if (!isOpen || !previewFrameRef.current) return;
 
-  const currentScale = manualZoom !== null ? manualZoom / 100 : autoScale;
+    const updateBounds = () => {
+      const rect = previewFrameRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPreviewBounds({ width: rect.width, height: rect.height });
+    };
+
+    updateBounds();
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(previewFrameRef.current);
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   const queuePages = useMemo(() => {
     const pages = [];
@@ -86,6 +98,42 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
     }
     return pages;
   }, [queue, labelsPerPage]);
+  const previewPageStackGapPx = isSinglePreview ? 0 : Math.max(0, queuePages.length - 1) * 16;
+
+  useEffect(() => {
+    setManualZoom(null);
+  }, [dimensions.height, dimensions.width, queue.length]);
+
+  const autoScale = useMemo(() => {
+    if (!previewBounds.width || !previewBounds.height) {
+      if (queue.length <= 1) return 1.8;
+      if (queue.length <= 4) return 0.75;
+      if (queue.length <= 12) return 0.6;
+      if (queue.length <= 24) return 0.45;
+      return 0.35;
+    }
+
+    const insetPx = 48;
+    const availableWidth = Math.max(160, previewBounds.width - insetPx);
+    const availableHeight = Math.max(160, previewBounds.height - insetPx);
+    const fitWidth = availableWidth / previewPageWidthPx;
+    const fitHeight = availableHeight / (previewPageHeightPx * Math.max(1, queuePages.length) + previewPageStackGapPx);
+    const fitScale = Math.min(fitWidth, fitHeight);
+    const maxScale = isSinglePreview ? 4 : 1.1;
+
+    return Math.min(maxScale, Math.max(0.12, fitScale));
+  }, [
+    isSinglePreview,
+    previewBounds.height,
+    previewBounds.width,
+    previewPageHeightPx,
+    previewPageWidthPx,
+    previewPageStackGapPx,
+    queue.length,
+    queuePages.length,
+  ]);
+
+  const currentScale = manualZoom !== null ? manualZoom / 100 : autoScale;
   const isBulk = printableProducts.length > 1;
 
   if (printableProducts.length === 0) return null;
@@ -274,7 +322,7 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 rounded-lg text-slate-500 hover:text-slate-900"
-                  onClick={() => setManualZoom(prev => Math.min(200, (prev || autoScale * 100) + 10))}
+                  onClick={() => setManualZoom(prev => Math.min(400, (prev || autoScale * 100) + 10))}
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
@@ -285,13 +333,20 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
               </Badge>
             </div>
 
-            <div className="flex-1 w-full flex overflow-auto px-4 pb-8 pt-4 custom-scrollbar bg-slate-200/50 dark:bg-black/20">
-              <div className="m-auto transition-all duration-300" style={{ width: `calc(210mm * ${currentScale})`, height: `calc(297mm * ${currentScale})`, flexShrink: 0 }}>
+            <div ref={previewFrameRef} className="flex-1 w-full flex overflow-auto px-4 pb-8 pt-4 custom-scrollbar bg-slate-200/50 dark:bg-black/20">
+              <div
+                className="m-auto transition-all duration-300"
+                style={{
+                  width: previewPageWidthPx * currentScale,
+                  height: (previewPageHeightPx * queuePages.length + previewPageStackGapPx) * currentScale,
+                  flexShrink: 0,
+                }}
+              >
                 <div
                   className="relative shadow-2xl transition-all duration-300 origin-top-left bg-white"
                   style={{
-                    width: "210mm",
-                    height: "297mm",
+                    width: `${previewPageWidthMm}mm`,
+                    height: `${previewPageHeightMm}mm`,
                     transform: `scale(${currentScale})`,
                   }}
                 >
@@ -309,7 +364,10 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
                     {queuePages.map((page, pageIndex) => (
                       <div
                         key={`page-${pageIndex}`}
-                        className={cn("barcode-print-page bg-white relative w-full h-full", queue.length === 1 && "flex items-center justify-center print:!justify-start print:!items-start")}
+                        className={cn(
+                          "barcode-print-page bg-white relative w-full h-full",
+                          isSinglePreview && "barcode-print-page-single"
+                        )}
                       >
                         {page.map((item, index) => (
                           <div key={`${item.id}-${pageIndex}-${index}`} className="barcode-label">

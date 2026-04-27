@@ -56,12 +56,12 @@ export function CategorySummaryCards({ products, categories }: CategorySummaryCa
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-black/20 border border-border/50">
-                            <div className="flex items-center gap-1.5 text-muted-foreground/80">
+                        <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-rose-500/5 border border-rose-500/30">
+                            <div className="flex items-center gap-1.5 text-rose-500">
                                 <Coins className="h-3 w-3" />
                                 <span className="text-[9px] uppercase font-semibold tracking-wider">Maliyet</span>
                             </div>
-                            <RevealFinancial amount={stat.cost} className="text-[13px] font-medium text-foreground" />
+                            <RevealFinancial amount={stat.cost} className="text-[13px] font-semibold text-rose-500" />
                         </div>
 
                         <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">

@@ -23,26 +23,26 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             {/* Total Inventory Value - Large Card */}
-            <Card className="md:col-span-2 relative overflow-hidden bg-card/40 border-border/50 p-6 matte-card">
+            <Card className="md:col-span-2 relative overflow-hidden bg-rose-500/5 border-rose-500/30 p-6 matte-card">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <Package className="h-32 w-32 text-blue-500" />
+                    <Package className="h-32 w-32 text-rose-500" />
                 </div>
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                            <DollarSign className="h-4 w-4 text-blue-500" />
+                        <div className="h-8 w-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                            <DollarSign className="h-4 w-4 text-rose-500" />
                         </div>
-                        <span className="text-[10px]  text-muted-foreground/80 tracking-wider">TOPLAM STOK MALİYETİ</span>
+                        <span className="text-[10px] text-rose-500 tracking-wider">TOPLAM STOK MALİYETİ</span>
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-baseline gap-2">
                             <RevealFinancial
                                 amount={stats.totalValue}
-                                className="text-4xl text-foreground tracking-tight"
+                                className="text-4xl text-rose-500 tracking-tight"
                             />
                         </div>
-                        <p className="text-[10px] text-muted-foreground/80  mt-2 flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3 text-emerald-500" />
+                        <p className="text-[10px] text-rose-500/80 mt-2 flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3 text-rose-500" />
                             Şu anki dükkan mal varlığı değeri
                         </p>
                     </div>

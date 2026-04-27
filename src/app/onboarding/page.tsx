@@ -270,7 +270,7 @@ export default function OnboardingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center lg:justify-center p-4 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-10 pb-20 lg:py-10">
+        <div className="onboarding-page min-h-screen bg-[#050505] text-white flex flex-col items-center lg:justify-center p-4 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-10 pb-20 lg:py-10">
             {/* API Guide Modal */}
             {showApiGuide && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
