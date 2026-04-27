@@ -10,7 +10,6 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
     const initializeScannerRoom = useCallback((currentUserIdOrShopId: string) => {
         if (!socket || !isConnected) return;
 
-        // Set Room ID logically as the entity's ID (or generate one)
         setRoomId((currentRoomId) => {
             if (currentRoomId !== currentUserIdOrShopId) {
                 setIsMobileScannerLinked(false);
@@ -20,7 +19,7 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
         socket.emit("join_room", currentUserIdOrShopId);
     }, [socket, isConnected]);
 
-    // Listener for PC Side (when mobile scans)
+    // Listener for PC Side (when mobile scans or manages cart)
     useEffect(() => {
         if (!socket || !roomId) return;
 
@@ -30,10 +29,28 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
             }
         };
 
+        const handleRemoveFromCart = ({ productId }: { productId: string }) => {
+            window.dispatchEvent(new CustomEvent("scanner_remove_from_cart", { detail: { productId } }));
+        };
+
+        const handleUpdateQuantity = ({ productId, delta }: { productId: string, delta: number }) => {
+            window.dispatchEvent(new CustomEvent("scanner_update_quantity", { detail: { productId, delta } }));
+        };
+
+        const handleAddToCart = ({ product }: { product: any }) => {
+            window.dispatchEvent(new CustomEvent("scanner_add_to_cart", { detail: { product } }));
+        };
+
         socket.on("process_barcode", handleProcessBarcode);
+        socket.on("process_remove_from_cart", handleRemoveFromCart);
+        socket.on("process_update_cart_quantity", handleUpdateQuantity);
+        socket.on("process_add_to_cart", handleAddToCart);
 
         return () => {
             socket.off("process_barcode", handleProcessBarcode);
+            socket.off("process_remove_from_cart", handleRemoveFromCart);
+            socket.off("process_update_cart_quantity", handleUpdateQuantity);
+            socket.off("process_add_to_cart", handleAddToCart);
         };
     }, [socket, roomId, onBarcodeScanned]);
 
@@ -50,7 +67,7 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
         };
     }, [socket, roomId]);
 
-    // Feedback commands sent from PC to Mobile
+    // Feedback & Sync commands sent from PC to Mobile
     const sendSuccessFeedback = useCallback((productName: string, deviceId?: string) => {
         if (socket && roomId) {
             socket.emit("scan_success", { roomId, productName, deviceId });
@@ -63,13 +80,20 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
         }
     }, [socket, roomId]);
 
+    const syncCartToMobile = useCallback((cart: any[]) => {
+        if (socket && roomId) {
+            socket.emit("sync_cart", { roomId, cart });
+        }
+    }, [socket, roomId]);
+
     return {
         socket,
         isConnected,
-        isMobileScannerLinked, // In future, you might want to detect if mobile actually joined
+        isMobileScannerLinked,
         initializeScannerRoom,
         sendSuccessFeedback,
         sendErrorFeedback,
+        syncCartToMobile,
         roomId
     };
 };

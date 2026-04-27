@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useTransition } from "react";
+import { useState, useMemo, useRef, useEffect, useTransition, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -195,7 +195,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
     }
   };
 
-  const addToCart = (product: any) => {
+  const addToCart = useCallback((product: any) => {
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
       if (existing) {
@@ -209,7 +209,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
       }
       return [...currentCart, { ...product, quantity: 1 }];
     });
-  };
+  }, [products, toast]);
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
@@ -224,30 +224,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
     return product;
   };
 
-  const { initializeScannerRoom, sendSuccessFeedback, sendErrorFeedback } = useScanner(
-    (barcode: string) => {
-      const scannedProduct = addBarcodeMatchToCart(barcode);
-      if (scannedProduct) {
-        sendSuccessFeedback(scannedProduct.name);
-      } else {
-        sendErrorFeedback("Ürün bulunamadı");
-      }
-    }
-  );
-
-  useEffect(() => {
-    let rid = localStorage.getItem("scanner_room_id");
-    if (!rid) {
-      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("scanner_room_id", rid);
-    }
-    setScannerRoomId(rid);
-    initializeScannerRoom(rid);
-  }, [initializeScannerRoom]);
-
-
-  const updateQuantity = (id: string, delta: number) => {
-    setCart(cart.map((item) => {
+  const updateQuantity = useCallback((id: string, delta: number) => {
+    setCart((prev) => prev.map((item) => {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
         const originalProduct = products.find((p) => p.id === id);
@@ -259,11 +237,60 @@ export function POSInterface({ products: initialProducts, customers, categories,
       }
       return item;
     }));
-  };
+  }, [products, toast]);
 
-  const removeFromCart = (id: string) => {
-    setCart(cart.filter((item) => item.id !== id));
-  };
+  const removeFromCart = useCallback((id: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const { initializeScannerRoom, sendSuccessFeedback, sendErrorFeedback, syncCartToMobile } = useScanner(
+    (barcode: string) => {
+      const scannedProduct = addBarcodeMatchToCart(barcode);
+      if (scannedProduct) {
+        sendSuccessFeedback(scannedProduct.name);
+      } else {
+        sendErrorFeedback("Ürün bulunamadı");
+      }
+    }
+  );
+
+  // Sync cart to mobile whenever it changes
+  useEffect(() => {
+    syncCartToMobile(cart);
+  }, [cart, syncCartToMobile]);
+
+  // Listen for mobile-initiated cart actions
+  useEffect(() => {
+    const handleRemove = (e: any) => {
+      removeFromCart(e.detail.productId);
+    };
+    const handleUpdateQty = (e: any) => {
+      updateQuantity(e.detail.productId, e.detail.delta);
+    };
+    const handleAdd = (e: any) => {
+      addToCart(e.detail.product);
+    };
+
+    window.addEventListener("scanner_remove_from_cart", handleRemove);
+    window.addEventListener("scanner_update_quantity", handleUpdateQty);
+    window.addEventListener("scanner_add_to_cart", handleAdd);
+
+    return () => {
+      window.removeEventListener("scanner_remove_from_cart", handleRemove);
+      window.removeEventListener("scanner_update_quantity", handleUpdateQty);
+      window.removeEventListener("scanner_add_to_cart", handleAdd);
+    };
+  }, [removeFromCart, updateQuantity, addToCart]);
+
+  useEffect(() => {
+    let rid = localStorage.getItem("scanner_room_id");
+    if (!rid) {
+      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("scanner_room_id", rid);
+    }
+    setScannerRoomId(rid);
+    initializeScannerRoom(rid);
+  }, [initializeScannerRoom]);
 
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);

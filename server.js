@@ -111,6 +111,26 @@ app.prepare().then(() => {
             io.to(roomId).emit('mobile_feedback', { success: false, message, deviceId });
         });
 
+        // Sepet Senkronizasyonu (PC -> Telefon)
+        socket.on('sync_cart', ({ roomId, cart }) => {
+            socket.to(roomId).emit('cart_updated', { cart });
+        });
+
+        // Sepetten Ürün Çıkarma (Telefon -> PC)
+        socket.on('remove_from_cart', ({ roomId, productId }) => {
+            io.to(roomId).emit('process_remove_from_cart', { productId });
+        });
+
+        // Sepette Miktar Güncelleme (Telefon -> PC)
+        socket.on('update_cart_quantity', ({ roomId, productId, delta }) => {
+            io.to(roomId).emit('process_update_cart_quantity', { productId, delta });
+        });
+
+        // Sepete Ürün Ekleme (Telefon -> PC - Search/History'den)
+        socket.on('add_to_cart', ({ roomId, product }) => {
+            io.to(roomId).emit('process_add_to_cart', { product });
+        });
+
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
         });
