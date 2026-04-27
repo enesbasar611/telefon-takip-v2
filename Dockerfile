@@ -48,6 +48,8 @@ ENV HOSTNAME="0.0.0.0"
 # Builder'dan gelen dosyaları kopyala
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
