@@ -214,7 +214,7 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                         {settings?.terms && (
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-6">
                                 <p className="text-[8px]  mb-1.5 border-b border-gray-200 pb-1">Önemli Şartlar</p>
-                                <div className="text-[6.5px] text-gray-600 font-medium leading-[1.4] whitespace-pre-line">
+                                <div className="text-[6.5px] text-gray-600 font-medium leading-[1.4] whitespace-pre-wrap break-words w-full h-auto min-h-min">
                                     {settings.terms}
                                 </div>
                             </div>
@@ -276,6 +276,8 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
               box-shadow: none !important;
               background: white !important;
               color: black !important;
+              word-wrap: break-word !important;
+              overflow-wrap: break-word !important;
             }
             @page { size: 80mm auto; margin: 0; }
           }

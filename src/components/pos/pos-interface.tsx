@@ -50,8 +50,10 @@ import { cn, formatPhone, formatCurrency } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ScanLine } from "lucide-react";
 import { getSettings } from "@/lib/actions/setting-actions";
+import { ScannerModal } from "@/components/scanner/scanner-modal";
+import { useScanner } from "@/hooks/use-scanner";
 
 export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
   products: any[];
@@ -59,6 +61,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
   categories: any[];
   initialSale?: any;
 }) {
+  const [scannerRoomId, setScannerRoomId] = useState<string>("");
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [products, setProducts] = useState(initialProducts);
 
   // Show receipt if arrived via sale confirmation URL
@@ -131,13 +135,19 @@ export function POSInterface({ products: initialProducts, customers, categories,
     });
   }, [products, searchTerm, selectedCategory]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
+      containerRef.current?.requestFullscreen().catch(() => { });
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      document.exitFullscreen().catch(() => { });
     }
   };
 
@@ -199,6 +209,28 @@ export function POSInterface({ products: initialProducts, customers, categories,
     toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
     return true;
   };
+
+  const { initializeScannerRoom, sendSuccessFeedback, sendErrorFeedback } = useScanner(
+    (barcode: string) => {
+      const isFound = addBarcodeMatchToCart(barcode);
+      if (isFound) {
+        sendSuccessFeedback("Ürün");
+      } else {
+        sendErrorFeedback("Ürün bulunamadı");
+      }
+    }
+  );
+
+  useEffect(() => {
+    let rid = localStorage.getItem("scanner_room_id");
+    if (!rid) {
+      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("scanner_room_id", rid);
+    }
+    setScannerRoomId(rid);
+    initializeScannerRoom(rid);
+  }, [initializeScannerRoom]);
+
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(cart.map((item) => {
@@ -341,7 +373,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Ürün adı veya barkod okut..."
-                  className="pl-12 bg-muted/30 border-border/40 h-14 sm:h-12 rounded-2xl text-sm sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
+                  className="pl-12 pr-12 bg-muted/30 border-border/40 h-14 sm:h-12 rounded-2xl text-sm sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => {
@@ -351,6 +383,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   }}
                   autoFocus
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-colors"
+                  onClick={() => setIsScannerModalOpen(true)}
+                >
+                  <ScanLine className="h-5 w-5 sm:h-4 sm:w-4" />
+                </Button>
               </div>
             </div>
 
@@ -702,6 +743,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
           animation: success-pulse 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
       `}</style>
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
     </div>
   );
 }

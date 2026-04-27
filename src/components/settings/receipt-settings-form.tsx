@@ -242,7 +242,7 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                                         {localSettings.terms && (
                                             <div className="bg-gray-100 p-3 rounded-sm mb-6 border border-gray-200">
                                                 <p className="text-[8px]  mb-1.5 border-b border-gray-300 pb-1">Önemli Şartlar</p>
-                                                <div className="text-[7px] text-gray-600 line-clamp-6 leading-tight whitespace-pre-line">
+                                                <div className="text-[7px] text-gray-600 leading-tight whitespace-pre-wrap break-words w-full h-auto min-h-min flex-1">
                                                     {localSettings.terms}
                                                 </div>
                                             </div>
@@ -293,7 +293,7 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

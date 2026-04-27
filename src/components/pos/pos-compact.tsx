@@ -29,7 +29,8 @@ import {
     CreditCard,
     Landmark,
     History,
-    AlertCircle
+    AlertCircle,
+    Camera
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
@@ -40,6 +41,10 @@ import { Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getSettings } from "@/lib/actions/setting-actions";
 import { useEffect } from "react";
+import { useScanner } from "@/hooks/use-scanner";
+import { useSession } from "next-auth/react";
+import { ScannerModal } from "../scanner/scanner-modal";
+import { useRouter } from "next/navigation";
 
 export function POSCompact({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
     const [productSearch, setProductSearch] = useState("");
@@ -55,6 +60,30 @@ export function POSCompact({ products, customers, categories }: { products: any[
 
     const [pointValueTl, setPointValueTl] = useState<number>(5);
     const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+
+    const { data: session } = useSession();
+    const router = useRouter();
+    const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+
+    const {
+        initializeScannerRoom,
+        sendSuccessFeedback,
+        sendErrorFeedback
+    } = useScanner((barcode, deviceId) => {
+        const success = addBarcodeMatchToCart(barcode);
+        if (success) {
+            const product = products.find(p => p.barcode?.toUpperCase() === barcode.trim().toUpperCase());
+            if (product) sendSuccessFeedback(product.name, deviceId);
+        } else {
+            sendErrorFeedback("Ürün bulunamadı!", deviceId);
+        }
+    });
+
+    useEffect(() => {
+        if (session?.user?.id || session?.user?.shopId) {
+            initializeScannerRoom(session.user.shopId || session.user.id);
+        }
+    }, [session, initializeScannerRoom]);
 
     // Load points config
     useEffect(() => {
@@ -181,19 +210,36 @@ export function POSCompact({ products, customers, categories }: { products: any[
         <div className="flex flex-col h-full bg-[#0F172A] text-white font-sans overflow-hidden">
             {/* Search Bar for Products */}
             <div className="p-6 pb-4">
-                <div className="relative group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
-                    <Input
-                        placeholder="Ürün adı veya barkod okut..."
-                        className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && addBarcodeMatchToCart(productSearch)) {
-                                e.preventDefault();
+                <div className="flex items-center gap-4 relative group">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                        <Input
+                            placeholder="Ürün adı veya barkod okut..."
+                            className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && addBarcodeMatchToCart(productSearch)) {
+                                    e.preventDefault();
+                                }
+                            }}
+                        />
+                    </div>
+                    <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-16 w-16 rounded-2xl bg-muted/50 border-border/80/50 hover:bg-blue-600/10 hover:border-blue-500/50 transition-all"
+                        onClick={() => {
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            if (isMobile) {
+                                setIsScannerModalOpen(true);
+                            } else {
+                                router.push("/ayarlar/moduller");
                             }
                         }}
-                    />
+                    >
+                        <Camera className="h-6 w-6 text-blue-500" />
+                    </Button>
                 </div>
             </div>
 
@@ -489,6 +535,12 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     sale={lastSale}
                 />
             )}
+
+            <ScannerModal
+                open={isScannerModalOpen}
+                onOpenChange={setIsScannerModalOpen}
+                shopIdOrUserId={session?.user?.shopId || session?.user?.id || ""}
+            />
         </div>
     );
 }

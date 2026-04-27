@@ -91,7 +91,7 @@ export function ProductDetailDrawer({
                     <SheetHeader className="p-6 pb-2">
                         <div className="flex justify-between items-start gap-4">
                             <div>
-                                <SheetTitle className="text-xl  text-white leading-tight">
+                                <SheetTitle className="text-xl  text-foreground leading-tight">
                                     {product.name}
                                 </SheetTitle>
                                 <SheetDescription className="text-[10px]  text-muted-foreground/80 mt-1 uppercase flex items-center gap-1">
@@ -108,10 +108,10 @@ export function ProductDetailDrawer({
                     <div className="flex-1 overflow-hidden px-6 pb-6">
                         <Tabs defaultValue="info" className="h-full flex flex-col">
                             <TabsList className="grid w-full grid-cols-2 bg-card border border-border/50 p-1 rounded-xl mb-6">
-                                <TabsTrigger value="info" className="text-[11px]  gap-2 rounded-lg data-[state=active]:bg-muted data-[state=active]:text-white">
+                                <TabsTrigger value="info" className="text-[11px]  gap-2 rounded-lg data-[state=active]:bg-muted data-[state=active]:text-foreground">
                                     <Info className="h-3.5 w-3.5" /> BİLGİLER
                                 </TabsTrigger>
-                                <TabsTrigger value="history" className="text-[11px]  gap-2 rounded-lg data-[state=active]:bg-muted data-[state=active]:text-white">
+                                <TabsTrigger value="history" className="text-[11px]  gap-2 rounded-lg data-[state=active]:bg-muted data-[state=active]:text-foreground">
                                     <History className="h-3.5 w-3.5" /> HAREKETLER
                                 </TabsTrigger>
                             </TabsList>
@@ -123,7 +123,7 @@ export function ProductDetailDrawer({
                                         <div className="p-4 rounded-2xl bg-card/40 border border-border/50">
                                             <p className="text-[9px]  text-slate-600 mb-1 uppercase">Stok Durumu</p>
                                             <div className="flex items-baseline gap-1">
-                                                <span className={`text-2xl  ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-white'}`}>
+                                                <span className={`text-2xl  ${product.stock <= product.criticalStock ? 'text-rose-500' : 'text-foreground'}`}>
                                                     {product.stock}
                                                 </span>
                                                 <span className="text-[10px] text-muted-foreground/80  uppercase">ADET</span>
@@ -146,7 +146,7 @@ export function ProductDetailDrawer({
                                                 <Barcode className="h-4 w-4 text-muted-foreground/80" />
                                                 <span className="text-[11px]  text-muted-foreground">BARKOD / SKU</span>
                                             </div>
-                                            <span className="text-[11px]  text-white uppercase">{product.barcode || product.sku || "-"}</span>
+                                            <span className="text-[11px]  text-foreground uppercase">{product.barcode || product.sku || "-"}</span>
                                         </div>
                                         <div className="flex items-center justify-between p-3 rounded-xl bg-card/20 border border-border/50">
                                             <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ export function ProductDetailDrawer({
                                                 <Truck className="h-4 w-4 text-orange-400" />
                                                 <span className="text-[11px]  text-muted-foreground">TEDARİKÇİ</span>
                                             </div>
-                                            <span className="text-[11px]  text-white uppercase">S. GÖKSU</span>
+                                            <span className="text-[11px]  text-foreground uppercase">S. GÖKSU</span>
                                         </div>
 
                                         {/* Dynamic Attributes */}
@@ -172,7 +172,7 @@ export function ProductDetailDrawer({
                                                 {Object.entries(product.attributes).map(([key, value]: [string, any]) => (
                                                     <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
                                                         <span className="text-[10px]  text-indigo-400 uppercase">{key}</span>
-                                                        <span className="text-[11px]  text-white uppercase">{String(value || "-")}</span>
+                                                        <span className="text-[11px]  text-foreground uppercase">{String(value || "-")}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -183,7 +183,7 @@ export function ProductDetailDrawer({
                                     <div className="p-4 rounded-2xl bg-card border border-border/50 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-wider">Birim Maliyet (TL)</span>
-                                            <RevealFinancial amount={product.buyPrice} className="text-sm  text-white" />
+                                            <RevealFinancial amount={product.buyPrice} className="text-sm  text-foreground" />
                                         </div>
                                         {product.buyPriceUsd && (
                                             <div className="flex items-center justify-between">
@@ -194,7 +194,7 @@ export function ProductDetailDrawer({
                                         <div className="h-px bg-white/5" />
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px]  text-muted-foreground/80 uppercase tracking-wider">Toplam Envanter Değeri</span>
-                                            <RevealFinancial amount={product.buyPrice * product.stock} className="text-sm  text-white" />
+                                            <RevealFinancial amount={product.buyPrice * product.stock} className="text-sm  text-foreground" />
                                         </div>
                                     </div>
 
@@ -245,7 +245,7 @@ export function ProductDetailDrawer({
                                                         }`} />
                                                     <div className="flex justify-between items-start gap-2">
                                                         <div>
-                                                            <p className="text-[11px]  text-white leading-tight">
+                                                            <p className="text-[11px]  text-foreground leading-tight">
                                                                 {move.type === "SALE" ? "Satış Yapıldı" :
                                                                     move.type === "SERVICE_USE" ? "Servis Malzemesi" :
                                                                         move.type === "PURCHASE" ? "Stok Girişi" : "Stok Güncelleme"}

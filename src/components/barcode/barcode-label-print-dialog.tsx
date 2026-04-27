@@ -31,7 +31,7 @@ import {
   getBarcodeLabelDimensions,
   normalizeBarcodeSettings,
 } from "@/lib/barcode-utils";
-import { Printer, Tags } from "lucide-react";
+import { Printer, Tags, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
 interface BarcodeLabelPrintDialogProps {
   product?: any;
@@ -42,6 +42,7 @@ interface BarcodeLabelPrintDialogProps {
 
 export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChange }: BarcodeLabelPrintDialogProps) {
   const [settings, setSettings] = useState(defaultBarcodeLabelSettings);
+  const [manualZoom, setManualZoom] = useState<number | null>(null);
 
   const printableProducts = useMemo(() => {
     if (products && products.length > 0) return products;
@@ -67,6 +68,17 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
     Math.floor((297 - pagePaddingMm * 2 + labelGapMm) / (dimensions.height + labelGapMm))
   );
   const labelsPerPage = a4Columns * a4Rows;
+
+  const autoScale = useMemo(() => {
+    if (queue.length <= 1) return 0.9;
+    if (queue.length <= 4) return 0.75;
+    if (queue.length <= 12) return 0.6;
+    if (queue.length <= 24) return 0.45;
+    return 0.35;
+  }, [queue.length]);
+
+  const currentScale = manualZoom !== null ? manualZoom / 100 : autoScale;
+
   const queuePages = useMemo(() => {
     const pages = [];
     for (let index = 0; index < queue.length; index += labelsPerPage) {
@@ -105,8 +117,8 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[760px] bg-card border-border p-0 overflow-hidden">
-        <div className="grid md:grid-cols-[280px_1fr] min-h-[520px]">
+      <DialogContent className="sm:max-w-[1000px] bg-card border-border p-0 overflow-hidden shadow-2xl">
+        <div className="grid md:grid-cols-[280px_1fr] h-[85vh] max-h-[800px]">
           <div className="p-6 border-r border-border/60 bg-muted/20 space-y-6 no-print">
             <DialogHeader>
               <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -227,57 +239,113 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
             </Button>
           </div>
 
-          <div className="p-6 bg-background/60">
-            <div className="no-print mb-4 flex items-center justify-between gap-3">
+          <div className="p-6 bg-slate-50 dark:bg-background/20 relative overflow-hidden flex flex-col items-center justify-start min-h-[520px]">
+            <div className="no-print w-full mb-6 flex items-center justify-between gap-3 bg-white dark:bg-black/20 p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
               <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">
-                  {isBulk ? `${printableProducts.length} ürün seçildi` : printableProducts[0].name}
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {isBulk ? `${printableProducts.length} farklı ürün` : printableProducts[0].name}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {isBulk ? `${queue.length} etiket önizleniyor` : printableProducts[0].barcode}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-[10px] font-bold border-blue-500/20 text-blue-500 bg-blue-500/5">
+                    {queue.length} Etiket
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {a4Columns} Sütun x {a4Rows} Satır
+                  </span>
+                </div>
               </div>
-              <Badge variant="secondary">{dimensions.width} x {dimensions.height} mm</Badge>
+
+              <div className="flex items-center gap-1 bg-white dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-slate-500 hover:text-slate-900"
+                  onClick={() => setManualZoom(prev => Math.max(10, (prev || autoScale * 100) - 10))}
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <div
+                  className="px-2 min-w-[50px] text-center text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:text-blue-500"
+                  onClick={() => setManualZoom(null)}
+                >
+                  %{Math.round(currentScale * 100)}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-slate-500 hover:text-slate-900"
+                  onClick={() => setManualZoom(prev => Math.min(200, (prev || autoScale * 100) + 10))}
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Badge variant="secondary" className="bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 border-none font-bold">
+                {dimensions.width} x {dimensions.height} mm
+              </Badge>
             </div>
 
-            <div
-              className="barcode-print-area"
-              style={{
-                "--barcode-label-width": `${dimensions.width}mm`,
-                "--barcode-label-height": `${dimensions.height}mm`,
-                "--barcode-a4-columns": a4Columns,
-                "--barcode-a4-padding": `${pagePaddingMm}mm`,
-                "--barcode-label-gap": `${labelGapMm}mm`,
-              } as CSSProperties}
-            >
-              {queuePages.map((page, pageIndex) => (
-                <div key={`page-${pageIndex}`} className="barcode-print-page">
-                  {page.map((item, index) => (
-                    <div key={`${item.id}-${pageIndex}-${index}`} className="barcode-label">
-                      <div className="barcode-label-name">{item.name}</div>
-                      <Barcode value={item.barcode} width={1.2} height={42} fontSize={10} displayValue={normalizedSettings.showBarcodeText} />
-                      <div className="barcode-label-footer">
-                        {normalizedSettings.showSku && item.sku ? (
-                          <span>{item.sku}</span>
-                        ) : normalizedSettings.showBarcodeText ? (
-                          <span>{item.barcode}</span>
-                        ) : (
-                          <span />
-                        )}
-                        {normalizedSettings.showPrice && item.sellPrice != null && (
-                          <span className="barcode-label-price">{formatCurrency(Number(item.sellPrice))} TL</span>
-                        )}
+            <div className="flex-1 w-full flex overflow-auto px-4 pb-8 pt-4 custom-scrollbar bg-slate-200/50 dark:bg-black/20">
+              <div className="m-auto transition-all duration-300" style={{ width: `calc(210mm * ${currentScale})`, height: `calc(297mm * ${currentScale})`, flexShrink: 0 }}>
+                <div
+                  className="relative shadow-2xl transition-all duration-300 origin-top-left bg-white"
+                  style={{
+                    width: "210mm",
+                    height: "297mm",
+                    transform: `scale(${currentScale})`,
+                  }}
+                >
+                  <div
+                    className="barcode-print-area w-full h-full"
+                    style={{
+                      "--barcode-label-width": `${dimensions.width}mm`,
+                      "--barcode-label-height": `${dimensions.height}mm`,
+                      "--barcode-a4-columns": a4Columns,
+                      "--barcode-a4-padding": `${pagePaddingMm}mm`,
+                      "--barcode-label-gap": `${labelGapMm}mm`,
+                      background: "white",
+                    } as CSSProperties}
+                  >
+                    {queuePages.map((page, pageIndex) => (
+                      <div
+                        key={`page-${pageIndex}`}
+                        className={cn("barcode-print-page bg-white relative w-full h-full", queue.length === 1 && "flex items-center justify-center print:!justify-start print:!items-start")}
+                      >
+                        {page.map((item, index) => (
+                          <div key={`${item.id}-${pageIndex}-${index}`} className="barcode-label">
+                            <div className="barcode-label-name">{item.name}</div>
+                            <Barcode value={item.barcode} width={1.2} height={42} fontSize={10} displayValue={normalizedSettings.showBarcodeText} />
+                            <div className="barcode-label-footer">
+                              {normalizedSettings.showSku && item.sku ? (
+                                <span>{item.sku}</span>
+                              ) : normalizedSettings.showBarcodeText ? (
+                                <span>{item.barcode}</span>
+                              ) : (
+                                <span />
+                              )}
+                              {normalizedSettings.showPrice && item.sellPrice != null && (
+                                <span className="barcode-label-price">{formatCurrency(Number(item.sellPrice))} TL</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="no-print barcode-page-counter absolute bottom-2 right-2 opacity-50 pointer-events-none text-black text-[10px] font-bold">
+                          Sayfa {pageIndex + 1}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  <div className="no-print barcode-page-counter">
-                    A4 sayfa {pageIndex + 1} / {queuePages.length}
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
 
-            {queue.length > 80 && <p className="no-print mt-4 text-xs text-muted-foreground">Önizleme çok sayıda etiket içeriyor.</p>}
+            {queue.length > 80 && (
+              <div className="no-print absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                <p className="text-[10px] text-amber-500 font-bold whitespace-nowrap">
+                  DİKKAT: Çok sayıda etiket yazdırılıyor ({queue.length} adet)
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

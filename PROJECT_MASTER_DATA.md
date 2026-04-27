@@ -81,6 +81,7 @@ Projenin görsel dili "Apple-Style" sadeliği ve premium hissi üzerine kuruludu
 ### Hassas Noktalar (Caveats)
 - **Prisma Regeneration:** Yeni bir model eklendiğinde (örn: `IndustryTemplate`), dev sunucusu dosyaları kitlediği için `EPERM` hatası verebilir. Bu durumda `prisma generate` için sunucunun durdurulması gerekebilir.
 - **Naming Conventions:** Fonksiyon isimleri `camelCase`, veritabanı modelleri `PascalCase` ve Türkçeye özel `LocaleLower` desteğiyle yazılmalıdır.
+- **Remote Scanner:** Barkod okuma sisteminin yerel ağdaki mobil cihazlardan test edilebilmesi için Next.js uygulamasını `npm run dev -- -H 0.0.0.0` ile çalıştırın. Böylece aynı ağdaki telefon, üretilen QR kodunu (örneğin `http://192.168.1.5:3000`) tanıyıp kamerayı açabilir.
 
 ### Gelecek Planları
 - **Multi-Industry SDK:** Diğer sektörler için AI tabanlı menü ve form yapılarının tam dinamikleştirilmesi.

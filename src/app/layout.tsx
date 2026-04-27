@@ -12,6 +12,7 @@ import { getStaff } from "@/lib/actions/staff-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { NextAuthProvider } from "@/components/providers/session-provider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
+import { SocketProvider } from "@/components/providers/socket-provider";
 
 export const metadata: Metadata = {
   title: "BAŞAR TEKNİK - ERP & Servis Takip",
@@ -37,7 +38,9 @@ export default async function RootLayout({
         >
           <NextAuthProvider>
             <ProgressBarProvider>
-              {children}
+              <SocketProvider>
+                {children}
+              </SocketProvider>
             </ProgressBarProvider>
           </NextAuthProvider>
           <Toaster position="bottom-right" expand={false} duration={2500} />

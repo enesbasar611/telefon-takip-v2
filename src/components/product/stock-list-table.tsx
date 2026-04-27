@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -26,8 +26,11 @@ import {
   ShoppingCart,
   MapPin,
   Barcode as BarcodeIcon,
-  RefreshCw
+  RefreshCw,
+  ScanLine
 } from "lucide-react";
+import { ScannerModal } from "@/components/scanner/scanner-modal";
+import { useScanner } from "@/hooks/use-scanner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,6 +68,28 @@ export function StockListTable({ products, categories, shop }: { products: any[]
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+
+  const [scannerRoomId, setScannerRoomId] = useState<string>("");
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+
+  const { initializeScannerRoom, sendSuccessFeedback } = useScanner(
+    (barcode: string) => {
+      setSearchTerm(barcode);
+      sendSuccessFeedback("Ürün Arandı");
+      toast.success("Barkod okutuldu");
+      setIsScannerModalOpen(false);
+    }
+  );
+
+  useEffect(() => {
+    let rid = localStorage.getItem("scanner_room_id");
+    if (!rid) {
+      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("scanner_room_id", rid);
+    }
+    setScannerRoomId(rid);
+    initializeScannerRoom(rid);
+  }, [initializeScannerRoom]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -265,8 +290,16 @@ export function StockListTable({ products, categories, shop }: { products: any[]
             placeholder={`${getIndustryLabel(shop, "productLabel")} adı, SKU veya barkod ara...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-muted/30 border-border rounded-xl text-[13px] font-medium text-foreground h-10 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
+            className="pl-9 pr-12 bg-muted/30 border-border rounded-xl text-[13px] font-medium text-foreground h-10 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
           />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+            onClick={() => setIsScannerModalOpen(true)}
+          >
+            <ScanLine className="h-4 w-4" />
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
@@ -322,8 +355,8 @@ export function StockListTable({ products, categories, shop }: { products: any[]
                       className="mt-0.5"
                     />
                     <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground text-[14px] leading-tight">{product.name}</h3>
-                    <p className="text-[11px] text-muted-foreground font-medium mt-1">SKU: {product.sku || '-'}</p>
+                      <h3 className="font-semibold text-foreground text-[14px] leading-tight">{product.name}</h3>
+                      <p className="text-[11px] text-muted-foreground font-medium mt-1">SKU: {product.sku || '-'}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
@@ -432,7 +465,7 @@ export function StockListTable({ products, categories, shop }: { products: any[]
               <TableHead className="font-medium py-3 h-11">
                 <SortableHeader label="Fiyat" field="sellPrice" sortField={sortField as string} sortOrder={sortOrder} onSort={toggleSort} align="right" />
               </TableHead>
-              <TableHead className="font-medium py-3 pr-8 h-11 text-right"></TableHead>
+              <TableHead className="font-medium py-3 pr-8 h-11 text-right text-[10px] uppercase tracking-widest text-muted-foreground/60">İŞLEMLER</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -508,7 +541,7 @@ export function StockListTable({ products, categories, shop }: { products: any[]
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-4">
-                    <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1 transition-opacity">
                       <Button onClick={(e) => { e.stopPropagation(); onAddToShortage(product); }} variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Eksik Listesine Ekle">
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -570,6 +603,7 @@ export function StockListTable({ products, categories, shop }: { products: any[]
         isOpen={isPrintDialogOpen}
         onOpenChange={setIsPrintDialogOpen}
       />
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
     </div>
   );
 }

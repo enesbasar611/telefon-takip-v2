@@ -267,7 +267,9 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
 
                         <div className={cn(
                             "p-4 rounded-xl border transition-all space-y-4",
-                            formData.googleDriveEnabled === "true" ? "border-emerald-500/20 bg-emerald-500/5" : "border-[#222] bg-[#111]"
+                            formData.googleDriveEnabled === "true"
+                                ? "border-emerald-500/20 bg-emerald-500/5"
+                                : "border-slate-200 dark:border-[#222] bg-white dark:bg-[#111]"
                         )}>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">

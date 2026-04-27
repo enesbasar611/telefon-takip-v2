@@ -380,6 +380,36 @@ export async function regenerateProductBarcodes(productIds: string[]) {
   }
 }
 
+export async function fixAllBarcodes() {
+  try {
+    const shopId = await getShopId();
+    const products = await prisma.product.findMany({
+      where: { shopId }
+    });
+
+    const updatedProducts = await prisma.$transaction(
+      products.map((product) =>
+        prisma.product.update({
+          where: { id: product.id, shopId },
+          data: {
+            barcode: generateProductBarcode({
+              shopId,
+              productId: product.id,
+              productName: product.name,
+            }),
+          },
+        })
+      )
+    );
+
+    revalidatePath("/stok");
+    return { success: true, count: updatedProducts.length };
+  } catch (error) {
+    console.error("Fix all barcodes error:", error);
+    return { success: false, error: "Tüm barkodlar güncellenemedi." };
+  }
+}
+
 // getOrCreateDevUser removed.
 
 export async function updateProduct(id: string, rawData: Partial<z.infer<typeof productSchema>>) {

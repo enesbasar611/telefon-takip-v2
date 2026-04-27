@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     Search, Command, ChevronRight, Package, User, Truck, Wrench,
     Loader2, Sparkles, TrendingDown, TrendingUp, ShoppingCart,
-    PlusCircle, Zap, ArrowRight, Terminal
+    PlusCircle, Zap, ArrowRight, Terminal, ScanLine
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { globalSearchAction } from "@/lib/actions/search-actions";
 import { useRouter } from "next/navigation";
+import { ScannerModal } from "@/components/scanner/scanner-modal";
+import { useScanner } from "@/hooks/use-scanner";
+import { toast } from "sonner";
 
 // ─── Quick Command Definitions ───────────────────────────────────────────────
 const QUICK_COMMANDS = [
@@ -105,6 +108,30 @@ export function GlobalSearch() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [isCommandMode, setIsCommandMode] = useState(false);
     const router = useRouter();
+
+    const [scannerRoomId, setScannerRoomId] = useState<string>("");
+    const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+
+    // Provide default parameter value explicitly to avoid unused parameter issues if any,
+    // though barcode is strictly typed as string.
+    const { initializeScannerRoom, sendSuccessFeedback } = useScanner(
+        (barcode: string) => {
+            handleSearch(barcode);
+            sendSuccessFeedback("Arandı");
+            toast.success("Barkod okutuldu");
+            setIsScannerModalOpen(false);
+        }
+    );
+
+    useEffect(() => {
+        let rid = localStorage.getItem("scanner_room_id");
+        if (!rid) {
+            rid = "scanner-" + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem("scanner_room_id", rid);
+        }
+        setScannerRoomId(rid);
+        initializeScannerRoom(rid);
+    }, [initializeScannerRoom]);
 
     // Global Event Listener for manual trigger
     useEffect(() => {
@@ -221,13 +248,21 @@ export function GlobalSearch() {
                                     : <Search className="h-5 w-5" />
                                 }
                             </div>
-                            <Input
-                                autoFocus
-                                value={query}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                placeholder="Ne yapmak istiyorsun? 'gelir ekle', 'yeni servis' ya da ürün ismi yaz..."
-                                className="bg-transparent border-none h-10 text-lg font-medium text-white focus-visible:ring-0 placeholder:text-slate-600 p-0 shadow-none"
-                            />
+                            <div className="flex-1 relative">
+                                <Input
+                                    autoFocus
+                                    value={query}
+                                    onChange={(e) => handleSearch(e.target.value)}
+                                    placeholder="Ne yapmak istiyorsun? 'gelir ekle', 'yeni servis' ya da ürün ismi yaz..."
+                                    className="bg-transparent border-none h-10 text-lg font-medium text-white focus-visible:ring-0 placeholder:text-slate-600 p-0 pr-10 shadow-none w-full"
+                                />
+                                <button
+                                    onClick={() => setIsScannerModalOpen(true)}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors rounded-lg"
+                                >
+                                    <ScanLine className="h-5 w-5" />
+                                </button>
+                            </div>
                             <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-border/50 text-[10px] text-muted-foreground/80 font-mono shrink-0">
                                 CTRL+⇧+S
                             </kbd>
@@ -406,6 +441,7 @@ export function GlobalSearch() {
                     </div>
                 </DialogContent>
             </Dialog>
+            <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
         </>
     );
 }

@@ -86,7 +86,7 @@ export function FormsTab({ shop }: { shop: any }) {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             {/* Editor Side */}
             <div className="xl:col-span-8 space-y-8">
-                <div className="flex items-center justify-between bg-white/5 p-6 rounded-3xl border border-white/10">
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/20 text-indigo-400">
                             <Layout className="w-6 h-6" />
@@ -106,12 +106,14 @@ export function FormsTab({ shop }: { shop: any }) {
                     </div>
                 </div>
 
-                <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/5">
+                <div className="flex gap-2 p-1 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5">
                     <button
                         onClick={() => setActiveSection("productFields")}
                         className={cn(
                             "flex-1 h-12 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                            activeSection === "productFields" ? "bg-white/10 text-white shadow-lg" : "text-muted-foreground hover:bg-white/[0.02]"
+                            activeSection === "productFields"
+                                ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                                : "text-muted-foreground hover:bg-slate-200/50 dark:hover:bg-white/[0.02]"
                         )}
                     >
                         <Layout className="w-4 h-4" /> Ürün Formu
@@ -120,7 +122,9 @@ export function FormsTab({ shop }: { shop: any }) {
                         onClick={() => setActiveSection("serviceFields")}
                         className={cn(
                             "flex-1 h-12 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2",
-                            activeSection === "serviceFields" ? "bg-white/10 text-white shadow-lg" : "text-muted-foreground hover:bg-white/[0.02]"
+                            activeSection === "serviceFields"
+                                ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                                : "text-muted-foreground hover:bg-slate-200/50 dark:hover:bg-white/[0.02]"
                         )}
                     >
                         <Zap className="w-4 h-4" /> Servis Formu
@@ -136,7 +140,7 @@ export function FormsTab({ shop }: { shop: any }) {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="group relative bg-[#0a0a0a] border border-white/5 rounded-[2rem] overflow-hidden transition-all hover:border-white/20"
+                                className="group relative bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden transition-all hover:border-blue-500/30 dark:hover:border-white/20 shadow-sm hover:shadow-md"
                             >
                                 <div className="p-6 space-y-6">
                                     {/* Field Header */}
@@ -151,7 +155,7 @@ export function FormsTab({ shop }: { shop: any }) {
                                                     value={field.label}
                                                     onChange={(e) => updateField(index, { label: e.target.value })}
                                                     placeholder="Örn: Cihaz Modeli"
-                                                    className="h-12 bg-white/[0.02] border-white/5 rounded-xl focus:border-indigo-500/50"
+                                                    className="h-12 bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 rounded-xl focus:border-indigo-500/50"
                                                 />
                                             </div>
                                         </div>
@@ -184,10 +188,10 @@ export function FormsTab({ shop }: { shop: any }) {
                                         <div className="space-y-1">
                                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Veri Tipi</Label>
                                             <Select value={field.type} onValueChange={(val) => updateField(index, { type: val })}>
-                                                <SelectTrigger className="h-12 bg-white/[0.02] border-white/5 rounded-xl focus:ring-0 focus:border-indigo-500/50 text-xs">
+                                                <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 rounded-xl focus:ring-0 focus:border-indigo-500/50 text-xs">
                                                     <SelectValue />
                                                 </SelectTrigger>
-                                                <SelectContent className="bg-[#111] border-white/10 text-white rounded-xl">
+                                                <SelectContent className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl">
                                                     <SelectItem value="text">Metin</SelectItem>
                                                     <SelectItem value="number">Sayı</SelectItem>
                                                     <SelectItem value="textarea">Uzun Metin</SelectItem>
@@ -204,7 +208,7 @@ export function FormsTab({ shop }: { shop: any }) {
                                                 value={field.options?.join(", ") || ""}
                                                 onChange={(e) => updateField(index, { options: e.target.value.split(",").map((s) => s.trim()) })}
                                                 placeholder="Seçenek 1, Seçenek 2, Seçenek 3"
-                                                className="h-12 bg-white/[0.02] border-white/5 rounded-xl text-xs focus:border-indigo-500/50"
+                                                className="h-12 bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 rounded-xl text-xs focus:border-indigo-500/50"
                                             />
                                         </motion.div>
                                     )}
@@ -232,7 +236,7 @@ export function FormsTab({ shop }: { shop: any }) {
                         </Badge>
                     </div>
 
-                    <div className="bg-[#0a0a0a] border border-white/5 rounded-[3rem] p-8 space-y-8 relative overflow-hidden group">
+                    <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-[3rem] p-8 space-y-8 relative overflow-hidden group shadow-sm">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.03] to-transparent pointer-events-none" />
 
                         <div className="relative space-y-6">
@@ -254,16 +258,16 @@ export function FormsTab({ shop }: { shop: any }) {
                                         </div>
 
                                         {field.type === "textarea" ? (
-                                            <div className="h-24 w-full bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-[10px] text-gray-500 font-medium italic">
+                                            <div className="h-24 w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl p-4 text-[10px] text-gray-500 font-medium italic">
                                                 {field.label} içeriği buraya yazılacak...
                                             </div>
                                         ) : field.type === "select" ? (
-                                            <div className="h-12 w-full bg-white/[0.03] border border-white/5 rounded-2xl px-4 flex items-center justify-between">
+                                            <div className="h-12 w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl px-4 flex items-center justify-between">
                                                 <span className="text-[10px] text-gray-500 font-medium italic">Seçim yapın...</span>
-                                                <List className="h-3 w-3 text-white/10" />
+                                                <List className="h-3 w-3 text-slate-300 dark:text-white/10" />
                                             </div>
                                         ) : (
-                                            <div className="h-12 w-full bg-white/[0.03] border border-white/5 rounded-2xl px-4 flex items-center">
+                                            <div className="h-12 w-full bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl px-4 flex items-center">
                                                 <span className="text-[10px] text-gray-500 font-medium italic">
                                                     {field.type === "number" ? "0" : `${field.label} girin...`}
                                                 </span>

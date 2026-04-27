@@ -56,6 +56,7 @@ import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Wrench } from "lucide-react";
+import { ServiceReceiptModal } from "@/components/service/service-receipt-modal";
 
 const MAX_PHOTOS = 6;
 const MAX_SIZE_MB = 3;
@@ -309,6 +310,8 @@ export default function NewServicePage() {
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
+  const [createdTicket, setCreatedTicket] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -507,7 +510,8 @@ export default function NewServicePage() {
 
       if (result.success) {
         toast({ title: "Başarılı", description: "Yeni servis kaydı oluşturuldu." });
-        router.push("/servis");
+        setCreatedTicket(result.data);
+        setShowReceipt(true);
       } else {
         toast({ title: "Hata", description: result.error, variant: "destructive" });
       }

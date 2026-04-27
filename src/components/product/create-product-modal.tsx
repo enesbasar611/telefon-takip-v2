@@ -37,6 +37,9 @@ import { getInventoryFormFields, extractCoreAndAttributes, getIndustryLabel } fr
 import { FormFactory } from "@/components/common/form-factory";
 
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { ScannerModal } from "@/components/scanner/scanner-modal";
+import { useScanner } from "@/hooks/use-scanner";
+import { ScanLine } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
@@ -73,6 +76,28 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
   const [aiExpanded, setAiExpanded] = useState(false);
   const [aiDescription, setAiDescription] = useState("");
   const [aiStatus, setAiStatus] = useState<"idle" | "success" | "error">("idle");
+
+  const [scannerRoomId, setScannerRoomId] = useState<string>("");
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+
+  const { initializeScannerRoom, sendSuccessFeedback } = useScanner(
+    (barcode: string) => {
+      setValue("barcode", barcode, { shouldValidate: true });
+      sendSuccessFeedback("Barkod Kopyalandı");
+      toast.success("Barkod okutuldu");
+      setIsScannerModalOpen(false);
+    }
+  );
+
+  useEffect(() => {
+    let rid = localStorage.getItem("scanner_room_id");
+    if (!rid) {
+      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem("scanner_room_id", rid);
+    }
+    setScannerRoomId(rid);
+    initializeScannerRoom(rid);
+  }, [initializeScannerRoom]);
 
   const industryFields = getInventoryFormFields(shop);
 
@@ -368,7 +393,18 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                     <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
-                    <Input id="barcode" {...register("barcode")} placeholder="Boş bırakılırsa ürün adına göre oluşturulur" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <div className="relative">
+                      <Input id="barcode" {...register("barcode")} placeholder="Boş bırakılırsa ürün adına göre oluşturulur" className="bg-muted border-border rounded-xl h-12 pl-4 pr-12 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                        onClick={() => setIsScannerModalOpen(true)}
+                      >
+                        <ScanLine className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <p className="text-[10px] text-muted-foreground/80 px-1">Barkod girmezseniz sistem ürün adıyla uyumlu benzersiz barkod oluşturur.</p>
                   </div>
                 </div>
@@ -492,6 +528,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
           </div>
         </form>
       </DialogContent>
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
     </Dialog>
   );
 }

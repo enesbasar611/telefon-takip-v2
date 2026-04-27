@@ -95,10 +95,8 @@ export function buildBarcodePrintQueue(
 }
 
 export function generateProductBarcode({
-  shopId,
   productId,
   productName,
-  randomPart = randomBarcodeSegment(),
 }: {
   shopId: string;
   productId: string;
@@ -106,11 +104,37 @@ export function generateProductBarcode({
   createdAtMs?: number;
   randomPart?: string;
 }) {
-  const namePart = compactProductName(productName || productId).slice(0, 8);
-  const productPart = compactId(productId).slice(-4).padStart(4, "0");
-  const randomPartCompact = compactId(randomPart).slice(0, 4).padEnd(4, "0");
-  const base = `TT2-${namePart}-${productPart}${randomPartCompact}`;
-  return `${base}-${checksumDigit(base)}`;
+  const prefix = "BST-";
+  const initials = extractInitials(productName || "PRD");
+  const shortId = compactId(productId).slice(-4).padStart(4, "0");
+
+  return `${prefix}${initials}-${shortId}`;
+}
+
+function extractInitials(name: string): string {
+  if (!name) return "PRD";
+
+  // Normalize and split by spaces or dashes
+  const words = name
+    .trim()
+    .replace(/[çÇ]/g, "C")
+    .replace(/[ğĞ]/g, "G")
+    .replace(/[ıİ]/g, "I")
+    .replace(/[öÖ]/g, "O")
+    .replace(/[şŞ]/g, "S")
+    .replace(/[üÜ]/g, "U")
+    .split(/[\s-]+/)
+    .filter(word => word.length > 0);
+
+  if (words.length === 1) {
+    return words[0].slice(0, 3).toUpperCase();
+  }
+
+  return words
+    .map(word => word[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
 }
 
 function randomBarcodeSegment() {
