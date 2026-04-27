@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import io from "socket.io-client";
 import type { Socket } from "socket.io-client";
 import { toast } from "sonner";
 
@@ -25,12 +25,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const socketUrl = window.location.origin;
+
+        console.log("Initializing socket connection to:", socketUrl);
+
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
-            transports: ['websocket'], // Force websocket for Traefik performance and stability
+            transports: ['websocket'], // SKIP POLLING: Best for Traefik/Docker environments
+            upgrade: false, // Don't try to upgrade, start with websocket
+            rememberUpgrade: true,
             reconnection: true,
-            reconnectionAttempts: 5,
-            timeout: 10000,
+            reconnectionAttempts: Infinity, // Keep trying forever
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 10000,
+            timeout: 20000,
+            autoConnect: true,
         });
 
         socketInstance.on("connect", () => {

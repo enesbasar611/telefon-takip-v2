@@ -159,10 +159,22 @@ export default function MobileScannerPage() {
 
     if (!isConnected) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-black/90 text-white">
-                <div className="text-center space-y-4">
-                    <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-500" />
-                    <p>Sunucuya bağlanılıyor...</p>
+            <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-white p-6">
+                <div className="text-center space-y-6 max-w-xs">
+                    <div className="relative mx-auto w-16 h-16">
+                        <Loader2 className="w-16 h-16 animate-spin text-blue-500 opacity-20" />
+                        <Loader2 className="w-16 h-16 animate-spin text-blue-400 absolute inset-0 [animation-duration:1.5s]" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-bold tracking-tight">Sunucuya Bağlanıyor</h3>
+                        <p className="text-sm text-neutral-500 leading-relaxed">
+                            Traefik Gateway üzerinden güvenli WebSocket tüneli kuruluyor...
+                        </p>
+                    </div>
+                    <div className="pt-4 flex items-center justify-center gap-2 text-[10px] text-neutral-600 uppercase tracking-widest font-bold">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        Handshake Aşamasında
+                    </div>
                 </div>
             </div>
         );

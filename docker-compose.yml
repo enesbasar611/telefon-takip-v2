@@ -9,16 +9,24 @@ services:
       - "traefik.enable=true"
       # Domain yönlendirmesi
       - "traefik.http.routers.telefon-takip.rule=Host(`basarteknik.tech`)"
-      # SSL (HTTPS) ayarları - senin traefik ayarlarındaki entrypoint adın neyse (genelde websecure)
       - "traefik.http.routers.telefon-takip.entrypoints=websecure"
       - "traefik.http.routers.telefon-takip.tls=true"
+
+      # --- KRİTİK SOCKET.IO AYARLARI ---
       # İçerideki portu Traefik'e tanıtıyoruz
       - "traefik.http.services.telefon-takip.loadbalancer.server.port=5000"
+
+      # Sticky Sessions: Socket.io'nun handshake (el sıkışma) aşamasında 
+      # bağlantının kopmaması için aynı istemciyi aynı container'a bağlar.
+      - "traefik.http.services.telefon-takip.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.telefon-takip.loadbalancer.sticky.cookie.name=basar_teknik_socket"
+      - "traefik.http.services.telefon-takip.loadbalancer.sticky.cookie.httpOnly=true"
+
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://neondb_owner:npg_3BDNheXV2xSL@ep-still-shadow-alqclhl0.c-3.eu-central-1.aws.neon.tech/telefoncu-app-db?sslmode=require&channel_binding=require
       - NEXTAUTH_URL=https://basarteknik.tech
-      - NEXTAUTH_SECRET=senin_gizli_anahtarin # Burayı gerçek secret ile değiştir kanka
+      - NEXTAUTH_SECRET=senin_gizli_anahtarin
       - GOOGLE_API_KEY=senin_google_keyin
     volumes:
       - whatsapp-auth:/app/.whatsapp-auth
