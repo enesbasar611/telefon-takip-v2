@@ -24,10 +24,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+        const socketUrl = window.location.origin;
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
-            transports: ['websocket', 'polling'],
+            transports: ['websocket'], // Force websocket for Traefik performance and stability
+            reconnection: true,
+            reconnectionAttempts: 5,
+            timeout: 10000,
         });
 
         socketInstance.on("connect", () => {

@@ -46,11 +46,15 @@ app.prepare().then(() => {
             if (pathname === '/api/network-info' || pathname === '/api/network-info/') {
                 console.log('[API] Serving network info');
                 const ip = getPreferredIp();
+                const protocol = req.headers['x-forwarded-proto'] || 'http';
+                const host = req.headers['host'] || `${ip}:${port}`;
+                const origin = `${protocol}://${host}`;
+
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({
                     ip,
                     port,
-                    origin: `http://${ip}:${port}`,
+                    origin,
                     allIps: getLocalIps()
                 }));
                 return;
