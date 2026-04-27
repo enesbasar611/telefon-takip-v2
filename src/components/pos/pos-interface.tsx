@@ -140,8 +140,21 @@ export function POSInterface({ products: initialProducts, customers, categories,
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    // Auto-fullscreen from shortcut parameter
+    if (searchParams.get("fullscreen") === "true") {
+      const triggerFs = () => {
+        if (!document.fullscreenElement) {
+          containerRef.current?.requestFullscreen().catch(() => { });
+        }
+      };
+      triggerFs();
+      // Browsers often block auto-fullscreen, so we try once on the first document click too
+      document.addEventListener("click", triggerFs, { once: true });
+    }
+
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+  }, [searchParams]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {

@@ -26,6 +26,8 @@ import { LayoutDashboard } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
+import { LiveClock } from "@/components/dashboard/live-clock";
+import { QuickShortcuts } from "@/components/dashboard/quick-shortcuts";
 
 export default async function DashboardPage() {
   const [shop, categories] = await Promise.all([
@@ -45,8 +47,14 @@ export default async function DashboardPage() {
       <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
         <PageHeader
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
-          description={`${industryConf.name} operasyon ve finans takip merkezi • ${format(new Date(), "d MMMM yyyy", { locale: tr })}`}
+          description={
+            <div className="flex items-center gap-1">
+              <span>{industryConf.name} operasyon ve finans takip merkezi • {format(new Date(), "d MMMM yyyy", { locale: tr })}</span>
+              <LiveClock />
+            </div>
+          }
           icon={LayoutDashboard}
+          actions={<QuickShortcuts />}
           badge={
             <div className="flex items-center gap-4 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-full shadow-sm">
               <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
