@@ -3,31 +3,63 @@
 import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, QrCode, Smartphone } from "lucide-react";
+import { Copy, HelpCircle, QrCode, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { fixAllBarcodes } from "@/lib/actions/product-actions";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { buildScannerUrl } from "@/lib/scanner-url";
+import { ScannerHelpModal } from "@/components/scanner/scanner-help-modal";
+import { useScanner } from "@/hooks/use-scanner";
 
 export default function MobileScannerSettingsPage() {
     const { data: session } = useSession();
     const [qrUrl, setQrUrl] = useState("");
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const { initializeScannerRoom, isMobileScannerLinked } = useScanner();
 
     useEffect(() => {
         if (session?.user?.shopId || session?.user?.id) {
             const room = session.user.shopId || session.user.id;
-            const host = window.location.origin;
-            setQrUrl(`${host}/scanner?room=${room}`);
+            initializeScannerRoom(room);
+
+            const setFallbackUrl = () => {
+                setQrUrl(buildScannerUrl({
+                    roomId: room,
+                    browserOrigin: window.location.origin,
+                }));
+            };
+
+            fetch("/api/network-info")
+                .then((r) => r.json())
+                .then((data) => {
+                    setQrUrl(buildScannerUrl({
+                        roomId: room,
+                        browserOrigin: window.location.origin,
+                        networkInfo: data,
+                    }));
+                })
+                .catch(setFallbackUrl);
         }
-    }, [session]);
+    }, [session, initializeScannerRoom]);
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(qrUrl);
         toast.success("Bağlantı kopyalandı!");
     };
 
+    const openHelp = () => {
+        if (isMobileScannerLinked) {
+            toast.info("Telefon zaten bağlı.");
+            return;
+        }
+        setIsHelpOpen(true);
+    };
+
     return (
+        <>
         <div className="p-6 md:p-10 space-y-8 max-w-4xl mx-auto">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Mobil Tarayıcı Modülü</h1>
@@ -57,13 +89,25 @@ export default function MobileScannerSettingsPage() {
                         </div>
 
                         <div className="w-full flex items-center space-x-2">
-                            <code className="flex-1 bg-neutral-100 dark:bg-neutral-900 p-3 rounded-lg text-xs truncate">
-                                {qrUrl}
-                            </code>
+                            <Input
+                                readOnly
+                                value={qrUrl}
+                                onFocus={(event) => event.currentTarget.select()}
+                                className="flex-1 h-11 bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-mono"
+                            />
                             <Button size="icon" variant="outline" onClick={copyToClipboard}>
                                 <Copy className="w-4 h-4" />
                             </Button>
                         </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-11 rounded-2xl gap-2"
+                            onClick={openHelp}
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            Nasıl bağlarım?
+                        </Button>
                     </CardContent>
                 </Card>
 
@@ -131,5 +175,7 @@ export default function MobileScannerSettingsPage() {
                 </Card>
             </div>
         </div>
+        <ScannerHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+        </>
     );
 }

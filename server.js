@@ -93,6 +93,14 @@ app.prepare().then(() => {
             });
         });
 
+        socket.on('mobile_scanner_ready', ({ roomId }) => {
+            if (!roomId) return;
+            console.log(`Mobile scanner linked in room ${roomId}: ${socket.id}`);
+            io.to(roomId).emit('mobile_scanner_linked', {
+                deviceId: socket.id.substring(0, 4).toUpperCase()
+            });
+        });
+
         // PC'den telefona ekleme başarılı sinyali
         socket.on('scan_success', ({ roomId, productName, deviceId }) => {
             io.to(roomId).emit('mobile_feedback', { success: true, productName, deviceId });

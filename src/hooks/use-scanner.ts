@@ -11,7 +11,12 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
         if (!socket || !isConnected) return;
 
         // Set Room ID logically as the entity's ID (or generate one)
-        setRoomId(currentUserIdOrShopId);
+        setRoomId((currentRoomId) => {
+            if (currentRoomId !== currentUserIdOrShopId) {
+                setIsMobileScannerLinked(false);
+            }
+            return currentUserIdOrShopId;
+        });
         socket.emit("join_room", currentUserIdOrShopId);
     }, [socket, isConnected]);
 
@@ -31,6 +36,19 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
             socket.off("process_barcode", handleProcessBarcode);
         };
     }, [socket, roomId, onBarcodeScanned]);
+
+    useEffect(() => {
+        if (!socket || !roomId) return;
+
+        const handleMobileLinked = () => {
+            setIsMobileScannerLinked(true);
+        };
+
+        socket.on("mobile_scanner_linked", handleMobileLinked);
+        return () => {
+            socket.off("mobile_scanner_linked", handleMobileLinked);
+        };
+    }, [socket, roomId]);
 
     // Feedback commands sent from PC to Mobile
     const sendSuccessFeedback = useCallback((productName: string, deviceId?: string) => {

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import { industries, IndustryType } from "@/config/industries";
 import { updateShopModules } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import {
-    Wrench, Package, ShoppingCart, BarChart3,
+    Wrench, Package, ShoppingCart, BarChart3, Barcode,
     Heart, Calendar, CheckCircle2, Sparkles, Info,
     Users, Wallet, Truck, UserCheck, MessageSquare
 } from "lucide-react";
@@ -155,6 +156,12 @@ export function ModulesTab({ shop }: { shop: any }) {
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                    <Button asChild size="sm" variant="outline" className="rounded-xl gap-2">
+                        <Link href="/ayarlar/moduller">
+                            <Barcode className="h-4 w-4" />
+                            Barkod okuyucu
+                        </Link>
+                    </Button>
                     <span className="text-xs text-muted-foreground/60 hidden sm:block">
                         {industryConf.name} şablonu
                     </span>

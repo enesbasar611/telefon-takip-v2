@@ -62,6 +62,7 @@ export default function MobileScannerPage() {
     useEffect(() => {
         if (socket && isConnected && roomId) {
             socket.emit("join_room", roomId);
+            socket.emit("mobile_scanner_ready", { roomId });
             console.log("Joined room:", roomId);
 
             // Feedback event listeners

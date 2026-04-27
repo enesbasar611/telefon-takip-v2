@@ -2,11 +2,15 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useScanner } from "@/hooks/use-scanner";
-import { Smartphone, QrCode, Loader2 } from "lucide-react";
+import { Smartphone, QrCode, Loader2, HelpCircle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRouter } from "next/navigation";
 import { buildScannerUrl } from "@/lib/scanner-url";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScannerHelpModal } from "@/components/scanner/scanner-help-modal";
+import { toast } from "sonner";
 
 interface ScannerModalProps {
     open: boolean;
@@ -15,9 +19,10 @@ interface ScannerModalProps {
 }
 
 export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModalProps) {
-    const { initializeScannerRoom, isConnected, socket } = useScanner();
+    const { initializeScannerRoom, isConnected, isMobileScannerLinked, socket } = useScanner();
     const [qrUrl, setQrUrl] = useState("");
     const [recentScans, setRecentScans] = useState<{ id: string; name: string; time: string; device: string }[]>([]);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -73,7 +78,16 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
         return () => { socket.off("process_barcode", handleBarcode); };
     }, [socket, open]);
 
+    const openHelp = () => {
+        if (isMobileScannerLinked) {
+            toast.info("Telefon zaten bağlı.");
+            return;
+        }
+        setIsHelpOpen(true);
+    };
+
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md border-neutral-200 dark:border-neutral-800 backdrop-blur-md bg-white/90 dark:bg-neutral-900/90 shadow-2xl">
                 <DialogHeader>
@@ -94,6 +108,12 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                                 <p className="text-xs font-medium">Sunucu bağlantısı bekleniyor, QR hazır.</p>
                             </div>
                         )}
+                        {isMobileScannerLinked && (
+                            <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                <p className="text-xs font-medium">Telefon bağlı. Barkod okutmaya hazır.</p>
+                            </div>
+                        )}
                         <div className="flex flex-col items-center space-y-4">
                                 <div className="bg-white p-4 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800">
                                     {qrUrl ? (
@@ -102,15 +122,28 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                                         <div className="w-[180px] h-[180px] bg-neutral-100 animate-pulse rounded-lg" />
                                     )}
                                 </div>
-                                <div className="text-center px-4">
-                                    <p className="text-[10px] font-mono text-neutral-400 break-all select-all cursor-pointer hover:text-blue-500 transition-colors">
-                                        {qrUrl}
-                                    </p>
+                                <div className="w-full px-4 space-y-2 text-center">
+                                    <Input
+                                        readOnly
+                                        value={qrUrl}
+                                        onFocus={(event) => event.currentTarget.select()}
+                                        className="h-10 rounded-xl bg-neutral-100 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-300"
+                                    />
                                     <p className="text-[9px] text-neutral-500 italic mt-1">
                                         (Bağlanamazsa bu adresi telefon tarayıcısına elle yazın)
                                     </p>
                                 </div>
                             </div>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full h-11 rounded-2xl gap-2"
+                                onClick={openHelp}
+                            >
+                                <HelpCircle className="h-4 w-4" />
+                                Nasıl bağlarım?
+                            </Button>
 
                             <div className="text-center space-y-2 max-w-xs">
                                 <p className="font-semibold flex items-center justify-center gap-2 text-neutral-800 dark:text-neutral-200">
@@ -146,5 +179,7 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                 </div>
             </DialogContent>
         </Dialog>
+        <ScannerHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+        </>
     );
 }
