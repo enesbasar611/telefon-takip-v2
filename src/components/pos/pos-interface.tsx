@@ -187,6 +187,19 @@ export function POSInterface({ products: initialProducts, customers, categories,
     }
   };
 
+  const addBarcodeMatchToCart = (value: string) => {
+    const normalizedValue = value.trim().toUpperCase();
+    if (!normalizedValue) return false;
+
+    const product = products.find((p: any) => p.barcode?.toUpperCase() === normalizedValue);
+    if (!product) return false;
+
+    addToCart(product);
+    setSearchTerm("");
+    toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
+    return true;
+  };
+
   const updateQuantity = (id: string, delta: number) => {
     setCart(cart.map((item) => {
       if (item.id === id) {
@@ -327,10 +340,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
-                  placeholder="Ürün adı veya barkod..."
+                  placeholder="Ürün adı veya barkod okut..."
                   className="pl-12 bg-muted/30 border-border/40 h-14 sm:h-12 rounded-2xl text-sm sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && addBarcodeMatchToCart(searchTerm)) {
+                      e.preventDefault();
+                    }
+                  }}
                   autoFocus
                 />
               </div>

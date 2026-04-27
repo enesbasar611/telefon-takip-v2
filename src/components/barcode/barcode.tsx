@@ -9,9 +9,10 @@ interface BarcodeProps {
   width?: number;
   height?: number;
   fontSize?: number;
+  displayValue?: boolean;
 }
 
-export function Barcode({ value, width = 2, height = 50, fontSize = 12 }: BarcodeProps) {
+export function Barcode({ value, width = 2, height = 50, fontSize = 12, displayValue = true }: BarcodeProps) {
   if (!value) return null;
 
   return (
@@ -22,7 +23,7 @@ export function Barcode({ value, width = 2, height = 50, fontSize = 12 }: Barcod
         height={height}
         fontSize={fontSize}
         format="CODE128"
-        displayValue={true}
+        displayValue={displayValue}
       />
     </div>
   );

@@ -97,6 +97,19 @@ export function POSCompact({ products, customers, categories }: { products: any[
         }
     };
 
+    const addBarcodeMatchToCart = (value: string) => {
+        const normalizedValue = value.trim().toUpperCase();
+        if (!normalizedValue) return false;
+
+        const product = products.find((p: any) => p.barcode?.toUpperCase() === normalizedValue);
+        if (!product) return false;
+
+        addToCart(product);
+        setProductSearch("");
+        toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
+        return true;
+    };
+
     const removeFromCart = (id: string) => {
         setCart(cart.filter(item => item.id !== id));
     };
@@ -171,10 +184,15 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 <div className="relative group">
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                     <Input
-                        placeholder="Ürün veya seri no ara..."
+                        placeholder="Ürün adı veya barkod okut..."
                         className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && addBarcodeMatchToCart(productSearch)) {
+                                e.preventDefault();
+                            }
+                        }}
                     />
                 </div>
             </div>

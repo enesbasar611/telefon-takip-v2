@@ -4,6 +4,11 @@ import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Check, Loader2 } from "lucide-react";
+import {
+    fontFamilies,
+    getRadiusForButtonStyle,
+    hexToHsl,
+} from "@/lib/appearance-settings";
 
 interface AppearanceTabProps {
     formData: Record<string, string>;
@@ -27,37 +32,6 @@ const buttonStyles = [
     { label: "Keskin", value: "sharp", preview: "rounded-md" },
 ];
 
-const fontFamilies = [
-    { label: "Inter", value: "Inter", gfont: "Inter:wght@300;400;500;600;700" },
-    { label: "Poppins", value: "Poppins", gfont: "Poppins:wght@300;400;500;600;700" },
-    { label: "Outfit", value: "Outfit", gfont: "Outfit:wght@300;400;500;600;700" },
-    { label: "Roboto", value: "Roboto", gfont: "Roboto:wght@300;400;500;700" },
-    { label: "Nunito", value: "Nunito", gfont: "Nunito:wght@300;400;500;600;700" },
-    { label: "Jakarta", value: "Plus Jakarta Sans", gfont: "Plus+Jakarta+Sans:wght@300;400;500;600;700" },
-];
-
-// Convert HEX to HSL string for CSS variable
-function hexToHsl(hex: string): string {
-    let r = 0, g = 0, b = 0;
-    if (hex.length === 7) {
-        r = parseInt(hex.slice(1, 3), 16) / 255;
-        g = parseInt(hex.slice(3, 5), 16) / 255;
-        b = parseInt(hex.slice(5, 7), 16) / 255;
-    }
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
-    if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-            case g: h = ((b - r) / d + 2) / 6; break;
-            case b: h = ((r - g) / d + 4) / 6; break;
-        }
-    }
-    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
 export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabProps) {
     const currentBrand = formData.brandColor || "#3B82F6";
     const currentBtnStyle = formData.buttonStyle || "rounded";
@@ -69,7 +43,18 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
         const font = fontFamilies.find(f => f.value === currentFont);
         if (!font) return;
 
-        // 1. Inject Google Font link if not already present
+        fontFamilies.forEach((previewFont) => {
+            const previewLinkId = `gfont-${previewFont.value.replace(/\s/g, "-")}`;
+            if (!document.getElementById(previewLinkId)) {
+                const link = document.createElement("link");
+                link.id = previewLinkId;
+                link.rel = "stylesheet";
+                link.href = `https://fonts.googleapis.com/css2?family=${previewFont.gfont}&display=swap`;
+                document.head.appendChild(link);
+            }
+        });
+
+        // 1. Inject selected Google Font link if not already present
         const linkId = `gfont-${font.value.replace(/\s/g, "-")}`;
         if (!document.getElementById(linkId)) {
             const link = document.createElement("link");
@@ -90,11 +75,16 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
         styleTag.innerHTML = `
             :root {
                 --app-font: '${currentFont}', system-ui, -apple-system, sans-serif !important;
+                --app-font-weight: ${currentWeight};
             }
-            body {
+            body,
+            h1, h2, h3, h4, h5, h6,
+            button, label, span, p, div,
+            input, textarea, select {
                 font-family: '${currentFont}', system-ui, -apple-system, sans-serif !important;
                 font-weight: ${currentWeight} !important;
             }
+            body { font-weight: ${currentWeight} !important; }
         `;
     }, [currentFont, currentWeight]);
 
@@ -104,6 +94,10 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
         document.documentElement.style.setProperty("--primary", hsl);
         document.documentElement.style.setProperty("--ring", hsl);
     }, [currentBrand]);
+
+    useEffect(() => {
+        document.documentElement.style.setProperty("--radius", getRadiusForButtonStyle(currentBtnStyle));
+    }, [currentBtnStyle]);
 
     return (
         <div className="space-y-10">

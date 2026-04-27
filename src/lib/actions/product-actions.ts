@@ -7,6 +7,7 @@ import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId } from "@/lib/auth";
 import { productSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { generateProductBarcode } from "@/lib/barcode-utils";
 import { z } from "zod";
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
@@ -148,6 +149,24 @@ export const getCategories = cache(async function getCategories() {
   }
 });
 
+export const getProductsForCategorySummary = cache(async function getProductsForCategorySummary() {
+  try {
+    const shopId = await getShopId();
+    const products = await prisma.product.findMany({
+      where: { shopId, stock: { gt: 0 } },
+      select: {
+        categoryId: true,
+        buyPrice: true,
+        sellPrice: true,
+        stock: true,
+      }
+    });
+    return serializePrisma(products);
+  } catch (error) {
+    return [];
+  }
+});
+
 export async function createProduct(rawData: z.input<typeof productSchema>) {
   try {
     const shopId = await getShopId();
@@ -213,7 +232,7 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
       };
     }
 
-    const product = await prisma.product.create({
+    let product = await prisma.product.create({
       data: {
         name: formatTitleCase(data.name),
         categoryId: finalCategoryId as string,
@@ -260,6 +279,20 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
       }
     });
 
+    if (!product.barcode) {
+      product = await prisma.product.update({
+        where: { id: product.id, shopId },
+        data: {
+          barcode: generateProductBarcode({
+            shopId,
+            productId: product.id,
+            productName: product.name,
+            createdAtMs: product.createdAt.getTime(),
+          }),
+        },
+      });
+    }
+
     revalidatePath("/stok");
     revalidatePath("/ikinci-el");
     return { success: true, product: serializePrisma(product) };
@@ -269,6 +302,81 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
     }
     console.error("Create product error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Ürün eklenemedi." };
+  }
+}
+
+export async function ensureProductBarcode(productId: string) {
+  try {
+    const shopId = await getShopId();
+    const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
+
+    if (!product) {
+      return { success: false, error: "Ürün bulunamadı." };
+    }
+
+    if (product.barcode) {
+      return { success: true, product: serializePrisma(product) };
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId, shopId },
+      data: {
+        barcode: generateProductBarcode({
+          shopId,
+          productId: product.id,
+          productName: product.name,
+          createdAtMs: product.createdAt.getTime(),
+        }),
+      },
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/satis");
+    return { success: true, product: serializePrisma(updatedProduct) };
+  } catch (error) {
+    console.error("Ensure product barcode error:", error);
+    return { success: false, error: "Barkod oluşturulamadı." };
+  }
+}
+
+export async function regenerateProductBarcodes(productIds: string[]) {
+  try {
+    const shopId = await getShopId();
+    const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
+
+    if (uniqueIds.length === 0) {
+      return { success: false, error: "Barkod yenilemek için ürün seçin." };
+    }
+
+    const products = await prisma.product.findMany({
+      where: { shopId, id: { in: uniqueIds } },
+    });
+
+    if (products.length === 0) {
+      return { success: false, error: "Seçili ürünler bulunamadı." };
+    }
+
+    const updatedProducts = await prisma.$transaction(
+      products.map((product) =>
+        prisma.product.update({
+          where: { id: product.id, shopId },
+          data: {
+            barcode: generateProductBarcode({
+              shopId,
+              productId: product.id,
+              productName: product.name,
+            }),
+          },
+        })
+      )
+    );
+
+    revalidatePath("/stok");
+    revalidatePath("/satis");
+    return { success: true, count: updatedProducts.length, products: serializePrisma(updatedProducts) };
+  } catch (error) {
+    console.error("Regenerate product barcodes error:", error);
+    return { success: false, error: "Barkodlar yenilenemedi." };
   }
 }
 
@@ -666,11 +774,25 @@ export async function getProductMovements(productId: string) {
 export async function getInventoryStats() {
   try {
     const shopId = await getShopId();
-    const products = await prisma.product.findMany({ where: { shopId } });
+    const [products, criticalCount] = await Promise.all([
+      prisma.product.findMany({
+        where: { shopId },
+        select: {
+          buyPrice: true,
+          sellPrice: true,
+          stock: true,
+        }
+      }),
+      prisma.product.count({
+        where: {
+          shopId,
+          stock: { lte: prisma.product.fields.criticalStock }
+        }
+      })
+    ]);
 
     const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
     const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
-    const criticalCount = products.filter(p => p.stock <= p.criticalStock).length;
     const totalItems = products.reduce((acc, p) => acc + p.stock, 0);
 
     return {
@@ -834,7 +956,7 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
           finalCategoryId = generalCat.id;
         }
 
-        const product = await tx.product.create({
+        let product = await tx.product.create({
           data: {
             name: formatTitleCase(data.name),
             categoryId: finalCategoryId as string,
@@ -874,6 +996,19 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
             }
           }
         });
+        if (!product.barcode) {
+          product = await tx.product.update({
+            where: { id: product.id, shopId },
+            data: {
+              barcode: generateProductBarcode({
+                shopId,
+                productId: product.id,
+                productName: product.name,
+                createdAtMs: product.createdAt.getTime(),
+              }),
+            },
+          });
+        }
         createdProducts.push(product);
       }
       return createdProducts;

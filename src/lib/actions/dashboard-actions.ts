@@ -19,7 +19,13 @@ export const getDashboardStats = async (shopId: string) => {
             where: { shopId, status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
           }),
           prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
-          prisma.product.findMany({ where: { shopId } }),
+          prisma.product.findMany({
+            where: { shopId },
+            select: {
+              stock: true,
+              criticalStock: true,
+            }
+          }),
           prisma.sale.aggregate({
             where: { shopId, createdAt: { gte: today } },
             _sum: { finalAmount: true }

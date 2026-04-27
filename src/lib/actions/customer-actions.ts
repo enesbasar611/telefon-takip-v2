@@ -75,9 +75,12 @@ export async function getCustomersPaginated(params: {
           loyaltyPoints: true,
           createdAt: true,
           updatedAt: true,
-          // Instead of full relations, we just grab their counts
-          tickets: { select: { id: true } },
-          sales: { select: { id: true } },
+          _count: {
+            select: {
+              tickets: true,
+              sales: true
+            }
+          },
         },
         orderBy: { updatedAt: "desc" },
         take: limit,

@@ -10,9 +10,9 @@ const config: Config = {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ['var(--font-outfit)', 'sans-serif'],
+				sans: ['var(--app-font)', 'sans-serif'],
 				mono: ['var(--font-geist-mono)', 'monospace'],
-				aeonik: ['var(--font-outfit)', 'sans-serif'],
+				aeonik: ['var(--app-font)', 'sans-serif'],
 			},
 			colors: {
 				background: 'hsl(var(--background))',

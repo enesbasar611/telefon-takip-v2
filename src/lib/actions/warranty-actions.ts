@@ -25,11 +25,27 @@ export async function getWarrantyStats() {
                 where: { shopId },
                 take: 10,
                 orderBy: { createdAt: "desc" },
-                include: {
+                select: {
+                    id: true,
+                    ticketNumber: true,
+                    returnReason: true,
+                    createdAt: true,
                     serviceTicket: {
-                        include: { customer: true }
+                        select: {
+                            ticketNumber: true,
+                            customer: {
+                                select: {
+                                    name: true,
+                                    phone: true
+                                }
+                            }
+                        }
                     },
-                    product: true,
+                    product: {
+                        select: {
+                            name: true
+                        }
+                    },
                 }
             })
         ]);

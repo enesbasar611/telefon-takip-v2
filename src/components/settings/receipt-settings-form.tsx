@@ -13,30 +13,36 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PhoneInput } from "@/components/ui/phone-input";
 
-export function ReceiptSettingsForm({ initialSettings }: { initialSettings: any[] }) {
+export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings: any[]; shop?: any }) {
     const [activeType, setActiveType] = useState("pos");
     const [localSettings, setLocalSettings] = useState<any>({});
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
-        const current = initialSettings.find(s => s.id === activeType) || {
+        const current = initialSettings.find(s => s.id === activeType || String(s.id).endsWith(`_${activeType}`)) || {
             id: activeType,
-            title: "BAŞAR TEKNİK",
+            title: shop?.name || "BAŞAR TEKNİK",
             subtitle: activeType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
-            phone: "+90 (5xx) xxx xx xx",
-            address: "",
+            phone: shop?.phone || "",
+            address: shop?.address || "",
             footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
-            website: "v2.basarteknik.com",
+            website: shop?.website || "v2.basarteknik.com",
             terms: activeType === "service" ? "• Arıza tespit ücreti 150 TL'dir. İptal edilen cihazlarda bu ücret tahsil edilir.\n• 30 gün içinde teslim alınmayan cihazlardan işletmemiz sorumlu değildir.\n• Yedekleme sorumluluğu müşteriye aittir. Veri kaybından firmamız sorumlu tutulamaz." : ""
         };
-        setLocalSettings(current);
-    }, [activeType, initialSettings]);
+        setLocalSettings({
+            ...current,
+            title: current.title || shop?.name || "",
+            phone: current.phone || shop?.phone || "",
+            address: current.address || shop?.address || "",
+            website: current.website || shop?.website || "",
+        });
+    }, [activeType, initialSettings, shop]);
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const { id, updatedAt, ...saveData } = localSettings;
+            const { id, shopId, updatedAt, ...saveData } = localSettings;
             const res = await updateReceiptSettings(activeType, saveData);
             if (res.success) {
                 toast({ title: "Başarılı", description: `${activeType.toUpperCase()} şablonu güncellendi.` });

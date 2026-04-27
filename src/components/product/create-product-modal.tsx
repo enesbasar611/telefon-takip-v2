@@ -368,7 +368,8 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                     <Label htmlFor="barcode" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
-                    <Input id="barcode" {...register("barcode")} placeholder="Opsiyonel" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input id="barcode" {...register("barcode")} placeholder="Boş bırakılırsa ürün adına göre oluşturulur" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <p className="text-[10px] text-muted-foreground/80 px-1">Barkod girmezseniz sistem ürün adıyla uyumlu benzersiz barkod oluşturur.</p>
                   </div>
                 </div>
 

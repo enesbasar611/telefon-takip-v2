@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { sendApprovalCodeToAdmin } from "@/lib/mail";
+import { cache } from "react";
 
 const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "qwerty61.enes@gmail.com";
 
@@ -216,7 +217,7 @@ export const authOptions: NextAuthOptions = {
     },
 };
 
-export const getSession = () => getServerSession(authOptions);
+export const getSession = cache(() => getServerSession(authOptions));
 
 export const auth = async () => {
     const session = await getSession();

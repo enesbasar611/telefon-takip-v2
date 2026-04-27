@@ -215,7 +215,7 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
                 <WhatsAppTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
               )}
               {activeTab === "printing" && (
-                <PrinterTab receiptSettings={receiptSettings} />
+                <PrinterTab receiptSettings={receiptSettings} shop={shop} />
               )}
               {activeTab === "customers" && (
                 <CustomersTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />

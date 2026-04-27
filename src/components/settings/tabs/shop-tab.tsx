@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
     Select,
     SelectContent,
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
-import { Store, MapPin, Phone, Mail, Box, ShieldCheck, Zap } from "lucide-react";
+import { Store, MapPin, Mail, Box, ShieldCheck, Zap } from "lucide-react";
 import { industries } from "@/config/industries";
 
 type IndustryType = "PHONE_REPAIR" | "ELECTRICIAN" | "PLUMBING" | "COMPUTER_REPAIR" | "GENERAL";
@@ -108,17 +109,13 @@ export function ShopTab({ shop }: ShopTabProps) {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Telefon</Label>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                <Input
-                                    id="phone"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                                    placeholder="05xx..."
-                                    className="pl-9 bg-card/50"
-                                />
-                            </div>
+                            <PhoneInput
+                                id="phone"
+                                label="Telefon"
+                                value={formData.phone}
+                                onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                                className="bg-card/50"
+                            />
                         </div>
 
                         <div className="space-y-2">

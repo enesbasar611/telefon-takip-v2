@@ -72,6 +72,10 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
     });
     const [isPending, startTransition] = useTransition();
 
+    const getCustomerCount = (customer: any, key: "tickets" | "sales") => {
+        return customer._count?.[key] ?? customer[key]?.length ?? 0;
+    };
+
     // Sync search to URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
@@ -204,11 +208,11 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
                                         <TableCell className="text-center">
                                             <div className="flex items-center justify-center gap-6">
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-foreground text-base ">{customer.tickets?.length || 0}</span>
+                                                    <span className="text-foreground text-base ">{getCustomerCount(customer, "tickets")}</span>
                                                     <span className="text-[8px]  text-muted-foreground/60 mt-0.5 uppercase">Servis</span>
                                                 </div>
                                                 <div className="flex flex-col items-center border-l border-border/30 pl-6">
-                                                    <span className="text-foreground text-base ">{customer.sales?.length || 0}</span>
+                                                    <span className="text-foreground text-base ">{getCustomerCount(customer, "sales")}</span>
                                                     <span className="text-[8px]  text-muted-foreground/60 mt-0.5 uppercase">Satış</span>
                                                 </div>
                                             </div>
@@ -290,11 +294,11 @@ export function CustomerListClient({ initialCustomers, totalPages, totalCount, c
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-muted/20 rounded-xl p-3 flex flex-col items-center justify-center border border-border/30">
-                                        <span className="text-lg font-bold text-foreground">{customer.tickets?.length || 0}</span>
+                                        <span className="text-lg font-bold text-foreground">{getCustomerCount(customer, "tickets")}</span>
                                         <span className="text-[9px] text-muted-foreground uppercase tracking-widest">Servis Kaydı</span>
                                     </div>
                                     <div className="bg-muted/20 rounded-xl p-3 flex flex-col items-center justify-center border border-border/30">
-                                        <span className="text-lg font-bold text-foreground">{customer.sales?.length || 0}</span>
+                                        <span className="text-lg font-bold text-foreground">{getCustomerCount(customer, "sales")}</span>
                                         <span className="text-[9px] text-muted-foreground uppercase tracking-widest">Toplam Satış</span>
                                     </div>
                                 </div>

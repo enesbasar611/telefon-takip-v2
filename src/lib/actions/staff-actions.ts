@@ -35,6 +35,32 @@ export const getStaff = async (shopId?: string) => {
   )();
 };
 
+export const getStaffShell = async (shopId?: string) => {
+  const finalShopId = shopId || await getShopId();
+  return unstable_cache(
+    async () => {
+      try {
+        const staff = await prisma.user.findMany({
+          where: { shopId: finalShopId },
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            role: true,
+          },
+          orderBy: { createdAt: "desc" }
+        });
+        return serializePrisma(staff);
+      } catch (error) {
+        console.error("Error fetching staff shell:", error);
+        return [];
+      }
+    },
+    [`staff-shell-${finalShopId}`],
+    { tags: [`staff-${finalShopId}`], revalidate: 3600 }
+  )();
+};
+
 export async function getProfile() {
   try {
     const userId = await getUserId();

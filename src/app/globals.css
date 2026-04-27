@@ -120,8 +120,9 @@
   input,
   textarea,
   select {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.01em;
+    font-family: var(--app-font, 'Inter', system-ui, -apple-system, sans-serif);
+    font-weight: var(--app-font-weight, inherit);
+    letter-spacing: 0;
   }
 
   /* Nexus Heading Hierarchy */
@@ -416,4 +417,309 @@
 
 .gemini-aura-button:hover::after {
   opacity: 0.25;
+}
+
+.barcode-print-area {
+  --barcode-label-width: 50mm;
+  --barcode-label-height: 30mm;
+  --barcode-a4-columns: 3;
+  --barcode-a4-padding: 6mm;
+  --barcode-label-gap: 2mm;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 430px;
+  overflow: auto;
+}
+
+.barcode-print-root {
+  display: none;
+}
+
+.barcode-print-page {
+  position: relative;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: var(--barcode-a4-padding);
+  display: grid;
+  grid-template-columns: repeat(var(--barcode-a4-columns), var(--barcode-label-width));
+  grid-auto-rows: var(--barcode-label-height);
+  justify-content: start;
+  align-content: start;
+  gap: var(--barcode-label-gap);
+  background: #fff;
+  border: 1px solid hsl(var(--border));
+  color: #000;
+  transform: scale(0.44);
+  transform-origin: top left;
+  margin: 0 0 calc(-297mm * 0.56) 0;
+}
+
+.barcode-label {
+  width: var(--barcode-label-width);
+  height: var(--barcode-label-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1mm;
+  overflow: hidden;
+  padding: 2mm;
+  background: #fff;
+  border: 1px dashed hsl(var(--border));
+  color: #000;
+  break-inside: avoid;
+}
+
+.barcode-page-counter {
+  position: absolute;
+  right: 8mm;
+  bottom: 6mm;
+  color: #666;
+  font-size: 10px;
+}
+
+.barcode-label-name {
+  color: #000;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barcode-label .flex.justify-center {
+  padding: 0;
+}
+
+.barcode-label svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.barcode-label-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2mm;
+  color: #000;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.barcode-label-price {
+  white-space: nowrap;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body.barcode-label-printing {
+    background: #fff !important;
+    margin: 0 !important;
+  }
+
+  body.barcode-label-printing * {
+    visibility: hidden !important;
+  }
+
+  body.barcode-label-printing .barcode-print-root,
+  body.barcode-label-printing .barcode-print-root * {
+    visibility: visible !important;
+  }
+
+  body.barcode-label-printing .no-print {
+    display: none !important;
+  }
+
+  body.barcode-label-printing .barcode-print-root {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    max-height: none;
+    overflow: visible;
+    width: 210mm;
+    background: #fff;
+  }
+
+  body.barcode-label-printing .barcode-print-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: var(--barcode-a4-padding);
+    border: 0;
+    transform: none;
+    display: grid;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  body.barcode-label-printing .barcode-print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  body.barcode-label-printing .barcode-label {
+    display: flex;
+    margin: 0;
+    border: 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+@layer utilities {
+
+  /*
+   * Theme bridge: older screens still use hard-coded blue Tailwind utilities.
+   * Map the common blue accent classes to the shop brand color so saved
+   * appearance settings affect active buttons, badges, borders, and icons.
+   */
+  .bg-blue-400,
+  .bg-blue-500,
+  .bg-blue-600,
+  .bg-blue-700 {
+    background-color: hsl(var(--primary)) !important;
+  }
+
+  .hover\:bg-blue-400:hover,
+  .hover\:bg-blue-500:hover,
+  .hover\:bg-blue-600:hover,
+  .hover\:bg-blue-700:hover {
+    background-color: hsl(var(--primary) / 0.9) !important;
+  }
+
+  .bg-blue-400\/5,
+  .bg-blue-500\/5,
+  .bg-blue-600\/5,
+  .bg-blue-700\/5,
+  .hover\:bg-blue-400\/5:hover,
+  .hover\:bg-blue-500\/5:hover,
+  .hover\:bg-blue-600\/5:hover,
+  .hover\:bg-blue-700\/5:hover {
+    background-color: hsl(var(--primary) / 0.05) !important;
+  }
+
+  .bg-blue-400\/8,
+  .bg-blue-500\/8,
+  .bg-blue-600\/8,
+  .bg-blue-700\/8,
+  .hover\:bg-blue-400\/8:hover,
+  .hover\:bg-blue-500\/8:hover,
+  .hover\:bg-blue-600\/8:hover,
+  .hover\:bg-blue-700\/8:hover {
+    background-color: hsl(var(--primary) / 0.08) !important;
+  }
+
+  .bg-blue-400\/10,
+  .bg-blue-500\/10,
+  .bg-blue-600\/10,
+  .bg-blue-700\/10,
+  .hover\:bg-blue-400\/10:hover,
+  .hover\:bg-blue-500\/10:hover,
+  .hover\:bg-blue-600\/10:hover,
+  .hover\:bg-blue-700\/10:hover {
+    background-color: hsl(var(--primary) / 0.1) !important;
+  }
+
+  .bg-blue-400\/20,
+  .bg-blue-500\/20,
+  .bg-blue-600\/20,
+  .bg-blue-700\/20 {
+    background-color: hsl(var(--primary) / 0.2) !important;
+  }
+
+  .border-blue-400,
+  .border-blue-500,
+  .border-blue-600,
+  .border-blue-700,
+  .hover\:border-blue-400:hover,
+  .hover\:border-blue-500:hover,
+  .hover\:border-blue-600:hover,
+  .hover\:border-blue-700:hover {
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  .border-blue-400\/10,
+  .border-blue-500\/10,
+  .border-blue-600\/10,
+  .border-blue-700\/10 {
+    border-color: hsl(var(--primary) / 0.1) !important;
+  }
+
+  .border-blue-400\/20,
+  .border-blue-500\/20,
+  .border-blue-600\/20,
+  .border-blue-700\/20,
+  .hover\:border-blue-400\/20:hover,
+  .hover\:border-blue-500\/20:hover,
+  .hover\:border-blue-600\/20:hover,
+  .hover\:border-blue-700\/20:hover {
+    border-color: hsl(var(--primary) / 0.2) !important;
+  }
+
+  .border-blue-400\/40,
+  .border-blue-500\/40,
+  .border-blue-600\/40,
+  .border-blue-700\/40 {
+    border-color: hsl(var(--primary) / 0.4) !important;
+  }
+
+  .text-blue-400,
+  .text-blue-500,
+  .text-blue-600,
+  .text-blue-700,
+  .hover\:text-blue-400:hover,
+  .hover\:text-blue-500:hover,
+  .hover\:text-blue-600:hover,
+  .hover\:text-blue-700:hover,
+  .group:hover .group-hover\:text-blue-400,
+  .group:hover .group-hover\:text-blue-500,
+  .group:hover .group-hover\:text-blue-600,
+  .group:hover .group-hover\:text-blue-700 {
+    color: hsl(var(--primary)) !important;
+  }
+
+  .text-blue-400\/60,
+  .text-blue-500\/60,
+  .text-blue-600\/60,
+  .text-blue-700\/60 {
+    color: hsl(var(--primary) / 0.6) !important;
+  }
+
+  .text-blue-400\/80,
+  .text-blue-500\/80,
+  .text-blue-600\/80,
+  .text-blue-700\/80 {
+    color: hsl(var(--primary) / 0.8) !important;
+  }
+
+  .ring-blue-400,
+  .ring-blue-500,
+  .ring-blue-600,
+  .ring-blue-700 {
+    --tw-ring-color: hsl(var(--primary)) !important;
+  }
+
+  .ring-blue-400\/20,
+  .ring-blue-500\/20,
+  .ring-blue-600\/20,
+  .ring-blue-700\/20 {
+    --tw-ring-color: hsl(var(--primary) / 0.2) !important;
+  }
+
+  .shadow-blue-400\/10,
+  .shadow-blue-500\/10,
+  .shadow-blue-600\/10,
+  .shadow-blue-700\/10 {
+    --tw-shadow-color: hsl(var(--primary) / 0.1) !important;
+  }
 }

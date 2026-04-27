@@ -9,13 +9,22 @@ import { DashboardDataProvider } from "@/lib/context/dashboard-data-context";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
-import { getStaff } from "@/lib/actions/staff-actions";
+import { getStaffShell } from "@/lib/actions/staff-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
-import { getDashboardStats } from "@/lib/actions/dashboard-actions";
-import { getShop } from "@/lib/actions/setting-actions";
+import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
 import { getShopId, getSession } from "@/lib/auth";
+import {
+    defaultAppearanceSettings,
+    getRadiusForButtonStyle,
+    getSafeBrandColor,
+    getSafeFontFamily,
+    getSafeFontImport,
+    getSafeFontWeight,
+    hexToHsl,
+    settingsArrayToRecord,
+} from "@/lib/appearance-settings";
 
 export default async function DashboardLayout({
     children,
@@ -46,21 +55,21 @@ export default async function DashboardLayout({
 
     let staff: any[] = [];
     let initialRates: any = null;
-    let initialStats: any = null;
     let shop: any = null;
+    let settings: any[] = [];
 
     try {
-        // Parallel fetch for data needed throughout the dashboard
-        const [staffRes, ratesRes, statsRes, shopRes] = await Promise.all([
-            getStaff(shopId).catch(() => []),
+        // Keep the dashboard shell light; page-specific stats load through React Query.
+        const [staffRes, ratesRes, shopRes, settingsRes] = await Promise.all([
+            getStaffShell(shopId).catch(() => []),
             getExchangeRates(shopId).catch(() => null),
-            getDashboardStats(shopId).catch(() => null),
             getShop().catch(() => null),
+            getSettings().catch(() => []),
         ]);
         staff = staffRes;
         initialRates = ratesRes;
-        initialStats = statsRes;
         shop = shopRes;
+        settings = settingsRes;
     } catch (err) {
         console.error("DashboardLayout: Could not load initial data.", err);
     }
@@ -73,15 +82,26 @@ export default async function DashboardLayout({
     const primaryColor = (shop?.themeConfig as any)?.industryTemplate?.primaryColor
         || (shop?.themeConfig as any)?.primaryColor
         || "#6366f1";
+    const appearance = settingsArrayToRecord(settings);
+    const brandColor = getSafeBrandColor(appearance.brandColor || primaryColor);
+    const primaryHsl = hexToHsl(brandColor);
+    const appFont = getSafeFontFamily(appearance.fontFamily);
+    const appFontImport = getSafeFontImport(appFont);
+    const appFontWeight = getSafeFontWeight(appearance.fontWeight);
+    const radius = getRadiusForButtonStyle(appearance.buttonStyle || defaultAppearanceSettings.buttonStyle);
 
     return (
         <QueryProvider>
             <ProgressBarProvider>
                 <UIProvider>
-                    <DashboardDataProvider initialRates={initialRates} initialStats={initialStats}>
+                    <DashboardDataProvider initialRates={initialRates} initialStats={null} shopId={shopId}>
                         <SupplierOrderProvider>
                             <ShortageProvider>
-                                <style>{`:root { --brand-color: ${primaryColor}; --brand-color-muted: ${primaryColor}1a; }`}</style>
+                                <link
+                                    rel="stylesheet"
+                                    href={`https://fonts.googleapis.com/css2?family=${appFontImport.gfont}&display=swap`}
+                                />
+                                <style>{`:root { --brand-color: ${brandColor}; --brand-color-muted: ${brandColor}1a; --primary: ${primaryHsl}; --ring: ${primaryHsl}; --app-font: '${appFont}', system-ui, -apple-system, sans-serif; --app-font-weight: ${appFontWeight}; --radius: ${radius}; } body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select { font-family: var(--app-font); font-weight: var(--app-font-weight) !important; }`}</style>
                                 <GlobalSearch />
                                 {shop?.industry && <IndustryBackground industry={shop.industry} />}
                                 <div className="flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0">
