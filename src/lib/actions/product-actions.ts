@@ -1111,3 +1111,19 @@ export async function quickUpdateStock(barcode: string, quantity: number, notes?
     return { success: false, error: "Stok güncellenemedi." };
   }
 }
+
+export async function getProductByBarcode(barcode: string) {
+  try {
+    const shopId = await getShopId();
+    const product = await prisma.product.findFirst({
+      where: { barcode: barcode.toUpperCase(), shopId },
+      include: {
+        category: true
+      }
+    });
+    if (!product) return { success: false, error: "Ürün bulunamadı" };
+    return { success: true, data: serializePrisma(product) };
+  } catch (error) {
+    return { success: false, error: "Ürün getirilemedi" };
+  }
+}

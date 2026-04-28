@@ -10,8 +10,8 @@ import {
     History, HelpCircle, PackagePlus, ArrowRightLeft, ScanSearch, ChevronDown, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { searchProducts, quickUpdateStock } from "@/lib/actions/product-actions";
-import { getCustomers } from "@/lib/actions/customer-actions";
+import { searchProducts, quickUpdateStock, getProductByBarcode } from "@/lib/actions/product-actions";
+import { getCustomers, createCustomerMuted } from "@/lib/actions/customer-actions";
 import { createSale } from "@/lib/actions/sale-actions";
 import { sendWhatsAppAction } from "@/lib/actions/data-management-actions";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,12 @@ export default function MobileScannerPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>('scan');
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+    const [isCheckoutBarVisible, setIsCheckoutBarVisible] = useState(true);
     const [lastSaleData, setLastSaleData] = useState<any>(null);
+
+    const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
+    const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
     // History Pagination & Search
     const [historyLimit, setHistoryLimit] = useState(5);
@@ -122,12 +127,12 @@ export default function MobileScannerPage() {
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                     playBeep('success');
 
-                    const newEntry = {
+                    const newEntry: { id: string; name: string; barcode: string; time: string; status: 'success' | 'error' } = {
                         id: Date.now().toString(),
                         name: productName || "Ürün",
                         barcode: barcode || lastScannedBarcode.current || "???",
                         time: now,
-                        status: 'success' as const
+                        status: 'success'
                     };
                     setHistory(prev => [newEntry, ...prev].slice(0, 100));
                 } else {
@@ -135,19 +140,20 @@ export default function MobileScannerPage() {
                     if (navigator.vibrate) navigator.vibrate([500]);
                     playBeep('error');
 
-                    const newEntry = {
+                    const newEntry: { id: string; name: string; barcode: string; time: string; status: 'success' | 'error' } = {
                         id: Date.now().toString(),
                         name: message || "Hata",
                         barcode: barcode || lastScannedBarcode.current || "???",
                         time: now,
-                        status: 'error' as const
+                        status: 'error'
                     };
                     setHistory(prev => [newEntry, ...prev].slice(0, 100));
                 }
 
                 if (activeTab === 'scan') {
-                    // Start scanning again after a delay to show toast
-                    setTimeout(() => { if (!isScanning) startScanning(); }, 1200);
+                    setTimeout(() => {
+                        if (!isScanning && scannerRef.current === null) startScanning();
+                    }, 1200);
                 }
             });
 
@@ -182,7 +188,14 @@ export default function MobileScannerPage() {
 
     const addToCart = (product: any) => {
         if (socket && roomId) {
-            socket.emit("add_to_cart", { roomId, product });
+            // Ensure product has essential fields for POS
+            const posProduct = {
+                id: product.id,
+                name: product.name,
+                sellPrice: product.sellPrice,
+                stock: product.stock
+            };
+            socket.emit("add_to_cart", { roomId, product: posProduct });
             toast.info(`${product.name} ekleniyor...`);
         }
     };
@@ -244,23 +257,64 @@ export default function MobileScannerPage() {
             const res = await quickUpdateStock(stockBarcode, stockQuantity);
             if (res.success) {
                 toast.success(`${res.data.name} stoğu güncellendi. Yeni stok: ${res.data.stock}`);
-                setStockBarcode("");
+
+                // Fetch fresh info immediately
+                fetchStockProductInfo(stockBarcode);
+
                 setStockQuantity(1);
-                setStockProduct(null);
 
                 const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                setHistory(prev => [{
+                const newEntry: { id: string; name: string; barcode: string; time: string; status: 'success' | 'error' } = {
                     id: Date.now().toString(),
                     name: `Stok +${stockQuantity}: ${res.data.name}`,
                     barcode: stockBarcode,
                     time: now,
                     status: 'success'
-                }, ...prev].slice(0, 100));
+                };
+                setHistory(prev => [newEntry, ...prev].slice(0, 100));
             } else {
                 toast.error(res.error);
                 playBeep('error');
             }
         });
+    };
+
+    const fetchStockProductInfo = async (barcode: string) => {
+        if (barcode.length < 3) {
+            setStockProduct(null);
+            return;
+        }
+        try {
+            const res = await getProductByBarcode(barcode);
+            if (res.success) setStockProduct(res.data);
+            else setStockProduct(null);
+        } catch (e) {
+            setStockProduct(null);
+        }
+    };
+
+    const handleCreateCustomer = async () => {
+        if (!newCustomer.name || newCustomer.name.length < 2) {
+            toast.error("Geçerli bir isim girin.");
+            return;
+        }
+        setIsCreatingCustomer(true);
+        try {
+            const res = await createCustomerMuted(newCustomer);
+            if (res.success && res.customer) {
+                toast.success("Müşteri başarıyla eklendi.");
+                setCustomers(prev => [res.customer, ...prev]);
+                setSelectedCustomerId(res.customer.id);
+                setIsNewCustomerModalOpen(false);
+                setNewCustomer({ name: '', phone: '' });
+            } else {
+                toast.error(res.error || "Müşteri eklenemedi.");
+            }
+        } catch (error) {
+            toast.error("Sistem hatası.");
+        } finally {
+            setIsCreatingCustomer(false);
+        }
     };
 
     const sendWhatsAppReceipt = async () => {
@@ -305,15 +359,18 @@ export default function MobileScannerPage() {
                             playBeep('success');
                             lastScannedBarcode.current = decodedText;
 
-                            // If we are in stock tab, just fill the barcode
                             if (activeTab === 'stock') {
                                 setStockBarcode(decodedText);
-                                toast.success("Barkod okundu: " + decodedText);
+                                fetchStockProductInfo(decodedText);
+                                toast.success("Eşleşme sağlandı");
                             } else {
                                 socket.emit("barcode_scanned", { roomId, barcode: decodedText });
                             }
 
                             if (navigator.vibrate) navigator.vibrate(100);
+                        }).catch(() => {
+                            scannerRef.current = null;
+                            setIsScanning(false);
                         });
                     }
                 },
@@ -322,6 +379,7 @@ export default function MobileScannerPage() {
         } catch (err) {
             toast.error("Kamera başlatılamadı.");
             setIsScanning(false);
+            scannerRef.current = null;
         }
     };
 
@@ -369,37 +427,37 @@ export default function MobileScannerPage() {
     return (
         <div className="min-h-screen bg-neutral-950 flex flex-col text-white tabular-nums selection:bg-blue-500/30 overflow-hidden">
             {/* Header */}
-            <div className="bg-neutral-900/60 backdrop-blur-2xl border-b border-white/5 sticky top-0 z-[100] px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-900/20">
-                        <ScanSearch className="w-7 h-7 text-white" />
+            <div className="bg-neutral-900/40 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-[100] px-5 py-3 flex items-center justify-between transition-all duration-300">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <ScanSearch className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="font-black text-xl tracking-tighter leading-none italic uppercase">Başar AI</h1>
-                        <p className="text-[10px] text-neutral-500 font-black mt-1 uppercase tracking-[0.2em]">Scanner Assistant</p>
+                        <h1 className="font-extrabold text-base tracking-tight leading-none">Başar AI</h1>
+                        <p className="text-[9px] text-neutral-500 font-bold mt-0.5 uppercase tracking-wider">Barkod Okuyucu</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => setIsHelpOpen(true)}
-                        className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all"
-                    >
-                        <HelpCircle className="w-6 h-6 text-neutral-400" />
-                    </button>
-                    <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-2">
-                            <div className={cn("w-2.5 h-2.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse" : "bg-red-500")} />
-                            <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">{isConnected ? "ONLINE" : "OFFLINE"}</span>
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-center gap-1.5 bg-neutral-800/50 px-2.5 py-1 rounded-full border border-white/5">
+                            <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" : "bg-red-500")} />
+                            <span className="text-[8px] font-bold text-neutral-300 uppercase tracking-widest">{isConnected ? "SİSTEME BAĞLI" : "BAĞLANTI YOK"}</span>
                         </div>
                     </div>
+                    <button
+                        onClick={() => setIsHelpOpen(true)}
+                        className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-95 transition-all text-neutral-400"
+                    >
+                        <HelpCircle className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 
             {/* Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto pb-48">
                 {/* Tabs - Sticky below header */}
-                <div className="sticky top-0 z-[90] bg-neutral-950/80 backdrop-blur-xl px-6 py-4">
-                    <div className="flex p-1.5 bg-neutral-900 rounded-[2rem] border border-white/5 gap-1.5 shadow-2xl overflow-x-auto no-scrollbar">
+                <div className="sticky top-0 z-[90] bg-neutral-950/80 backdrop-blur-xl px-4 py-3">
+                    <div className="flex p-1 bg-neutral-900 rounded-[1.2rem] border border-white/5 gap-1 shadow-xl overflow-x-auto no-scrollbar">
                         {[
                             { id: 'scan', label: 'TARA', icon: Camera },
                             { id: 'search', label: 'ARA', icon: Search },
@@ -409,18 +467,18 @@ export default function MobileScannerPage() {
                             <button
                                 key={tab.id}
                                 onClick={() => {
-                                    if (tab.id !== 'scan' && isScanning) stopScanning();
+                                    if (tab.id !== 'scan') stopScanning();
                                     setActiveTab(tab.id as any);
                                 }}
                                 className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 py-4 px-3 rounded-[1.5rem] text-[10px] font-black transition-all whitespace-nowrap relative min-w-[70px]",
-                                    activeTab === tab.id ? "bg-white text-black shadow-xl" : "text-neutral-500 hover:text-white"
+                                    "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-[0.8rem] text-[9px] font-extrabold transition-all whitespace-nowrap relative min-w-[60px]",
+                                    activeTab === tab.id ? "bg-white text-black shadow-lg" : "text-neutral-500 hover:text-white"
                                 )}
                             >
-                                <tab.icon className="w-4 h-4" />
-                                <span className={cn(activeTab === tab.id ? "inline" : "hidden sm:inline")}>{tab.label}</span>
+                                <tab.icon className="w-3.5 h-3.5" />
+                                <span className={cn(activeTab === tab.id ? "inline" : "hidden")}>{tab.label}</span>
                                 {tab.badge && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[9px] font-black border-2 border-neutral-900">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[8px] font-black border border-neutral-900">
                                         {tab.badge}
                                     </span>
                                 )}
@@ -625,42 +683,55 @@ export default function MobileScannerPage() {
                     )}
 
                     {activeTab === 'stock' && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                            <div className="bg-neutral-900/50 border border-white/5 p-8 rounded-[3rem] space-y-8 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-8 scale-150 rotate-12 opacity-5 pointer-events-none">
-                                    <PackagePlus className="w-24 h-24 text-white" />
-                                </div>
-
-                                <div className="space-y-4">
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+                            <div className="bg-neutral-900/50 border border-white/5 p-6 rounded-[2rem] space-y-6 shadow-2xl relative overflow-hidden">
+                                <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] pl-2">ÜRÜN BARKODU</label>
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-wider pl-1 font-sans">ÜRÜN BARKODU</label>
                                         <button
-                                            onClick={startScanning}
-                                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full text-[10px] font-black active:scale-90 transition-all shadow-lg shadow-blue-900/20"
+                                            onClick={() => {
+                                                stopScanning();
+                                                setTimeout(startScanning, 100);
+                                            }}
+                                            className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-full text-[9px] font-black active:scale-90 transition-all"
                                         >
                                             <Camera className="w-3.5 h-3.5" /> TARA
                                         </button>
                                     </div>
                                     <Input
                                         placeholder="Okutun veya yazın..."
-                                        className="h-16 bg-neutral-950 border-white/5 rounded-2xl text-base font-black px-6 tracking-wider"
+                                        className="h-14 bg-neutral-950 border-white/5 rounded-xl text-base font-black px-5"
                                         value={stockBarcode}
-                                        onChange={(e) => setStockBarcode(e.target.value.toUpperCase())}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase();
+                                            setStockBarcode(val);
+                                            fetchStockProductInfo(val);
+                                        }}
                                     />
+
+                                    {stockProduct && (
+                                        <div className="bg-blue-600/5 border border-blue-500/10 p-4 rounded-xl space-y-1 animate-in fade-in duration-300">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-black text-white uppercase truncate flex-1 pr-4">{stockProduct.name}</h4>
+                                                <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">STOK: {stockProduct.stock}</span>
+                                            </div>
+                                            <p className="text-[10px] text-neutral-500 font-bold">{stockProduct.category?.name || 'GENEL CATEGORİ'}</p>
+                                        </div>
+                                    )}
                                 </div>
 
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] pl-2">EKLEME ADEDİ</label>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1 flex items-center bg-neutral-950 rounded-2xl p-1 border border-white/5">
-                                            <button onClick={() => setStockQuantity(Math.max(1, stockQuantity - 1))} className="w-14 h-14 rounded-xl flex items-center justify-center hover:bg-neutral-900 transition-colors"><Minus className="w-5 h-5 text-neutral-500" /></button>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-wider pl-1">EKLEME ADEDİ</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1 flex items-center bg-neutral-950 rounded-xl p-1 border border-white/5">
+                                            <button onClick={() => setStockQuantity(Math.max(1, stockQuantity - 1))} className="w-12 h-12 flex items-center justify-center hover:bg-neutral-900 transition-colors"><Minus className="w-4 h-4 text-neutral-500" /></button>
                                             <Input
                                                 type="number"
-                                                className="flex-1 bg-transparent border-none text-center text-xl font-black focus:ring-0"
+                                                className="flex-1 bg-transparent border-none text-center text-lg font-black focus:ring-0"
                                                 value={stockQuantity}
                                                 onChange={(e) => setStockQuantity(parseInt(e.target.value) || 1)}
                                             />
-                                            <button onClick={() => setStockQuantity(stockQuantity + 1)} className="w-14 h-14 rounded-xl flex items-center justify-center hover:bg-neutral-900 transition-colors"><Plus className="w-5 h-5 text-neutral-500" /></button>
+                                            <button onClick={() => setStockQuantity(stockQuantity + 1)} className="w-12 h-12 flex items-center justify-center hover:bg-neutral-900 transition-colors"><Plus className="w-4 h-4 text-neutral-500" /></button>
                                         </div>
                                     </div>
                                 </div>
@@ -668,31 +739,32 @@ export default function MobileScannerPage() {
                                 <Button
                                     disabled={!stockBarcode || isPending}
                                     onClick={handleStockAction}
-                                    className="w-full h-20 bg-white text-black hover:bg-neutral-100 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl disabled:opacity-30 disabled:bg-neutral-800"
+                                    className="w-full h-14 bg-white text-black hover:bg-neutral-100 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl disabled:opacity-30"
                                 >
-                                    {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : "STOK GÜNCELLE"}
+                                    {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "STOK GÜNCELLE"}
                                 </Button>
-                            </div>
-
-                            <div className="px-4 py-8 bg-amber-500/5 border border-amber-500/10 rounded-[2.5rem] flex items-start gap-4">
-                                <Info className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-                                <p className="text-[11px] text-amber-500/70 font-medium leading-relaxed uppercase tracking-wider">
-                                    Buradan yapılan güncellemeler envanter loglarına <span className="font-black text-amber-500">"Hızlı Stok Girişi"</span> olarak kaydedilir ve stok değeri belirtilen miktar kadar <span className="font-black text-amber-500">artırılır</span>.
-                                </p>
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'cart' && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
                             {/* Standalone POS Controls */}
-                            <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] space-y-8 shadow-2xl relative overflow-hidden">
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] pl-2">MÜŞTERİ SEÇİMİ</label>
+                            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2rem] space-y-6 shadow-2xl">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between pl-1">
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">MÜŞTERİ SEÇİMİ</label>
+                                        <button
+                                            onClick={() => setIsNewCustomerModalOpen(true)}
+                                            className="text-[9px] font-black text-blue-500 flex items-center gap-1 hover:bg-blue-500/10 px-2 py-1 rounded-full transition-all"
+                                        >
+                                            <Plus className="w-3 h-3" /> YENİ EKLE
+                                        </button>
+                                    </div>
                                     <div className="relative">
-                                        <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                                         <select
-                                            className="w-full h-16 pl-14 pr-6 bg-neutral-950 border border-white/5 rounded-2xl text-sm font-black appearance-none focus:outline-none focus:border-blue-500 transition-all uppercase tracking-wider shadow-inner"
+                                            className="w-full h-14 pl-11 pr-6 bg-neutral-950 border border-white/5 rounded-xl text-sm font-black appearance-none"
                                             value={selectedCustomerId}
                                             onChange={(e) => setSelectedCustomerId(e.target.value)}
                                         >
@@ -704,9 +776,9 @@ export default function MobileScannerPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] pl-2">ÖDEME YÖNTEMİ</label>
-                                    <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-wider pl-1">ÖDEME YÖNTEMİ</label>
+                                    <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { id: 'CASH', label: 'NAKİT', icon: Banknote },
                                             { id: 'CREDIT_CARD', label: 'KART', icon: CreditCard },
@@ -717,17 +789,14 @@ export default function MobileScannerPage() {
                                                 key={m.id}
                                                 onClick={() => setPaymentMethod(m.id as any)}
                                                 className={cn(
-                                                    "flex flex-col items-center justify-center gap-3 p-5 rounded-[2rem] border transition-all relative overflow-hidden group",
+                                                    "flex items-center gap-2.5 p-3.5 rounded-xl border transition-all",
                                                     paymentMethod === m.id
-                                                        ? "bg-white border-white text-black shadow-xl scale-[1.03]"
-                                                        : "bg-neutral-950 border-white/5 text-neutral-500"
+                                                        ? "bg-white border-white text-black"
+                                                        : "bg-neutral-950 border-white/5 text-neutral-600"
                                                 )}
                                             >
-                                                <m.icon className={cn("w-6 h-6", paymentMethod === m.id ? "text-black" : "text-neutral-700")} />
+                                                <m.icon className={cn("w-4 h-4", paymentMethod === m.id ? "text-black" : "text-neutral-700")} />
                                                 <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>
-                                                {paymentMethod === m.id && (
-                                                    <div className="absolute top-0 left-0 w-full h-full bg-white opacity-10 animate-pulse pointer-events-none" />
-                                                )}
                                             </button>
                                         ))}
                                     </div>
@@ -784,39 +853,48 @@ export default function MobileScannerPage() {
             </div>
 
             {/* Bottom Final Checkout Bar */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-black/60 backdrop-blur-3xl border-t border-white/10 z-[120] animate-in slide-in-from-bottom-full duration-500">
-                <div className="max-w-md mx-auto space-y-6">
-                    <div className="flex justify-between items-end px-3">
-                        <div className="space-y-1">
-                            <span className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em]">ÖDENECEK TUTAR</span>
-                            <div className="flex items-center gap-3">
-                                <span className={cn("text-xs font-black px-3 py-1 rounded-full border", cart.length > 0 ? "bg-blue-600/20 border-blue-600 text-blue-500" : "bg-neutral-900 border-white/5 text-neutral-700")}>
+            <div className={cn(
+                "fixed bottom-0 left-0 right-0 p-4 transition-all duration-500 z-[120]",
+                isCheckoutBarVisible ? "translate-y-0" : "translate-y-[calc(100%-60px)]"
+            )}>
+                <div className="max-w-md mx-auto bg-neutral-900/80 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden p-5">
+                    {/* Minimal Toggle Handle */}
+                    <button
+                        onClick={() => setIsCheckoutBarVisible(!isCheckoutBarVisible)}
+                        className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/20 hover:bg-white/40 transition-colors"
+                    />
+
+                    <div className="flex justify-between items-center mt-2 group" onClick={() => setIsCheckoutBarVisible(!isCheckoutBarVisible)}>
+                        <div className="space-y-0.5">
+                            <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest leading-none">ÖDENECEK</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className={cn("text-[8px] font-bold px-2 py-0.5 rounded-md border", cart.length > 0 ? "bg-blue-600/20 border-blue-500/30 text-blue-400" : "bg-neutral-800 border-white/5 text-neutral-700")}>
                                     {cart.length} ÜRÜN
                                 </span>
                             </div>
                         </div>
-                        <span className="text-4xl font-black text-white tracking-tighter">₺{formatCurrency(cartTotal)}</span>
+                        <span className="text-2xl font-black text-white tracking-tighter">₺{formatCurrency(cartTotal)}</span>
                     </div>
-                    {activeTab === 'cart' ? (
-                        <Button
-                            disabled={cart.length === 0 || isPending}
-                            onClick={handleCheckout}
-                            className="w-full h-20 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[2.5rem] shadow-[0_0_40px_rgba(37,99,235,0.2)] active:scale-[0.98] transition-all disabled:opacity-20 text-lg uppercase tracking-[0.1em]"
-                        >
-                            {isPending ? <Loader2 className="w-8 h-8 animate-spin" /> : "GÜVENLİ SATIŞI TAMAMLA"}
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={() => setActiveTab('cart')}
-                            className="w-full h-20 bg-white text-black font-black rounded-[2.5rem] active:scale-[0.98] transition-all flex items-center justify-center gap-4 text-sm tracking-widest relative overflow-hidden"
-                        >
-                            <ShoppingCart className="w-6 h-6" />
-                            SEPETE GİT (₺{formatCurrency(cartTotal)})
-                            {cart.length > 0 && (
-                                <div className="absolute top-0 left-0 h-full bg-blue-500 w-1 animate-pulse" />
-                            )}
-                        </Button>
-                    )}
+
+                    <div className={cn("mt-5 space-y-4 transition-all duration-300 origin-bottom", isCheckoutBarVisible ? "scale-100 opacity-100 h-auto" : "scale-90 opacity-0 h-0 overflow-hidden")}>
+                        {activeTab === 'cart' ? (
+                            <Button
+                                disabled={cart.length === 0 || isPending}
+                                onClick={handleCheckout}
+                                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-20 text-xs uppercase tracking-widest"
+                            >
+                                {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "SATIŞI TAMAMLA"}
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={() => setActiveTab('cart')}
+                                className="w-full h-14 bg-white text-black font-black rounded-xl active:scale-95 transition-all flex items-center justify-center gap-3 text-xs tracking-widest"
+                            >
+                                <ShoppingCart className="w-4 h-4" />
+                                SEPETE GİT
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -873,6 +951,44 @@ export default function MobileScannerPage() {
             </Dialog>
 
             <ScannerHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+
+            {/* Quick Customer Modal */}
+            <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
+                <DialogContent className="max-w-[90vw] sm:max-w-md rounded-[2.5rem] bg-neutral-900 border-white/5 text-white p-7">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tight">Hızlı Müşteri</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">AD SOYAD</label>
+                            <Input
+                                placeholder="Müşteri adı..."
+                                className="h-14 bg-neutral-950 border-white/5 rounded-xl text-sm font-black"
+                                value={newCustomer.name}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">TELEFON</label>
+                            <Input
+                                placeholder="05XX XXX XX XX"
+                                className="h-14 bg-neutral-950 border-white/5 rounded-xl text-sm font-black"
+                                value={newCustomer.phone}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs"
+                            onClick={handleCreateCustomer}
+                            disabled={isCreatingCustomer}
+                        >
+                            {isCreatingCustomer ? <Loader2 className="w-5 h-5 animate-spin" /> : "KAYDET VE SEÇ"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Custom Animation Styles */}
             <style jsx global>{`
