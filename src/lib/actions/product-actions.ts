@@ -1052,3 +1052,62 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
     return { success: false, error: "Toplu kayıt işlemi başarısız oldu." };
   }
 }
+export async function quickUpdateStock(barcode: string, quantity: number, notes?: string) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const upBarcode = barcode.toUpperCase();
+
+    const product = await prisma.product.findUnique({
+      where: { shopId_barcode: { shopId, barcode: upBarcode } }
+    });
+
+    if (!product) {
+      return { success: false, error: "Ürün bulunamadı." };
+    }
+
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      // 1. Update stock
+      const updated = await tx.product.update({
+        where: { id: product.id, shopId },
+        data: { stock: { increment: quantity } }
+      });
+
+      // 2. Create inventory log
+      await tx.inventoryLog.create({
+        data: {
+          productId: product.id,
+          userId,
+          quantity,
+          type: quantity >= 0 ? "ENTRY" : "OUT",
+          notes: notes || "Mobil Tarayıcı Hızlı Stok Güncelleme",
+          shopId
+        }
+      });
+
+      // 3. Create movement for reports
+      await tx.inventoryMovement.create({
+        data: {
+          productId: product.id,
+          quantity,
+          type: quantity >= 0 ? "RESTOCK" : "ADJUSTMENT",
+          notes: notes || "Mobil Tarayıcı Hızlı Stok Güncelleme",
+          shopId
+        }
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/(dashboard)", "layout");
+
+    return {
+      success: true,
+      data: serializePrisma(updatedProduct)
+    };
+  } catch (error) {
+    console.error("quickUpdateStock error:", error);
+    return { success: false, error: "Stok güncellenemedi." };
+  }
+}
