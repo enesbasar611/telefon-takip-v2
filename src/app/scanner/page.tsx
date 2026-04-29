@@ -345,14 +345,18 @@ export default function MobileScannerPage() {
             await scannerRef.current.start(
                 { facingMode: "environment" },
                 {
-                    fps: 15,
+                    fps: 20, // Increased for better performance
                     qrbox: (viewWidth, viewHeight) => {
-                        return { width: viewWidth * 0.7, height: 100 };
+                        // Dynamic qrbox: More proportional to mobile screens
+                        const width = viewWidth * 0.8;
+                        const height = Math.min(viewHeight * 0.5, 250);
+                        return { width, height };
                     },
                     aspectRatio: 1
                 },
                 (decodedText) => {
                     if (socket && roomId) {
+                        // Stop current scan session immediately
                         scannerRef.current?.stop().then(() => {
                             scannerRef.current = null;
                             setIsScanning(false);
@@ -377,25 +381,44 @@ export default function MobileScannerPage() {
                 () => { }
             );
         } catch (err) {
-            toast.error("Kamera başlatılamadı.");
+            console.error("Camera start error:", err);
+            toast.error("Kamera başlatılamadı. İzinleri kontrol edin.");
             setIsScanning(false);
             scannerRef.current = null;
         }
     };
 
-    const stopScanning = () => {
+    const stopScanning = async () => {
         if (scannerRef.current) {
-            scannerRef.current.stop().then(() => {
+            try {
+                await scannerRef.current.stop();
                 scannerRef.current = null;
                 setIsScanning(false);
-            });
+            } catch (err) {
+                console.error("Stop scanning error:", err);
+                scannerRef.current = null;
+                setIsScanning(false);
+            }
         }
     };
 
     useEffect(() => {
-        if (!roomId || !isConnected || hasAutoStarted.current || activeTab !== 'scan') return;
-        hasAutoStarted.current = true;
-        startScanning();
+        if (!roomId || !isConnected || activeTab !== 'scan') return;
+
+        let isMounting = true;
+
+        const autoStart = async () => {
+            if (isMounting) {
+                await stopScanning(); // Ensure closed before restart
+                startScanning();
+            }
+        };
+
+        autoStart();
+
+        return () => {
+            isMounting = false;
+        };
     }, [roomId, isConnected, activeTab]);
 
     if (!isConnected) {
@@ -689,9 +712,9 @@ export default function MobileScannerPage() {
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] font-black text-neutral-500 uppercase tracking-wider pl-1 font-sans">ÜRÜN BARKODU</label>
                                         <button
-                                            onClick={() => {
-                                                stopScanning();
-                                                setTimeout(startScanning, 100);
+                                            onClick={async () => {
+                                                await stopScanning();
+                                                startScanning();
                                             }}
                                             className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-full text-[9px] font-black active:scale-90 transition-all"
                                         >

@@ -68,7 +68,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const {
         initializeScannerRoom,
         sendSuccessFeedback,
-        sendErrorFeedback
+        sendErrorFeedback,
+        syncCartToMobile
     } = useScanner((barcode, deviceId) => {
         const success = addBarcodeMatchToCart(barcode);
         if (success) {
@@ -78,6 +79,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
             sendErrorFeedback("Ürün bulunamadı!", deviceId);
         }
     });
+
+    // Sync cart to mobile whenever it changes
+    useEffect(() => {
+        syncCartToMobile(cart);
+    }, [cart, syncCartToMobile]);
 
     useEffect(() => {
         if (session?.user?.id || session?.user?.shopId) {
@@ -112,36 +118,94 @@ export function POSCompact({ products, customers, categories }: { products: any[
     }, [products, productSearch, selectedCategory]);
 
     const addToCart = (product: any) => {
-        const existing = cart.find((item) => item.id === product.id);
-        if (existing) {
-            if (existing.quantity >= product.stock) {
-                toast({ title: "Stok Yetersiz", variant: "destructive" });
-                return;
+        if (!product) return;
+
+        setCart((currentCart) => {
+            const existing = currentCart.find((item) => item.id === product.id);
+
+            if (!existing && product.stock <= 0) {
+                toast({ title: "Stokta Yok", description: "Bu ürünün stoğu tükenmiş.", variant: "destructive" });
+                return currentCart;
             }
-            setCart(cart.map((item) =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-            ));
-        } else {
-            setCart([...cart, { ...product, quantity: 1 }]);
-        }
+
+            if (existing) {
+                if (existing.quantity >= product.stock) {
+                    toast({ title: "Stok Yetersiz", description: "Daha fazla ekleyemezsiniz.", variant: "destructive" });
+                    return currentCart;
+                }
+                return currentCart.map((item) =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            }
+            return [...currentCart, { ...product, quantity: 1 }];
+        });
     };
 
     const addBarcodeMatchToCart = (value: string) => {
         const normalizedValue = value.trim().toUpperCase();
         if (!normalizedValue) return false;
 
-        const product = products.find((p: any) => p.barcode?.toUpperCase() === normalizedValue);
-        if (!product) return false;
+        const product = products.find((p: any) =>
+            p.barcode?.toUpperCase() === normalizedValue ||
+            p.sku?.toUpperCase() === normalizedValue
+        );
+
+        if (!product) {
+            toast({
+                title: "Ürün Bulunamadı",
+                description: "Barkod sistemde kayıtlı değil.",
+                variant: "destructive"
+            });
+            return false;
+        }
 
         addToCart(product);
         setProductSearch("");
-        toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
+        toast({ title: "Başarılı", description: `${product.name} sepete eklendi.` });
         return true;
+    };
+
+    const updateQuantity = (id: string, delta: number) => {
+        setCart((prev) => prev.map((item) => {
+            if (item.id === id) {
+                const newQty = Math.max(1, item.quantity + delta);
+                const originalProduct = products.find((p) => p.id === id);
+                if (delta > 0 && originalProduct && newQty > originalProduct.stock) {
+                    toast({ title: "Stok Yetersiz", variant: "destructive" });
+                    return item;
+                }
+                return { ...item, quantity: newQty };
+            }
+            return item;
+        }));
     };
 
     const removeFromCart = (id: string) => {
         setCart(cart.filter(item => item.id !== id));
     };
+
+    // Listen for mobile-initiated cart actions (Bridge to Mobile Scanner)
+    useEffect(() => {
+        const handleRemove = (e: any) => {
+            removeFromCart(e.detail.productId);
+        };
+        const handleUpdateQty = (e: any) => {
+            updateQuantity(e.detail.productId, e.detail.delta);
+        };
+        const handleAdd = (e: any) => {
+            addToCart(e.detail.product);
+        };
+
+        window.addEventListener("scanner_remove_from_cart", handleRemove);
+        window.addEventListener("scanner_update_quantity", handleUpdateQty);
+        window.addEventListener("scanner_add_to_cart", handleAdd);
+
+        return () => {
+            window.removeEventListener("scanner_remove_from_cart", handleRemove);
+            window.removeEventListener("scanner_update_quantity", handleUpdateQty);
+            window.removeEventListener("scanner_add_to_cart", handleAdd);
+        };
+    }, [cart, products]); // Re-bind when data changes
 
     const totalItemsAmount = cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
     const tax = totalItemsAmount * 0.20;

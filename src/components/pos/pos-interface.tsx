@@ -196,11 +196,20 @@ export function POSInterface({ products: initialProducts, customers, categories,
   };
 
   const addToCart = useCallback((product: any) => {
+    if (!product) return;
+
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
+
+      // Stock check for first-time addition
+      if (!existing && product.stock <= 0) {
+        toast({ title: "Stokta Yok", description: "Bu ürünün stoğu tükenmiş.", variant: "destructive" });
+        return currentCart;
+      }
+
       if (existing) {
         if (existing.quantity >= product.stock) {
-          toast({ title: "Stok Yetersiz", variant: "destructive" });
+          toast({ title: "Stok Yetersiz", description: "Daha fazla ekleyemezsiniz.", variant: "destructive" });
           return currentCart;
         }
         return currentCart.map((item) =>
@@ -209,18 +218,29 @@ export function POSInterface({ products: initialProducts, customers, categories,
       }
       return [...currentCart, { ...product, quantity: 1 }];
     });
-  }, [products, toast]);
+  }, [toast]); // Removed products dependency as it's not used inside the state updater
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
-    if (!normalizedValue) return false;
+    if (!normalizedValue) return null;
 
-    const product = products.find((p: any) => p.barcode?.toUpperCase() === normalizedValue);
-    if (!product) return null;
+    const product = products.find((p: any) =>
+      p.barcode?.toUpperCase() === normalizedValue ||
+      p.sku?.toUpperCase() === normalizedValue
+    );
+
+    if (!product) {
+      toast({
+        title: "Ürün Bulunamadı",
+        description: `${normalizedValue} barkodlu ürün sistemde kayıtlı değil.`,
+        variant: "destructive"
+      });
+      return null;
+    }
 
     addToCart(product);
     setSearchTerm("");
-    toast({ title: "Barkod okutuldu", description: `${product.name} sepete eklendi.` });
+    toast({ title: "Başarılı", description: `${product.name} sepete eklendi.` });
     return product;
   };
 
