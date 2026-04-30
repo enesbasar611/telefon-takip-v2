@@ -107,7 +107,7 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
             <div className="flex justify-end">
                 <Button
                     onClick={() => { setActiveShop(null); setIsFormOpen(true); }}
-                    className="rounded-xl px-6 bg-primary hover:bg-primary/90 text-white font-bold gap-2"
+                    className="rounded-xl px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2"
                 >
                     <Plus className="h-4 w-4" /> Yeni Dükkan Ekle
                 </Button>
@@ -161,20 +161,20 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                                         <TableCell>
                                             {owner ? (
                                                 <div className="flex flex-col gap-0.5">
-                                                    <div className="text-[13px] font-bold text-white/90 truncate max-w-[180px]">{owner.name}</div>
-                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                    <div className="text-[13px] font-bold text-foreground truncate max-w-[180px]">{owner.name}</div>
+                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
                                                         <div className="h-1 w-1 rounded-full bg-blue-500" />
                                                         {owner.email}
                                                     </div>
                                                     {owner.phone && (
-                                                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
                                                             <div className="h-1 w-1 rounded-full bg-emerald-500" />
                                                             {owner.phone}
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-[11px] text-muted-foreground italic">Sahip Bilgisi Yok</span>
+                                                <span className="text-[11px] text-muted-foreground italic font-medium">Sahip Bilgisi Yok</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -196,12 +196,12 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1 max-w-[150px]">
                                                 {shop.enabledModules.slice(0, 2).map((mod: string) => (
-                                                    <Badge key={mod} variant="secondary" className="text-[9px] py-0 px-1 bg-white/5 text-gray-400 border-0">
+                                                    <Badge key={mod} variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
                                                         {mod}
                                                     </Badge>
                                                 ))}
                                                 {shop.enabledModules.length > 2 && (
-                                                    <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-white/5 text-gray-400 border-0">
+                                                    <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
                                                         +{shop.enabledModules.length - 2}
                                                     </Badge>
                                                 )}
@@ -230,7 +230,7 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                                                             <MoreVertical className="h-4 w-4 text-muted-foreground" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-white/10 text-white rounded-xl shadow-2xl">
+                                                    <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-zinc-900 border-border dark:border-white/10 text-foreground dark:text-white rounded-xl shadow-2xl">
                                                         <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Yönetim</DropdownMenuLabel>
                                                         <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsFormOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
                                                             <Settings className="h-4 w-4 text-blue-400" /> Genel Ayarlar
@@ -259,7 +259,7 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
             </div>
 
             <Dialog open={isDeleting} onOpenChange={setIsDeleting}>
-                <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10 text-white rounded-3xl">
+                <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-950 border-border dark:border-white/10 text-foreground dark:text-white rounded-3xl">
                     <DialogHeader className="flex flex-col items-center justify-center pt-6">
                         <div className="h-20 w-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
                             <Trash2 className="h-10 w-10 text-red-500 animate-bounce" />
@@ -277,10 +277,10 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                             </div>
                             <Progress value={deleteProgress} className="h-3 bg-white/5" indicatorClassName="bg-gradient-to-r from-red-500 to-orange-500" />
                         </div>
-                        <div className="bg-white/5 rounded-2xl p-4 flex items-start gap-4 border border-white/5">
-                            <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-muted-foreground/80 leading-relaxed uppercase tracking-tight">
-                                <strong className="text-amber-500">UYARI:</strong> Bu işlem veritabanı seviyesinde kalıcıdır. Silinen veriler kurtarılamaz. İşlem tamamlanana kadar sayfayı kapatmayın.
+                        <div className="bg-muted dark:bg-white/5 rounded-2xl p-4 flex items-start gap-4 border border-border dark:border-white/5">
+                            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-muted-foreground dark:text-muted-foreground/80 leading-relaxed uppercase tracking-tight font-medium">
+                                <strong className="text-amber-600 dark:text-amber-500">UYARI:</strong> Bu işlem veritabanı seviyesinde kalıcıdır. Silinen veriler kurtarılamaz. İşlem tamamlanana kadar sayfayı kapatmayın.
                             </p>
                         </div>
                     </div>

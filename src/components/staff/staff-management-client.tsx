@@ -459,13 +459,13 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 icon={Users}
                 badge={
                     <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-500/10 text-blue-400 border-none px-3 py-1 text-[9px] uppercase font-bold tracking-widest">SİSTEM DENETİMİ</Badge>
+                        <Badge className="bg-blue-600/10 text-blue-600 dark:text-blue-400 border-none px-3 py-1 text-[9px] uppercase font-black tracking-widest">SİSTEM DENETİMİ</Badge>
                     </div>
                 }
                 actions={
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl bg-white/5 border border-border/40 shadow-xl">
-                            <Filter className="w-5 h-5" />
+                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl bg-card border border-border/40 shadow-sm">
+                            <Filter className="w-5 h-5 text-muted-foreground" />
                         </Button>
                         <CreateStaffModal />
                     </div>
@@ -498,7 +498,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 <div className="lg:col-span-8 space-y-6">
                     <div className="flex items-center justify-between px-1">
                         <h2 className="font-medium text-xl  text-slate-900 dark:text-white">Personel Listesi</h2>
-                        <div className="flex items-center gap-2 p-1 bg-white dark:bg-card/50 rounded-2xl border border-slate-100 dark:border-border/50">
+                        <div className="flex items-center gap-2 p-1 bg-muted/30 dark:bg-card/50 rounded-2xl border border-border/50">
                             {[
                                 { id: "all", label: "TÜMÜ" },
                                 { id: "SUPER_ADMIN", label: "SÜPER EDN" },
@@ -511,10 +511,10 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     variant="ghost"
                                     onClick={() => setFilter(t.id as any)}
                                     className={cn(
-                                        "h-10 px-6 rounded-xl text-[10px]  tracking-widest transition-all",
+                                        "h-10 px-6 rounded-xl text-[10px] font-bold tracking-widest transition-all",
                                         filter === t.id
-                                            ? "bg-card text-white shadow-lg shadow-black/20"
-                                            : "text-muted-foreground hover:text-slate-600 hover:bg-slate-50"
+                                            ? "bg-card text-foreground shadow-lg dark:shadow-black/20"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                     )}
                                 >
                                     {t.label}
@@ -525,13 +525,13 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
                     <Card className="rounded-[2.5rem] overflow-hidden">
                         <Table>
-                            <TableHeader className="font-medium bg-white/5 dark:bg-black/20">
+                            <TableHeader className="bg-muted/30 dark:bg-black/20">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="font-medium py-6 px-8 text-[10px]  uppercase tracking-widest text-muted-foreground/80">İSİM / ROL</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">İŞ SAYISI</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">BAŞARI</TableHead>
-                                    <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">SON GİRİŞ</TableHead>
-                                    <TableHead className="font-medium text-right pr-8 text-[10px]  uppercase tracking-widest text-muted-foreground/80">AKSİYON</TableHead>
+                                    <TableHead className="font-bold py-6 px-8 text-[10px] uppercase tracking-widest text-muted-foreground">İSİM / ROL</TableHead>
+                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">İŞ SAYISI</TableHead>
+                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">BAŞARI</TableHead>
+                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">SON GİRİŞ</TableHead>
+                                    <TableHead className="font-bold text-right pr-8 text-[10px] uppercase tracking-widest text-muted-foreground">AKSİYON</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -552,19 +552,19 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                             {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className=" text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                                    <div className="flex flex-col gap-1 text-left">
+                                                        <span className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                                             {member.name}
                                                         </span>
                                                         <RoleBadge role={member.role} />
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm  text-slate-700 dark:text-foreground">
+                                            <TableCell className="text-sm font-bold text-foreground/80">
                                                 {member.assignedTickets.length + member.sales.length}
                                             </TableCell>
-                                            <TableCell className="text-sm  text-emerald-500">%98.5</TableCell>
-                                            <TableCell className="text-xs  text-muted-foreground">Şimdi aktif</TableCell>
+                                            <TableCell className="text-sm font-bold text-emerald-500">%98.5</TableCell>
+                                            <TableCell className="text-xs font-bold text-muted-foreground">Şimdi aktif</TableCell>
                                             <TableCell className="text-right pr-8">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -572,18 +572,18 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="bg-card border-border/50 text-white w-48 rounded-2xl p-2">
+                                                    <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground dark:text-white w-48 rounded-2xl p-2 shadow-2xl">
                                                         <DropdownMenuItem
                                                             onClick={() => {
                                                                 setSelectedMember(member);
                                                                 setEditModalOpen(true);
                                                             }}
-                                                            className="rounded-xl gap-2 cursor-pointer  py-3 text-xs"
+                                                            className="rounded-xl gap-2 cursor-pointer py-3 text-xs font-bold"
                                                         >
-                                                            <Shield className="w-4 h-4" /> Düzenle & Yetkilendir
+                                                            <Shield className="w-4 h-4 text-blue-500" /> Düzenle & Yetkilendir
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator className="bg-white/5" />
-                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer  py-3 text-xs text-rose-500">
+                                                        <DropdownMenuSeparator className="bg-muted dark:bg-white/5" />
+                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer py-3 text-xs text-rose-500 font-bold">
                                                             <XCircle className="w-4 h-4" /> Personeli Çıkar
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -631,17 +631,17 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
                     <div className="p-1 bg-card dark:bg-blue-600 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
                         <div className="p-8 space-y-4 relative z-10">
-                            <div className="flex items-center justify-between  text-white">
-                                <h3 className="font-medium text-lg">Performans Ara</h3>
+                            <div className="flex items-center justify-between text-white">
+                                <h3 className="font-bold text-lg">Performans Ara</h3>
                                 <Activity className="w-5 h-5 text-blue-200" />
                             </div>
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-100/60" />
                                 <Input
                                     placeholder="Personel ara..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="h-12 bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/40 focus:ring-2 focus:ring-white/20 "
+                                    className="h-12 bg-white/20 dark:bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/60 focus:ring-2 focus:ring-white/20 font-bold"
                                 />
                             </div>
                         </div>
@@ -700,14 +700,14 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></svg>
                                     )}
                                 </div>
-                                <div className="space-y-0.5">
-                                    <p className="text-sm  text-slate-700 dark:text-foreground/90">
-                                        <span className=" text-slate-900 dark:text-white uppercase text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded-md mr-2">
+                                <div className="space-y-0.5 text-left">
+                                    <p className="text-sm font-bold text-foreground/90">
+                                        <span className="text-foreground dark:text-white uppercase text-[10px] font-black px-2 py-0.5 bg-muted dark:bg-white/10 rounded-md mr-2">
                                             {log.user?.name}
                                         </span>
                                         {log.message}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground font-medium">#{log.id.slice(-8).toUpperCase()}</p>
+                                    <p className="text-[10px] text-muted-foreground font-black">#{log.id.slice(-8).toUpperCase()}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">

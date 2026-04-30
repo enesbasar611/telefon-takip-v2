@@ -22,6 +22,7 @@ import {
     Wrench,
     Smartphone,
     User,
+    Trash2,
     ShoppingBag,
     UserPlus,
     CheckCircle,
@@ -30,7 +31,8 @@ import {
     Landmark,
     History,
     AlertCircle,
-    Camera
+    Camera,
+    ShoppingCart
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
@@ -49,6 +51,7 @@ import { useRouter } from "next/navigation";
 export function POSCompact({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
     const [productSearch, setProductSearch] = useState("");
     const [customerSearch, setCustomerSearch] = useState("");
+    const [view, setView] = useState<'products' | 'cart'>('products');
     const [selectedCategory, setSelectedCategory] = useState("ALL");
     const [cart, setCart] = useState<any[]>([]);
     const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -180,6 +183,15 @@ export function POSCompact({ products, customers, categories }: { products: any[
         }));
     };
 
+    const updatePrice = (id: string, newPrice: number) => {
+        setCart((prev) => prev.map((item) => {
+            if (item.id === id) {
+                return { ...item, sellPrice: newPrice };
+            }
+            return item;
+        }));
+    };
+
     const removeFromCart = (id: string) => {
         setCart(cart.filter(item => item.id !== id));
     };
@@ -196,14 +208,20 @@ export function POSCompact({ products, customers, categories }: { products: any[
             addToCart(e.detail.product);
         };
 
+        const handleUpdatePrice = (e: any) => {
+            updatePrice(e.detail.productId, e.detail.newPrice);
+        };
+
         window.addEventListener("scanner_remove_from_cart", handleRemove);
         window.addEventListener("scanner_update_quantity", handleUpdateQty);
         window.addEventListener("scanner_add_to_cart", handleAdd);
+        window.addEventListener("scanner_update_price", handleUpdatePrice);
 
         return () => {
             window.removeEventListener("scanner_remove_from_cart", handleRemove);
             window.removeEventListener("scanner_update_quantity", handleUpdateQty);
             window.removeEventListener("scanner_add_to_cart", handleAdd);
+            window.removeEventListener("scanner_update_price", handleUpdatePrice);
         };
     }, [cart, products]); // Re-bind when data changes
 
@@ -271,7 +289,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const isDebtBlocked = paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null");
 
     return (
-        <div className="flex flex-col h-full bg-[#0F172A] text-white font-sans overflow-hidden">
+        <div className="flex flex-col h-full bg-background text-foreground font-sans overflow-hidden">
             {/* Search Bar for Products */}
             <div className="p-6 pb-4">
                 <div className="flex items-center gap-4 relative group">
@@ -279,7 +297,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
                         <Input
                             placeholder="Ürün adı veya barkod okut..."
-                            className="pl-14 h-16 bg-muted/50 border-border/80/50 rounded-2xl text-base  text-white focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            className="pl-14 h-16 bg-muted/30 border-border/40 rounded-2xl text-base text-foreground focus:bg-muted focus:ring-4 focus:ring-blue-500/10 transition-all"
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
                             onKeyDown={(e) => {
@@ -343,35 +361,111 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 </div>
             </div>
 
-            {/* Product List Area */}
-            <div className="flex-1 overflow-y-auto px-6 space-y-4 custom-scrollbar-dark pb-6">
-                {filteredProducts.map((product) => (
-                    <div
-                        key={product.id}
-                        className="flex items-center justify-between p-5 bg-muted/30 border border-border/80/30 rounded-2xl hover:bg-white/[0.03] hover:border-blue-500/20 transition-all group active:scale-[0.99]"
+            {/* Tabs for switching between Products and Cart */}
+            <div className="px-6 mb-4">
+                <div className="flex p-1 bg-muted/50 rounded-xl border border-border/40">
+                    <button
+                        onClick={() => setView('products')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all",
+                            view === 'products' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        )}
                     >
-                        <div className="flex items-center gap-5">
-                            <div className="h-16 w-16 rounded-2xl bg-card border border-border/80 flex items-center justify-center overflow-hidden">
-                                <Package className="h-9 w-9 text-muted-foreground/80 opacity-20" />
+                        <Package className="h-4 w-4" />
+                        ÜRÜNLER
+                    </button>
+                    <button
+                        onClick={() => setView('cart')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all relative",
+                            view === 'cart' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <ShoppingCart className="h-4 w-4" />
+                        SEPET
+                        {cart.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px]">{cart.length}</span>}
+                    </button>
+                </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 space-y-4 custom-scrollbar pb-6">
+                {view === 'products' ? (
+                    filteredProducts.map((product) => (
+                        <div
+                            key={product.id}
+                            className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-2xl hover:bg-muted/40 hover:border-blue-500/20 transition-all group active:scale-[0.99]"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-card border border-border/60 flex items-center justify-center overflow-hidden">
+                                    <Package className="h-7 w-7 text-muted-foreground/40 opacity-50" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="font-bold text-sm text-foreground leading-tight">{product.name}</h4>
+                                    <p className="text-[10px] text-blue-500 mt-1 font-bold">{product.category.name}</p>
+                                </div>
                             </div>
-                            <div className="flex flex-col">
-                                <h4 className="font-medium text-base  text-white leading-tight">{product.name}</h4>
-                                <p className="text-xs text-blue-500 mt-1.5 ">{product.category.name}</p>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <span className="text-sm font-bold text-foreground">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                </div>
+                                <button
+                                    onClick={() => addToCart(product)}
+                                    className="h-9 w-9 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all active:scale-90"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-6">
-                            <div className="text-right">
-                                <span className="text-lg  text-white">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
-                            </div>
-                            <button
-                                onClick={() => addToCart(product)}
-                                className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all active:scale-90"
-                            >
-                                <Plus className="h-5 w-5" />
-                            </button>
+                    ))
+                ) : (
+                    cart.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 p-10 text-center">
+                            <ShoppingCart className="h-12 w-12 mb-4 opacity-10" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest">Sepetiniz Boş</p>
                         </div>
-                    </div>
-                ))}
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SEPETTEKİ ÜRÜNLER</h3>
+                                <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-7 px-3 text-[9px] text-rose-500 hover:bg-rose-500/10">BOŞALT</Button>
+                            </div>
+                            {cart.map((item) => (
+                                <div key={item.id} className="bg-card border border-border/60 p-4 rounded-2xl space-y-3 shadow-sm">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-sm font-bold text-foreground truncate uppercase">{item.name}</h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="relative flex items-center">
+                                                    <span className="text-xs text-blue-600 font-bold absolute left-0">₺</span>
+                                                    <input
+                                                        type="number"
+                                                        value={item.sellPrice}
+                                                        onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                                                        className="bg-transparent border-none text-xs text-blue-600 font-bold focus:ring-0 w-20 pl-3 py-0 h-auto"
+                                                    />
+                                                </div>
+                                                <div className="h-1 w-1 rounded-full bg-border" />
+                                                <span className="text-[10px] text-muted-foreground">ADET</span>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => removeFromCart(item.id)} className="text-rose-500 hover:bg-rose-500/10 p-2 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                                        <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/40">
+                                            <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center hover:bg-background rounded-md transition-colors"><Minus className="h-3 w-3" /></button>
+                                            <span className="w-10 text-center font-bold text-xs">{item.quantity}</span>
+                                            <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center hover:bg-background rounded-md transition-colors"><Plus className="h-3 w-3" /></button>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[12px] font-bold text-foreground">₺{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                )}
             </div>
 
             {/* Cart Summary Section - Fixed at bottom */}

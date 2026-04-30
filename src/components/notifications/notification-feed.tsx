@@ -167,20 +167,20 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                     {/* Header Area */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                         <div className="space-y-1">
-                            <h1 className="font-medium text-3xl  text-white tracking-tighter">
+                            <h1 className="font-semibold text-3xl text-foreground tracking-tighter">
                                 Bildirimler <span className="text-blue-500 font-serif italic text-2xl">&</span> Hatırlatmalar
                             </h1>
-                            <p className="text-muted-foreground font-medium text-[13px] flex items-center gap-2">
-                                <span className={cn("h-1.5 w-1.5 rounded-full", unreadCount > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-600")} />
+                            <p className="text-muted-foreground font-bold text-[13px] flex items-center gap-2">
+                                <span className={cn("h-1.5 w-1.5 rounded-full", unreadCount > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-400 dark:bg-slate-600")} />
                                 Şu an {unreadCount} adet okunmamış işleminiz var.
                             </p>
                         </div>
 
                         <div className="flex items-center gap-2">
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 onClick={handleMarkAllRead}
-                                className="h-10 px-4 rounded-xl bg-white/[0.03] border border-border/50  text-[11px] gap-2 hover:bg-white/10 transition-all text-muted-foreground hover:text-white"
+                                className="h-10 px-4 rounded-xl bg-muted/30 border border-border/50 text-[11px] font-bold gap-2 hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground"
                             >
                                 <CheckCheck className="h-3.5 w-3.5 text-blue-500" /> Tümünü Okundu İşaretle
                             </Button>
@@ -193,7 +193,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-1.5 bg-white/[0.02] border border-border/50 rounded-2xl backdrop-blur-3xl overflow-x-auto no-scrollbar scroll-smooth">
+                    <div className="flex items-center gap-2 p-1.5 bg-muted/20 border border-border/50 rounded-2xl backdrop-blur-3xl overflow-x-auto no-scrollbar scroll-smooth">
                         {(Object.keys(categoryConfigs) as NotificationCategory[]).map((cat) => {
                             const isActive = activeTab === cat;
                             const config = categoryConfigs[cat];
@@ -204,19 +204,19 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                     key={cat}
                                     onClick={() => setActiveTab(cat)}
                                     className={cn(
-                                        "h-10 px-5 rounded-xl text-[11px]  uppercase tracking-tighter transition-all flex items-center gap-3 whitespace-nowrap group relative",
+                                        "h-10 px-5 rounded-xl text-[11px] font-bold uppercase tracking-tighter transition-all flex items-center gap-3 whitespace-nowrap group relative",
                                         isActive
-                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30  scale-[1.02]"
-                                            : "text-muted-foreground/80 hover:text-white hover:bg-blue-500/10 hover:border-blue-500/20"
+                                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-[1.02]"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border/50"
                                     )}
                                 >
-                                    <config.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-muted-foreground/80 group-hover:text-blue-400")} />
+                                    <config.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-muted-foreground group-hover:text-blue-500")} />
                                     {cat}
                                     <div className={cn(
-                                        "px-2.5 py-0.5 rounded-full text-[9px]  transition-all",
+                                        "px-2.5 py-0.5 rounded-full text-[9px] font-black transition-all",
                                         isActive
                                             ? "bg-white/20 text-white shadow-inner"
-                                            : "bg-white/5 text-muted-foreground/80 group-hover:bg-blue-500/20 group-hover:text-blue-400"
+                                            : "bg-muted text-muted-foreground group-hover:bg-blue-500/20 group-hover:text-blue-500"
                                     )}>
                                         {count}
                                     </div>
@@ -237,8 +237,8 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                     <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full" />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium text-lg  text-white mb-1">Her Şey Yolunda!</h3>
-                                    <p className="text-muted-foreground/80 text-[13px] font-medium max-w-xs mx-auto">Şu an müdahale etmeniz gereken herhangi bir bildirim bulunmuyor.</p>
+                                    <h3 className="font-semibold text-lg text-foreground mb-1">Her Şey Yolunda!</h3>
+                                    <p className="text-muted-foreground text-[13px] font-bold max-w-xs mx-auto">Şu an müdahale etmeniz gereken herhangi bir bildirim bulunmuyor.</p>
                                 </div>
                             </div>
                         ) : (
@@ -250,9 +250,9 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                         style={{ animationDelay: `${idx * 40}ms` }}
                                         onClick={() => handleAction(n)}
                                         className={cn(
-                                            "group relative p-4 rounded-2xl border border-white/5 bg-white/[0.03] dark:bg-black/20 hover:bg-white/10 dark:hover:bg-white/5 transition-all cursor-pointer overflow-hidden animate-in fade-in duration-500",
-                                            !n.isRead && "border-blue-500/30 bg-blue-500/[0.03]",
-                                            "hover:translate-x-1"
+                                            "group relative p-4 rounded-2xl border border-border/40 bg-card hover:bg-muted/50 transition-all cursor-pointer overflow-hidden animate-in fade-in duration-500",
+                                            !n.isRead && "border-blue-500/30 bg-blue-500/[0.03] dark:bg-blue-500/[0.05]",
+                                            "hover:translate-x-1 shadow-sm"
                                         )}
                                     >
                                         <div className="flex gap-4 items-center">
@@ -270,8 +270,8 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                             <div className="flex-1 min-w-0 space-y-0.5">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className={cn(
-                                                        "text-sm  tracking-tight transition-colors truncate",
-                                                        n.isRead ? "text-muted-foreground" : "text-white group-hover:text-blue-400 "
+                                                        "text-sm font-bold tracking-tight transition-colors truncate",
+                                                        n.isRead ? "text-muted-foreground" : "text-foreground group-hover:text-blue-500 dark:group-hover:text-blue-400"
                                                     )}>
                                                         {n.title}
                                                     </h3>

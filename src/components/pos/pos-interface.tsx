@@ -259,6 +259,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
     }));
   }, [products, toast]);
 
+  const updatePrice = useCallback((id: string, newPrice: number) => {
+    setCart((prev) => prev.map((item) => {
+      if (item.id === id) {
+        return { ...item, sellPrice: newPrice };
+      }
+      return item;
+    }));
+  }, []);
+
   const removeFromCart = useCallback((id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   }, []);
@@ -290,17 +299,22 @@ export function POSInterface({ products: initialProducts, customers, categories,
     const handleAdd = (e: any) => {
       addToCart(e.detail.product);
     };
+    const handleUpdatePrice = (e: any) => {
+      updatePrice(e.detail.productId, e.detail.newPrice);
+    };
 
     window.addEventListener("scanner_remove_from_cart", handleRemove);
     window.addEventListener("scanner_update_quantity", handleUpdateQty);
     window.addEventListener("scanner_add_to_cart", handleAdd);
+    window.addEventListener("scanner_update_price", handleUpdatePrice);
 
     return () => {
       window.removeEventListener("scanner_remove_from_cart", handleRemove);
       window.removeEventListener("scanner_update_quantity", handleUpdateQty);
       window.removeEventListener("scanner_add_to_cart", handleAdd);
+      window.removeEventListener("scanner_update_price", handleUpdatePrice);
     };
-  }, [removeFromCart, updateQuantity, addToCart]);
+  }, [removeFromCart, updateQuantity, addToCart, updatePrice]);
 
   useEffect(() => {
     let rid = localStorage.getItem("scanner_room_id");
@@ -648,9 +662,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     <div className="flex-1 min-w-0">
                       <span className="text-[15px]  text-foreground block leading-tight mb-1 truncate">{item.name}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-[13px] text-primary ">
-                          ₺{formatCurrency(item.sellPrice)}
-                        </span>
+                        <div className="relative flex items-center">
+                          <span className="text-[13px] text-primary absolute left-0">₺</span>
+                          <input
+                            type="number"
+                            value={item.sellPrice}
+                            onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                            className="bg-transparent border-none text-[13px] text-primary font-bold focus:ring-0 w-24 pl-3 py-0 h-auto"
+                          />
+                        </div>
                         <div className="h-1 w-1 rounded-full bg-border" />
                         <span className="text-[10px] text-muted-foreground ">MEVCUT: {item.stock}</span>
                       </div>

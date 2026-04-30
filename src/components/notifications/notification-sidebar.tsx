@@ -36,7 +36,7 @@ export function NotificationSidebar({
         <div className="flex flex-col gap-5 w-full lg:w-[320px] shrink-0">
             {/* Garanti Bitiş Uyarısı Widget */}
             {warrantyAlerts.length > 0 && (
-                <div className="bg-slate-900/50 dark:bg-black/40 backdrop-blur-3xl rounded-2xl p-5 border border-white/10 shadow-xl relative overflow-hidden group">
+                <div className="bg-slate-900 dark:bg-black/40 backdrop-blur-3xl rounded-2xl p-5 border border-white/10 shadow-xl relative overflow-hidden group">
                     <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
 
                     <div className="flex items-center justify-between mb-3 relative z-10">
@@ -49,15 +49,15 @@ export function NotificationSidebar({
                     </div>
 
                     <div className="relative z-10">
-                        <h3 className="font-medium text-lg  text-white mb-1.5 leading-tight">
+                        <h3 className="font-bold text-lg text-white mb-1.5 leading-tight">
                             Garanti Uyarısı
                         </h3>
-                        <p className="text-[12px] font-medium text-muted-foreground leading-snug mb-4">
+                        <p className="text-[12px] font-bold text-slate-300 leading-snug mb-4">
                             {warrantyAlerts[0].message}
                         </p>
                         <Button
                             onClick={() => router.push(`/servis?highlight=${warrantyAlerts[0].referenceId}`)}
-                            className="w-full h-10 rounded-xl bg-white text-slate-900  hover:bg-slate-200 text-xs transition-all shadow-lg shadow-white/5"
+                            className="w-full h-10 rounded-xl bg-white text-slate-900 hover:bg-slate-200 font-bold text-xs transition-all shadow-lg"
                         >
                             Teklif Hazırla
                         </Button>
@@ -66,8 +66,8 @@ export function NotificationSidebar({
             )}
 
             {/* Onay Bekleyenler & Gecikmiş Servis Widget */}
-            <div className="bg-white/[0.03] dark:bg-black/20 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50" />
+            <div className="bg-card dark:bg-black/20 border border-border/50 rounded-2xl p-5 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-blue-500/5 to-transparent opacity-50 dark:opacity-100" />
 
                 <div className="flex items-center justify-between mb-5 relative z-10">
                     <h3 className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">
@@ -92,10 +92,10 @@ export function NotificationSidebar({
                                 </div>
                                 <div className="flex flex-col gap-2 flex-1 min-w-0">
                                     <div className="space-y-0.5">
-                                        <h4 className="font-medium text-[13px]  text-white leading-none truncate tracking-tight">
+                                        <h4 className="font-bold text-[13px] text-foreground dark:text-white leading-none truncate tracking-tight">
                                             {pending.message.split('-')[0].trim().replace('Müşteri:', '').trim()}
                                         </h4>
-                                        <p className="text-[11px] font-medium text-muted-foreground/80 leading-tight">
+                                        <p className="text-[11px] font-bold text-muted-foreground leading-tight">
                                             Maliyet onayı bekleniyor ({pending.metadata?.cost?.toLocaleString('tr-TR')} TL)
                                         </p>
                                     </div>
@@ -132,10 +132,10 @@ export function NotificationSidebar({
                                     <AlertCircle className="h-4 w-4 text-rose-500" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <h4 className="font-medium text-[12px]  text-white leading-none">
+                                    <h4 className="font-bold text-[12px] text-foreground dark:text-white leading-none">
                                         {delayed.title}
                                     </h4>
-                                    <p className="text-[10px] font-medium text-muted-foreground leading-tight">
+                                    <p className="text-[10px] font-bold text-muted-foreground leading-tight">
                                         {delayed.message}
                                     </p>
                                     <Button
@@ -154,18 +154,18 @@ export function NotificationSidebar({
             {/* Cihaz Takibi Widget - Real Data */}
             <div
                 onClick={() => router.push('/servis')}
-                className="bg-slate-900/30 dark:bg-black/20 rounded-2xl p-5 border border-white/5 relative overflow-hidden group hover:bg-white/5 transition-all cursor-pointer"
+                className="bg-muted/50 dark:bg-black/20 rounded-2xl p-5 border border-border/50 relative overflow-hidden group hover:bg-muted dark:hover:bg-white/5 transition-all cursor-pointer shadow-sm"
             >
                 <div className="absolute inset-0 bg-white/[0.01] opacity-20 pointer-events-none" />
                 <div className="relative z-10 flex flex-col h-full justify-end min-h-[100px]">
-                    <h3 className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest mb-1.5 ml-0.5">
+                    <h3 className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest mb-1.5 ml-0.5">
                         CİHAZ TAKİBİ
                     </h3>
                     <div className="flex items-end justify-between mb-4">
-                        <span className="text-xl  text-white leading-none tracking-tight">
+                        <span className="text-xl font-bold text-foreground dark:text-white leading-none tracking-tight">
                             {serviceStats?.active || 0} Cihaz Onarımda
                         </span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground/80 group-hover:text-white transition-all group-hover:translate-x-1" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-white transition-all group-hover:translate-x-1" />
                     </div>
                     <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
                         <div

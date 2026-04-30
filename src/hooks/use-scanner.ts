@@ -41,15 +41,21 @@ export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: strin
             window.dispatchEvent(new CustomEvent("scanner_add_to_cart", { detail: { product } }));
         };
 
+        const handleUpdatePrice = ({ productId, newPrice }: { productId: string, newPrice: number }) => {
+            window.dispatchEvent(new CustomEvent("scanner_update_price", { detail: { productId, newPrice } }));
+        };
+
         socket.on("process_barcode", handleProcessBarcode);
         socket.on("process_remove_from_cart", handleRemoveFromCart);
         socket.on("process_update_cart_quantity", handleUpdateQuantity);
+        socket.on("process_update_cart_price", handleUpdatePrice);
         socket.on("process_add_to_cart", handleAddToCart);
 
         return () => {
             socket.off("process_barcode", handleProcessBarcode);
             socket.off("process_remove_from_cart", handleRemoveFromCart);
             socket.off("process_update_cart_quantity", handleUpdateQuantity);
+            socket.off("process_update_cart_price", handleUpdatePrice);
             socket.off("process_add_to_cart", handleAddToCart);
         };
     }, [socket, roomId, onBarcodeScanned]);

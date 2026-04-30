@@ -212,6 +212,12 @@ export default function MobileScannerPage() {
         }
     };
 
+    const updateCartPrice = (productId: string, newPrice: number) => {
+        if (socket && roomId) {
+            socket.emit("update_cart_price", { roomId, productId, newPrice });
+        }
+    };
+
     const handleCheckout = () => {
         if (cart.length === 0) return;
         if (paymentMethod === "DEBT" && selectedCustomerId === "null") {
@@ -337,7 +343,7 @@ export default function MobileScannerPage() {
         }
     };
 
-    const startScanning = async () => {
+    const startScanning = async (isRetry = false) => {
         if (!roomId || scannerRef.current || isScanning) return;
         try {
             setIsScanning(true);
@@ -345,9 +351,8 @@ export default function MobileScannerPage() {
             await scannerRef.current.start(
                 { facingMode: "environment" },
                 {
-                    fps: 20, // Increased for better performance
+                    fps: 20,
                     qrbox: (viewWidth, viewHeight) => {
-                        // Dynamic qrbox: More proportional to mobile screens
                         const width = viewWidth * 0.8;
                         const height = Math.min(viewHeight * 0.5, 250);
                         return { width, height };
@@ -380,9 +385,18 @@ export default function MobileScannerPage() {
                 },
                 () => { }
             );
-        } catch (err) {
+        } catch (err: any) {
             console.error("Camera start error:", err);
-            toast.error("Kamera başlatılamadı. İzinleri kontrol edin.");
+
+            // If it's a common "busy" error, try one more time after a short delay
+            if (!isRetry && (err.name === 'NotReadableError' || err.message?.includes('busy'))) {
+                scannerRef.current = null;
+                setIsScanning(false);
+                setTimeout(() => startScanning(true), 500);
+                return;
+            }
+
+            toast.error("Kamera başlatılamadı. Cihaz meşgul olabilir veya izin gerekebilir.");
             setIsScanning(false);
             scannerRef.current = null;
         }
@@ -409,8 +423,11 @@ export default function MobileScannerPage() {
 
         const autoStart = async () => {
             if (isMounting) {
-                await stopScanning(); // Ensure closed before restart
-                startScanning();
+                await stopScanning();
+                // Adding a small delay to ensure hardware is fully released
+                setTimeout(() => {
+                    if (isMounting) startScanning();
+                }, 350);
             }
         };
 
@@ -418,6 +435,7 @@ export default function MobileScannerPage() {
 
         return () => {
             isMounting = false;
+            stopScanning();
         };
     }, [roomId, isConnected, activeTab]);
 
@@ -448,7 +466,7 @@ export default function MobileScannerPage() {
     const visibleHistory = filteredHistory.slice(0, historyLimit);
 
     return (
-        <div className="min-h-screen bg-neutral-950 flex flex-col text-white tabular-nums selection:bg-blue-500/30 overflow-hidden">
+        <div className="h-[100dvh] bg-neutral-950 flex flex-col text-white tabular-nums selection:bg-blue-500/30 overflow-hidden">
             {/* Header */}
             <div className="bg-neutral-900/40 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-[100] px-5 py-3 flex items-center justify-between transition-all duration-300">
                 <div className="flex items-center gap-3">
@@ -477,7 +495,7 @@ export default function MobileScannerPage() {
             </div>
 
             {/* Content Area - Scrollable */}
-            <div className="flex-1 overflow-y-auto pb-48">
+            <div className="flex-1 overflow-y-auto pb-64 custom-scrollbar">
                 {/* Tabs - Sticky below header */}
                 <div className="sticky top-0 z-[90] bg-neutral-950/80 backdrop-blur-xl px-4 py-3">
                     <div className="flex p-1 bg-neutral-900 rounded-[1.2rem] border border-white/5 gap-1 shadow-xl overflow-x-auto no-scrollbar">
@@ -536,7 +554,7 @@ export default function MobileScannerPage() {
 
                             {!isScanning ? (
                                 <Button
-                                    onClick={startScanning}
+                                    onClick={() => startScanning()}
                                     className="w-full h-20 text-lg font-black bg-blue-600 hover:bg-blue-700 rounded-[2rem] gap-4 shadow-2xl shadow-blue-600/20 active:scale-95 transition-all"
                                 >
                                     <Camera className="w-7 h-7" />
@@ -844,7 +862,17 @@ export default function MobileScannerPage() {
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="text-[16px] font-black text-neutral-100 truncate tracking-tight uppercase">{item.name}</h4>
-                                                    <p className="text-xs text-blue-500 font-black mt-1.5">₺{formatCurrency(item.sellPrice)} <span className="text-white/20 px-1">/</span> <span className="text-neutral-500 text-[10px]">ADET</span></p>
+                                                    <p className="text-xs text-blue-500 font-black mt-1.5 flex items-center">
+                                                        <span>₺</span>
+                                                        <input
+                                                            type="number"
+                                                            value={item.sellPrice}
+                                                            onChange={(e) => updateCartPrice(item.id, parseFloat(e.target.value) || 0)}
+                                                            className="bg-transparent border-none text-blue-500 font-black p-0 h-auto focus:ring-0 w-24 ml-1"
+                                                        />
+                                                        <span className="text-white/20 px-1">/</span>
+                                                        <span className="text-neutral-500 text-[10px]">ADET</span>
+                                                    </p>
                                                 </div>
                                                 <button
                                                     onClick={() => removeFromCart(item.id)}
@@ -1028,6 +1056,22 @@ export default function MobileScannerPage() {
                 .no-scrollbar {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
+                }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+                    overscroll-behavior-y: contain;
+                    -webkit-overflow-scrolling: touch;
                 }
             `}</style>
         </div>
