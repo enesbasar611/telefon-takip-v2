@@ -55,7 +55,7 @@ const statusLabels: Record<string, string> = {
 
 export default async function ServiceDetailPage({ params }: { params: { id: string } }) {
     const ticket = await getServiceTicketById(params.id);
-    const products = await getProducts();
+    const { products } = await getProducts();
 
     if (!ticket) {
         notFound();

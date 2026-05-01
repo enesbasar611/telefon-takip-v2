@@ -131,6 +131,11 @@ app.prepare().then(() => {
             io.to(roomId).emit('process_add_to_cart', { product });
         });
 
+        // Sepette Fiyat Güncelleme (Telefon -> PC)
+        socket.on('update_cart_price', ({ roomId, productId, newPrice }) => {
+            io.to(roomId).emit('process_update_cart_price', { productId, newPrice });
+        });
+
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
         });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,7 +42,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getSettings } from "@/lib/actions/setting-actions";
-import { useEffect } from "react";
+// Cart Persistence Effect
 import { useScanner } from "@/hooks/use-scanner";
 import { useSession } from "next-auth/react";
 import { ScannerModal } from "../scanner/scanner-modal";
@@ -60,6 +60,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const [showReceipt, setShowReceipt] = useState(false);
     const [lastSale, setLastSale] = useState<any>(null);
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const lastAddRef = useRef<{ id: string; time: number } | null>(null);
 
     const [pointValueTl, setPointValueTl] = useState<number>(5);
     const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
@@ -94,6 +96,27 @@ export function POSCompact({ products, customers, categories }: { products: any[
         }
     }, [session, initializeScannerRoom]);
 
+    // Load cart from localStorage
+    useEffect(() => {
+        const savedCart = localStorage.getItem("pos_active_cart");
+        if (savedCart) {
+            try {
+                setCart(JSON.parse(savedCart));
+            } catch (e) {
+                console.error("Cart recovery error:", e);
+            }
+        }
+        setIsLoaded(true);
+    }, []);
+
+    // Save cart to localStorage
+    useEffect(() => {
+        if (isLoaded) {
+            localStorage.setItem("pos_active_cart", JSON.stringify(cart));
+            syncCartToMobile(cart);
+        }
+    }, [cart, isLoaded, syncCartToMobile]);
+
     // Load points config
     useEffect(() => {
         async function fetchPointsSettings() {
@@ -122,6 +145,14 @@ export function POSCompact({ products, customers, categories }: { products: any[
 
     const addToCart = (product: any) => {
         if (!product) return;
+
+        // Debounce rapid additions of the same product (prevent "1 adds 3" bug)
+        const now = Date.now();
+        const lastAdd = lastAddRef.current;
+        if (lastAdd && lastAdd.id === product.id && now - lastAdd.time < 500) {
+            return;
+        }
+        lastAddRef.current = { id: product.id, time: now };
 
         setCart((currentCart) => {
             const existing = currentCart.find((item) => item.id === product.id);
@@ -171,9 +202,12 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const updateQuantity = (id: string, delta: number) => {
         setCart((prev) => prev.map((item) => {
             if (item.id === id) {
-                const newQty = Math.max(1, item.quantity + delta);
+                // Ensure delta is valid
+                const change = Number(delta);
+                const newQty = Math.max(1, item.quantity + change);
                 const originalProduct = products.find((p) => p.id === id);
-                if (delta > 0 && originalProduct && newQty > originalProduct.stock) {
+
+                if (change > 0 && originalProduct && newQty > originalProduct.stock) {
                     toast({ title: "Stok Yetersiz", variant: "destructive" });
                     return item;
                 }

@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Plus,
+  Minus,
   Download,
   Edit,
   Trash2,
@@ -27,7 +28,9 @@ import {
   MapPin,
   Barcode as BarcodeIcon,
   RefreshCw,
-  ScanLine
+  ScanLine,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
@@ -44,7 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addShortageItem } from "@/lib/actions/shortage-actions";
-import { quickSellProduct, deleteProduct, ensureProductBarcode, regenerateProductBarcodes } from "@/lib/actions/product-actions";
+import { quickSellProduct, deleteProduct, ensureProductBarcode, regenerateProductBarcodes, adjustStockById } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "./product-detail-drawer";
 import { EditProductModal } from "./edit-product-modal";
@@ -54,7 +57,21 @@ import { getIndustryLabel } from "@/lib/industry-utils";
 import { BarcodeLabelPrintDialog } from "@/components/barcode/barcode-label-print-dialog";
 
 
-export function StockListTable({ products, categories, shop }: { products: any[], categories: any[], shop?: any }) {
+export function StockListTable({
+  products,
+  categories,
+  shop,
+  totalCount = 0,
+  pageSize = 20,
+  currentPage = 1
+}: {
+  products: any[],
+  categories: any[],
+  shop?: any,
+  totalCount?: number,
+  pageSize?: number,
+  currentPage?: number
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
@@ -64,7 +81,19 @@ export function StockListTable({ products, categories, shop }: { products: any[]
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [printProduct, setPrintProduct] = useState<any>(null);
   const [printProducts, setPrintProducts] = useState<any[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Selection persistence across pages
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("stock_selected_ids");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("stock_selected_ids", JSON.stringify(selectedIds));
+  }, [selectedIds]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
@@ -104,6 +133,21 @@ export function StockListTable({ products, categories, shop }: { products: any[]
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
+
+  // Debounced search update for URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm === (searchParams.get("q") || "")) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchTerm) params.set("q", searchTerm);
+      else params.delete("q");
+      params.set("page", "1"); // Reset to page 1 on search
+      router.push(`?${params.toString()}`);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, router, searchParams]);
 
   const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filteredProducts, "name", "asc");
   const selectedProducts = useMemo(
@@ -184,6 +228,21 @@ export function StockListTable({ products, categories, shop }: { products: any[]
       }
     } catch (error) {
       toast.error("Satış işlemi sırasında bir hata oluştu.");
+    }
+  };
+
+  const handleAdjustStock = async (e: React.MouseEvent, productId: string, amount: number) => {
+    e.stopPropagation();
+    try {
+      const res = await adjustStockById(productId, amount);
+      if (res.success) {
+        toast.success(amount > 0 ? "Stok artırıldı." : "Stok azaltıldı.", { duration: 1000 });
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
+    } catch (error) {
+      toast.error("Stok güncellenemedi.");
     }
   };
 
@@ -375,18 +434,38 @@ export function StockListTable({ products, categories, shop }: { products: any[]
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="bg-muted/40 p-3 rounded-xl border border-border flex flex-col justify-center">
                     <p className="text-[9px] font-medium text-muted-foreground/80 mb-1.5 uppercase tracking-wider">STOK DURUMU</p>
-                    <div className="flex items-center gap-2">
-                      {product.stock <= product.criticalStock ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-                          <span className="text-[13px] font-semibold text-rose-500">{product.stock} Adet</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                          <span className="text-[13px] font-medium text-foreground">{product.stock} Adet</span>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {product.stock <= product.criticalStock ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                            <span className="text-[13px] font-semibold text-rose-500">{product.stock} Adet</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                            <span className="text-[13px] font-medium text-foreground">{product.stock} Adet</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          onClick={(e) => handleAdjustStock(e, product.id, -1)}
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg border-border/50 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          onClick={(e) => handleAdjustStock(e, product.id, 1)}
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg border-border/50 hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   <div className="bg-muted/40 p-3 rounded-xl border border-border flex flex-col justify-center text-right">
@@ -502,25 +581,45 @@ export function StockListTable({ products, categories, shop }: { products: any[]
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col items-center justify-center gap-1">
-                      <div className="flex items-center gap-2">
-                        {product.stock <= product.criticalStock ? (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-                            <span className="text-[12px] font-semibold text-rose-400">{product.stock} Adet</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                            <span className="text-[12px] font-medium text-foreground">{product.stock} Adet</span>
-                          </div>
+                    <div className="flex items-center justify-center gap-4">
+                      <Button
+                        onClick={(e) => handleAdjustStock(e, product.id, -1)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-500 transition-all border border-transparent hover:border-rose-500/20"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </Button>
+
+                      <div className="flex flex-col items-center justify-center gap-1 min-w-[60px]">
+                        <div className="flex items-center gap-2">
+                          {product.stock <= product.criticalStock ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                              <span className="text-[12px] font-semibold text-rose-400">{product.stock} Adet</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                              <span className="text-[12px] font-medium text-foreground">{product.stock} Adet</span>
+                            </div>
+                          )}
+                        </div>
+                        {product.stock <= product.criticalStock && (
+                          <span className="text-[10px] font-medium text-rose-500/80 uppercase tracking-tighter">
+                            {product.stock === 0 ? 'Tükendi' : 'Kritik'}
+                          </span>
                         )}
                       </div>
-                      {product.stock <= product.criticalStock && (
-                        <span className="text-[10px] font-medium text-rose-500/80 uppercase tracking-tighter">
-                          {product.stock === 0 ? 'Tükendi' : 'Kritik'}
-                        </span>
-                      )}
+
+                      <Button
+                        onClick={(e) => handleAdjustStock(e, product.id, 1)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-500/20"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -604,6 +703,80 @@ export function StockListTable({ products, categories, shop }: { products: any[]
         onOpenChange={setIsPrintDialogOpen}
       />
       <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
+
+      {/* Pagination Controls */}
+      {totalCount > pageSize && (
+        <div className="flex items-center justify-between px-8 py-6 border-t border-border/40 bg-muted/5">
+          <div className="flex-1 text-[12px] font-medium text-muted-foreground/80">
+            Toplam <span className="text-foreground">{totalCount}</span> üründen
+            <span className="text-foreground"> {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalCount)}</span> arası gösteriliyor
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", (currentPage - 1).toString());
+                router.push(`?${params.toString()}`);
+              }}
+              disabled={currentPage <= 1}
+              className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Önceki
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }, (_, i) => {
+                // Show pages around current page
+                const totalPages = Math.ceil(totalCount / pageSize);
+                let pageNum = currentPage;
+                if (totalPages <= 5) pageNum = i + 1;
+                else {
+                  if (currentPage <= 3) pageNum = i + 1;
+                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("page", pageNum.toString());
+                      router.push(`?${params.toString()}`);
+                    }}
+                    className={cn(
+                      "h-9 w-9 p-0 rounded-xl text-[12px] font-medium transition-all",
+                      currentPage === pageNum ? "shadow-md shadow-primary/20" : "border-border/80 hover:bg-muted"
+                    )}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", (currentPage + 1).toString());
+                router.push(`?${params.toString()}`);
+              }}
+              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+              className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
+            >
+              Sonraki
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

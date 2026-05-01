@@ -63,7 +63,7 @@ async function buildCategoryContext() {
 }
 
 async function buildProductContext() {
-    const products = await getProducts();
+    const { products } = await getProducts();
     // Only return names to save tokens
     return products.slice(0, 300).map((p: any) => p.name);
 }
@@ -659,7 +659,8 @@ export async function getShopHealthAnalysis(): Promise<{ success: true; analysis
     const { getShopId } = await import("@/lib/auth");
     const shopId = await getShopId();
 
-    const products = await getProducts();
+    const productsData = await getProducts();
+    const products = productsData.products;
     const categories = await getCategories();
 
     // Minimal stats for context

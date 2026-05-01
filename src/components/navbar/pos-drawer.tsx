@@ -24,8 +24,8 @@ export function POSDrawer() {
 
   const fetchData = async () => {
     try {
-      const [p, c, cats] = await Promise.all([getProducts(), getCustomers(), getCategories()]);
-      setProducts(p);
+      const [pData, c, cats] = await Promise.all([getProducts(), getCustomers(), getCategories()]);
+      setProducts(pData.products);
       setCustomers(c);
       setCategories(cats);
     } catch (error) {

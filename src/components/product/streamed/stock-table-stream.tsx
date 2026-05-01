@@ -12,19 +12,33 @@ export async function StockTableStream({ searchParams, shop }: { searchParams?: 
         }
     }
 
-    const [productsRaw, categoriesRaw] = await Promise.all([
+    const currentPage = Number(searchParams?.page) || 1;
+    const pageSize = 50;
+
+    const [data, categoriesRaw] = await Promise.all([
         getProducts({
-            pageSize: 100,
+            page: currentPage,
+            pageSize: pageSize,
             search: searchParams?.q,
             ...aiFilters
         }),
         getCategories()
     ]);
 
-    const products = serializePrisma(productsRaw);
+    const products = data.products;
+    const totalCount = data.totalCount;
     const categories = serializePrisma(categoriesRaw);
 
-    return <StockListTable products={products} categories={categories} shop={shop} />;
+    return (
+        <StockListTable
+            products={products}
+            categories={categories}
+            shop={shop}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            currentPage={currentPage}
+        />
+    );
 }
 
 

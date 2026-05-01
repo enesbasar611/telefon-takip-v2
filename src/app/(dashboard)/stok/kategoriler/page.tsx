@@ -6,10 +6,11 @@ import { CategoryManagementClient } from "@/components/product/category-manageme
 import { PageHeader } from "@/components/ui/page-header";
 
 export default async function KategorilerPage() {
-    const [categories, products] = await Promise.all([
+    const [categories, productsData] = await Promise.all([
         getAllCategories(),
         getProducts()
     ]);
+    const products = productsData.products;
 
     return (
         <div className="flex flex-col gap-10 pb-20">

@@ -83,17 +83,25 @@ export const getProducts = cache(async function getProducts(options: {
       };
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      include: { category: true },
-      orderBy: { updatedAt: "desc" },
-      ...(pageSize ? { take: pageSize } : {}),
-      ...(page && pageSize ? { skip: (page - 1) * pageSize } : {}),
-    });
-    return serializePrisma(products);
+    // Fetch products and total count in parallel
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: true },
+        orderBy: { updatedAt: "desc" },
+        ...(pageSize ? { take: pageSize } : {}),
+        ...(page && pageSize ? { skip: (page - 1) * pageSize } : {}),
+      }),
+      prisma.product.count({ where })
+    ]);
+
+    return {
+      products: serializePrisma(products),
+      totalCount
+    };
   } catch (error) {
     console.error("Error fetching products:", error);
-    return [];
+    return { products: [], totalCount: 0 };
   }
 });
 
@@ -1125,5 +1133,61 @@ export async function getProductByBarcode(barcode: string) {
     return { success: true, data: serializePrisma(product) };
   } catch (error) {
     return { success: false, error: "Ürün getirilemedi" };
+  }
+}
+
+export async function adjustStockById(id: string, quantity: number, notes?: string) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const product = await prisma.product.findUnique({
+      where: { id, shopId }
+    });
+
+    if (!product) {
+      return { success: false, error: "Ürün bulunamadı." };
+    }
+
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id: product.id, shopId },
+        data: { stock: { increment: quantity } }
+      });
+
+      await tx.inventoryLog.create({
+        data: {
+          productId: product.id,
+          userId,
+          quantity,
+          type: quantity >= 0 ? "ENTRY" : "OUT",
+          notes: notes || "Tablodan Hızlı Stok Güncelleme",
+          shopId
+        }
+      });
+
+      await tx.inventoryMovement.create({
+        data: {
+          productId: product.id,
+          quantity,
+          type: quantity >= 0 ? "RESTOCK" : "ADJUSTMENT",
+          notes: notes || "Tablodan Hızlı Stok Güncelleme",
+          shopId
+        }
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/(dashboard)", "layout");
+
+    return {
+      success: true,
+      data: serializePrisma(updatedProduct)
+    };
+  } catch (error) {
+    console.error("adjustStockById error:", error);
+    return { success: false, error: "Stok güncellenemedi." };
   }
 }
