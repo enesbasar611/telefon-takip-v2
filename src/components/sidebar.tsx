@@ -30,7 +30,8 @@ import {
   RefreshCcw,
   Activity,
   ListTree,
-  Plus
+  Plus,
+  ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -176,7 +177,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     if (activeMenu && !openMenus.includes(activeMenu.label)) {
       setOpenMenus(prev => [...prev, activeMenu.label]);
     }
-  }, [pathname, shop]); // Re-run when shop/industry changes
+  }, [pathname, currentShop]); // Re-run when currentShop changes
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev =>
@@ -191,7 +192,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   };
 
   // Logo always stable - only industry label changes below
-  const industryConfig = getIndustryConfig(shop?.industry);
+  const industryConfig = getIndustryConfig(currentShop?.industry);
 
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
@@ -232,7 +233,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
           </motion.div>
           <div className="flex flex-col flex-1 min-w-0 items-start text-left">
             <h1 className="text-[17px] font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
-              BAŞAR TEKNİK
+              {currentShop?.name || "BAŞAR TEKNİK"}
             </h1>
             <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate block">
               {industryConfig?.name || "ERP SİSTEMİ"}
@@ -254,7 +255,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
               session?.user?.role !== "SHOP_MANAGER") return false;
 
             // Granular module check
-            if ((item as any).module && !isModuleEnabled(shop, (item as any).module)) return false;
+            if ((item as any).module && !isModuleEnabled(currentShop, (item as any).module)) return false;
 
             return true;
           }).map((item) => {
@@ -265,8 +266,14 @@ export function Sidebar({ className, user, shop, onNavigate }: {
             const isOpen = openMenus.includes(item.label);
             const isActive = localActivePath === item.href || (item.href !== "/" && localActivePath?.startsWith(item.href));
 
+            // Distinguish Admin items visually or separate them
+            const isAdminItem = item.label === "Ayarlar" && item.subItems?.some(s => s.href === "/admin/shops");
+
             return (
               <div key={item.label}>
+                {isAdminItem && (
+                  <p className="text-[10px] text-primary/60 font-bold uppercase tracking-[0.2em] px-3 mt-6 mb-2">Admin Araçları</p>
+                )}
                 {hasSubItems && !isRedundantDropdown ? (
                   <button
                     onClick={() => toggleMenu(item.label)}
@@ -321,7 +328,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                           "px-3 py-2.5 text-left text-[13.5px]  rounded-lg transition-all duration-150 outline-none leading-none block",
                           localActivePath === sub.href
                             ? "text-primary bg-primary/8 font-medium "
-                            : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40"
+                            : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/40",
+                          sub.href === "/admin/shops" && "text-amber-500 font-bold"
                         )}
                       >
                         {sub.label}
@@ -397,14 +405,25 @@ export function Sidebar({ className, user, shop, onNavigate }: {
             <span className="text-[14px] text-foreground truncate leading-tight group-hover:text-primary transition-colors">
               {session?.user?.name || "..."}
             </span>
-            <span className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
-              {session?.user?.role === 'SUPER_ADMIN' ? 'Süper Admin' :
-                session?.user?.role === 'ADMIN' || session?.user?.role === 'SHOP_MANAGER' ? 'Yönetici' :
-                  session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' :
-                    session?.user?.role === 'CASHIER' ? 'Kasiyer' :
-                      session?.user?.role === 'STAFF' ? 'Personel' :
-                        'Yükleniyor...'}
-            </span>
+            <div className="flex flex-col gap-1 mt-1">
+              <span className="text-[11px] font-bold text-primary leading-tight truncate">
+                {session?.user?.role === 'SUPER_ADMIN' ? (
+                  <span className="flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3" /> Süper Admin
+                  </span>
+                ) :
+                  session?.user?.role === 'ADMIN' || session?.user?.role === 'SHOP_MANAGER' ? 'Yönetici' :
+                    session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' :
+                      session?.user?.role === 'CASHIER' ? 'Kasiyer' :
+                        session?.user?.role === 'STAFF' ? 'Personel' :
+                          'Yükleniyor...'}
+              </span>
+              {session?.user?.role === 'SUPER_ADMIN' && session?.user?.shopId && (
+                <span className="text-[9px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter w-fit animate-pulse">
+                  Yönetim Modu
+                </span>
+              )}
+            </div>
           </div>
         </Link>
       </div>

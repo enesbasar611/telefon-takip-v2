@@ -39,7 +39,7 @@ export function Navbar({ shop }: { shop?: any }) {
           <div className="flex items-center gap-3">
             <MobileSidebar />
             <Link href="/" className="md:hidden hover:opacity-80 transition-opacity">
-              <span className="text-[14px] font-bold tracking-tight text-primary">BAŞAR TEKNİK</span>
+              <span className="text-[14px] font-bold tracking-tight text-primary uppercase">{shop?.name || "BAŞAR TEKNİK"}</span>
             </Link>
           </div>
         </div>

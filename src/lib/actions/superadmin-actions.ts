@@ -115,6 +115,23 @@ export async function impersonateShop(shopId: string) {
     }
 }
 
+export async function stopImpersonating() {
+    try {
+        const user = await checkSuperAdmin();
+
+        // Clear the shopId — getShopId() has a Super Admin fallback that finds the
+        // home shop automatically, so setting null here is safe.
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { shopId: null }
+        });
+
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: "Dönüş başarısız: " + error.message };
+    }
+}
+
 export async function deleteShop(shopId: string) {
     try {
         await checkSuperAdmin();

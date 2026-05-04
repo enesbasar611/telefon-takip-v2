@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
     Store, Zap, ArrowRight, Code2, Users, Receipt, Calendar, Loader2,
-    MoreVertical, Settings, Trash2, ShieldAlert, CheckCircle2, XCircle, Plus
+    MoreVertical, Settings, Trash2, ShieldAlert, CheckCircle2, XCircle, Plus, Layout
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfigEditor } from "@/components/admin/config-editor";
 import { ShopForm } from "@/components/admin/shop-form";
+import { AdminFormsEditor } from "@/components/admin/admin-forms-editor";
 import { impersonateShop, deleteShop } from "@/lib/actions/superadmin-actions";
 
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +40,7 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
     const [shops, setShops] = useState(initialShops);
     const [activeShop, setActiveShop] = useState<any | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [isFormsEditorOpen, setIsFormsEditorOpen] = useState(false);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -238,6 +240,9 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                                                         <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
                                                             <Code2 className="h-4 w-4 text-emerald-400" /> Konfigürasyon (JSON)
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsFormsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
+                                                            <Layout className="h-4 w-4 text-indigo-400" /> Form Tasarımı
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="bg-white/5" />
                                                         <DropdownMenuItem onClick={() => handleImpersonate(shop)} className="gap-2 cursor-pointer focus:bg-white/5">
                                                             <ShieldAlert className="h-4 w-4 text-amber-400" /> Kimlik Bürünme
@@ -302,6 +307,13 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                         open={isFormOpen}
                         onOpenChange={setIsFormOpen}
                         onSaved={handleSaved}
+                    />
+                )}
+                {isFormsEditorOpen && (
+                    <AdminFormsEditor
+                        shop={activeShop}
+                        open={isFormsEditorOpen}
+                        onOpenChange={setIsFormsEditorOpen}
                     />
                 )}
             </AnimatePresence>

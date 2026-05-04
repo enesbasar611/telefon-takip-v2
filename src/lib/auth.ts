@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { sendApprovalCodeToAdmin } from "@/lib/mail";
-import { cache } from "react";
+
 
 const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "qwerty61.enes@gmail.com";
 
@@ -69,8 +69,8 @@ export const authOptions: NextAuthOptions = {
         })
     ],
     callbacks: {
-        async jwt({ token, user, account, trigger, session }: any) {
-            // Initial sign in
+        async jwt({ token, user, account }: any) {
+            // Initial sign in — populate token from credentials/OAuth
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -87,7 +87,10 @@ export const authOptions: NextAuthOptions = {
                 token.accessToken = account.access_token;
             }
 
-            // Real-time synchronization: Check DB to ensure user is still active and roles are current
+            // Real-time DB sync on every request.
+            // Because we always read from DB here, when stopImpersonating() updates
+            // the shopId in DB the very next JWT evaluation (triggered by update() or
+            // any navigation) will automatically carry the fresh value — no merging needed.
             if (token.id) {
                 const dbUser = await (prisma.user as any).findUnique({
                     where: { id: token.id },
@@ -111,7 +114,6 @@ export const authOptions: NextAuthOptions = {
                     return null as any;
                 }
 
-                // Always sync critical fields from DB to ensure permissions are real-time
                 token.shopId = dbUser.shopId;
                 token.role = dbUser.role;
                 token.isApproved = dbUser.isApproved;
@@ -122,9 +124,6 @@ export const authOptions: NextAuthOptions = {
                 token.isShopActive = (dbUser as any).shop?.isActive ?? true;
             }
 
-            if (trigger === "update" && session) {
-                return { ...token, ...session };
-            }
             return token;
         },
         async session({ session, token }: any) {
@@ -217,19 +216,35 @@ export const authOptions: NextAuthOptions = {
     },
 };
 
-export const getSession = cache(() => getServerSession(authOptions));
+export const getSession = () => getServerSession(authOptions);
 
 export const auth = async () => {
     const session = await getSession();
     return session;
 };
 
-export const getShopId = async () => {
+export const getShopId = async (): Promise<string> => {
     const session = await auth();
-    if (!session?.user?.shopId) {
-        throw new Error("Unauthorized: No Shop ID found");
+
+    // Fast path: shopId is already in the token
+    if (session?.user?.shopId) {
+        return session.user.shopId;
     }
-    return session.user.shopId;
+
+    // Super Admin fallback: token may lack shopId during impersonation transitions.
+    // Find the "home" shop automatically so no call site crashes.
+    if (session?.user?.role === "SUPER_ADMIN") {
+        const homeShop = await prisma.shop.findFirst({
+            where: { name: { contains: "BAŞAR", mode: "insensitive" } },
+            select: { id: true }
+        }) || await prisma.shop.findFirst({ select: { id: true } });
+
+        if (homeShop) {
+            return homeShop.id;
+        }
+    }
+
+    throw new Error("Unauthorized: No Shop ID found");
 };
 
 export const getUserId = async () => {

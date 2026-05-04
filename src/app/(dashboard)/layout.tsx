@@ -15,6 +15,7 @@ import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
 import { redirect } from "next/navigation";
 import { getShopId, getSession } from "@/lib/auth";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import {
     defaultAppearanceSettings,
     getRadiusForButtonStyle,
@@ -46,11 +47,17 @@ export default async function DashboardLayout({
     }
 
     // Ensure the user has a shop before rendering dashboard shell
-    let shopId;
+    let shopId: string | null = null;
     try {
         shopId = await getShopId();
     } catch (error) {
-        redirect("/login");
+        // If it's a super admin, we allow them to continue even without a shopId (e.g. just stopped impersonating)
+        if (isSuperAdmin) {
+            shopId = null;
+        } else {
+            console.error("DashboardLayout Auth Error: Redirecting to login because no shopId found.");
+            redirect("/login");
+        }
     }
 
     let staff: any[] = [];
@@ -60,16 +67,24 @@ export default async function DashboardLayout({
 
     try {
         // Keep the dashboard shell light; page-specific stats load through React Query.
-        const [staffRes, ratesRes, shopRes, settingsRes] = await Promise.all([
-            getStaffShell(shopId).catch(() => []),
-            getExchangeRates(shopId).catch(() => null),
-            getShop().catch(() => null),
-            getSettings().catch(() => []),
-        ]);
-        staff = staffRes;
-        initialRates = ratesRes;
-        shop = shopRes;
-        settings = settingsRes;
+        if (shopId) {
+            const [staffRes, ratesRes, shopRes, settingsRes] = await Promise.all([
+                getStaffShell(shopId).catch(() => []),
+                getExchangeRates(shopId).catch(() => null),
+                getShop().catch(() => null),
+                getSettings().catch(() => []),
+            ]);
+            staff = staffRes;
+            initialRates = ratesRes;
+            shop = shopRes;
+            settings = settingsRes;
+        } else if (isSuperAdmin) {
+            // Default empty state for shop-less super admin (e.g. at /admin/shops)
+            staff = [];
+            initialRates = { usd: 34, eur: 37, ga: 3000, lastUpdate: new Date() };
+            shop = { name: "Yönetim Paneli", industry: "GENERAL" };
+            settings = [];
+        }
     } catch (err) {
         console.error("DashboardLayout: Could not load initial data.", err);
     }
@@ -94,7 +109,7 @@ export default async function DashboardLayout({
         <QueryProvider>
             <ProgressBarProvider>
                 <UIProvider>
-                    <DashboardDataProvider initialRates={initialRates} initialStats={null} shopId={shopId}>
+                    <DashboardDataProvider initialRates={initialRates} initialStats={null} shopId={shopId || ""}>
                         <SupplierOrderProvider>
                             <ShortageProvider>
                                 <link
@@ -103,6 +118,9 @@ export default async function DashboardLayout({
                                 />
                                 <style>{`:root { --brand-color: ${brandColor}; --brand-color-muted: ${brandColor}1a; --primary: ${primaryHsl}; --ring: ${primaryHsl}; --app-font: '${appFont}', system-ui, -apple-system, sans-serif; --app-font-weight: ${appFontWeight}; --radius: ${radius}; } body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select { font-family: var(--app-font); font-weight: var(--app-font-weight) !important; }`}</style>
                                 <GlobalSearch />
+                                {isSuperAdmin && (session.user as any).shopId && !shop?.name?.toLowerCase().includes("başar") && (
+                                    <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
+                                )}
                                 {shop?.industry && <IndustryBackground industry={shop.industry} />}
                                 <div className="flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0">
                                     <Sidebar

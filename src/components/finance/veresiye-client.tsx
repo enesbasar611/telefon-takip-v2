@@ -154,6 +154,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
     // Multi-select State for History
     const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
 
+    const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+
     const [paymentSummary, setPaymentSummary] = useState<{
         customerName: string;
         items: string[];
@@ -324,7 +326,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
 
                 // Prepare and show summary modal
                 const itemsNames = selectedDebtIds.length > 0
-                    ? historyCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id)).map((d: any) => d.notes || "İsimsiz Borç")
+                    ? paymentCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id)).map((d: any) => d.notes || "İsimsiz Borç")
                     : ["Genel Tahsilat"];
 
                 setPaymentSummary({
@@ -421,28 +423,86 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
         });
     };
 
-    const handleWhatsAppMessage = (customer: any) => {
+    const handleWhatsAppMessage = async (customer: any) => {
         setWhatsappCustomer(customer);
+        const toastId = toast.loading("Bilgiler hazırlanıyor...");
 
-        let message = `Merhaba ${customer.name},\n\nGüncel bakiye ve alacak detaylarınız aşağıdadır:\n\n`;
+        try {
+            const res = await getCustomerStatement(customer.customerId);
 
-        const activeDebts = customer.debtItems
-            .filter((d: any) => !d.isPaid)
-            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            if (!res.success) {
+                toast.error("Hata: " + res.error, { id: toastId });
+                return;
+            }
 
-        activeDebts.forEach((d: any, index: number) => {
-            const dateStr = new Date(d.createdAt).toLocaleDateString('tr-TR');
-            const amt = d.currency === 'USD' ? `$${Number(d.remainingAmount).toLocaleString('tr-TR')}` : `₺${Number(d.remainingAmount).toLocaleString('tr-TR')}`;
-            message += `${index + 1}. ${d.notes || "Alacak Kaydı"} - ${amt} (${dateStr})\n`;
-        });
+            let message = `*${customer.name} - GÜNCEL HESAP EKSTRESİ*\n\n`;
+            message += `_Aşağıda dükkanımıza olan borçlarınız ve yaptığınız ödemelerin detaylı dökümü bulunmaktadır:_\n\n`;
 
-        message += `\n*Toplam Kalan Bakiye:*\n`;
-        if (customer.totalRemainingTRY > 0) message += `TL: ₺${customer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
-        if (customer.totalRemainingUSD > 0) message += `Dolar: $${customer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
-        message += `\nİyi çalışmalar dileriz.`;
+            const combined = [
+                ...(res.debts || []).map((d: any) => ({
+                    date: new Date(d.createdAt),
+                    text: `🔴 Borç: ${d.notes || 'Hizmet/Ürün'} - ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')} ${d.isPaid ? '(Ödendi)' : `(Kalan: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.remainingAmount).toLocaleString('tr-TR')})`}`
+                })),
+                ...(res.transactions || []).map((t: any) => ({
+                    date: new Date(t.createdAt),
+                    text: `🟢 Ödeme: ${Number(t.amount).toLocaleString('tr-TR')} TL`
+                }))
+            ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        setWhatsappMessageContent(message);
-        setWhatsappModalOpen(true);
+            combined.forEach((item, index) => {
+                const dateStr = item.date.toLocaleDateString('tr-TR');
+                message += `${index + 1}. ${dateStr}\n   ${item.text}\n\n`;
+            });
+
+            message += `*--------------------------*\n`;
+            message += `*TOPLAM GÜNCEL BORÇ:*\n`;
+            if (customer.totalRemainingTRY > 0) message += `💰 TL: ₺${customer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+            if (customer.totalRemainingUSD > 0) message += `💰 Dolar: $${customer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+
+            if (customer.totalRemainingTRY <= 0 && customer.totalRemainingUSD <= 0) {
+                message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
+            } else {
+                message += `\n_En kısa sürede ödeme yapmanızı rica ederiz. İyi çalışmalar._`;
+            }
+
+            setWhatsappMessageContent(message);
+            setWhatsappModalOpen(true);
+            toast.dismiss(toastId);
+        } catch (error) {
+            console.error(error);
+            toast.error("Bağlantı hatası oluştu.", { id: toastId });
+        }
+    };
+
+    const handleBulkWhatsAppReminders = async () => {
+        if (selectedCustomerIds.length === 0) {
+            toast.error("Lütfen en az bir müşteri seçin.");
+            return;
+        }
+
+        const customersToSend = aggregatedData.filter(c => selectedCustomerIds.includes(c.customerId) && c.phone);
+
+        if (customersToSend.length === 0) {
+            toast.error("Seçilen müşterilerin telefon numarası bulunamadı.");
+            return;
+        }
+
+        toast.info(`${customersToSend.length} müşteri için hatırlatma pencereleri açılıyor...`);
+
+        // We can't really "bulk send" automatically without an API, but we can open them one by one or show a summary.
+        // User asked for "toplu mesaj atma özelliği" - I'll implement a logic that iterates and prompts.
+        for (const customer of customersToSend) {
+            let msg = `*Borç Hatırlatması*\n\nMerhaba ${customer.name},\n\nDükkanımızda kayıtlı güncel borç bakiyeniz bulunmaktadır:\n`;
+            if (customer.totalRemainingTRY > 0) msg += `- ₺${customer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+            if (customer.totalRemainingUSD > 0) msg += `- $${customer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+            msg += `\nÖdeme durumunuzu kontrol etmenizi rica ederiz. İyi çalışmalar.`;
+
+            const encodedMsg = encodeURIComponent(msg);
+            const url = `https://wa.me/90${(customer.phone ?? "").replace(/\D/g, '')}?text=${encodedMsg}`;
+            window.open(url, '_blank');
+        }
+
+        setSelectedCustomerIds([]);
     };
 
     const exportToExcel = () => {
@@ -473,6 +533,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                 }
                 actions={
                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+                        {selectedCustomerIds.length > 0 && (
+                            <Button
+                                onClick={handleBulkWhatsAppReminders}
+                                className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 gap-2 text-xs font-black uppercase tracking-widest text-white transition-all animate-in zoom-in-95"
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                {selectedCustomerIds.length} Kişiye Hatırlatma At
+                            </Button>
+                        )}
                         <AddDebtModal rates={rates} />
                         <Button
                             onClick={exportToExcel}
@@ -693,11 +762,30 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                                                 }}
                                                 className={cn(
                                                     "group relative p-5 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer hover:bg-muted/50 transition-all",
+                                                    selectedCustomerIds.includes(item.customerId) && "bg-indigo-500/[0.03] dark:bg-indigo-500/10",
                                                     idx !== aggregatedData.length - 1 && "border-b border-border/40"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-6 min-w-0 flex-1">
-                                                    <div className="shrink-0 relative">
+                                                    <div className="shrink-0 relative flex items-center gap-4">
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedCustomerIds(prev =>
+                                                                    prev.includes(item.customerId)
+                                                                        ? prev.filter(id => id !== item.customerId)
+                                                                        : [...prev, item.customerId]
+                                                                );
+                                                            }}
+                                                            className={cn(
+                                                                "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
+                                                                selectedCustomerIds.includes(item.customerId)
+                                                                    ? "bg-indigo-500 border-indigo-500 shadow-md"
+                                                                    : "border-border bg-card group-hover:border-indigo-500/50"
+                                                            )}
+                                                        >
+                                                            {selectedCustomerIds.includes(item.customerId) && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                                        </div>
                                                         <div
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1062,20 +1150,37 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates }: V
                             <Button
                                 onClick={() => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    let msg = `*${historyCustomer?.name} - HESAP EKSTRESİ*\n\n`;
-                                    const combined = [
-                                        ...statementData.debts.map(d => ({ d: new Date(d.createdAt), text: `🔴 Borç: ${d.notes || 'Borç'} - ${d.currency === 'USD' ? '$' : '₺'}${d.amount}` })),
-                                        ...statementData.transactions.map(t => ({ d: new Date(t.createdAt), text: `🟢 Ödeme: ${t.amount} TL` }))
-                                    ].sort((a, b) => b.d.getTime() - a.d.getTime());
+                                    let message = `*${historyCustomer?.name} - GÜNCEL HESAP EKSTRESİ*\n\n`;
+                                    message += `_Aşağıda dükkanımıza olan borçlarınız ve yaptığınız ödemelerin detaylı dökümü bulunmaktadır:_\n\n`;
 
-                                    combined.forEach(item => {
-                                        msg += `📅 ${format(item.d, "dd.MM.yyyy")}\n${item.text}\n\n`;
+                                    const combined = [
+                                        ...(statementData.debts || []).map((d: any) => ({
+                                            date: new Date(d.createdAt),
+                                            text: `🔴 Borç: ${d.notes || 'Hizmet/Ürün'} - ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')} ${d.isPaid ? '(Ödendi)' : `(Kalan: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.remainingAmount).toLocaleString('tr-TR')})`}`
+                                        })),
+                                        ...(statementData.transactions || []).map((t: any) => ({
+                                            date: new Date(t.createdAt),
+                                            text: `🟢 Ödeme: ${Number(t.amount).toLocaleString('tr-TR')} TL`
+                                        }))
+                                    ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                                    combined.forEach((item, index) => {
+                                        const dateStr = item.date.toLocaleDateString('tr-TR');
+                                        message += `${index + 1}. ${dateStr}\n   ${item.text}\n\n`;
                                     });
 
-                                    msg += `*Güncel Borç:* ₺${Number(historyCustomer?.totalRemainingTRY).toLocaleString('tr-TR')}`;
-                                    if (Number(historyCustomer?.totalRemainingUSD) > 0) msg += ` / $${Number(historyCustomer?.totalRemainingUSD).toLocaleString('tr-TR')}`;
+                                    message += `*--------------------------*\n`;
+                                    message += `*TOPLAM GÜNCEL BORÇ:*\n`;
+                                    if (historyCustomer?.totalRemainingTRY > 0) message += `💰 TL: ₺${historyCustomer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+                                    if (historyCustomer?.totalRemainingUSD > 0) message += `💰 Dolar: $${historyCustomer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
 
-                                    setWhatsappMessageContent(msg);
+                                    if (historyCustomer?.totalRemainingTRY <= 0 && historyCustomer?.totalRemainingUSD <= 0) {
+                                        message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
+                                    } else {
+                                        message += `\n_En kısa sürede ödeme yapmanızı rica ederiz. İyi çalışmalar._`;
+                                    }
+
+                                    setWhatsappMessageContent(message);
                                     setWhatsappCustomer(historyCustomer);
                                     setWhatsappModalOpen(true);
                                 }}
