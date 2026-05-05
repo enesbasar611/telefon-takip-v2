@@ -101,6 +101,7 @@ export async function createServiceTicket(rawData: any) {
           paymentMethod: "CASH",
           userId,
           shopId,
+          customerId: customer.id,
           financeAccountId: kasaAccount.id
         }
       });
@@ -262,6 +263,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
               paymentMethod: paymentMethod as any,
               userId,
               shopId,
+              customerId: currentTicket.customerId,
               financeAccountId: kasaAccount.id
             }
           });

@@ -179,7 +179,8 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,
-          shopId
+          shopId,
+          customerId: debt.customerId
         }
       });
 

@@ -34,22 +34,29 @@ export async function calculateLoyaltyPoints(
             return { earnedPoints: 0, eligibleRevenue: 0 };
         }
 
-        // Exclude specific categories (e.g. Device Sales) from accumulating loyalty points
-        // Assuming "Telefonlar" (Phones) is an excluded category
         const allCategories = await prisma.category.findMany({ where: { shopId } });
-        const telefonlarCat = allCategories.find(c => c.name.toLowerCase() === "telefonlar");
-
+        const excludedKeywords = ["telefon", "cihaz", "phone", "device", "ikinci el", "sıfır"];
         const excludedCategoryIds = new Set<string>();
-        if (telefonlarCat) {
-            excludedCategoryIds.add(telefonlarCat.id);
-            const findChildren = (parentId: string) => {
-                allCategories.filter(c => c.parentId === parentId).forEach(child => {
+
+        allCategories.forEach(cat => {
+            const nameLower = cat.name.toLowerCase();
+            if (excludedKeywords.some(kw => nameLower.includes(kw))) {
+                excludedCategoryIds.add(cat.id);
+            }
+        });
+
+        // Also add child categories of excluded categories
+        const addChildCategories = (parentId: string) => {
+            allCategories.filter(c => c.parentId === parentId).forEach(child => {
+                if (!excludedCategoryIds.has(child.id)) {
                     excludedCategoryIds.add(child.id);
-                    findChildren(child.id);
-                });
-            };
-            findChildren(telefonlarCat.id);
-        }
+                    addChildCategories(child.id);
+                }
+            });
+        };
+
+        const initialExcluded = Array.from(excludedCategoryIds);
+        initialExcluded.forEach(id => addChildCategories(id));
 
         // Calculate eligible revenue (filter out parts in excluded categories)
         // Fetch product category IDs

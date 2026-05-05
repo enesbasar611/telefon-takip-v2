@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+export const dynamic = "force-dynamic";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { StatsGridStream } from "@/components/dashboard/streamed/stats-grid-stream";
 import { RevenueAnalysisStream } from "@/components/dashboard/streamed/revenue-analysis-stream";
@@ -8,6 +9,7 @@ import { LiveActivityStream } from "@/components/dashboard/streamed/live-activit
 import { RecentTransactionsStream } from "@/components/dashboard/streamed/recent-transactions-stream";
 import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queue-stream";
 import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
+import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
 import {
   StatsSkeleton,
   ChartSkeleton,
@@ -29,18 +31,119 @@ import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
 import { LiveClock } from "@/components/dashboard/live-clock";
 import { QuickShortcuts } from "@/components/dashboard/quick-shortcuts";
 
+import { getProfile } from "@/lib/actions/staff-actions";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
+
+import { getDashboardStats } from "@/lib/actions/dashboard-actions";
+import { serializePrisma } from "@/lib/utils";
+import { StatWidgetWrapper } from "@/components/dashboard/stat-widget-wrapper";
+import { getShopId } from "@/lib/auth";
+import { DashboardProvider } from "@/components/dashboard/dashboard-context";
+import { DashboardEditButton } from "@/components/dashboard/dashboard-edit-button";
+
 export default async function DashboardPage() {
-  const [shop, categories] = await Promise.all([
+  const shopId = await getShopId();
+  const [shop, categories, profile, statsDataRaw] = await Promise.all([
     getShop(),
-    getCategories()
+    getCategories(),
+    getProfile(),
+    getDashboardStats(shopId)
   ]);
+
+  const statsData = serializePrisma(statsDataRaw);
   const industryConf = getIndustryConfig(shop?.industry);
   const showService = isModuleEnabled(shop, "SERVICE");
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
   const assetLabel = getIndustryLabel(shop, "customerAsset");
 
+  const statItems = [
+    { id: "stat_sales", type: "DAILY_SALES", label: "Kasa Bakiyesi", value: statsData?.todaySales || "0", subValue: `Kasa: ${statsData?.kasaBalance || "0"}`, iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel" },
+    { id: "stat_income", type: "REPAIR_INCOME", label: `${serviceLabel} Gelirleri`, value: statsData?.todayRepairIncome || "0", iconId: "Wrench", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%" },
+    { id: "stat_collections", type: "COLLECTIONS", label: "Tahsilatlar", value: statsData?.collectedPayments || "0", iconId: "Banknote", colorClass: "text-amber-500", bgClass: "bg-amber-500/10" },
+    { id: "stat_pending", type: "PENDING_SERVICES", label: `Bekleyen ${serviceLabel || 'Servis'}ler`, value: statsData?.pendingServices || "0", iconId: "Clock", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
+    { id: "stat_ready", type: "READY_DEVICES", label: `Hazır ${assetLabel || 'Cihaz'}lar`, value: statsData?.readyDevices || "0", iconId: "CheckCircle2", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
+    { id: "stat_stock", type: "CRITICAL_STOCK", label: "Kritik stok", value: statsData?.criticalStock || "0", iconId: "AlertTriangle", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
+    { id: "stat_debts", type: "TOTAL_DEBTS", label: "Toplam borçlar", value: statsData?.totalDebts || "0", iconId: "ArrowDownCircle", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10" },
+    { id: "stat_accounts", type: "CASH_BALANCE", label: "Kasa & Hesaplar", value: statsData?.cashBalance || "0", iconId: "Wallet", colorClass: "text-primary", bgClass: "bg-primary/10" },
+  ];
+
+  const defaultLayout = [
+    ...statItems.map(s => s.id),
+    "revenue",
+    ...(showService ? ["service_status"] : []),
+    "ai_insights",
+    "receivables",
+    ...(showService ? ["service_queue"] : []),
+    "activity",
+    "transactions",
+    "inventory"
+  ];
+
+  const rawLayout = profile?.dashboardLayout as any;
+  console.log(`SERVER: DashboardPage - rawLayout fetched: ${Array.isArray(rawLayout) ? rawLayout.length + " items" : "not an array or null"}`);
+  const layout = Array.isArray(rawLayout) ? rawLayout : defaultLayout;
+  console.log(`SERVER: DashboardPage - final layout count: ${layout.length}`);
+
+  const widgets: any = {
+    revenue: (
+      <Suspense fallback={<ChartSkeleton />}>
+        <RevenueAnalysisStream />
+      </Suspense>
+    ),
+    service_status: (
+      <Suspense fallback={<ChartSkeleton />}>
+        <ServiceStatusStream title={serviceLabel} />
+      </Suspense>
+    ),
+    ai_insights: (
+      <Suspense fallback={<StatsSkeleton />}>
+        <SmartInsightsStream />
+      </Suspense>
+    ),
+    receivables: (
+      <Suspense fallback={<ListSkeleton />}>
+        <ReceivablesStream />
+      </Suspense>
+    ),
+    activity: (
+      <Suspense fallback={<ActivitySkeleton />}>
+        <LiveActivityStream />
+      </Suspense>
+    ),
+    transactions: (
+      <Suspense fallback={<ListSkeleton />}>
+        <RecentTransactionsStream />
+      </Suspense>
+    ),
+    service_queue: (
+      <Suspense fallback={<ListSkeleton />}>
+        <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
+      </Suspense>
+    ),
+    inventory: (
+      <Suspense fallback={<ListSkeleton />}>
+        <TopProductsStream />
+      </Suspense>
+    )
+  };
+
+  statItems.forEach(stat => {
+    widgets[stat.id] = (
+      <StatWidgetWrapper
+        stat={stat}
+        type={stat.type as any}
+        statsData={statsData}
+      />
+    );
+  });
+
+  const widgetLabels: Record<string, string> = {
+    receivables: "Alacaklarım",
+  };
+  statItems.forEach(s => { widgetLabels[s.id] = s.label; });
+
   return (
-    <>
+    <DashboardProvider>
       <DashboardOnboardingClient categories={categories} shop={shop} />
 
       {/* Desktop Dashboard View */}
@@ -49,91 +152,42 @@ export default async function DashboardPage() {
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
           description={
             <div className="flex items-center gap-1">
-              <span>{industryConf.name} operasyon ve finans takip merkezi • {format(new Date(), "d MMMM yyyy", { locale: tr })}</span>
+              <span>{industryConf.name} operasyon ve finance takip merkezi • {format(new Date(), "d MMMM yyyy", { locale: tr })}</span>
               <LiveClock />
             </div>
           }
           icon={LayoutDashboard}
           actions={<QuickShortcuts />}
           badge={
-            <div className="flex items-center gap-4 bg-card/40 backdrop-blur-md border border-border/40 p-1 rounded-full shadow-sm">
-              <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
+            <div className="flex items-center bg-card/40 backdrop-blur-md border border-border/40 p-0 rounded-full shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-1.5 bg-emerald-500/5 border-r border-border/40">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 <div className="flex flex-col">
                   <span className="text-[8px] text-emerald-600/70 tracking-tighter uppercase leading-none font-bold">Sistem Durumu</span>
-                  <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF & STABİL</span>
+                  <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF</span>
                 </div>
               </div>
-              <div className="px-4 py-1.5 pr-6">
-                <div className="flex flex-col">
-                  <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
-                  <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
-                </div>
+              <div className="px-4 py-1.5 flex flex-col">
+                <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
+                <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
               </div>
+              <DashboardEditButton />
             </div>
           }
         />
 
-        {/* Phase 1: Key Stats */}
-        <Suspense fallback={<StatsSkeleton />}>
-          <StatsGridStream
-            labels={{
-              repairIncome: `${serviceLabel} Gelirleri`,
-              pendingServices: `Bekleyen ${serviceLabel || 'Servis'}ler`,
-              readyAssets: `Hazır ${assetLabel || 'Cihaz'}lar`
-            }}
-          />
-        </Suspense>
-
-        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
-          {/* Phase 2: Core Analytics */}
-          <Suspense fallback={<ChartSkeleton />}>
-            <RevenueAnalysisStream />
-          </Suspense>
-
-          {/* Phase 2: Operational Health */}
-          {showService && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <ServiceStatusStream title={serviceLabel} />
-            </Suspense>
-          )}
-
-          {/* Phase 3: AI Insights (Spans 2 columns if service is hidden) */}
-          <div className={cn(showService ? "lg:col-span-1" : "lg:col-span-2")}>
-            <Suspense fallback={<StatsSkeleton />}>
-              <SmartInsightsStream />
-            </Suspense>
-          </div>
-
-          {/* Phase 3: Live Feed */}
-          <Suspense fallback={<ActivitySkeleton />}>
-            <LiveActivityStream />
-          </Suspense>
-
-          {/* Phase 4: Operational Queues */}
-          <Suspense fallback={<ListSkeleton />}>
-            <RecentTransactionsStream />
-          </Suspense>
-
-          {showService && (
-            <Suspense fallback={<ListSkeleton />}>
-              <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
-            </Suspense>
-          )}
-
-          {/* Phase 4: Inventory Trends (Full width) */}
-          <div className="lg:col-span-3">
-            <Suspense fallback={<ListSkeleton />}>
-              <TopProductsStream />
-            </Suspense>
-          </div>
-        </div>
+        <DashboardClient
+          key={JSON.stringify(layout)}
+          initialLayout={layout}
+          widgets={widgets}
+          widgetLabels={widgetLabels}
+        />
       </div>
 
       {/* Mobile Dashboard View (Apple Style) */}
       <div className="md:hidden flex flex-col space-y-6 pt-2 pb-10">
         <MobileDashboard />
       </div>
-    </>
+    </DashboardProvider>
   );
 }

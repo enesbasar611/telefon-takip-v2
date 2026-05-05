@@ -148,6 +148,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
           userId,
           shopId,
           saleId: sale.id,
+          customerId: data.customerId || undefined,
           financeAccountId: targetAccount?.id ?? undefined,
           dailySessionId: activeSession?.id ?? undefined,
         },

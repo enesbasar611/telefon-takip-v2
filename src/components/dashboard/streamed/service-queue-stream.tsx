@@ -33,56 +33,63 @@ export async function ServiceQueueStream({ title = "Servis Kuyruğu" }: { title?
     const recentTickets = serializePrisma(recentTicketsRaw);
 
     return (
-        <Card className="border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in duration-1000">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 p-8 pb-6">
+        <Card className="h-full flex flex-col border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in">
+            <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 p-8 pb-6">
                 <div className="flex items-center gap-4">
                     <div className="h-11 w-11 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
                         <Smartphone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="font-medium text-lg  tracking-tight font-sans uppercase">{title}</CardTitle>
-                        <p className="text-[10px] text-muted-foreground  uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
+                        <CardTitle className="font-medium text-lg tracking-tight font-sans uppercase">{title}</CardTitle>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Aktif İş Emreleri</p>
                     </div>
                 </div>
                 <Link href="/servis/liste">
-                    <Button variant="outline" className="text-[10px]  uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
+                    <Button variant="outline" className="text-[10px] uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-5 transition-all">
                         YÖNET <ChevronRight className="h-3 w-3 ml-2" />
                     </Button>
                 </Link>
             </CardHeader>
-            <CardContent className="p-6 space-y-3">
-                {(recentTickets ?? []).map((ticket: any) => (
-                    <Link
-                        key={ticket.id}
-                        href={`/servis/liste?status=${ticket.status}`}
-                        className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 border border-border/5 group hover:border-primary/20 hover:bg-card transition-all cursor-pointer"
-                    >
-                        <div className="flex items-center gap-5">
-                            <div className="h-14 w-14 rounded-xl bg-card border border-border/40 flex items-center justify-center shadow-sm relative shrink-0 group-hover:scale-105 transition-transform">
-                                <Smartphone className="h-7 w-7 text-primary/80" />
-                                <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
+            <CardContent className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                {(recentTickets ?? []).length > 0 ? (
+                    (recentTickets ?? []).map((ticket: any) => (
+                        <Link
+                            key={ticket.id}
+                            href={`/servis/liste?status=${ticket.status}`}
+                            className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 border border-border/5 group hover:border-primary/20 hover:bg-card transition-all cursor-pointer"
+                        >
+                            <div className="flex items-center gap-5">
+                                <div className="h-14 w-14 rounded-xl bg-card border border-border/40 flex items-center justify-center shadow-sm relative shrink-0 group-hover:scale-105 transition-transform">
+                                    <Smartphone className="h-7 w-7 text-primary/80" />
+                                    <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="font-medium text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight mt-1 truncate">
+                                        {ticket.customer?.name} • <span className="text-primary tracking-tighter">#{ticket.ticketNumber}</span>
+                                    </p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <h4 className="font-medium  text-sm text-foreground tracking-tight truncate font-sans uppercase group-hover:text-primary transition-colors">{ticket.deviceBrand} {ticket.deviceModel}</h4>
-                                <p className="text-[10px] text-muted-foreground  uppercase tracking-tight mt-1 truncate">
-                                    {ticket.customer?.name} • <span className="text-primary tracking-tighter">#{ticket.ticketNumber}</span>
+                            <div className="text-right shrink-0">
+                                <Badge
+                                    variant="outline"
+                                    className="text-[8px] uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
+                                    style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
+                                >
+                                    {statusLabels[ticket.status]}
+                                </Badge>
+                                <p className="text-[9px] text-muted-foreground uppercase tracking-tighter opacity-60">
+                                    {ticket.technician?.name || "BOŞTA"}
                                 </p>
                             </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                            <Badge
-                                variant="outline"
-                                className="text-[8px]  uppercase tracking-tighter border-none px-3 py-1 rounded-lg mb-1"
-                                style={{ backgroundColor: `${statusColors[ticket.status]}15`, color: statusColors[ticket.status] }}
-                            >
-                                {statusLabels[ticket.status]}
-                            </Badge>
-                            <p className="text-[9px] text-muted-foreground  uppercase tracking-tighter opacity-60">
-                                {ticket.technician?.name || "BOŞTA"}
-                            </p>
-                        </div>
-                    </Link>
-                ))}
+                        </Link>
+                    ))
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-20">
+                        <Smartphone className="h-12 w-12 mb-2" />
+                        <p className="text-xs font-bold uppercase tracking-widest">Kuyruk Boş</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

@@ -273,10 +273,85 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         <Tabs defaultValue="history" className="w-full">
                             <TabsList className="bg-muted/30 border-b border-border w-full justify-start rounded-none h-auto p-0 gap-10 mb-8 overflow-x-auto">
                                 <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">İşlem arşivi</TabsTrigger>
+                                <TabsTrigger value="financial" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Borç & Tahsilat</TabsTrigger>
                                 <TabsTrigger value="parts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Kullanılan parçalar</TabsTrigger>
                                 <TabsTrigger value="warranty" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Aktif garantiler</TabsTrigger>
                                 <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Müşteri notları</TabsTrigger>
                             </TabsList>
+
+                            <TabsContent value="financial" className="space-y-6 outline-none">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <Card className="bg-rose-500/5 border-rose-500/20">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-600">
+                                                    <ArrowDownCircle className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] uppercase text-rose-600 font-bold tracking-wider">Toplam Kalan Borç</p>
+                                                    <h4 className="text-2xl font-black text-rose-700">₺{formatCurrency(totalDebt)}</h4>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="bg-emerald-500/5 border-emerald-500/20">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600">
+                                                    <TrendingUp className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] uppercase text-emerald-600 font-bold tracking-wider">Toplam Ödeme/Tahsilat</p>
+                                                    <h4 className="text-2xl font-black text-emerald-700">
+                                                        ₺{formatCurrency(customer.transactions?.filter((t: any) => t.type === 'INCOME').reduce((acc: number, t: any) => acc + Number(t.amount), 0) || 0)}
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {[...(customer.transactions || []), ...(customer.debts || [])]
+                                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                        .map((item: any, idx: number) => (
+                                            <div key={idx} className="bg-card p-6 rounded-xl border border-border flex items-center justify-between hover:bg-muted/5 transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn(
+                                                        "h-12 w-12 rounded-xl flex items-center justify-center",
+                                                        item.amount && !item.remainingAmount ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                    )}>
+                                                        {item.amount && !item.remainingAmount ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownCircle className="h-6 w-6" />}
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-bold text-sm">
+                                                            {item.description || (item.remainingAmount !== undefined ? "Borç Kaydı" : "Ödeme/Tahsilat")}
+                                                        </h5>
+                                                        <p className="text-[10px] text-muted-foreground">
+                                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })}
+                                                            {item.paymentMethod && ` • ${item.paymentMethod}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={cn(
+                                                        "text-lg font-black",
+                                                        item.amount && item.remainingAmount !== undefined ? "text-rose-500" : "text-emerald-500"
+                                                    )}>
+                                                        {item.amount && item.remainingAmount !== undefined ? `-₺${formatCurrency(item.remainingAmount)}` : `+₺${formatCurrency(item.amount)}`}
+                                                    </span>
+                                                    {item.notes && <p className="text-[10px] text-muted-foreground mt-1 max-w-[200px] truncate">{item.notes}</p>}
+                                                </div>
+                                            </div>
+                                        ))
+                                    }
+                                    {(!customer.transactions?.length && !customer.debts?.length) && (
+                                        <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed border-border">
+                                            <p className="text-sm text-muted-foreground">Henüz finansal bir hareket bulunmamaktadır.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </TabsContent>
 
                             <TabsContent value="history" className="space-y-6 outline-none">
                                 {[...(customer.tickets || []), ...(customer.sales || [])]
@@ -292,8 +367,13 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                     <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-blue-500 border-4 border-card" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-medium  text-lg group-hover:text-blue-600 transition-colors">
-                                                        {item.ticketNumber ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)` : `${item.saleNumber} (Ürün satışı)`}
+                                                    <h4 className="font-bold text-lg group-hover:text-blue-600 transition-colors">
+                                                        {item.ticketNumber
+                                                            ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)`
+                                                            : item.items?.some((i: any) => i.product?.category?.name.toLowerCase().includes('telefon') || i.product?.category?.name.toLowerCase().includes('cihaz'))
+                                                                ? `${item.saleNumber} (Cihaz satışı)`
+                                                                : `${item.saleNumber} (Ürün satışı)`
+                                                        }
                                                     </h4>
                                                     <p className="text-xs text-muted-foreground  mt-1">
                                                         {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold">#{item.ticketNumber || item.saleNumber}</span>

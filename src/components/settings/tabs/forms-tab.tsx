@@ -18,11 +18,37 @@ import { getIndustryConfig } from "@/lib/industry-utils";
 
 export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: string }) {
     const [isPending, startTransition] = useTransition();
-    const [themeConfig, setThemeConfig] = useState(shop.themeConfig || { productFields: [], serviceFields: [], accessories: [] });
+    const industryConfig = useMemo(() => getIndustryConfig(shop.industry), [shop.industry]);
+
+    const initialThemeConfig = useMemo(() => {
+        const config = {
+            productFields: shop.themeConfig?.productFields || [],
+            serviceFields: shop.themeConfig?.serviceFields || [],
+            accessories: shop.themeConfig?.accessories || []
+        };
+
+        // If the shop hasn't customized their forms yet (empty lists),
+        // we provide the industry defaults automatically.
+        if (config.productFields.length === 0 && industryConfig.inventoryFormFields) {
+            config.productFields = industryConfig.inventoryFormFields;
+        }
+        if (config.serviceFields.length === 0 && industryConfig.serviceFormFields) {
+            config.serviceFields = industryConfig.serviceFormFields;
+        }
+        if (!config.accessories || config.accessories.length === 0) {
+            config.accessories = industryConfig.accessories || [];
+        }
+
+        return config;
+    }, [shop.themeConfig, industryConfig]);
+
+    const [themeConfig, setThemeConfig] = useState<{
+        productFields: any[];
+        serviceFields: any[];
+        accessories: string[];
+    }>(initialThemeConfig);
     const [activeSection, setActiveSection] = useState<"productFields" | "serviceFields" | "accessories">("productFields");
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-    const industryConfig = useMemo(() => getIndustryConfig(shop.industry), [shop.industry]);
 
     const handleSave = () => {
         startTransition(async () => {
