@@ -3,6 +3,7 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const os = require('os');
+const cron = require('node-cron');
 
 function getLocalIps() {
     const ips = [];
@@ -158,5 +159,19 @@ app.prepare().then(() => {
                 console.log(`  - Diğer IP'ler: ${ips.join(', ')}`);
             }
             console.log(`> Socket.io motoru aktif yol: /socket.io\n`);
+
+            // --- Cron Jobs ---
+            cron.schedule("0 3 * * *", async () => {
+                console.log("[CRON] Otomatik gece yedeklemesi başlatılıyor...");
+                try {
+                    const secret = process.env.CRON_SECRET || 'fallback-secret';
+                    const res = await fetch(`http://localhost:${port}/api/system/backup?token=${secret}`);
+                    const data = await res.json();
+                    console.log("[CRON] Yedekleme tamamlandı:", data);
+                } catch (err) {
+                    console.error("[CRON ERROR] Yedekleme başarısız:", err.message);
+                }
+            });
+            console.log(`> Gece yedekleme zamanlayıcısı aktif (03:00)`);
         });
 });

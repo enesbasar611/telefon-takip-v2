@@ -11,12 +11,14 @@ import { formatWhatsAppLink } from "@/lib/utils/notifications";
 interface WhatsAppConfirmModalProps {
     isOpen: boolean;
     onClose: () => void;
-    phone: string;
+    phone?: string;
+    phones?: string[];
     customerName?: string;
     initialMessage: string;
+    mode?: "single" | "bulk";
 }
 
-export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, initialMessage }: WhatsAppConfirmModalProps) {
+export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], customerName, initialMessage, mode = "single" }: WhatsAppConfirmModalProps) {
     const [message, setMessage] = useState(initialMessage);
     const [isSending, setIsSending] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
@@ -56,46 +58,64 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
         }
     };
 
+    const targetPhones = mode === "bulk" ? phones : [phone].filter(Boolean) as string[];
+
     const handleSend = async () => {
         if (!message.trim()) return;
+        setIsSending(true);
 
         if (isConnected) {
-            setIsSending(true);
-            const res = await sendWhatsAppAction(phone, message);
+            let successCount = 0;
+            for (const p of targetPhones) {
+                const res = await sendWhatsAppAction(p, message);
+                if (res.success) successCount++;
+                // Small delay to prevent rate limit
+                await new Promise(r => setTimeout(r, 500));
+            }
             setIsSending(false);
-
-            if (res.success) {
-                toast({ title: "Başarılı", description: "WhatsApp mesajı başarıyla gönderildi." });
+            if (successCount > 0) {
+                toast({ title: "Başarılı", description: `${successCount} mesaj başarıyla gönderildi.` });
                 onClose();
             } else {
-                toast({ title: "Hata", description: "Mesaj gönderilemedi: " + res.error, variant: "destructive" });
+                toast({ title: "Hata", description: "Mesajlar gönderilemedi.", variant: "destructive" });
             }
         } else {
-            // Fallback to Web/App WhatsApp
-            const link = formatWhatsAppLink(phone, message);
-            window.open(link, '_blank');
+            // Fallback to Web/App WhatsApp (one by one)
+            for (const p of targetPhones) {
+                const link = formatWhatsAppLink(p, message);
+                window.open(link, '_blank');
+                // Small delay to let browser handle windows
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            setIsSending(false);
             onClose();
         }
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px] bg-[#EFEAE2] dark:bg-[#0B141A] p-0 border-none overflow-hidden">
+        <Dialog open={isOpen} onOpenChange={(open) => !isSending && onClose()}>
+            <DialogContent className="sm:max-w-[425px] bg-[#EFEAE2] dark:bg-[#0B141A] p-0 border-none overflow-hidden outline-none">
 
                 {/* WhatsApp Header Mockup */}
                 <div className="bg-[#00A884] dark:bg-[#202C33] flex items-center gap-3 px-4 py-3 text-white">
                     <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                        <Smartphone className="h-5 w-5" />
+                        {mode === "bulk" ? <CheckCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                     </div>
                     <div className="flex-1">
-                        <p className="font-semibold">{customerName || "Müşteri"}</p>
-                        <p className="text-xs text-white/80">{phone}</p>
+                        <p className="font-semibold">{mode === "bulk" ? "Toplu Hatırlatma" : (customerName || "Müşteri")}</p>
+                        <p className="text-xs text-white/80">{mode === "bulk" ? `${targetPhones.length} Alıcı` : phone}</p>
                     </div>
                 </div>
 
                 {/* Chat Background & Bubble */}
-                <div className="p-4 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-repeat min-h-[300px] flex flex-col justify-end">
-                    <div className="bg-[#D9FDD3] dark:bg-[#005C4B] md:max-w-[85%] max-w-[95%] self-end rounded-lg rounded-tr-none p-2 shadow-sm relative">
+                <div className="p-4 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-repeat min-h-[300px] flex flex-col justify-end relative">
+                    {isSending && (
+                        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
+                            <Loader2 className="w-10 h-10 text-white animate-spin" />
+                            <p className="text-white font-bold text-sm">Gönderiliyor...</p>
+                        </div>
+                    )}
+                    <div className="bg-[#D9FDD3] dark:bg-[#005C4B] md:max-w-[85%] max-w-[95%] self-end rounded-lg rounded-tr-none p-2 shadow-sm relative border border-emerald-500/10">
                         <textarea
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
@@ -107,7 +127,7 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
                             <div className="flex gap-1">
                                 <Button
                                     onClick={() => handleRefine("professional")}
-                                    disabled={isRefining}
+                                    disabled={isRefining || isSending}
                                     variant="ghost"
                                     className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-[#00A884] gap-1.5 font-medium transition-all active:scale-95"
                                 >
@@ -116,7 +136,7 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
                                 </Button>
                                 <Button
                                     onClick={() => handleRefine("friendly")}
-                                    disabled={isRefining}
+                                    disabled={isRefining || isSending}
                                     variant="ghost"
                                     className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-[#00A884] gap-1.5 font-medium transition-all active:scale-95"
                                 >
@@ -124,7 +144,7 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
                                 </Button>
                                 <Button
                                     onClick={() => handleRefine("urgent")}
-                                    disabled={isRefining}
+                                    disabled={isRefining || isSending}
                                     variant="ghost"
                                     className="h-7 px-2.5 rounded-lg text-[10px] hover:bg-[#00000005] dark:hover:bg-white/5 hover:text-red-500 gap-1.5 font-medium transition-all active:scale-95"
                                 >
@@ -147,16 +167,16 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, customerName, ini
                                 <CheckCheck className="h-4 w-4" /> Sistem üzerinden gönderilecek
                             </span>
                         ) : (
-                            <span className="font-medium text-amber-600 dark:text-amber-400">WhatsApp Web / App kullanılarak gönderilecek</span>
+                            <span className="font-medium text-amber-600 dark:text-amber-400">WhatsApp Web / App kullanılacak</span>
                         )}
                     </div>
 
                     <Button
                         onClick={handleSend}
                         disabled={isSending || !message.trim()}
-                        className="rounded-full h-12 w-12 bg-[#00A884] hover:bg-[#017561] text-white p-0 shrink-0 shadow-md"
+                        className="rounded-full h-12 w-12 bg-[#00A884] hover:bg-[#017561] text-white p-0 shrink-0 shadow-md flex items-center justify-center transition-all active:scale-90"
                     >
-                        <Send className="h-5 w-5 ml-1" />
+                        <Send className="h-5 w-5 ml-0.5" />
                     </Button>
                 </div>
 

@@ -22,9 +22,10 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             authorization: {
                 params: {
-                    prompt: "select_account",
+                    prompt: "consent",
                     access_type: "offline",
-                    response_type: "code"
+                    response_type: "code",
+                    scope: "openid email profile https://www.googleapis.com/auth/drive.file"
                 }
             }
         }),
@@ -82,9 +83,24 @@ export const authOptions: NextAuthOptions = {
                 token.canFinance = user.canFinance;
             }
 
-            if (account) {
+            if (account && account.provider === "google") {
                 token.provider = account.provider;
                 token.accessToken = account.access_token;
+
+                // Explicitly persist the refresh token if provided (happens on prompt=consent)
+                if (account.refresh_token) {
+                    await prisma.account.updateMany({
+                        where: {
+                            provider: "google",
+                            providerAccountId: account.providerAccountId
+                        },
+                        data: {
+                            refresh_token: account.refresh_token,
+                            access_token: account.access_token,
+                            expires_at: account.expires_at,
+                        }
+                    });
+                }
             }
 
             // Real-time DB sync on every request.

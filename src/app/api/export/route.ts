@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
             const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
 
-            return new NextResponse(buffer, {
+            return new NextResponse(new Uint8Array(buffer), {
                 headers: {
                     "Content-Disposition": `attachment; filename="basar-teknik-yedek.${format}"`,
                     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -48,6 +48,7 @@ export async function GET(req: Request) {
             },
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[EXPORT API ERROR]", error);
+        return NextResponse.json({ error: error.message || "Bilinmeyen bir hata oluştu" }, { status: 500 });
     }
 }

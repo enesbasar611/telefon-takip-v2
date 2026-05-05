@@ -1,14 +1,8 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { auth, getShopId } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidateTag, revalidatePath } from "next/cache";
-
-async function getShopId() {
-    const session = await auth();
-    if (!session?.user?.shopId) throw new Error("Unauthorized");
-    return session.user.shopId;
-}
 
 // ────────── EXPORT ──────────────────────────────────────────────────────────
 
@@ -21,56 +15,60 @@ export async function getExportData(categories: ExportCategory[]) {
     const result: Record<string, any[]> = {};
 
     await Promise.all(categories.map(async (cat) => {
+        let rawData: any[] = [];
         switch (cat) {
             case "customers":
-                result.customers = await prisma.customer.findMany({
+                rawData = await prisma.customer.findMany({
                     where: { shopId },
                     select: { id: true, name: true, phone: true, email: true, address: true, notes: true, loyaltyPoints: true, type: true, createdAt: true },
                 });
                 break;
             case "products":
-                result.products = await prisma.product.findMany({
+                rawData = await prisma.product.findMany({
                     where: { shopId },
                     select: { id: true, sku: true, barcode: true, name: true, description: true, buyPrice: true, sellPrice: true, stock: true, criticalStock: true, location: true, createdAt: true },
                 });
                 break;
             case "categories":
-                result.categories = await prisma.category.findMany({
+                rawData = await prisma.category.findMany({
                     where: { shopId },
                     select: { id: true, name: true, parentId: true, order: true },
                 });
                 break;
             case "services":
-                result.services = await prisma.serviceTicket.findMany({
+                rawData = await prisma.serviceTicket.findMany({
                     where: { shopId },
                     select: { id: true, ticketNumber: true, deviceModel: true, deviceBrand: true, problemDesc: true, status: true, estimatedCost: true, actualCost: true, createdAt: true },
                 });
                 break;
             case "sales":
-                result.sales = await prisma.sale.findMany({
+                rawData = await prisma.sale.findMany({
                     where: { shopId },
                     select: { id: true, saleNumber: true, totalAmount: true, finalAmount: true, paymentMethod: true, createdAt: true },
                 });
                 break;
             case "transactions":
-                result.transactions = await prisma.transaction.findMany({
+                rawData = await prisma.transaction.findMany({
                     where: { shopId },
                     select: { id: true, type: true, amount: true, description: true, category: true, createdAt: true },
                 });
                 break;
             case "suppliers":
-                result.suppliers = await prisma.supplier.findMany({
+                rawData = await prisma.supplier.findMany({
                     where: { shopId },
                     select: { id: true, name: true, phone: true, email: true, address: true, createdAt: true },
                 });
                 break;
             case "agenda":
-                result.agenda = await (prisma as any).agendaEvent.findMany({
+                rawData = await (prisma as any).agendaEvent.findMany({
                     where: { shopId },
                     select: { id: true, title: true, type: true, date: true, notes: true, isCompleted: true, createdAt: true },
                 });
                 break;
         }
+
+        // Sanitize data: Convert Decimals and serialize
+        result[cat] = JSON.parse(JSON.stringify(rawData));
     }));
 
     return result;
@@ -305,7 +303,34 @@ export async function fullResetAction(): Promise<{ success: boolean; deleted: Re
 
 // ────────── INTEGRATIONS ──────────────────────────────────────────────────
 
-/** Backup to Google Drive (Functional Placeholder) */
+import { getGoogleDriveClient, ensureBackupFolder, uploadBackup } from "@/lib/google-drive";
+
+/**
+ * Ensures Google Drive folder exists and saves its ID to settings.
+ */
+export async function ensureGoogleDriveFolderAction() {
+    const shopId = await getShopId();
+
+    try {
+        const drive = await getGoogleDriveClient(shopId);
+        const folderId = await ensureBackupFolder(drive);
+
+        // Save Folder ID to settings
+        await prisma.setting.upsert({
+            where: { shopId_key: { shopId, key: "googleDriveFolderId" } },
+            create: { shopId, key: "googleDriveFolderId", value: folderId },
+            update: { value: folderId }
+        });
+
+        revalidatePath("/ayarlar");
+        return { success: true, folderId };
+    } catch (error: any) {
+        console.error("[DRIVE FOLDER ERROR]", error);
+        return { success: false, error: error.message || "Drive klasörü oluşturulamadı. Lütfen Google ile giriş yapıldığından emin olun." };
+    }
+}
+
+/** Backup to Google Drive (Functional) */
 export async function backupToDriveAction() {
     const shopId = await getShopId();
 
@@ -313,7 +338,7 @@ export async function backupToDriveAction() {
     const settings = await prisma.setting.findMany({
         where: {
             shopId,
-            key: { in: ["googleDriveEnabled", "googleDriveFolderId", "googleDriveToken"] }
+            key: { in: ["googleDriveEnabled", "googleDriveFolderId"] }
         }
     });
 
@@ -323,28 +348,33 @@ export async function backupToDriveAction() {
         return { success: false, error: "Google Drive entegrasyonu aktif değil." };
     }
 
-    if (!config.googleDriveFolderId) {
-        return { success: false, error: "Drive Klasör ID eksik." };
-    }
-
     try {
+        const drive = await getGoogleDriveClient(shopId);
+        let folderId = config.googleDriveFolderId;
+
+        if (!folderId) {
+            folderId = await ensureBackupFolder(drive);
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId, key: "googleDriveFolderId" } },
+                create: { shopId, key: "googleDriveFolderId", value: folderId },
+                update: { value: folderId }
+            });
+        }
+
         // Prepare backup data
         const data = await getExportData([
             "customers", "products", "categories", "services",
             "sales", "transactions", "suppliers", "agenda"
         ]);
 
-        const fileName = `yedek_${new Date().toISOString().split('T')[0]}.json`;
+        const fileName = `yedek_${new Date().toISOString().split('T')[0]}_${new Date().getTime()}.json`;
 
-        // This is where you would call the Google Drive API
-        // For now, we simulate the success if folderId is present
-        console.log(`[DRIVE BACKUP] Uploading ${fileName} to folder ${config.googleDriveFolderId}`);
-
-        // In a real implementation, you'd use googleapis or fetch to https://www.googleapis.com/upload/drive/v3/files
+        await uploadBackup(drive, folderId, data, fileName);
 
         return { success: true, message: "Yedek Google Drive'a başarıyla yüklendi." };
-    } catch (error) {
-        return { success: false, error: "Drive yüklemesi sırasında hata oluştu." };
+    } catch (error: any) {
+        console.error("[DRIVE UPLOAD ERROR]", error);
+        return { success: false, error: error.message || "Drive yüklemesi sırasında hata oluştu." };
     }
 }
 

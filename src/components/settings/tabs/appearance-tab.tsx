@@ -64,7 +64,7 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
             document.head.appendChild(link);
         }
 
-        // 2. Use a dynamic style tag to override EVERYTHING (more stable than direct style props with !important CSS)
+        // 2. Use a dynamic style tag to override EVERYTHING
         const styleId = "dynamic-font-override";
         let styleTag = document.getElementById(styleId) as HTMLStyleElement;
         if (!styleTag) {
@@ -142,7 +142,6 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
                 <div className="grid grid-cols-3 gap-3">
                     {fontFamilies.map((f) => {
                         const isActive = currentFont === f.value;
-                        const isSaving = savingKeys.has("fontFamily") && isActive;
                         return (
                             <button
                                 key={f.value}
@@ -243,6 +242,43 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
                                 {s.label}
                             </span>
                         </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Layout Settings */}
+            <div className="pt-6 border-t border-slate-200 dark:border-[#222] space-y-6 text-left">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <Label className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Sayfa Düzenleri (Admin/Editör)</Label>
+                        <p className="text-xs text-muted-foreground/80 dark:text-muted-foreground">Belirli sayfaların görünüm tercihlerini dükkan bazlı özelleştirin.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                        { key: "layout_hidden_veresiye_stats", label: "Veresiye: İstatistik Kartları", desc: "Üst kısımdaki özet finansal verileri gizler." },
+                        { key: "layout_hidden_veresiye_analysis", label: "Veresiye: Analiz Sidebar", desc: "Sol taraftaki yaşlandırma ve AI analizlerini gizler." },
+                        { key: "layout_hidden_veresiye_table", label: "Veresiye: Müşteri Listesi", desc: "Ana müşteri portföy tablosunu gizler." },
+                    ].map((layout) => (
+                        <div key={layout.key} className="flex items-center justify-between bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-[#222]">
+                            <div className="space-y-1">
+                                <Label className="text-sm font-semibold text-slate-900 dark:text-white">{layout.label}</Label>
+                                <p className="text-[10px] text-muted-foreground/70 tracking-tight">{layout.desc}</p>
+                            </div>
+                            <div
+                                onClick={() => onChange(layout.key, formData[layout.key] === "true" ? "false" : "true", true)}
+                                className={cn(
+                                    "w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-200 relative shrink-0",
+                                    formData[layout.key] === "true" ? "bg-slate-300 dark:bg-slate-700" : "bg-blue-500"
+                                )}
+                            >
+                                <div className={cn(
+                                    "w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm",
+                                    formData[layout.key] === "true" ? "translate-x-0" : "translate-x-6"
+                                )} />
+                            </div>
+                        </div>
                     ))}
                 </div>
             </div>

@@ -30,7 +30,11 @@ export async function getThisMonthCollected() {
       where: {
         shopId,
         type: "INCOME",
-        description: { startsWith: "Borç Tahsilatı:" },
+        OR: [
+          { description: { startsWith: "Borç Tahsilatı:" } },
+          { description: { startsWith: "Toplu Borç Tahsilatı:" } },
+          { category: "Tahsilat" }
+        ],
         createdAt: { gte: startOfMonth }
       }
     });
@@ -373,5 +377,67 @@ export async function getCustomerStatement(customerId: string) {
   } catch (error) {
     console.error("getCustomerStatement error:", error);
     return { success: false, error: "Ekstre verileri alınamadı." };
+  }
+}
+
+export async function getDebtStatsDetails(filter: {
+  type: 'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED';
+  startDate?: Date;
+  endDate?: Date;
+}) {
+  try {
+    const shopId = await getShopId();
+    const { type, startDate, endDate } = filter;
+
+    const dateFilter = (startDate || endDate) ? {
+      createdAt: {
+        ...(startDate && { gte: startDate }),
+        ...(endDate && { lte: endDate }),
+      }
+    } : {};
+
+    if (type === 'COLLECTED') {
+      const transactions = await prisma.transaction.findMany({
+        where: {
+          shopId,
+          type: 'INCOME',
+          OR: [
+            { description: { startsWith: "Borç Tahsilatı:" } },
+            { description: { startsWith: "Toplu Borç Tahsilatı:" } },
+            { category: "Tahsilat" }
+          ],
+          ...dateFilter
+        },
+        include: {
+          customer: true,
+          user: true,
+          financeAccount: true
+        },
+        orderBy: { createdAt: "desc" }
+      });
+      return { success: true, data: serializePrisma(transactions) };
+    } else {
+      // For debt stats (Receivables, Overdue)
+      const debts = await prisma.debt.findMany({
+        where: {
+          shopId,
+          isPaid: false,
+          ...(type === 'RECEIVABLE_TRY' && { currency: 'TRY' }),
+          ...(type === 'RECEIVABLE_USD' && { currency: 'USD' }),
+          ...(type === 'OVERDUE' && {
+            dueDate: { lt: new Date() }
+          }),
+          ...dateFilter
+        },
+        include: {
+          customer: true
+        },
+        orderBy: { createdAt: "desc" }
+      });
+      return { success: true, data: serializePrisma(debts) };
+    }
+  } catch (error) {
+    console.error("getDebtStatsDetails error:", error);
+    return { success: false, error: "Detay verileri alınamadı." };
   }
 }

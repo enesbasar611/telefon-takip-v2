@@ -6,7 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Download, Upload, FileJson, FileSpreadsheet, Trash2, Archive, Loader2, AlertTriangle, Cloud, HardDrive, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { softResetAction, transactionResetAction, fullResetAction } from "@/lib/actions/data-management-actions";
+import { softResetAction, transactionResetAction, fullResetAction, backupToDriveAction, ensureGoogleDriveFolderAction, ExportCategory } from "@/lib/actions/data-management-actions";
+import { Check, AlertCircle } from "lucide-react";
 
 interface DataTabProps {
     formData: Record<string, string>;
@@ -27,7 +28,7 @@ const CATEGORIES = [
 
 export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>(CATEGORIES.map(c => c.id));
+    const [selectedCategories, setSelectedCategories] = useState<ExportCategory[]>(CATEGORIES.map(c => c.id) as ExportCategory[]);
 
     const [isPending, startTransition] = useTransition();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,7 +36,7 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
     // Reset Modal State
     const [resetModal, setResetModal] = useState<{ open: boolean, type: "soft" | "tx" | "full", countdown: number } | null>(null);
 
-    const toggleCategory = (id: string) => {
+    const toggleCategory = (id: ExportCategory) => {
         setSelectedCategories(prev =>
             prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
         );
@@ -159,9 +160,14 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
                     <div className="p-4 rounded-xl border border-slate-200 dark:border-[#222] bg-white dark:bg-[#111] shadow-sm">
                         <div className="grid grid-cols-2 gap-3 mb-6">
                             {CATEGORIES.map(c => {
-                                const active = selectedCategories.includes(c.id);
+                                const categoryId = c.id as ExportCategory;
+                                const active = selectedCategories.includes(categoryId);
                                 return (
-                                    <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                                    <label
+                                        key={categoryId}
+                                        className="flex items-center gap-2 cursor-pointer group"
+                                        onClick={() => toggleCategory(categoryId)}
+                                    >
                                         <div className={cn(
                                             "w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors",
                                             active ? "bg-blue-500 border-blue-500" : "border-slate-300 dark:border-border/80 bg-transparent group-hover:border-slate-500"
@@ -275,7 +281,7 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
                                 <div className="flex items-center gap-3">
                                     <Cloud className={cn("w-5 h-5", formData.googleDriveEnabled === "true" ? "text-emerald-500" : "text-muted-foreground")} />
                                     <div>
-                                        <p className="text-sm text-slate-900 dark:text-white font-medium">Google Drive Entegrasyonu</p>
+                                        <p className="text-sm text-slate-900 dark:text-white font-medium">Google Drive Yedekleme</p>
                                         <p className="text-xs text-muted-foreground/80 dark:text-muted-foreground">Yedekleri otomatik olarak Drive hesabınıza yükleyin.</p>
                                     </div>
                                 </div>
@@ -283,7 +289,17 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
                                     {isDriveSaving && <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />}
                                     <Switch
                                         checked={formData.googleDriveEnabled === "true"}
-                                        onCheckedChange={(checked) => onChange("googleDriveEnabled", checked ? "true" : "false", true)}
+                                        onCheckedChange={async (checked) => {
+                                            onChange("googleDriveEnabled", checked ? "true" : "false", true);
+                                            if (checked) {
+                                                const res = await ensureGoogleDriveFolderAction();
+                                                if (res.success) {
+                                                    toast.success("Google Drive klasörü başarıyla bağlandı.");
+                                                } else {
+                                                    toast.error(res.error);
+                                                }
+                                            }
+                                        }}
                                         disabled={isDriveSaving}
                                         className="data-[state=checked]:bg-emerald-500"
                                     />
@@ -292,19 +308,44 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
 
                             {formData.googleDriveEnabled === "true" && (
                                 <div className="grid grid-cols-1 gap-3 pt-2 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground/80 ml-1">Drive Klasör ID (Folder ID)</Label>
-                                        <input
-                                            type="text"
-                                            value={formData.googleDriveFolderId || ""}
-                                            onChange={(e) => onChange("googleDriveFolderId", e.target.value)}
-                                            placeholder="Google Drive klasör linkindeki ID alanını yapıştırın"
-                                            className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-border/50 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-emerald-500/50 outline-none transition-all font-medium"
-                                        />
+                                    <div className="flex items-center gap-2 p-3 bg-white/50 dark:bg-black/20 rounded-lg border border-emerald-500/10">
+                                        {formData.googleDriveFolderId ? (
+                                            <>
+                                                <Check className="w-4 h-4 text-emerald-500" />
+                                                <div className="flex-1">
+                                                    <p className="text-[10px] font-bold text-emerald-600/80 uppercase">Klasör Hazır</p>
+                                                    <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[200px]">{formData.googleDriveFolderId}</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <AlertCircle className="w-4 h-4 text-amber-500" />
+                                                <p className="text-[10px] font-bold text-amber-600/80 uppercase">Klasör Oluşturuluyor...</p>
+                                            </>
+                                        )}
                                     </div>
-                                    <button className="w-full py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded-lg hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2">
-                                        <RefreshCw className="w-3 h-3" /> DRIVE BAĞLANTISINI TEST ET
-                                    </button>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={async () => {
+                                                const res = await backupToDriveAction();
+                                                if (res.success) toast.success(res.message);
+                                                else toast.error(res.error);
+                                            }}
+                                            className="flex-1 py-2 bg-emerald-500 text-white text-[10px] font-black rounded-lg hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                                        >
+                                            <Cloud className="w-3 h-3" /> ŞİMDİ DRIVE'A YEDEKLE
+                                        </button>
+                                        <button
+                                            onClick={() => ensureGoogleDriveFolderAction()}
+                                            className="px-4 py-2 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-border/50 text-slate-600 dark:text-muted-foreground text-[10px] font-bold rounded-lg hover:bg-slate-200 transition-all"
+                                        >
+                                            <RefreshCw className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    <p className="text-[9px] text-center text-muted-foreground px-2 italic">
+                                        Not: Google Drive ișlemleri için Google ile giriș yapmıș olmanız gerekir.
+                                    </p>
                                 </div>
                             )}
                         </div>

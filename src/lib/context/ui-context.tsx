@@ -5,6 +5,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 interface UIContextType {
   isFinancialVisible: boolean;
   toggleFinancialVisibility: () => void;
+  isLayoutEditing: boolean;
+  toggleLayoutEditing: () => void;
   isAiLoading: boolean;
   setAiLoading: (v: boolean) => void;
   isAiInputFocused: boolean;
@@ -15,14 +17,19 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isFinancialVisible, setIsFinancialVisible] = useState(false);
+  const [isLayoutEditing, setIsLayoutEditing] = useState(false);
   const [isAiLoading, setAiLoading] = useState(false);
   const [isAiInputFocused, setAiInputFocused] = useState(false);
 
   // Initialize from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("isFinancialVisible");
-    if (saved !== null) {
-      setIsFinancialVisible(JSON.parse(saved));
+    const savedFinancial = localStorage.getItem("isFinancialVisible");
+    if (savedFinancial !== null) {
+      setIsFinancialVisible(JSON.parse(savedFinancial));
+    }
+    const savedLayout = localStorage.getItem("isLayoutEditing");
+    if (savedLayout !== null) {
+      setIsLayoutEditing(JSON.parse(savedLayout));
     }
   }, []);
 
@@ -34,10 +41,20 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const toggleLayoutEditing = () => {
+    setIsLayoutEditing((prev) => {
+      const newState = !prev;
+      localStorage.setItem("isLayoutEditing", JSON.stringify(newState));
+      return newState;
+    });
+  };
+
   return (
     <UIContext.Provider value={{
       isFinancialVisible,
       toggleFinancialVisibility,
+      isLayoutEditing,
+      toggleLayoutEditing,
       isAiLoading,
       setAiLoading,
       isAiInputFocused,

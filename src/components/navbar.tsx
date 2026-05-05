@@ -1,7 +1,9 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { useRouter } from "next/navigation";
-import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun } from "lucide-react";
+import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun, LayoutDashboard } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -27,7 +29,7 @@ import { NotificationDropdown } from "@/components/navbar/notification-dropdown"
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
 
 export function Navbar({ shop }: { shop?: any }) {
-  const { isFinancialVisible, toggleFinancialVisibility } = useUI();
+  const { isFinancialVisible, toggleFinancialVisibility, isLayoutEditing, toggleLayoutEditing } = useUI();
   const { setTheme } = useTheme();
   const router = useRouter();
 
@@ -93,6 +95,21 @@ export function Navbar({ shop }: { shop?: any }) {
                 className="h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary transition-all"
               >
                 {isFinancialVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLayoutEditing}
+                className={cn(
+                  "h-10 w-10 rounded-xl border transition-all",
+                  isLayoutEditing
+                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105"
+                    : "bg-muted/40 border-border text-muted-foreground hover:text-primary"
+                )}
+                title={isLayoutEditing ? "Düzenleme Modunu Kapat" : "Sayfayı Düzenle"}
+              >
+                <LayoutDashboard className="h-5 w-5" />
               </Button>
 
               <ShortageList />
