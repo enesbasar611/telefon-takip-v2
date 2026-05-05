@@ -1,129 +1,180 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
-import { ReturnReason, ServiceStatus } from "@prisma/client";
 import { serializePrisma } from "@/lib/utils";
+import { revalidatePath } from "next/cache";
+import { getShopId, getUserId } from "@/lib/auth";
+import { ReturnStatus, ReturnReason } from "@prisma/client";
 
-import { getUserId, getShopId } from "@/lib/auth";
-
-export async function createReturnTicket(data: {
-  serviceTicketId: string;
-  productId: string;
-  returnReason: ReturnReason;
-  notes?: string;
+export async function getReturnTickets(filters?: {
+  sourceType?: string;
+  status?: string;
+  customerId?: string;
+  supplierId?: string;
 }) {
   try {
-    const userId = await getUserId();
     const shopId = await getShopId();
-
-    if (!userId || !shopId) throw new Error("Yetkilendirme hatası.");
-
-    // Get original service ticket for actual revenue/cost context
-    const serviceTicket = await prisma.serviceTicket.findUnique({
-      where: { id: data.serviceTicketId, shopId },
-      include: { usedParts: true }
+    const tickets = await prisma.returnTicket.findMany({
+      where: {
+        shopId,
+        ...(filters?.sourceType && { sourceType: filters.sourceType }),
+        ...(filters?.status && { returnStatus: filters.status as any }),
+        ...(filters?.customerId && { customerId: filters.customerId }),
+        ...(filters?.supplierId && { supplierId: filters.supplierId }),
+      },
+      include: {
+        product: true,
+        customer: true,
+        supplier: true,
+        user: true,
+        serviceTicket: true
+      },
+      orderBy: { createdAt: "desc" },
     });
-
-    if (!serviceTicket) throw new Error("Servis kaydı bulunamadı.");
-
-    const usedPart = serviceTicket.usedParts.find(p => p.productId === data.productId);
-    if (!usedPart) throw new Error("Bu ürün servis kaydında kullanılmamış.");
-
-    const returnCount = await prisma.returnTicket.count({ where: { shopId } });
-    const ticketNumber = `RET-${1000 + returnCount + 1}`;
-
-    const lossAmount = Number(usedPart.costPrice || 0) + Number(serviceTicket.overhead || 0);
-
-    const result = await prisma.$transaction(async (tx) => {
-      const retTicket = await tx.returnTicket.create({
-        data: {
-          ticketNumber,
-          serviceTicketId: data.serviceTicketId,
-          productId: data.productId,
-          userId: userId,
-          returnReason: data.returnReason,
-          lossAmount: lossAmount,
-          notes: data.notes,
-          shopId
-        }
-      });
-
-      // Stock Logic:
-      // If CUSTOMER_CANCEL, restore stock.
-      // If PART_FAILURE or LABOR_ERROR, do NOT restore stock (it's junk/loss).
-      if (data.returnReason === ReturnReason.CUSTOMER_CANCEL) {
-        await tx.product.update({
-          where: { id: data.productId, shopId },
-          data: {
-            stock: { increment: 1 },
-            inventoryLogs: {
-              create: {
-                userId: userId,
-                quantity: 1,
-                type: "RETURN_RESTORE",
-                notes: `İade sonrası stok iade edildi: ${ticketNumber}`,
-                shopId
-              }
-            }
-          }
-        });
-      } else {
-        // Log as junk for failures
-        await tx.inventoryLog.create({
-          data: {
-            productId: data.productId,
-            userId: userId,
-            quantity: 0, // No stock change
-            type: "RETURN_JUNK",
-            notes: `Hatalı parça iadesi (stoka eklenmedi): ${ticketNumber.toLowerCase()}`,
-            shopId
-          }
-        });
-      }
-
-      return retTicket;
-    });
-
-    // Update Chronic Failure Status
-    await updateChronicFailureStatus(data.productId, shopId);
-
-    revalidatePath("/servis/liste");
-    revalidatePath("/stok");
-    revalidatePath("/dashboard");
-    return { success: true, data: serializePrisma(result) };
-  } catch (error: any) {
-    console.error("Error creating return ticket:", error);
-    return { success: false, error: error.message || "İade kaydı oluşturulurken hata oluştu." };
+    return serializePrisma(tickets);
+  } catch (error) {
+    console.error("getReturnTickets error:", error);
+    return [];
   }
 }
 
-async function updateChronicFailureStatus(productId: string, shopId: string) {
-  const totalUses = await prisma.serviceUsedPart.count({
-    where: { productId, shopId }
-  });
+export async function createReturnTicket(data: {
+  sourceType: string;
+  productId?: string;
+  quantity: number;
+  refundAmount?: number;
+  refundCurrency?: string;
+  customerId?: string;
+  supplierId?: string;
+  debtId?: string;
+  saleId?: string;
+  serviceTicketId?: string;
+  reason?: string;
+  notes?: string;
+  restockProduct?: boolean;
+}) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
 
-  if (totalUses < 5) return; // Need a sample size
+    const count = await prisma.returnTicket.count({ where: { shopId } });
+    const ticketNumber = `RET-${new Date().getFullYear()}${(count + 1).toString().padStart(4, "0")}`;
 
-  const totalReturns = await prisma.returnTicket.count({
-    where: {
-      productId,
-      shopId,
-      returnReason: { in: [ReturnReason.PART_FAILURE, ReturnReason.LABOR_ERROR] }
-    }
-  });
-
-  const returnRate = totalReturns / totalUses;
-
-  if (returnRate > 0.10) {
-    await prisma.product.update({
-      where: { id: productId, shopId },
-      data: { isChronic: true }
+    const ticket = await prisma.returnTicket.create({
+      data: {
+        ticketNumber,
+        sourceType: data.sourceType,
+        productId: data.productId,
+        quantity: data.quantity,
+        refundAmount: data.refundAmount,
+        refundCurrency: data.refundCurrency || "TRY",
+        customerId: data.customerId,
+        supplierId: data.supplierId,
+        debtId: data.debtId,
+        saleId: data.saleId,
+        serviceTicketId: data.serviceTicketId,
+        returnReason: data.reason as any,
+        notes: data.notes,
+        restockProduct: data.restockProduct ?? true,
+        shopId,
+        userId,
+        returnStatus: "PENDING",
+      },
     });
-  } else {
-    await prisma.product.update({
-      where: { id: productId, shopId },
-      data: { isChronic: false }
+
+    revalidatePath("/stok/iade");
+    return { success: true, ticket: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("createReturnTicket error:", error);
+    return { success: false, error: "İade kaydı oluşturulamadı." };
+  }
+}
+
+export async function approveReturn(id: string) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const ticket = await prisma.returnTicket.findUnique({
+      where: { id, shopId },
+      include: { product: true },
     });
+
+    if (!ticket) return { success: false, error: "İade kaydı bulunamadı." };
+    if (ticket.returnStatus !== "PENDING") return { success: false, error: "Bu iade zaten işlem görmüş." };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.returnTicket.update({
+        where: { id },
+        data: { returnStatus: "APPROVED" },
+      });
+
+      if (ticket.restockProduct && ticket.productId) {
+        await tx.product.update({
+          where: { id: ticket.productId },
+          data: { stock: { increment: ticket.quantity } },
+        });
+
+        await tx.inventoryMovement.create({
+          data: {
+            productId: ticket.productId,
+            quantity: ticket.quantity,
+            type: "IN",
+            notes: `İade Onayı: ${ticket.ticketNumber}`,
+            shopId,
+          },
+        });
+      }
+
+      if (ticket.sourceType === "DEBT" && ticket.debtId && ticket.refundAmount) {
+        const debt = await tx.debt.findUnique({ where: { id: ticket.debtId } });
+        if (debt) {
+          const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(ticket.refundAmount));
+          await tx.debt.update({
+            where: { id: ticket.debtId },
+            data: {
+              remainingAmount: newRemaining,
+              isPaid: newRemaining <= 0,
+            },
+          });
+        }
+      } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
+        await tx.transaction.create({
+          data: {
+            type: "EXPENSE",
+            amount: ticket.refundAmount,
+            description: `Satış İadesi Para İadesi: ${ticket.ticketNumber}`,
+            category: "İade",
+            userId,
+            shopId,
+          },
+        });
+      }
+    });
+
+    revalidatePath("/stok/iade");
+    revalidatePath("/veresiye");
+    return { success: true };
+  } catch (error) {
+    console.error("approveReturn error:", error);
+    return { success: false, error: "İade onaylanırken hata oluştu." };
+  }
+}
+
+export async function rejectReturn(id: string, notes?: string) {
+  try {
+    const shopId = await getShopId();
+    await prisma.returnTicket.update({
+      where: { id, shopId },
+      data: {
+        returnStatus: "REJECTED",
+        notes: notes || undefined,
+      },
+    });
+    revalidatePath("/stok/iade");
+    return { success: true };
+  } catch (error) {
+    console.error("rejectReturn error:", error);
+    return { success: false, error: "İade reddedilirken hata oluştu." };
   }
 }

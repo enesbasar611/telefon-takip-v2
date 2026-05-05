@@ -77,6 +77,7 @@ const getMenuItems = (shop: any, userRole?: string) => {
         { label: "Hareket Analizi", href: "/stok/hareketler" },
         { label: "Kategoriler", href: "/stok/kategoriler" },
         { label: "AI Önerileri", href: "/stok/stok-ai" },
+        { label: "İade / Hasarlı", href: "/stok/iade" },
       ]
     },
     {
@@ -152,6 +153,14 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     }
   }, [shop]);
   useEffect(() => {
+    // - [x] Create `ReturnTicket` model expansions and enums
+    // - [x] Implement `return-actions.ts` (list, create, approve, reject)
+    // - [x] Update `createDebt` in `debt-actions.ts` to handle stock deduction
+    // - [x] Integrate product search into `AddDebtModal`
+    // - [x] Add "İade/Hasarlı" to sidebar
+    // - [/] Create `/stok/iade` page and `ReturnsClient` component
+    // - [ ] Manual verification and testing
+    // - [ ] Polish UI/UX for returns lists
     const checkStatus = async () => {
       try {
         const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");

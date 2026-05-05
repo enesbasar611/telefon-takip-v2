@@ -50,23 +50,61 @@ export async function createDebt(data: {
   currency?: string;
   exchangeRate?: number;
   dueDate?: Date;
-  notes?: string
+  notes?: string;
+  items?: {
+    title: string;
+    amount: number;
+    currency: string;
+    productId?: string;
+    quantity?: number;
+  }[];
 }) {
   try {
     const shopId = await getShopId();
-    const debt = await prisma.debt.create({
-      data: {
-        customerId: data.customerId,
-        amount: data.amount,
-        remainingAmount: data.amount,
-        currency: data.currency || "TRY",
-        exchangeRate: data.exchangeRate,
-        dueDate: data.dueDate,
-        notes: data.notes,
-        shopId
+    const userId = await getUserId();
+
+    const debt = await prisma.$transaction(async (tx) => {
+      // 1. Create the debt record
+      const newDebt = await tx.debt.create({
+        data: {
+          customerId: data.customerId,
+          amount: data.amount,
+          remainingAmount: data.amount,
+          currency: data.currency || "TRY",
+          exchangeRate: data.exchangeRate,
+          dueDate: data.dueDate,
+          notes: data.notes,
+          shopId
+        }
+      });
+
+      // 2. Handle product stock deduction for items
+      if (data.items) {
+        for (const item of data.items) {
+          if (item.productId && item.quantity) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } }
+            });
+
+            await tx.inventoryMovement.create({
+              data: {
+                productId: item.productId,
+                quantity: item.quantity,
+                type: "OUT",
+                notes: `Veresiye Satışı: ${newDebt.id.substring(0, 8)}`,
+                shopId
+              }
+            });
+          }
+        }
       }
+
+      return newDebt;
     });
+
     revalidatePath("/veresiye");
+    revalidatePath("/stok");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
     return { success: true, debt: serializePrisma(debt) };

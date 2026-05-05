@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, User, FileText, Calendar, History } from "lucide-react";
 import { createDebt } from "@/lib/actions/debt-actions";
+import { getProducts } from "@/lib/actions/product-actions";
 import { resolveCustomerForDebt, getCustomerById } from "@/lib/actions/customer-actions";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -46,6 +47,8 @@ interface DebtDraftItem {
     amount: number;
     currency: "TRY" | "USD";
     convertedAmount: number;
+    productId?: string;
+    quantity?: number;
 }
 
 export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDebtModalProps) {
@@ -62,6 +65,12 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     const [itemCurrency, setItemCurrency] = useState<"TRY" | "USD">("TRY");
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
     const [selectedCustomerInfo, setSelectedCustomerInfo] = useState<any>(null);
+
+    // Product Search State
+    const [productSearch, setProductSearch] = useState("");
+    const [productSuggestions, setProductSuggestions] = useState<any[]>([]);
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
 
     const { toast } = useToast();
     const router = useRouter();
@@ -133,6 +142,35 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
         setSelectedCustomerInfo(fullInfo);
     };
 
+    // Product Search Effect
+    useEffect(() => {
+        if (itemTitle.length < 2 || (selectedProduct && selectedProduct.name === itemTitle)) {
+            setProductSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingProducts(true);
+            try {
+                const results = await getProducts({ search: itemTitle, pageSize: 5 });
+                setProductSuggestions(results.products || []);
+            } catch (error) {
+                console.error("Product search error:", error);
+            } finally {
+                setIsSearchingProducts(false);
+            }
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [itemTitle, selectedProduct]);
+
+    const handleSelectProduct = (product: any) => {
+        setItemTitle(product.name);
+        setItemAmount(product.sellPrice.toString());
+        setSelectedProduct(product);
+        setProductSuggestions([]);
+    };
+
     // Initial Data Sync
     useEffect(() => {
         if (open && initialData) {
@@ -171,12 +209,15 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
             title: itemTitle,
             amount: Number(itemAmount),
             currency: itemCurrency,
-            convertedAmount: converted
+            convertedAmount: converted,
+            productId: selectedProduct?.id,
+            quantity: 1
         };
 
         setDebtItems(prev => [...prev, newItem]);
         setItemTitle("");
         setItemAmount("");
+        setSelectedProduct(null);
     };
 
     const removeItem = (id: string) => {
@@ -204,21 +245,25 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 return;
             }
 
-            // Create multiple debt records (itemized)
-            let successCount = 0;
-            for (const item of debtItems) {
-                const res = await createDebt({
-                    customerId: customerRes.customerId,
+            // Create the debt record with all items
+            const totalAmount = debtItems.reduce((acc, item) => acc + item.amount, 0);
+            const res = await createDebt({
+                customerId: customerRes.customerId,
+                amount: totalAmount,
+                currency: debtItems[0].currency, // Use first item's currency as primary
+                notes: debtItems.map(i => i.title).join(", "),
+                dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+                items: debtItems.map(item => ({
+                    title: item.title,
                     amount: item.amount,
                     currency: item.currency,
-                    notes: item.title,
-                    dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-                });
-                if (res.success) successCount++;
-            }
+                    productId: item.productId,
+                    quantity: item.quantity
+                }))
+            });
 
-            if (successCount > 0) {
-                toast({ title: "Başarılı", description: `${successCount} adet alacak kaydı oluşturuldu.` });
+            if (res.success) {
+                toast({ title: "Başarılı", description: `Alacak kaydı ve ilgili stok hareketleri oluşturuldu.` });
                 setOpen(false);
                 reset();
                 setPhoneValue("");
@@ -320,9 +365,51 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                 Yeni Kalem Ekle
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                                <div className="md:col-span-5 space-y-2">
+                                <div className="md:col-span-5 space-y-2 relative">
                                     <Label className="text-[9px] text-muted-foreground uppercase">Ürün / Açıklama</Label>
-                                    <Input value={itemTitle} onChange={(e) => setItemTitle(e.target.value)} placeholder="Şarj aleti, Kılıf, İşçilik..." className="h-11 bg-card rounded-xl" />
+                                    <div className="relative group overflow-hidden rounded-xl">
+                                        <Input
+                                            value={itemTitle}
+                                            onChange={(e) => {
+                                                setItemTitle(e.target.value);
+                                                if (selectedProduct && e.target.value !== selectedProduct.name) {
+                                                    setSelectedProduct(null);
+                                                }
+                                            }}
+                                            placeholder="Şarj aleti, Kılıf, İşçilik..."
+                                            className="h-11 bg-card rounded-xl pr-10"
+                                        />
+                                        {isSearchingProducts && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <AnimatePresence>
+                                        {productSuggestions.length > 0 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="absolute top-full left-0 w-full bg-popover border border-border mt-1 rounded-xl shadow-2xl z-[110] max-h-48 overflow-y-auto p-1"
+                                            >
+                                                {productSuggestions.map((p) => (
+                                                    <button
+                                                        key={p.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectProduct(p)}
+                                                        className="w-full text-left p-2 hover:bg-indigo-500 hover:text-white rounded-lg transition-all flex justify-between items-center text-xs"
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span>{p.name}</span>
+                                                            <span className="text-[9px] opacity-60">Stok: {p.stock}</span>
+                                                        </div>
+                                                        <span className="font-bold">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                                 <div className="md:col-span-3 space-y-2">
                                     <Label className="text-[9px] text-muted-foreground uppercase">Tutar</Label>

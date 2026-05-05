@@ -124,6 +124,7 @@ model Customer {
   shopId         String
   shop           Shop            @relation(fields: [shopId], references: [id])
   debts          Debt[]
+  returns        ReturnTicket[]
   sales          Sale[]
   tickets        ServiceTicket[]
   transactions   Transaction[]
@@ -297,25 +298,37 @@ model Reminder {
 }
 
 model ReturnTicket {
-  id              String        @id @default(cuid())
+  id              String         @id @default(cuid())
   ticketNumber    String
-  serviceTicketId String
-  productId       String
+  serviceTicketId String?
+  productId       String?
   supplierId      String?
+  customerId      String?
+  debtId          String?
+  saleId          String?
   userId          String
-  returnReason    ReturnReason
-  lossAmount      Decimal       @default(0) @db.Decimal(10, 2)
+  returnReason    ReturnReason?
+  returnStatus    ReturnStatus   @default(PENDING)
+  sourceType      String         @default("SERVICE")
+  lossAmount      Decimal        @default(0) @db.Decimal(10, 2)
+  refundAmount    Decimal?       @db.Decimal(10, 2)
+  refundCurrency  String?        @default("TRY")
+  restockProduct  Boolean        @default(true)
+  quantity        Int            @default(1)
   notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   shopId          String
-  product         Product       @relation(fields: [productId], references: [id])
-  serviceTicket   ServiceTicket @relation(fields: [serviceTicketId], references: [id])
-  shop            Shop          @relation(fields: [shopId], references: [id])
-  user            User          @relation(fields: [userId], references: [id])
+  product         Product?       @relation(fields: [productId], references: [id])
+  serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
+  shop            Shop           @relation(fields: [shopId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  customer        Customer?      @relation(fields: [customerId], references: [id])
+  supplier        Supplier?      @relation(fields: [supplierId], references: [id])
 
   @@unique([shopId, ticketNumber])
-}
+}  
+
 
 model InventoryLog {
   id        String   @id @default(cuid())
@@ -584,6 +597,7 @@ model Supplier {
   shopId        String
   products      Product[]
   purchases     PurchaseOrder[]
+  returns       ReturnTicket[]
   shop          Shop                  @relation(fields: [shopId], references: [id])
   transactions  SupplierTransaction[]
 }
@@ -752,6 +766,14 @@ enum ReturnReason {
   LABOR_ERROR
   CUSTOMER_MISUSE
   CUSTOMER_CANCEL
+  GENERAL_RETURN
+  DAMAGED
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum AccountType {
