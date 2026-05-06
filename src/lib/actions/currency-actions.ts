@@ -1,8 +1,8 @@
 "use server";
-import { unstable_cache } from "next/cache";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
+
 
 // 1. syncAllRates fonksiyonu olduğu gibi kalabilir (içindeki getShopId dışarıdan shopId gelirse çalışmıyor zaten)
 export async function syncAllRates(providedShopId?: string) {
@@ -47,34 +47,26 @@ export async function syncAllRates(providedShopId?: string) {
   }
 }
 
-// 2. KRİTİK DEĞİŞİKLİK BURADA: Veriyi çekmeyi ve sync etmeyi ayırdık.
+// 2. KRİTİK DEĞİŞİKLİK: Anlık veriyi döndür, sync'i arka planda yap (non-blocking)
 export const getExchangeRates = async (shopId: string) => {
-  // Önce veriyi cache'den alalım
-  const getCachedRates = unstable_cache(
-    async (sId: string) => {
-      return prisma.setting.findMany({
-        where: {
-          shopId: sId,
-          key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] }
-        }
-      });
-    },
-    [`exchange-rates-${shopId}`],
-    { tags: [`rates-${shopId}`], revalidate: 3600 }
-  );
+  // DB'den direkt çek (cache bypass - layout'ta sadece bir kez çağrılır)
+  let settings = await prisma.setting.findMany({
+    where: {
+      shopId,
+      key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] }
+    }
+  });
 
-  let settings = await getCachedRates(shopId);
   const lastUpdateStr = settings.find(s => s.key === "currency_last_update")?.value;
   const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
   const now = new Date();
 
-  // Eğer veri eksikse veya 2 saat geçmişse "Dışarıda" sync yapalım (unstable_cache dışında!)
-  if (settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000)) {
-    await syncAllRates(shopId).catch(() => { });
-    // Sync sonrası güncel veriyi tekrar çek (cache'i bypass ederek)
-    settings = await prisma.setting.findMany({
-      where: { shopId, key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] } }
-    });
+  // Eğer veri eksikse veya 2 saat geçmişse ARKA PLANDA (non-blocking) sync başlat
+  // Layout render'ı ASLA bloklama - stale veriyi hemen dön
+  const isStale = settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000);
+  if (isStale) {
+    // Fire-and-forget: await YOK, arka planda çalışır
+    syncAllRates(shopId).catch(() => { });
   }
 
   return {

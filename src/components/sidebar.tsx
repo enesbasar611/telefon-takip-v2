@@ -153,15 +153,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     }
   }, [shop]);
   useEffect(() => {
-    // - [x] Create `ReturnTicket` model expansions and enums
-    // - [x] Implement `return-actions.ts` (list, create, approve, reject)
-    // - [x] Update `createDebt` in `debt-actions.ts` to handle stock deduction
-    // - [x] Integrate product search into `AddDebtModal`
-    // - [x] Add "İade/Hasarlı" to sidebar
-    // - [/] Create `/stok/iade` page and `ReturnsClient` component
-    // - [ ] Manual verification and testing
-    // - [ ] Polish UI/UX for returns lists
     const checkStatus = async () => {
+
       try {
         const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");
         const res = await getWhatsAppStatusAction();
@@ -196,9 +189,9 @@ export function Sidebar({ className, user, shop, onNavigate }: {
 
   const handleNavigation = (href: string) => {
     setLocalActivePath(href);
-    router.push(href);
     onNavigate?.();
   };
+
 
   // Logo always stable - only industry label changes below
   const industryConfig = getIndustryConfig(currentShop?.industry);
@@ -306,7 +299,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                 ) : (
                   <Link
                     href={item.href}
-                    onClick={() => onNavigate?.()}
+                    onClick={() => { setLocalActivePath(item.href); onNavigate?.(); }}
                     className={cn(
                       "flex items-center gap-3 w-full rounded-xl px-3 py-3 text-[15.5px] font-medium transition-all duration-150 outline-none group",
                       isActive
@@ -320,7 +313,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                     />
                     <span className="flex-1 text-left leading-none">{item.label}</span>
                     {item.label === "Ayarlar" && whatsappStatus === "DISCONNECTED" && (
-                      <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)] flex-shrink-0" />
+                      <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] flex-shrink-0" />
                     )}
                     {isActive && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
                   </Link>
@@ -332,7 +325,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                       <Link
                         key={sub.label}
                         href={sub.href}
-                        onClick={() => onNavigate?.()}
+                        onClick={() => { setLocalActivePath(sub.href); onNavigate?.(); }}
                         className={cn(
                           "px-3 py-2.5 text-left text-[13.5px]  rounded-lg transition-all duration-150 outline-none leading-none block",
                           localActivePath === sub.href
@@ -428,7 +421,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                           'Yükleniyor...'}
               </span>
               {session?.user?.role === 'SUPER_ADMIN' && session?.user?.shopId && (
-                <span className="text-[9px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter w-fit animate-pulse">
+                <span className="text-[9px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter w-fit">
                   Yönetim Modu
                 </span>
               )}

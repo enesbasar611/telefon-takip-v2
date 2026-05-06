@@ -25,9 +25,13 @@ import {
     User,
     ChevronDown,
     FileText,
+    Receipt,
     PlusCircle,
     Pencil,
-    Trash2
+    Trash2,
+    DollarSign,
+    RotateCcw,
+    Printer
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -66,9 +70,10 @@ import {
 import { toast } from "sonner";
 
 import { collectGlobalCustomerPayment, startTrackingDebt, getCustomerStatement, getDebtStatsDetails } from "@/lib/actions/debt-actions";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { AddDebtModal } from "./add-debt-modal";
+import { DebtReceiptModal } from "./debt-receipt-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import {
     Select,
@@ -111,11 +116,14 @@ interface VeresiyeClientProps {
         lastUpdate: Date;
     };
     settings?: any[];
+    shop?: any;
 }
 
-export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings }: VeresiyeClientProps) {
+export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings, shop }: VeresiyeClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'tracking'>('all');
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+    const [debtFilter, setDebtFilter] = useState<'all' | 'hasDebt' | 'noDebt'>('all');
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -152,6 +160,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
     const [portfolioData, setPortfolioData] = useState<{ tickets: any[], sales: any[], debts: any[] }>({ tickets: [], sales: [], debts: [] });
 
+    // Receipt Modal State
+    const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
+    const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
+
     // Global Payment State
     const [paymentCustomer, setPaymentCustomer] = useState<any>(null);
     const [paymentCurrency, setPaymentCurrency] = useState<"TRY" | "USD">("TRY");
@@ -166,6 +178,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
     const [paymentSummary, setPaymentSummary] = useState<{
+        customerId: string;
         customerName: string;
         items: string[];
         paidAmount: number;
@@ -233,7 +246,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         }> = {};
 
         debts.forEach(debt => {
-            if (debt.isPaid) return;
             const customerId = debt.customer.id;
             if (!groups[customerId]) {
                 groups[customerId] = {
@@ -248,9 +260,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 };
             }
 
-            const amount = Number(debt.remainingAmount);
-            if (debt.currency === 'USD') groups[customerId].totalRemainingUSD += amount;
-            else groups[customerId].totalRemainingTRY += amount;
+            if (!debt.isPaid) {
+                const amount = Number(debt.remainingAmount);
+                if (debt.currency === 'USD') groups[customerId].totalRemainingUSD += amount;
+                else groups[customerId].totalRemainingTRY += amount;
+            }
 
             groups[customerId].debtCount++;
             groups[customerId].debtItems.push(debt);
@@ -270,10 +284,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             );
         }
 
-        // Durum Filtresi
-        if (filterStatus === 'pending') {
-            // Sadece bekleyenler (isPaid: false zaten yukarda filtrelenmişti)
-        } else if (filterStatus === 'overdue') {
+        // Durum Filtresi (Borç Durumu)
+        if (debtFilter === 'hasDebt') {
+            filtered = filtered.filter(item => item.totalRemainingTRY > 0 || item.totalRemainingUSD > 0);
+        } else if (debtFilter === 'noDebt') {
+            filtered = filtered.filter(item => item.totalRemainingTRY <= 0 && item.totalRemainingUSD <= 0);
+        }
+
+        // Kategori Filtresi
+        if (filterStatus === 'overdue') {
             filtered = filtered.filter(item =>
                 item.debtItems.some((d: any) => d.dueDate && new Date(d.dueDate) < now)
             );
@@ -283,8 +302,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             );
         }
 
-        return filtered.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
-    }, [debts, searchTerm, filterStatus, now]);
+        // Sıralama
+        return filtered.sort((a, b) => {
+            if (sortOrder === 'newest') return b.lastActivity.getTime() - a.lastActivity.getTime();
+            return a.lastActivity.getTime() - b.lastActivity.getTime();
+        });
+    }, [debts, searchTerm, filterStatus, debtFilter, sortOrder, now]);
 
     const totalReceivableTRY = useMemo(() =>
         debts.filter(d => !d.isPaid && (!d.currency || d.currency === 'TRY')).reduce((sum, d) => sum + Number(d.remainingAmount), 0),
@@ -321,13 +344,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             bg: "bg-blue-500/10"
         },
         {
-            type: 'OVERDUE' as const,
-            title: "Vadesi Geçen",
-            value: `₺${totalOverdue.toLocaleString('tr-TR')}`,
-            subValue: "Kritik Alacaklar",
-            icon: AlertCircle,
-            color: "text-rose-500",
-            bg: "bg-rose-500/10"
+            type: 'GENERAL_TOTAL' as const,
+            title: "Genel Portfolio (TL)",
+            value: `₺${Math.round(totalReceivableTRY + (totalReceivableUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}`,
+            subValue: "TL + USD Birleşik",
+            icon: TrendingUp,
+            color: "text-amber-500",
+            bg: "bg-amber-500/10"
         },
         {
             type: 'COLLECTED' as const,
@@ -435,6 +458,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     : ["Genel Tahsilat"];
 
                 setPaymentSummary({
+                    customerId: paymentCustomer.customerId,
                     customerName: paymentCustomer.name,
                     items: itemsNames,
                     paidAmount: amount,
@@ -816,6 +840,45 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     />
                                 </div>
                             </div>
+                            <div className="flex flex-wrap items-center gap-3 relative z-10">
+                                <Select value={debtFilter} onValueChange={(val: any) => setDebtFilter(val)}>
+                                    <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
+                                        <SelectValue placeholder="Borç Filtresi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">TÜM MÜŞTERİLER</SelectItem>
+                                        <SelectItem value="hasDebt">BORCU OLANLAR</SelectItem>
+                                        <SelectItem value="noDebt">BORCU OLMAYANLAR</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                                    <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
+                                        <SelectValue placeholder="Sıralama" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="newest">YENİDEN ESKİYE</SelectItem>
+                                        <SelectItem value="oldest">ESKİDEN YENİYE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
+                                    {(['all', 'overdue', 'tracking'] as const).map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => handleFilterChange(s)}
+                                            className={cn(
+                                                "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all",
+                                                filterStatus === s
+                                                    ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            {s === 'all' ? 'Tümü' : s === 'overdue' ? 'Gecikenler' : 'Takip'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         <Card className="bg-muted/20 backdrop-blur-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-border relative z-10 min-h-[600px]">
@@ -849,11 +912,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         }
                                                     }}
                                                     className={cn(
-                                                        "group relative p-3 md:px-6 py-2 md:py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-muted/50 transition-all",
-                                                        selectedCustomerIds.includes(item.customerId) && "bg-indigo-500/[0.03] dark:bg-indigo-500/10",
+                                                        "group relative p-4 md:px-8 py-4 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-muted/5 transition-all overflow-hidden",
+                                                        selectedCustomerIds.includes(item.customerId) && "bg-indigo-500/[0.04] dark:bg-indigo-500/10",
+                                                        (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500/[0.02]" : "bg-rose-500/[0.02]",
                                                         idx !== aggregatedData.length - 1 && "border-b border-border/5"
                                                     )}
                                                 >
+                                                    {/* Status Color Strip */}
+                                                    <div className={cn(
+                                                        "absolute left-0 top-0 bottom-0 w-[6px] transition-all group-hover:w-2",
+                                                        (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500" : "bg-rose-500"
+                                                    )} />
+
                                                     <div className="flex items-center gap-6 min-w-0 flex-1">
                                                         <div className="shrink-0 relative flex items-center gap-4">
                                                             <div
@@ -880,7 +950,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                                     setPortfolioCustomer(item);
                                                                     handleFetchPortfolio(item.customerId);
                                                                 }}
-                                                                className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:scale-110 active:scale-95 transition-all cursor-pointer border border-indigo-500/5"
+                                                                className={cn(
+                                                                    "w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border",
+                                                                    (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0)
+                                                                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/10"
+                                                                        : "bg-rose-500/10 text-rose-600 border-rose-500/10"
+                                                                )}
                                                             >
                                                                 <User className="w-4 h-4 md:w-5 md:h-5" />
                                                             </div>
@@ -888,9 +963,14 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         <div className="flex flex-col min-w-0">
                                                             <div className="flex items-center gap-3">
                                                                 <h3 className="font-bold text-sm md:text-base text-foreground tracking-tight truncate">{item.name}</h3>
-                                                                <div className="flex gap-1.5 shrink-0">
-                                                                    {item.totalRemainingTRY > 0 && <span className="px-3 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-emerald-500/20">TL</span>}
-                                                                    {item.totalRemainingUSD > 0 && <span className="px-3 py-1 bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-blue-500/20">USD</span>}
+                                                                <div className="flex flex-wrap gap-1.5 shrink-0">
+                                                                    {item.totalRemainingTRY > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">TL BORCU</span>}
+                                                                    {item.totalRemainingUSD > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">USD BORCU</span>}
+                                                                    {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && (
+                                                                        <span className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-[0.1em] border-none shadow-lg shadow-emerald-500/20 flex items-center gap-1">
+                                                                            <CheckCircle2 className="w-2.5 h-2.5" /> BORCU YOKTUR
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 opacity-80">
@@ -907,22 +987,33 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex flex-row md:flex-col items-end justify-between md:justify-center gap-2 md:min-w-[120px]">
-                                                        <div className="flex flex-col items-end">
+                                                    <div className="flex flex-row items-center gap-4 md:min-w-[150px]">
+                                                        <div className="flex flex-row items-center gap-3">
                                                             {item.totalRemainingTRY > 0 && (
-                                                                <span className="text-lg md:text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter">
+                                                                <span className="text-sm md:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter">
                                                                     ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
                                                                 </span>
                                                             )}
                                                             {item.totalRemainingUSD > 0 && (
-                                                                <div className="flex flex-col items-end">
-                                                                    <span className="text-sm md:text-base font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tighter opacity-80">
-                                                                        ${item.totalRemainingUSD.toLocaleString('tr-TR')}
-                                                                    </span>
-                                                                    <span className="text-[10px] font-bold text-muted-foreground tabular-nums">
-                                                                        ~₺{Math.round(item.totalRemainingUSD * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
+                                                                <span className="text-sm md:text-base font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tighter">
+                                                                    ${item.totalRemainingUSD.toLocaleString('tr-TR')}
+                                                                </span>
+                                                            )}
+                                                            {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && (
+                                                                <span className="text-xs font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg">ÖDENDİ</span>
+                                                            )}
+                                                            {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && (
+                                                                <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
+                                                                    <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
+                                                                    <span className="text-sm md:text-base font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                                                                        ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
                                                                     </span>
                                                                 </div>
+                                                            )}
+                                                            {(item.totalRemainingTRY === 0 && item.totalRemainingUSD > 0) && (
+                                                                <span className="text-xs font-bold text-muted-foreground tabular-nums opacity-60">
+                                                                    ~₺{Math.round(item.totalRemainingUSD * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
+                                                                </span>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
@@ -941,6 +1032,39 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                             >
                                                                 <MessageCircle className="w-5 h-5" />
                                                             </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
+                                                                    try {
+                                                                        const res = await getCustomerStatement(item.customerId);
+                                                                        if (res.success) {
+                                                                            const combined = [
+                                                                                ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                                                ...(res.transactions || []).map((t: any) => ({
+                                                                                    ...t,
+                                                                                    type: 'PAYMENT',
+                                                                                    notes: t.notes || 'Tahsilat / Ödeme',
+                                                                                    amount: t.amount,
+                                                                                    remainingAmount: t.amount // Use amount as value
+                                                                                }))
+                                                                            ];
+                                                                            setReceiptCustomer(item);
+                                                                            setReceiptDebts(combined);
+                                                                            toast.success("Hesap dökümü yüklendi.", { id: toastId });
+                                                                        } else {
+                                                                            toast.error("Hata: " + res.error, { id: toastId });
+                                                                        }
+                                                                    } catch (err) {
+                                                                        toast.error("Bağlantı hatası.", { id: toastId });
+                                                                    }
+                                                                }}
+                                                                title="Borç Fişi Yazdır / WhatsApp"
+                                                                className="h-9 w-9 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/10 transition-all p-0 flex shrink-0"
+                                                            >
+                                                                <Receipt className="w-4 h-4" />
+                                                            </Button>
                                                             <div onClick={(e) => e.stopPropagation()}>
                                                                 <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
                                                                     <Button
@@ -957,7 +1081,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                                     e.stopPropagation();
                                                                     setPaymentCustomer(item);
                                                                     setPaymentCurrency("TRY");
-                                                                    setPaymentAmount(String(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))));
+                                                                    setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
                                                                 }}
                                                                 className="h-9 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 px-4 text-[9px] uppercase font-bold tracking-widest transition-all shadow-lg shadow-emerald-500/10"
                                                             >
@@ -1045,7 +1169,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
                                     <Button
                                         variant="ghost"
-                                        onClick={() => setPaymentAmount(String(paymentCurrency === 'TRY' ? (paymentCustomer?.totalRemainingTRY + (paymentCustomer?.totalRemainingUSD * (rates?.usd || 32.5))) : (paymentCustomer?.totalRemainingUSD + (paymentCustomer?.totalRemainingTRY / (rates?.usd || 32.5)))))}
+                                        onClick={() => {
+                                            const total = paymentCurrency === 'TRY'
+                                                ? (paymentCustomer?.totalRemainingTRY + (paymentCustomer?.totalRemainingUSD * (rates?.usd || 32.5)))
+                                                : (paymentCustomer?.totalRemainingUSD + (paymentCustomer?.totalRemainingTRY / (rates?.usd || 32.5)));
+                                            setPaymentAmount(String(Math.ceil(total)));
+                                        }}
                                         className="h-9 text-[9px] font-black text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-all uppercase tracking-wider"
                                     >
                                         BORCU KAPAT
@@ -1277,6 +1406,21 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             >
                                 <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP EKSTRE
                             </Button>
+                            <Button
+                                onClick={() => {
+                                    if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                    setReceiptCustomer({
+                                        id: historyCustomer.customerId,
+                                        name: historyCustomer.name,
+                                        phone: historyCustomer.phone
+                                    });
+                                    setReceiptDebts(statementData.debts);
+                                }}
+                                variant="outline"
+                                className="rounded-xl h-10 px-4 text-[10px] font-bold border-indigo-500/20 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all gap-2"
+                            >
+                                <Printer className="w-3.5 h-3.5" /> FİŞ YAZDIR
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => setHistoryCustomer(null)} className="rounded-xl text-muted-foreground font-bold hover:bg-muted transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </Button>
@@ -1284,8 +1428,9 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     </div>
                     <div className="px-6 md:px-8 py-4 overflow-y-auto flex-1 space-y-2 scrollbar-hide">
                         {(() => {
+                            const debtsToDisplay = statementData?.debts || (historyCustomer as any)?.debtItems || [];
                             const items = [
-                                ...((historyCustomer as any)?.debtItems || []).map((d: any) => ({ ...d, listType: 'DEBT' })),
+                                ...debtsToDisplay.map((d: any) => ({ ...d, listType: 'DEBT' })),
                                 ...(statementData?.transactions || []).map((t: any) => ({ ...t, listType: 'PAYMENT' }))
                             ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -1335,16 +1480,31 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     ) : (
                                                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                                                     )}
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-foreground">{item.notes || "İsimsiz Borç"}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[9px] text-muted-foreground">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs font-black text-foreground uppercase tracking-tight">{item.notes || "İsimsiz Borç"}</span>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                            {item.sale && (
+                                                                <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 rounded-full font-black border border-indigo-500/10">POS SATIŞI</span>
+                                                            )}
                                                             {Number(item.amount) !== Number(item.remainingAmount) && (
                                                                 <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded italic">
                                                                     Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        {item.sale?.items && item.sale.items.length > 0 && (
+                                                            <div className="mt-2 pl-2 border-l-2 border-indigo-500/20 flex flex-col gap-1">
+                                                                {item.sale.items.map((si: any, sidx: number) => (
+                                                                    <div key={sidx} className="text-[10px] text-muted-foreground flex items-center gap-2">
+                                                                        <span className="w-1 h-1 rounded-full bg-indigo-500/40" />
+                                                                        <span className="font-bold text-foreground/80">{si.quantity}x</span>
+                                                                        <span className="truncate max-w-[200px]">{si.product?.name}</span>
+                                                                        <span className="opacity-60">(@ ₺{formatCurrency(si.unitPrice)})</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="text-right flex items-center gap-4">
@@ -1387,10 +1547,20 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             );
                         })()}
                     </div>
-                    <div className="p-4 md:p-6 bg-muted/20 dark:bg-muted/10 border-t border-border/50 flex items-center justify-between shrink-0">
+                    <div className="p-4 md:p-6 bg-muted/10 border-t border-border/40 flex flex-wrap gap-2 items-center justify-between shrink-0">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SEÇİM</span>
-                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length} Kalem Seçildi</span>
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">İŞLEM MERKEZİ</span>
+                            <div className="flex items-center gap-4 mt-0.5">
+                                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length} Kalem Seçili</span>
+                                {historyCustomer && (
+                                    <AddDebtModal rates={rates} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
+                                        <Button variant="ghost" className="h-8 px-3 rounded-lg bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all gap-2 text-[10px] font-black uppercase tracking-widest">
+                                            <PlusCircle className="w-3 h-3" />
+                                            YENİ BORÇ EKLE
+                                        </Button>
+                                    </AddDebtModal>
+                                )}
+                            </div>
                         </div>
                         {selectedDebtIds.length > 0 && (
                             <Button
@@ -1398,7 +1568,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     // Sum selected amounts
                                     let sumTRY = 0;
                                     let sumUSD = 0;
-                                    historyCustomer.debtItems.forEach((d: any) => {
+                                    (historyCustomer?.debtItems || []).forEach((d: any) => {
                                         if (selectedDebtIds.includes(d.id)) {
                                             if (d.currency === 'USD') sumUSD += Number(d.remainingAmount);
                                             else sumTRY += Number(d.remainingAmount);
@@ -1468,6 +1638,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> Müşteri Katılımı: {new Date(portfolioCustomer?.lastActivity).toLocaleDateString()}</span>
                                 </div>
                             </div>
+                        </div>
+                        <div className="absolute top-10 right-10 z-20 flex gap-4">
+                            <Button
+                                onClick={() => {
+                                    setReceiptCustomer(portfolioCustomer);
+                                    setReceiptDebts(debts.filter((d: any) => d.customerId === portfolioCustomer.id && !d.isPaid));
+                                }}
+                                className="h-14 px-8 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-3 transition-all active:scale-95 shadow-2xl"
+                            >
+                                <Printer className="w-6 h-6" />
+                                <span className="text-xs font-black uppercase tracking-widest">FİŞ YAZDIR</span>
+                            </Button>
                         </div>
                     </div>
 
@@ -1606,8 +1788,26 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             </div>
                         )}
                     </div>
-                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center">
-                        <Button onClick={() => setPaymentSummary(null)} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                if (paymentSummary) {
+                                    const cust = debts.find(d => d.customerId === paymentSummary.customerId)?.customer;
+                                    if (cust) {
+                                        setReceiptCustomer(cust);
+                                        // Include all debts of this customer for the receipt to show paid portions too
+                                        setReceiptDebts(debts.filter(d => d.customerId === paymentSummary.customerId));
+                                    }
+                                }
+                                setPaymentSummary(null);
+                            }}
+                            className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs gap-2"
+                        >
+                            <Printer className="w-4 h-4" />
+                            Fiş Yazdır
+                        </Button>
+                        <Button onClick={() => setPaymentSummary(null)} className="flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1734,6 +1934,19 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Borç Fişi Modal */}
+            {receiptCustomer && (
+                <DebtReceiptModal
+                    open={!!receiptCustomer}
+                    onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); }}
+                    customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId }}
+                    debts={receiptDebts}
+                    shopName={shop?.name}
+                    shopPhone={shop?.phone}
+                    rates={rates}
+                />
+            )}
         </div >
     );
 }

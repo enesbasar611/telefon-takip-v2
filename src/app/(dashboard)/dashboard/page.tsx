@@ -1,26 +1,13 @@
 import { Suspense } from "react";
 export const dynamic = "force-dynamic";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { StatsGridStream } from "@/components/dashboard/streamed/stats-grid-stream";
-import { RevenueAnalysisStream } from "@/components/dashboard/streamed/revenue-analysis-stream";
-import { ServiceStatusStream } from "@/components/dashboard/streamed/service-status-stream";
-import { SmartInsightsStream } from "@/components/dashboard/streamed/smart-insights-stream";
-import { LiveActivityStream } from "@/components/dashboard/streamed/live-activity-stream";
-import { RecentTransactionsStream } from "@/components/dashboard/streamed/recent-transactions-stream";
-import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queue-stream";
-import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
-import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
+
 import {
   StatsSkeleton,
-  ChartSkeleton,
-  ListSkeleton,
-  ActivitySkeleton
 } from "@/components/dashboard/dashboard-skeletons";
 
 import { getShop } from "@/lib/actions/setting-actions";
 import { getIndustryConfig, isModuleEnabled, getIndustryLabel } from "@/lib/industry-utils";
-import { cn } from "@/lib/utils";
-import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
+import { serializePrisma } from "@/lib/utils";
 import { getCategories } from "@/lib/actions/product-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -30,18 +17,32 @@ import { PageHeader } from "@/components/ui/page-header";
 import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
 import { LiveClock } from "@/components/dashboard/live-clock";
 import { QuickShortcuts } from "@/components/dashboard/quick-shortcuts";
+import { DashboardEditButton } from "@/components/dashboard/dashboard-edit-button";
 
 import { getProfile } from "@/lib/actions/staff-actions";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 import { getDashboardStats } from "@/lib/actions/dashboard-actions";
-import { serializePrisma } from "@/lib/utils";
 import { StatWidgetWrapper } from "@/components/dashboard/stat-widget-wrapper";
 import { getShopId } from "@/lib/auth";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
-import { DashboardEditButton } from "@/components/dashboard/dashboard-edit-button";
+import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
 
-export default async function DashboardPage() {
+import {
+  ChartSkeleton,
+  ListSkeleton,
+  ActivitySkeleton
+} from "@/components/dashboard/dashboard-skeletons";
+import { RevenueAnalysisStream } from "@/components/dashboard/streamed/revenue-analysis-stream";
+import { ServiceStatusStream } from "@/components/dashboard/streamed/service-status-stream";
+import { SmartInsightsStream } from "@/components/dashboard/streamed/smart-insights-stream";
+import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
+import { LiveActivityStream } from "@/components/dashboard/streamed/live-activity-stream";
+import { RecentTransactionsStream } from "@/components/dashboard/streamed/recent-transactions-stream";
+import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queue-stream";
+import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
+
+async function DashboardContentData() {
   const shopId = await getShopId();
   const [shop, categories, profile, statsDataRaw] = await Promise.all([
     getShop(),
@@ -79,10 +80,7 @@ export default async function DashboardPage() {
     "inventory"
   ];
 
-  const rawLayout = profile?.dashboardLayout as any;
-  console.log(`SERVER: DashboardPage - rawLayout fetched: ${Array.isArray(rawLayout) ? rawLayout.length + " items" : "not an array or null"}`);
-  const layout = Array.isArray(rawLayout) ? rawLayout : defaultLayout;
-  console.log(`SERVER: DashboardPage - final layout count: ${layout.length}`);
+  const layout = Array.isArray(profile?.dashboardLayout) ? (profile.dashboardLayout as string[]) : defaultLayout;
 
   const widgets: any = {
     revenue: (
@@ -143,10 +141,8 @@ export default async function DashboardPage() {
   statItems.forEach(s => { widgetLabels[s.id] = s.label; });
 
   return (
-    <DashboardProvider>
+    <>
       <DashboardOnboardingClient categories={categories} shop={shop} />
-
-      {/* Desktop Dashboard View */}
       <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
         <PageHeader
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
@@ -157,11 +153,16 @@ export default async function DashboardPage() {
             </div>
           }
           icon={LayoutDashboard}
-          actions={<QuickShortcuts />}
+          actions={
+            <div className="flex items-center gap-3">
+              <QuickShortcuts />
+              <DashboardEditButton />
+            </div>
+          }
           badge={
             <div className="flex items-center bg-card/40 backdrop-blur-md border border-border/40 p-0 rounded-full shadow-sm overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-1.5 bg-emerald-500/5 border-r border-border/40">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 <div className="flex flex-col">
                   <span className="text-[8px] text-emerald-600/70 tracking-tighter uppercase leading-none font-bold">Sistem Durumu</span>
                   <span className="text-[10px] text-emerald-600 tracking-tight font-bold">AKTİF</span>
@@ -171,7 +172,6 @@ export default async function DashboardPage() {
                 <span className="text-[8px] text-muted-foreground/60 tracking-tighter uppercase leading-none font-bold">Veri Akışı</span>
                 <span className="text-[10px] text-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
               </div>
-              <DashboardEditButton />
             </div>
           }
         />
@@ -183,11 +183,19 @@ export default async function DashboardPage() {
           widgetLabels={widgetLabels}
         />
       </div>
-
-      {/* Mobile Dashboard View (Apple Style) */}
       <div className="md:hidden flex flex-col space-y-6 pt-2 pb-10">
         <MobileDashboard />
       </div>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <DashboardProvider>
+      <Suspense fallback={<StatsSkeleton />}>
+        <DashboardContentData />
+      </Suspense>
     </DashboardProvider>
   );
 }

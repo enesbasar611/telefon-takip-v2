@@ -178,3 +178,63 @@ export async function rejectReturn(id: string, notes?: string) {
     return { success: false, error: "İade reddedilirken hata oluştu." };
   }
 }
+export async function createMultipleReturnTickets(tickets: {
+  sourceType: string;
+  productId?: string;
+  quantity: number;
+  refundAmount?: number;
+  refundCurrency?: string;
+  customerId?: string;
+  supplierId?: string;
+  debtId?: string;
+  saleId?: string;
+  serviceTicketId?: string;
+  reason?: string;
+  notes?: string;
+  restockProduct?: boolean;
+}[]) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const createdTickets = [];
+      const baseCount = await tx.returnTicket.count({ where: { shopId } });
+
+      for (let i = 0; i < tickets.length; i++) {
+        const data = tickets[i];
+        const ticketNumber = `RET-${new Date().getFullYear()}${(baseCount + i + 1).toString().padStart(4, "0")}`;
+
+        const ticket = await tx.returnTicket.create({
+          data: {
+            ticketNumber,
+            sourceType: data.sourceType,
+            productId: data.productId,
+            quantity: data.quantity,
+            refundAmount: data.refundAmount,
+            refundCurrency: data.refundCurrency || "TRY",
+            customerId: data.customerId,
+            supplierId: data.supplierId,
+            debtId: data.debtId,
+            saleId: data.saleId,
+            serviceTicketId: data.serviceTicketId,
+            returnReason: data.reason as any,
+            notes: data.notes,
+            restockProduct: data.restockProduct ?? true,
+            shopId,
+            userId,
+            returnStatus: "PENDING",
+          },
+        });
+        createdTickets.push(ticket);
+      }
+      return createdTickets;
+    });
+
+    revalidatePath("/stok/iade");
+    return { success: true, tickets: serializePrisma(result) };
+  } catch (error) {
+    console.error("createMultipleReturnTickets error:", error);
+    return { success: false, error: "İade kayıtları oluşturulamadı." };
+  }
+}

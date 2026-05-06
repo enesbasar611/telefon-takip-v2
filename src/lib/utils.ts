@@ -68,9 +68,13 @@ export function serializePrisma<T>(data: T): any {
     if (typeof (data as any).toNumber === "function") {
       return Number((data as any).toNumber());
     }
-    // Also catch raw parsed decimal shapes just in case
+    // Deep check for Decimal.js-like structure
     if ('d' in data && 'e' in data && 's' in data && Array.isArray((data as any).d)) {
-      return Number(((data as any).d || []).join(''));
+      // Use valueOf if available, otherwise reconstruct
+      if (typeof (data as any).valueOf === "function") {
+        const val = (data as any).valueOf();
+        return typeof val === "number" ? val : Number(val);
+      }
     }
   }
 

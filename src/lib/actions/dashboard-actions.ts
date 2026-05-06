@@ -35,7 +35,12 @@ export const getDashboardStats = async (shopId: string) => {
             _sum: { actualCost: true }
           }),
           prisma.transaction.aggregate({
-            where: { shopId, type: "INCOME", createdAt: { gte: today } },
+            where: {
+              shopId,
+              type: "INCOME",
+              createdAt: { gte: today }
+              // paymentMethod: { not: "DEBT" } // Removed to include all sales/incomes per user request
+            },
             _sum: { amount: true }
           }),
           prisma.supplier.aggregate({ where: { shopId }, _sum: { balance: true } }),
@@ -128,9 +133,10 @@ export async function getRecentTransactions(shopId: string) {
   try {
     const transactions = await prisma.transaction.findMany({
       where: { shopId },
-      take: 5,
+      take: 10,
       orderBy: { createdAt: "desc" },
       include: {
+        customer: true,
         sale: {
           include: {
             customer: true

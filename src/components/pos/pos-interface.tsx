@@ -363,7 +363,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
             quantity: item.quantity,
             unitPrice: item.sellPrice
           })),
-          totalAmount: subtotal,
+          totalAmount: finalTotal, // Use finalTotal instead of subtotal
           paymentMethod,
           discountAmount: loyaltyDiscountAmount,
           usedPoints
@@ -435,7 +435,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
           <div className="p-4 sm:p-8 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-8 bg-muted/5">
             <div className="flex items-center gap-4 flex-shrink-0">
               <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
               </div>
               <div className="flex flex-col">
                 <h2 className="font-medium text-lg sm:text-2xl text-foreground whitespace-nowrap">Hızlı <span className="text-primary">Satış</span></h2>
@@ -488,15 +488,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
               <TabsList className="bg-transparent gap-3 p-0 h-auto">
                 <TabsTrigger
                   value="ALL"
-                  className="rounded-full h-10 px-8  text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
+                  className="rounded-full h-10 px-8 text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
                 >
-                  TÜM ÜRÜNLER
+                  TÜMÜ
                 </TabsTrigger>
                 {categories.map((cat) => (
                   <TabsTrigger
                     key={cat.id}
                     value={cat.id}
-                    className="rounded-full h-10 px-8  text-[10px] data-[state=active]:bg-primary data-[state=active]:text-white transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
+                    className="rounded-full h-10 px-8 text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
                   >
                     {cat.name.toUpperCase()}
                   </TabsTrigger>
@@ -581,14 +581,14 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     <UserPlus className="h-3 w-3" /> YENİ EKLE
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-[#0a0a0a] border border-border text-white shadow-2xl p-0 overflow-hidden">
-                  <div className="px-6 py-5 border-b border-border flex flex-col gap-1.5 bg-white/[0.02]">
-                    <DialogTitle className="font-medium text-lg ">Hızlı Müşteri Kaydı</DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground font-medium">
+                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
+                  <div className="px-8 py-8 border-b border-border/40 flex flex-col gap-2 bg-muted/20">
+                    <DialogTitle className="font-black text-xl uppercase tracking-tight">Hızlı Müşteri Kaydı</DialogTitle>
+                    <DialogDescription className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
                       Aktif sepete atamak için sisteme anında müşteri tanımlayın.
                     </DialogDescription>
                   </div>
-                  <div className="p-6 space-y-5">
+                  <div className="p-8 space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="c-name" className="font-medium text-xs font-semibold text-muted-foreground">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
                       <Input
@@ -717,15 +717,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   key={method.id}
                   variant="ghost"
                   className={cn(
-                    "h-16 flex flex-col gap-2 rounded-2xl border transition-all p-0 group",
+                    "h-20 flex flex-col gap-2 rounded-2xl border transition-all p-0 group",
                     paymentMethod === method.id
                       ? "bg-primary text-primary-foreground border-primary shadow-xl shadow-primary/20 scale-105"
-                      : "bg-background text-muted-foreground border-border/40 hover:bg-muted"
+                      : "bg-muted/10 text-muted-foreground border-border/20 hover:bg-muted hover:border-border/50"
                   )}
                   onClick={() => setPaymentMethod(method.id)}
                 >
-                  <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : "text-muted-foreground")} />
-                  <span className="text-[9px] ">{method.label}</span>
+                  <method.icon className={cn("h-5 w-5 transition-transform group-hover:scale-110", paymentMethod === method.id ? "text-primary-foreground" : "text-muted-foreground/60")} />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
                 </Button>
               ))}
             </div>

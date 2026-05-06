@@ -48,8 +48,10 @@ export async function RecentTransactionsStream() {
                             {recentTransactions.map((t: any) => (
                                 <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
                                     <td className="px-8 py-5">
-                                        <div className="text-foreground text-sm tracking-tight">{t.sale?.customer?.name || "Hızlı Satış"}</div>
-                                        <div className="text-[9px] text-muted-foreground/60 mt-1 uppercase tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
+                                        <div className="text-foreground text-sm tracking-tight">
+                                            {t.customer?.name || t.sale?.customer?.name || (t.description.includes('SATIŞ') ? 'Hızlı Satış' : 'Genel İşlem')}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground/40 mt-1 uppercase tracking-tighter font-medium">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
                                     </td>
                                     <td className="px-6 py-5 text-xs text-muted-foreground lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>
                                     <td className="px-6 py-5">
@@ -57,10 +59,14 @@ export async function RecentTransactionsStream() {
                                     </td>
                                     <td className="px-8 py-5 text-right">
                                         <Badge variant="outline" className={cn(
-                                            "text-[8px] uppercase tracking-tighter px-3 py-1 rounded-lg border-none",
-                                            t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive'
+                                            "text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg border-none shadow-sm transition-all group-hover:scale-105",
+                                            t.paymentMethod === 'DEBT'
+                                                ? 'bg-amber-500/10 text-amber-500'
+                                                : t.type === 'INCOME'
+                                                    ? 'bg-emerald-500/10 text-emerald-500'
+                                                    : 'bg-destructive/10 text-destructive'
                                         )}>
-                                            {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
+                                            {t.paymentMethod === 'DEBT' ? 'VERESİYE' : (t.category || (t.type === 'INCOME' ? 'TAHSİLAT' : 'GİDER'))}
                                         </Badge>
                                     </td>
                                 </tr>

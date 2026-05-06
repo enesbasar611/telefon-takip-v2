@@ -315,19 +315,24 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {} }: D
                 </DragOverlay>
             </DndContext>
 
-            {isEditMode && hasChanges && (
+            {isEditMode && (
                 <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] flex items-center justify-center animate-in slide-in-from-bottom-10 fade-in duration-500">
                     <Button
                         size="lg"
                         onClick={async () => {
-                            await handleSave();
+                            if (hasChanges) {
+                                await handleSave();
+                            }
                             setIsEditMode(false);
                         }}
                         disabled={isPending}
-                        className="h-16 px-10 rounded-[2rem] bg-emerald-500 text-white shadow-[0_20px_50px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all text-sm font-black uppercase tracking-widest flex items-center gap-4 group/finish border-4 border-white/20"
+                        className={cn(
+                            "h-16 px-10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 transition-all text-sm font-black uppercase tracking-widest flex items-center gap-4 group/finish border-4 border-white/20",
+                            hasChanges ? "bg-emerald-500 text-white shadow-emerald-500/40" : "bg-slate-900 text-white shadow-slate-900/40"
+                        )}
                     >
-                        {isPending ? <RotateCcw className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 group-hover/finish:scale-125 transition-all" />}
-                        DEĞİŞİKLİKLERİ KAYDET VE BİTİR
+                        {isPending ? <RotateCcw className="h-6 w-6 animate-spin" /> : hasChanges ? <Save className="h-6 w-6 group-hover/finish:scale-125 transition-all" /> : <Check className="h-6 w-6 group-hover/finish:scale-125 transition-all" />}
+                        {hasChanges ? "DEĞİŞİKLİKLERİ KAYDET VE BİTİR" : "DÜZENLEMEYİ BİTİR"}
                     </Button>
                 </div>
             )}

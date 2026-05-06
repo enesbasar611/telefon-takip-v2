@@ -1,5 +1,7 @@
 import { getCustomerById } from "@/lib/actions/customer-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
 import { notFound } from "next/navigation";
+import { CustomerDebtPanel } from "@/components/customer/customer-debt-panel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,8 +60,14 @@ const getLoyaltyTier = (points: number) => {
     return { label: "Bronz", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star, next: 200, percent: (points / 200) * 100 };
 };
 
+import { getShop } from "@/lib/actions/setting-actions";
+
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-    const customer = await getCustomerById(params.id);
+    const [customer, accounts, shop] = await Promise.all([
+        getCustomerById(params.id),
+        getAccounts(),
+        getShop()
+    ]);
 
     if (!customer) {
         notFound();
@@ -279,78 +287,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 px-6 py-4  text-xs transition-all">Müşteri notları</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="financial" className="space-y-6 outline-none">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <Card className="bg-rose-500/5 border-rose-500/20">
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-600">
-                                                    <ArrowDownCircle className="h-5 w-5" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] uppercase text-rose-600 font-bold tracking-wider">Toplam Kalan Borç</p>
-                                                    <h4 className="text-2xl font-black text-rose-700">₺{formatCurrency(totalDebt)}</h4>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                    <Card className="bg-emerald-500/5 border-emerald-500/20">
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600">
-                                                    <TrendingUp className="h-5 w-5" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] uppercase text-emerald-600 font-bold tracking-wider">Toplam Ödeme/Tahsilat</p>
-                                                    <h4 className="text-2xl font-black text-emerald-700">
-                                                        ₺{formatCurrency(customer.transactions?.filter((t: any) => t.type === 'INCOME').reduce((acc: number, t: any) => acc + Number(t.amount), 0) || 0)}
-                                                    </h4>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {[...(customer.transactions || []), ...(customer.debts || [])]
-                                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                        .map((item: any, idx: number) => (
-                                            <div key={idx} className="bg-card p-6 rounded-xl border border-border flex items-center justify-between hover:bg-muted/5 transition-all">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={cn(
-                                                        "h-12 w-12 rounded-xl flex items-center justify-center",
-                                                        item.amount && !item.remainingAmount ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                                                    )}>
-                                                        {item.amount && !item.remainingAmount ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownCircle className="h-6 w-6" />}
-                                                    </div>
-                                                    <div>
-                                                        <h5 className="font-bold text-sm">
-                                                            {item.description || (item.remainingAmount !== undefined ? "Borç Kaydı" : "Ödeme/Tahsilat")}
-                                                        </h5>
-                                                        <p className="text-[10px] text-muted-foreground">
-                                                            {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })}
-                                                            {item.paymentMethod && ` • ${item.paymentMethod}`}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className={cn(
-                                                        "text-lg font-black",
-                                                        item.amount && item.remainingAmount !== undefined ? "text-rose-500" : "text-emerald-500"
-                                                    )}>
-                                                        {item.amount && item.remainingAmount !== undefined ? `-₺${formatCurrency(item.remainingAmount)}` : `+₺${formatCurrency(item.amount)}`}
-                                                    </span>
-                                                    {item.notes && <p className="text-[10px] text-muted-foreground mt-1 max-w-[200px] truncate">{item.notes}</p>}
-                                                </div>
-                                            </div>
-                                        ))
-                                    }
-                                    {(!customer.transactions?.length && !customer.debts?.length) && (
-                                        <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed border-border">
-                                            <p className="text-sm text-muted-foreground">Henüz finansal bir hareket bulunmamaktadır.</p>
-                                        </div>
-                                    )}
-                                </div>
+                            <TabsContent value="financial" className="outline-none">
+                                <CustomerDebtPanel customer={customer} accounts={accounts} shop={shop} />
                             </TabsContent>
 
                             <TabsContent value="history" className="space-y-6 outline-none">
@@ -607,7 +545,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

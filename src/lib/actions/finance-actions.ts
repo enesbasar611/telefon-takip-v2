@@ -115,6 +115,16 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
 
     const data = transactionSchema.parse(rawData);
 
+    // Title case formatting for description and category
+    const toTitleCase = (str: string) => {
+      return str.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    if (data.description) data.description = toTitleCase(data.description);
+    if (data.category) data.category = toTitleCase(data.category);
+
     // Get active session if any
     const activeSession = await prisma.dailySession.findFirst({
       where: { status: "OPEN", shopId }

@@ -57,6 +57,7 @@ const transactionSchema = z.object({
   paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]),
   accountId: z.string().min(1, "Hesap seçimi gereklidir"),
   category: z.string().min(1, "İşlem türü gereklidir"),
+  manualCategory: z.string().optional(),
   date: z.string().optional(),
 });
 
@@ -100,11 +101,21 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       paymentMethod: initialData?.paymentMethod || "CASH",
       accountId: initialData?.accountId || "",
       category: initialData?.category || "GENEL",
+      manualCategory: "",
       date: initialData?.createdAt ? new Date(initialData.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     }
   });
 
   const transactionType = watch("type");
+  const categoryValue = watch("category");
+
+  const toTitleCase = (str: string) => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   // Auto-open from URL query param (e.g. from global search: ?action=add-income)
   useEffect(() => {
@@ -200,6 +211,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       } else {
         result = await createManualTransaction({
           ...data,
+          category: data.category === "DİĞER" ? toTitleCase(data.manualCategory || "DİĞER") : data.category,
           amount: Number(data.amount),
           attachments: attachments
         });
@@ -319,6 +331,15 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     <SelectItem value="DİĞER" className="text-xs  rounded-xl py-3">Diğer</SelectItem>
                   </SelectContent>
                 </Select>
+                {categoryValue === "DİĞER" && (
+                  <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
+                    <Input
+                      {...register("manualCategory")}
+                      placeholder="İşlem türünü yazınız... (Örn: Kırtasiye Gideri)"
+                      className="h-12 rounded-[1rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs px-4"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">

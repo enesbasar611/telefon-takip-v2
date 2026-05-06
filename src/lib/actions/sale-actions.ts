@@ -23,162 +23,168 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
     await checkRateLimit(`createSale:${userId}`, 30);
 
     const data = saleSchema.parse(rawData);
-    const saleCount = await prisma.sale.count({ where: { shopId } });
-    const saleNumber = `SALE-${1000 + saleCount + 1}`;
 
-    const sale = await prisma.sale.create({
-      data: {
-        saleNumber,
-        customerId: data.customerId,
-        userId,
-        shopId,
-        totalAmount: data.totalAmount,
-        finalAmount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
-        paymentMethod: (
-          data.paymentMethod === "CASH" ? PaymentMethod.CASH :
-            data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
-              data.paymentMethod === "TRANSFER" ? PaymentMethod.TRANSFER :
-                data.paymentMethod === "DEBT" ? PaymentMethod.DEBT :
-                  PaymentMethod.CASH
-        ) as PaymentMethod,
-        items: {
-          create: data.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.unitPrice * item.quantity,
-            shopId
-          })),
-        },
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        },
-        customer: true
-      }
-    });
+    const sale = await prisma.$transaction(async (tx) => {
+      // 1. Generate sale number and create sale record
+      const saleCount = await tx.sale.count({ where: { shopId } });
+      const saleNumber = `SALE-${1000 + saleCount + 1}`;
 
-    // Calculate and Increment Loyalty Points dynamically using the Loyalty Engine
-    let earnedPoints = 0;
-    try {
-      const result = await calculateLoyaltyPoints(
-        sale.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: Number(item.unitPrice)
-        })),
-        0, // No labor for pure product sales
-        data.discountAmount || 0,
-        shopId
-      );
-      earnedPoints = result.earnedPoints;
-    } catch (err) {
-      console.error("Loyalty calculation error via engine (SALE):", err);
-    }
-
-    if (data.customerId && (earnedPoints > 0 || (data.usedPoints && data.usedPoints > 0))) {
-      await prisma.customer.update({
-        where: { id: data.customerId },
+      const newSale = await tx.sale.create({
         data: {
-          loyaltyPoints: {
-            increment: earnedPoints,
-            decrement: data.usedPoints || 0
-          }
-        }
-      });
-    }
-
-    // Update stock and create movements
-    for (const item of data.items) {
-      const updatedProduct = await prisma.product.update({
-        where: { id: item.productId, shopId },
-        data: { stock: { decrement: item.quantity } },
-      });
-
-      await prisma.inventoryMovement.create({
-        data: {
-          productId: item.productId,
-          quantity: -item.quantity,
-          type: "SALE",
-          notes: `SATIŞ - ${sale.saleNumber}`,
-          shopId
-        },
-      });
-
-      if (updatedProduct.stock <= 0) {
-        await addShortageItem({
-          productId: item.productId,
-          name: updatedProduct.name,
-          quantity: 1,
-          notes: `Satış sonucu stok tükendi: ${sale.saleNumber}`
-        });
-      }
-    }
-
-    // Route the transaction to the correct account based on payment method
-    let targetAccount = null;
-    let isDebt = false;
-
-    if (data.paymentMethod === "CASH") {
-      targetAccount = await getOrCreateAccountByType("CASH");
-    } else if (data.paymentMethod === "CREDIT_CARD") {
-      targetAccount = await getOrCreateAccountByType("POS");
-    } else if (data.paymentMethod === "TRANSFER") {
-      targetAccount = await getOrCreateAccountByType("BANK");
-    } else if (data.paymentMethod === "DEBT") {
-      isDebt = true;
-      if (!data.customerId) {
-        return { success: false, error: "Veresiye (Borç) işlemi için müşteri seçilmesi zorunludur." };
-      }
-    }
-
-    const activeSession = await prisma.dailySession.findFirst({ where: { status: "OPEN", shopId } });
-
-    await prisma.$transaction(async (tx) => {
-      // 1. Financial transaction
-      await tx.transaction.create({
-        data: {
-          amount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
-          type: TransactionType.INCOME,
-          description: `SATIŞ - ${sale.saleNumber}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
-          paymentMethod: isDebt ? PaymentMethod.DEBT : sale.paymentMethod,
+          saleNumber,
+          customerId: data.customerId,
           userId,
           shopId,
-          saleId: sale.id,
+          totalAmount: data.totalAmount,
+          finalAmount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
+          paymentMethod: (
+            data.paymentMethod === "CASH" ? PaymentMethod.CASH :
+              data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
+                data.paymentMethod === "TRANSFER" ? PaymentMethod.TRANSFER :
+                  data.paymentMethod === "DEBT" ? PaymentMethod.DEBT :
+                    PaymentMethod.CASH
+          ) as PaymentMethod,
+          items: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.unitPrice * item.quantity,
+              shopId
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          customer: true
+        }
+      });
+
+      // 2. Increment Loyalty Points if customer exists and points earned
+      let earnedPoints = 0;
+      try {
+        const result = await calculateLoyaltyPoints(
+          newSale.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: Number(item.unitPrice)
+          })),
+          0,
+          data.discountAmount || 0,
+          shopId
+        );
+        earnedPoints = result.earnedPoints;
+      } catch (err) {
+        console.error("Loyalty calculation error:", err);
+      }
+
+      if (data.customerId && (earnedPoints > 0 || (data.usedPoints && data.usedPoints > 0))) {
+        await tx.customer.update({
+          where: { id: data.customerId },
+          data: {
+            loyaltyPoints: {
+              increment: earnedPoints - (data.usedPoints || 0)
+            }
+          }
+        });
+      }
+
+      // 3. Update stock and create movements
+      for (const item of data.items) {
+        const updatedProduct = await tx.product.update({
+          where: { id: item.productId, shopId },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        await tx.inventoryMovement.create({
+          data: {
+            productId: item.productId,
+            quantity: -item.quantity,
+            type: "SALE",
+            notes: `SATIŞ - ${newSale.saleNumber}`,
+            shopId,
+            saleId: newSale.id
+          },
+        });
+
+        if (updatedProduct.stock <= 0) {
+          await addShortageItem({
+            productId: item.productId,
+            name: updatedProduct.name,
+            quantity: 1,
+            notes: `Satış sonucu stok tükendi: ${newSale.saleNumber}`
+          });
+        }
+      }
+
+      // 4. Financial routing
+      let targetAccount = null;
+      let isDebt = data.paymentMethod === "DEBT";
+
+      if (data.paymentMethod === "CASH") {
+        targetAccount = await tx.financeAccount.findFirst({ where: { type: "CASH", shopId, isActive: true } });
+      } else if (data.paymentMethod === "CREDIT_CARD") {
+        targetAccount = await tx.financeAccount.findFirst({ where: { type: "POS", shopId, isActive: true } });
+      } else if (data.paymentMethod === "TRANSFER" || data.paymentMethod === "BANK_TRANSFER") {
+        targetAccount = await tx.financeAccount.findFirst({ where: { type: "BANK", shopId, isActive: true } });
+      }
+
+      const activeSession = await tx.dailySession.findFirst({ where: { status: "OPEN", shopId } });
+      const finalAmount = Number(data.totalAmount);
+
+      // 5. Create Financial Transaction
+      await tx.transaction.create({
+        data: {
+          amount: finalAmount,
+          type: TransactionType.INCOME,
+          description: `SATIŞ - ${newSale.saleNumber}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
+          paymentMethod: isDebt ? PaymentMethod.DEBT : newSale.paymentMethod,
+          userId,
+          shopId,
+          saleId: newSale.id,
           customerId: data.customerId || undefined,
           financeAccountId: targetAccount?.id ?? undefined,
           dailySessionId: activeSession?.id ?? undefined,
         },
       });
 
-      // 2. Update Account
+      // 6. Update Account Balance
       if (targetAccount) {
         await tx.financeAccount.update({
-          where: { id: targetAccount.id, shopId },
-          data: { balance: { increment: data.totalAmount } },
+          where: { id: targetAccount.id },
+          data: { balance: { increment: finalAmount } },
         });
       }
 
-      // 3. Create Debt if necessary
+      // 7. Create Debt Record if VERESİYE
       if (isDebt && data.customerId) {
         await tx.debt.create({
           data: {
             customerId: data.customerId,
-            amount: data.totalAmount,
-            remainingAmount: data.totalAmount, // İlk aşamada tamamı borç
+            amount: finalAmount,
+            remainingAmount: finalAmount,
             shopId,
-            notes: `Satış: ${sale.saleNumber}`
-          }
+            notes: `Satış: ${newSale.saleNumber}`,
+            saleId: newSale.id, // Verified in schema.prisma
+            isPaid: false
+          } as any
         });
       }
+
+      return newSale;
     });
 
-    // revalidatePath("/satis");
+    revalidatePath("/satis");
     revalidatePath("/stok");
     revalidatePath("/satis/kasa");
+    revalidatePath("/veresiye");
+    if (data.customerId) {
+      revalidatePath(`/musteriler/${data.customerId}`);
+    }
 
     return { success: true, data: serializePrisma(sale) };
   } catch (error) {
@@ -228,7 +234,7 @@ export async function getSaleById(id: string) {
     return null;
   }
 }
-export async function deleteSale(id: string) {
+export async function deleteSale(id: string, revertStock: boolean = true) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -236,7 +242,7 @@ export async function deleteSale(id: string) {
     // Rate limit: 10 deletions per minute
     await checkRateLimit(`deleteSale:${userId}`, 10);
 
-    // 1. Get sale details to refund stock
+    // 1. Get sale details
     const sale = await prisma.sale.findUnique({
       where: { id, shopId },
       include: { items: true }
@@ -245,23 +251,25 @@ export async function deleteSale(id: string) {
     if (!sale) return { success: false, error: "Satış bulunamadı." };
 
     await prisma.$transaction(async (tx) => {
-      // 2. Refund Stocks
-      for (const item of sale.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } }
-        });
+      // 2. Refund Stocks if requested
+      if (revertStock) {
+        for (const item of sale.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } }
+          });
 
-        // Add movement for record-keeping
-        await tx.inventoryMovement.create({
-          data: {
-            productId: item.productId,
-            shopId,
-            type: "IN",
-            quantity: item.quantity,
-            notes: `Satış İptali: ${sale.saleNumber}`
-          }
-        });
+          // Add movement for record-keeping
+          await tx.inventoryMovement.create({
+            data: {
+              productId: item.productId,
+              shopId,
+              type: "IN",
+              quantity: item.quantity,
+              notes: `Satış İptali (Stok Geri): ${sale.saleNumber}`
+            }
+          });
+        }
       }
 
       // 3. Delete related records
@@ -270,18 +278,30 @@ export async function deleteSale(id: string) {
         where: { saleId: id, shopId }
       });
 
-      // Delete inventory movements that weren't the "IN" we just created
+      // Delete inventory movements associated with this sale
       await tx.inventoryMovement.deleteMany({
         where: { saleId: id, shopId }
       });
 
-      await tx.saleItem.deleteMany({ where: { saleId: id } });
-      await tx.sale.delete({ where: { id } });
+      // Delete sale items
+      await tx.saleItem.deleteMany({
+        where: { saleId: id, shopId }
+      });
+
+      // Delete debt if exists
+      await tx.debt.deleteMany({
+        where: { saleId: id, shopId }
+      });
+
+      // Finally delete the sale
+      await tx.sale.delete({
+        where: { id, shopId }
+      });
     });
 
     revalidatePath("/satis/gecmis");
     revalidatePath("/stok");
-    revalidatePath("/satis/kasa");
+    revalidatePath("/veresiye");
     return { success: true };
   } catch (error) {
     console.error("Delete sale error:", error);
@@ -289,19 +309,56 @@ export async function deleteSale(id: string) {
   }
 }
 
-export async function deleteSales(ids: string[]) {
+export async function deleteSales(ids: string[], revertStock: boolean = true) {
   try {
     const shopId = await getShopId();
+    const userId = await getUserId();
 
-    for (const id of ids) {
-      const res = await deleteSale(id);
-      if (!res.success) throw new Error(res.error);
-    }
+    // Rate limit: 5 batch deletions per minute
+    await checkRateLimit(`deleteSales:${userId}`, 5);
+
+    await prisma.$transaction(async (tx) => {
+      for (const id of ids) {
+        const sale = await tx.sale.findUnique({
+          where: { id, shopId },
+          include: { items: true }
+        });
+
+        if (!sale) continue;
+
+        if (revertStock) {
+          for (const item of sale.items) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } }
+            });
+
+            await tx.inventoryMovement.create({
+              data: {
+                productId: item.productId,
+                shopId,
+                type: "IN",
+                quantity: item.quantity,
+                notes: `Toplu Satış İptali (Stok Geri): ${sale.saleNumber}`
+              }
+            });
+          }
+        }
+
+        await tx.transaction.deleteMany({ where: { saleId: id, shopId } });
+        await tx.inventoryMovement.deleteMany({ where: { saleId: id, shopId } });
+        await tx.saleItem.deleteMany({ where: { saleId: id, shopId } });
+        await tx.debt.deleteMany({ where: { saleId: id, shopId } });
+        await tx.sale.delete({ where: { id, shopId } });
+      }
+    });
 
     revalidatePath("/satis/gecmis");
+    revalidatePath("/stok");
+    revalidatePath("/veresiye");
     return { success: true };
   } catch (error) {
-    console.error("Bulk delete sales error:", error);
-    return { success: false, error: "Birtakım satışlar silinemedi." };
+    console.error("Delete sales error:", error);
+    return { success: false, error: "Satışlar silinirken bir hata oluştu." };
   }
 }

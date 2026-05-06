@@ -41,36 +41,30 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] bg-[#111111] border border-[#333333] text-white p-0 shadow-2xl">
-                <DialogHeader className="p-6 pb-0">
-                    <div className="flex items-center gap-4">
-                        <div className="h-11 w-11 rounded-lg bg-violet-600 flex items-center justify-center shadow-md">
-                            <Search className="h-5 w-5 text-white" />
+            <DialogContent className="sm:max-w-[600px] bg-background border-border text-foreground p-0 shadow-2xl overflow-hidden">
+                <DialogHeader className="p-8 pb-4">
+                    <div className="flex items-center gap-5 mr-6">
+                        <div className="h-12 w-12 rounded-2xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
+                            <Search className="h-6 w-6 text-white" />
                         </div>
-                        <div className="flex-1">
-                            <DialogTitle className="font-medium text-lg  tracking-tight">Akıllı Arama</DialogTitle>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                        <div className="flex-1 min-w-0">
+                            <DialogTitle className="font-bold text-xl tracking-tight">Akıllı Arama</DialogTitle>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                 BAŞAR AI: Doğal dilde arama yapın. (Örn: Alış fiyatı 10 dolar altındaki Type-C kablolar)
                             </p>
                         </div>
                     </div>
                 </DialogHeader>
 
-                <div className="p-6 space-y-4">
-                    <div className="space-y-2">
+                <div className="p-8 pt-2 space-y-6">
+                    <div className="space-y-3">
                         <Input
                             value={query}
-                            onChange={e => {
-                                setQuery(e.target.value);
-                            }}
-                            onFocus={() => {
-                                setAiInputFocused(true);
-                            }}
-                            onBlur={() => {
-                                setAiInputFocused(false);
-                            }}
+                            onChange={e => setQuery(e.target.value)}
+                            onFocus={() => setAiInputFocused(true)}
+                            onBlur={() => setAiInputFocused(false)}
                             placeholder="Aramak istediğiniz şeyi yazın..."
-                            className="bg-[#18181A] border-[#333333] text-white placeholder:text-muted-foreground/80 h-12 text-sm"
+                            className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 h-14 text-base px-5 rounded-2xl focus:ring-2 focus:ring-violet-500/20 transition-all"
                             onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
                             autoFocus
                         />
@@ -79,9 +73,13 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                     <Button
                         onClick={handleSearch}
                         disabled={isPending || !query.trim()}
-                        className="w-full h-12 bg-violet-600 hover:bg-violet-700 "
+                        className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
                     >
-                        {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aranıyor...</> : <><Sparkles className="h-4 w-4 mr-2" /> Ara</>}
+                        {isPending ? (
+                            <><Loader2 className="h-5 w-5 mr-3 animate-spin" /> Aranıyor...</>
+                        ) : (
+                            <><Sparkles className="h-5 w-5 mr-3" /> Akıllı Aramayı Başlat</>
+                        )}
                     </Button>
                 </div>
             </DialogContent>

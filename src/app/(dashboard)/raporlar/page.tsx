@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { getDashboardStats, getSalesReport, getServiceMetrics, getTopProductsReport, getDeviceBrandDistribution, getCashflowReport, getDetailedExportData } from "@/lib/actions/report-actions";
 import { RaporlarClient } from "@/components/reports/raporlar-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,28 @@ const statusLabels: Record<string, string> = {
   WAITING_PART: "Parça Bekliyor", READY: "Hazır", DELIVERED: "Teslim Edildi", CANCELLED: "İptal"
 };
 
-export default async function RaporlarPage() {
+function RaporlarSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-10 w-40 rounded-xl" />
+        <Skeleton className="h-4 w-60 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-3xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Skeleton className="lg:col-span-2 h-[360px] rounded-3xl" />
+        <Skeleton className="h-[360px] rounded-3xl" />
+      </div>
+      <Skeleton className="h-[300px] rounded-3xl" />
+    </div>
+  );
+}
+
+async function RaporlarData() {
   const [stats, salesData, serviceMetricsRaw, topProductsRaw, brandDistribution, cashflow, exportData] = await Promise.all([
     getDashboardStats(),
     getSalesReport(),
@@ -55,5 +78,10 @@ export default async function RaporlarPage() {
   );
 }
 
-
-
+export default function RaporlarPage() {
+  return (
+    <Suspense fallback={<RaporlarSkeleton />}>
+      <RaporlarData />
+    </Suspense>
+  );
+}

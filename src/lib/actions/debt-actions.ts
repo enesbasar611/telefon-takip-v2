@@ -10,7 +10,17 @@ export async function getDebts() {
     const debts = await prisma.debt.findMany({
       where: { shopId },
       include: {
-        customer: true
+        customer: true,
+        // @ts-expect-error - sale relation exists in schema but client is out of sync
+        sale: {
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }
       },
       orderBy: { createdAt: "desc" }
     });
@@ -302,11 +312,23 @@ export async function collectGlobalCustomerPayment(
 
     if (unpaidDebts.length === 0) return { success: false, error: "Ödenmemiş borç bulunamadı." };
 
+    if (isNaN(paymentAmount) || !isFinite(paymentAmount) || paymentAmount <= 0) {
+      return { success: false, error: "Geçerli bir ödeme tutarı giriniz." };
+    }
+
+    if (isNaN(usdRate) || usdRate <= 0) {
+      usdRate = 32.5; // Fallback to a safe default if rate is invalid
+    }
+
     let remainingPayment = paymentAmount;
+
+    // Pre-fetch customer info to avoid complex logic inside transaction
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    const customerName = customer?.name || customerId;
 
     await prisma.$transaction(async (tx) => {
       for (const debt of unpaidDebts) {
-        if (remainingPayment <= 0) break;
+        if (remainingPayment <= 0.001) break; // Use a small epsilon
 
         let amountToApplyFromPayment = 0;
         let amountToReduceFromDebt = 0;
@@ -331,12 +353,12 @@ export async function collectGlobalCustomerPayment(
           amountToReduceFromDebt = amountToApplyFromPayment * usdRate;
         }
 
-        if (amountToReduceFromDebt > 0) {
+        if (amountToReduceFromDebt > 0.001) { // Only update if significant
           await tx.debt.update({
             where: { id: debt.id },
             data: {
               remainingAmount: { decrement: amountToReduceFromDebt },
-              isPaid: (debtRemaining - amountToReduceFromDebt) <= 0.01 // Handle floating point
+              isPaid: (debtRemaining - amountToReduceFromDebt) <= 0.01
             }
           });
           remainingPayment -= amountToApplyFromPayment;
@@ -354,13 +376,11 @@ export async function collectGlobalCustomerPayment(
         targetAccountId = account?.id;
       }
 
-      const customer = await tx.customer.findUnique({ where: { id: customerId } });
-
       await tx.transaction.create({
         data: {
           type: "INCOME",
           amount: paymentAmount,
-          description: `Toplu Borç Tahsilatı: ${customer?.name || customerId}`,
+          description: notes || `Toplu Borç Tahsilatı: ${customerName}`,
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,
@@ -388,11 +408,26 @@ export async function collectGlobalCustomerPayment(
       else totalRemainingTRY += Number(d.remainingAmount);
     }
 
+    if (!customerId) {
+      return { success: false, error: "Müşteri ID bulunamadı." };
+    }
+
     revalidatePath("/veresiye");
-    return { success: true, remainingTRY: totalRemainingTRY, remainingUSD: totalRemainingUSD };
-  } catch (error) {
+    revalidatePath("/satis/kasa");
+    revalidatePath("/musteriler");
+    revalidatePath(`/musteriler/${customerId}`);
+
+    return {
+      success: true,
+      remainingTRY: Number(totalRemainingTRY.toFixed(2)),
+      remainingUSD: Number(totalRemainingUSD.toFixed(2))
+    };
+  } catch (error: any) {
     console.error("collectGlobalCustomerPayment error:", error);
-    return { success: false, error: "Tahsilat yapılamadı." };
+    return {
+      success: false,
+      error: error?.message || "Tahsilat yapılamadı. Lütfen tekrar deneyiniz."
+    };
   }
 }
 
@@ -401,6 +436,18 @@ export async function getCustomerStatement(customerId: string) {
     const shopId = await getShopId();
     const debts = await prisma.debt.findMany({
       where: { customerId, shopId },
+      include: {
+        // @ts-expect-error - sale relation exists in schema but client is out of sync
+        sale: {
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }
+      },
       orderBy: { createdAt: "desc" }
     });
     const transactions = await prisma.transaction.findMany({

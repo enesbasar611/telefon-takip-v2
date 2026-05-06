@@ -131,7 +131,7 @@ export default async function DashboardLayout({
                                     <DashboardContent>
                                         <Navbar shop={shop} />
                                         <main className="flex-1 lg:p-10 p-0 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full">
-                                            <div className="max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[6rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_32px_128px_-16px_rgba(0,0,0,0.22)] p-4 pb-32 lg:p-14 lg:px-16 transition-all duration-700 relative z-10">
+                                            <div className="max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300">
                                                 {children}
                                             </div>
                                         </main>

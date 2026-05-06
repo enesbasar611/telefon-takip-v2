@@ -21,8 +21,11 @@ import {
     TrendingUp,
     TrendingDown,
     ShieldAlert,
-    Undo2
+    Undo2,
+    Plus,
+    Navigation
 } from "lucide-react";
+import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -88,6 +91,7 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [isAddReturnOpen, setIsAddReturnOpen] = useState(false);
     const [rejectNotes, setRejectNotes] = useState("");
 
     const filteredData = useMemo(() => {
@@ -252,7 +256,18 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Button variant="outline" className="rounded-xl h-11 px-4 flex-1 md:flex-none">
+                        <Filter className="h-4 w-4 mr-2" />
+                        Filtrele
+                    </Button>
+                    <Button
+                        onClick={() => setIsAddReturnOpen(true)}
+                        className="bg-primary hover:bg-primary/90 rounded-xl h-11 px-6 shadow-lg shadow-primary/20 flex-1 md:flex-none"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Yeni İade Kaydı
+                    </Button>
                     <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => router.refresh()}>
                         <RefreshCcw className={cn("h-4 w-4", isPending && "animate-spin")} />
                     </Button>
@@ -457,6 +472,13 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <AddReturnModal
+                open={isAddReturnOpen}
+                onOpenChange={setIsAddReturnOpen}
+                onSuccess={() => {
+                    router.refresh();
+                }}
+            />
         </div>
     );
 }

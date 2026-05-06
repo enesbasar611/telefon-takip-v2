@@ -1,22 +1,31 @@
-import { Loader2 } from "lucide-react";
-import { BorderBeam } from "@/components/ui/border-beam";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
     return (
-        <div className="relative w-full h-[60vh] flex flex-col items-center justify-center gap-6 overflow-hidden rounded-[4rem]">
-            <BorderBeam duration={4} size={300} />
-            <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                <div className="h-20 w-20 rounded-full border-4 border-muted flex items-center justify-center relative bg-background/50 backdrop-blur-xl">
-                    <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                </div>
+        <div className="w-full space-y-10 animate-in fade-in duration-500">
+            {/* Header Skeleton */}
+            <div className="flex flex-col gap-4">
+                <Skeleton className="h-10 w-64 rounded-xl" />
+                <Skeleton className="h-4 w-96 rounded-lg" />
             </div>
-            <div className="flex flex-col items-center gap-2">
-                <span className="text-sm font-light tracking-[0.3em] uppercase text-primary animate-pulse">Yükleniyor</span>
-                <div className="flex gap-1">
-                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce [animation-delay:-0.3s]" />
-                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce [animation-delay:-0.15s]" />
-                    <div className="h-1 w-1 rounded-full bg-primary/40 animate-bounce" />
+
+            {/* Grid Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Skeleton className="h-32 rounded-3xl" />
+                <Skeleton className="h-32 rounded-3xl" />
+                <Skeleton className="h-32 rounded-3xl" />
+                <Skeleton className="h-32 rounded-3xl" />
+            </div>
+
+            {/* Content Skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                    <Skeleton className="h-[400px] rounded-3xl w-full" />
+                    <Skeleton className="h-[300px] rounded-3xl w-full" />
+                </div>
+                <div className="space-y-8">
+                    <Skeleton className="h-[500px] rounded-3xl w-full" />
+                    <Skeleton className="h-[200px] rounded-3xl w-full" />
                 </div>
             </div>
         </div>

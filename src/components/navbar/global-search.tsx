@@ -62,7 +62,7 @@ export function GlobalSearch() {
       </div>
 
       {isOpen && results && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#0F172A]/95 border border-border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-2xl">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card/95 border border-border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-2xl">
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
             <div className="p-3 mb-2 bg-blue-500/5 rounded-xl border border-blue-500/10 flex items-center justify-center gap-2">
               <Sparkles className="h-3 w-3 text-blue-400" />

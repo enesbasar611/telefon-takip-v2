@@ -9,12 +9,7 @@ export default async function SalesHistoryPage() {
     const sales = await getSales();
 
     return (
-        <div className="flex flex-col gap-10 pb-12 animate-in fade-in duration-500">
-            <PageHeader
-                title="Satış Geçmişi"
-                description="Mağazada gerçekleşen tüm işlemleri ve geçmiş satış verilerini inceleyin."
-                icon={History}
-            />
+        <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-500 pt-6">
             <SalesHistoryClient initialSales={sales} />
         </div>
     );

@@ -7,14 +7,16 @@ export function ProgressBarProvider({ children }: { children: React.ReactNode })
         <>
             {children}
             <ProgressBar
-                height="5px"
-                color="#4285F4"
-                options={{ showSpinner: false }}
+                height="3px"
+                color="var(--brand-color, #6366f1)"
+                options={{ showSpinner: false, trickleSpeed: 200 }}
                 shallowRouting
+                style="position:fixed;top:0;left:0;right:0;z-index:9999;"
             />
         </>
     );
 }
+
 
 
 

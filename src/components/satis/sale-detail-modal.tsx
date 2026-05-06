@@ -56,7 +56,7 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-xl p-0 overflow-hidden border-none rounded-[2.5rem] bg-card shadow-2xl">
-                <DialogHeader className="p-10 bg-primary/5 border-b border-border/40 relative">
+                <DialogHeader className="p-8 pb-6 bg-primary/5 border-b border-border/40 relative pr-16">
                     <div className="flex items-center gap-4 relative z-10">
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
                             <Receipt className="h-7 w-7 text-primary" />
@@ -78,7 +78,7 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                     </div>
                 </DialogHeader>
 
-                <div className="p-10 space-y-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                <div className="p-8 space-y-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     {/* Quick Info Grid */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-muted/30 p-5 rounded-3xl border border-border/20">

@@ -19,7 +19,8 @@ import {
     Trash2,
     AlertCircle,
     Loader2,
-    Calendar
+    Calendar,
+    RefreshCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -113,23 +114,27 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
         );
     };
 
+    const [revertStock, setRevertStock] = useState(true);
+
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
             if (targetId) {
-                const res = await deleteSale(targetId);
+                const res = await deleteSale(targetId, revertStock);
                 if (res.success) {
                     setSales(prev => prev.filter(s => s.id !== targetId));
-                    toast.success("Satış başarıyla silindi ve stoklar iade edildi.");
+                    toast.success(revertStock ? "Satış başarıyla silindi ve stoklar iade edildi." : "Satış başarıyla silindi.");
                 } else {
                     toast.error(res.error || "Silme işlemi başarısız.");
                 }
             } else if (selectedIds.length > 0) {
-                const res = await deleteSales(selectedIds);
+                const res = await deleteSales(selectedIds, revertStock);
                 if (res.success) {
                     setSales(prev => prev.filter(s => !selectedIds.includes(s.id)));
                     setSelectedIds([]);
-                    toast.success(`${selectedIds.length} adet satış silindi ve stoklar iade edildi.`);
+                    toast.success(revertStock
+                        ? `${selectedIds.length} adet satış silindi ve stoklar iade edildi.`
+                        : `${selectedIds.length} adet satış silindi.`);
                 } else {
                     toast.error("Bazı satışlar silinemedi.");
                 }
@@ -165,33 +170,6 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-2">
-                <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-                        <ShoppingCart className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="font-medium text-3xl font-extrabold text-foreground font-manrope">Satış Arşivi</h1>
-                        <p className="text-[11px] text-muted-foreground/80  mt-0.5">Tüm satış kayıtları ve detaylı geçmiş</p>
-                    </div>
-                </div>
-
-                {selectedIds.length > 0 && (
-                    <div className="flex items-center gap-4 animate-in slide-in-from-top-4 duration-300">
-                        <span className="text-xs  text-muted-foreground">{selectedIds.length} öğe seçildi</span>
-                        <Button
-                            variant="destructive"
-                            className="rounded-xl h-11 px-6  text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-destructive/20"
-                            onClick={() => {
-                                setTargetId(null);
-                                setDeleteConfirmOpen(true);
-                            }}
-                        >
-                            <Trash2 className="h-4 w-4" /> SEÇİLENLERİ SİL
-                        </Button>
-                    </div>
-                )}
-            </div>
 
             <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden bg-card/50 backdrop-blur-xl">
                 <CardHeader className="p-8 border-b border-border/40 bg-muted/5">
@@ -378,10 +356,28 @@ export function SalesHistoryClient({ initialSales }: SalesHistoryClientProps) {
                         </AlertDialogTitle>
                         <AlertDialogDescription className=" text-sm pt-4">
                             {targetId
-                                ? "Bu satış kaydı kalıcı olarak silinecek ve ilgili ürün stokları iade edilecektir. Bu işlem geri alınamaz."
-                                : `${selectedIds.length} adet satış kaydı ve ilgili stok hareketleri silinecektir. Devam etmek istiyor musunuz?`}
+                                ? "Bu satış kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz."
+                                : `${selectedIds.length} adet satış kaydı silinecektir. Devam etmek istiyor musunuz?`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+
+                    <div className="py-6 px-4 bg-muted/30 rounded-2xl border border-border/40 my-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-bold flex items-center gap-2">
+                                    <RefreshCcw className="h-4 w-4 text-emerald-500" />
+                                    Stokları Geri Al
+                                </h4>
+                                <p className="text-[11px] text-muted-foreground">Satılan ürünlerin miktarı stoğa geri eklensin mi?</p>
+                            </div>
+                            <Checkbox
+                                checked={revertStock}
+                                onCheckedChange={(v) => setRevertStock(!!v)}
+                                className="h-6 w-6 rounded-lg data-[state=checked]:bg-emerald-500 border-border/40"
+                            />
+                        </div>
+                    </div>
+
                     <AlertDialogFooter className="gap-3 mt-6">
                         <AlertDialogCancel className="rounded-xl h-12 px-6  border-border/40 hover:bg-muted/50">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction

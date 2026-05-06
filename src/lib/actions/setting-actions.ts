@@ -5,27 +5,45 @@ import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
 import { cache } from "react";
 
+import { unstable_cache } from "next/cache";
+
 export const getSettings = cache(async function getSettings() {
-  try {
-    const shopId = await getShopId();
-    const settings = await prisma.setting.findMany({ where: { shopId } });
-    return serializePrisma(settings);
-  } catch (error) {
-    return [];
-  }
+  const shopId = await getShopId();
+  if (!shopId) return [];
+
+  return unstable_cache(
+    async () => {
+      try {
+        const settings = await prisma.setting.findMany({ where: { shopId } });
+        return serializePrisma(settings);
+      } catch (error) {
+        return [];
+      }
+    },
+    [`settings-${shopId}`],
+    { tags: [`settings-${shopId}`, "settings"], revalidate: 3600 }
+  )();
 });
 
 export const getShop = cache(async function getShop() {
-  try {
-    const shopId = await getShopId();
-    const shop = await prisma.shop.findUnique({
-      where: { id: shopId }
-    });
-    return serializePrisma(shop);
-  } catch (error) {
-    console.error("getShop error:", error);
-    return null;
-  }
+  const shopId = await getShopId();
+  if (!shopId) return null;
+
+  return unstable_cache(
+    async () => {
+      try {
+        const shop = await prisma.shop.findUnique({
+          where: { id: shopId }
+        });
+        return serializePrisma(shop);
+      } catch (error) {
+        console.error("getShop error:", error);
+        return null;
+      }
+    },
+    [`shop-${shopId}`],
+    { tags: [`shop-${shopId}`, "shop"], revalidate: 3600 }
+  )();
 });
 
 export async function updateSetting(key: string, value: string, revalidate = true) {

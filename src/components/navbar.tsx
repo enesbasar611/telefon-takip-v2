@@ -97,20 +97,7 @@ export function Navbar({ shop }: { shop?: any }) {
                 {isFinancialVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
               </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleLayoutEditing}
-                className={cn(
-                  "h-10 w-10 rounded-xl border transition-all",
-                  isLayoutEditing
-                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105"
-                    : "bg-muted/40 border-border text-muted-foreground hover:text-primary"
-                )}
-                title={isLayoutEditing ? "Düzenleme Modunu Kapat" : "Sayfayı Düzenle"}
-              >
-                <LayoutDashboard className="h-5 w-5" />
-              </Button>
+
 
               <ShortageList />
               <ModeToggle />

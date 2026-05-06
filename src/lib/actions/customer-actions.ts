@@ -138,7 +138,20 @@ export async function getCustomerById(id: string) {
           },
           orderBy: { createdAt: "desc" }
         },
-        debts: { orderBy: { createdAt: "desc" } },
+        debts: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            sale: {
+              include: {
+                items: {
+                  include: {
+                    product: true
+                  }
+                }
+              }
+            }
+          }
+        },
         transactions: {
           orderBy: { createdAt: "desc" },
           include: {

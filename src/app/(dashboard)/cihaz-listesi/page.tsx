@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { getDeviceList, getExpiringDevices } from "@/lib/actions/device-hub-actions";
@@ -18,14 +19,44 @@ import { DeviceImportModal } from "@/components/device-hub/device-import-modal";
 import { getIndustryLabel } from "@/lib/industry-utils";
 import { DeviceMonthSelector } from "@/components/device-hub/device-month-selector";
 import { DeviceDateRangeSelector } from "@/components/device-hub/device-date-range-selector";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
-export default async function DeviceHubPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
-  const deviceId = searchParams.deviceId as string;
-  const month = searchParams.month as string;
-  const startDateParam = searchParams.startDate as string;
-  const endDateParam = searchParams.endDate as string;
+function DeviceHubSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
+      {/* Header Skeleton */}
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-10 w-56 rounded-xl" />
+        <Skeleton className="h-4 w-80 rounded-lg" />
+      </div>
+      {/* Stock Cards Row */}
+      <div className="flex gap-4 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 flex-1 rounded-2xl min-w-[180px]" />
+        ))}
+      </div>
+      {/* Finance Cards Row */}
+      <div className="flex gap-4 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 flex-1 rounded-2xl min-w-[180px]" />
+        ))}
+      </div>
+      {/* Table */}
+      <Skeleton className="h-[400px] rounded-3xl" />
+    </div>
+  );
+}
+
+interface DeviceHubDataProps {
+  month?: string;
+  startDateParam?: string;
+  endDateParam?: string;
+  deviceId?: string;
+}
+
+async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: DeviceHubDataProps) {
   const shopId = await getShopId();
   const [devices, categories, expiringDevices] = await Promise.all([
     getDeviceList({ month, startDate: startDateParam, endDate: endDateParam }),
@@ -37,7 +68,6 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const assetLabelUpper = assetLabel.toLocaleUpperCase('tr-TR');
 
-  // Filtering Boundaries
   let startBound: Date;
   let endBound: Date;
 
@@ -53,44 +83,46 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
     endBound.setMonth(endBound.getMonth() + 1);
   }
 
-  // Separation
   const stockDevices = devices.filter((d: any) => d.stock > 0);
   const soldDevices = devices.filter((d: any) => d.stock === 0 && d.sale);
 
-  // Filtered Sold Devices (based on period)
   const filteredSoldDevices = soldDevices.filter((d: any) => {
     const saleDate = new Date(d.sale.createdAt);
     return saleDate >= startBound && saleDate < endBound;
   });
 
-  // Metrics
   const newDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "NEW");
   const usedDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "USED");
   const intlDevicesStock = stockDevices.filter((d: any) => d.deviceInfo?.condition === "INTERNATIONAL");
 
-  // Financial Stock Metrics
   const totalStokMaliyeti = stockDevices.reduce((acc: number, d: any) => acc + (Number(d.buyPrice) * d.stock), 0);
   const beklenenKar = stockDevices.reduce((acc: number, d: any) => acc + (Number(d.sellPrice) - Number(d.buyPrice)) * d.stock, 0);
 
-  // Financial Sales Metrics (Selected Period)
   const periodTotalSatis = filteredSoldDevices.reduce((acc: number, d: any) => acc + Number(d.sellPrice), 0);
   const periodToplamKar = filteredSoldDevices.reduce((acc: number, d: any) => acc + (Number(d.sellPrice) - Number(d.buyPrice)), 0);
+  const periodCount = filteredSoldDevices.length;
 
-  // Period Sales Detail for Graphs
-  const periodSalesItems = await prisma.saleItem.findMany({
-    where: {
-      shopId,
-      sale: { createdAt: { gte: startBound, lt: endBound } },
-      product: { deviceInfo: { isNot: null } }
-    },
-    include: { product: { include: { deviceInfo: true } }, sale: true },
-    orderBy: { sale: { createdAt: "desc" } }
-  });
+  const [periodSalesItems, periodPurchases] = await Promise.all([
+    prisma.saleItem.findMany({
+      where: {
+        shopId,
+        sale: { createdAt: { gte: startBound, lt: endBound } },
+        product: { deviceInfo: { isNot: null } }
+      },
+      include: { product: { include: { deviceInfo: true } }, sale: true },
+      orderBy: { sale: { createdAt: "desc" } }
+    }),
+    prisma.product.findMany({
+      where: {
+        shopId,
+        createdAt: { gte: startBound, lt: endBound },
+        deviceInfo: { isNot: null }
+      }
+    })
+  ]);
 
   const periodTotal = periodSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
-  const periodCount = periodSalesItems.length;
 
-  // Comparison logic (simplified, relative to startBound)
   const lastMonthStart = new Date(startBound);
   lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
   const lastMonthEnd = new Date(startBound);
@@ -104,11 +136,7 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
   const lastMonthTotal = lastMonthSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
   const comparisonHtml = getMonthlySalesComparisonHtml(periodTotal, lastMonthTotal);
 
-  // Missing Items Analysis
-  const soldRecentLimit = new Date();
-  soldRecentLimit.setDate(soldRecentLimit.getDate() - 30);
   const missingItemsMap = new Map();
-  // ... (Missing items logic remains similar but uses stockDevices)
   periodSalesItems.forEach((item: any) => {
     const key = `${item.product.name}-${item.product.deviceInfo?.color}-${item.product.deviceInfo?.storage}`;
     if (!missingItemsMap.has(key)) {
@@ -127,39 +155,21 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
       }
     }
   });
-  // Purchases in period
-  const periodPurchases = await prisma.product.findMany({
-    where: {
-      shopId,
-      createdAt: { gte: startBound, lt: endBound },
-      deviceInfo: { isNot: null }
-    }
-  });
 
-  const missingItems = Array.from(missingItemsMap.values());  // Sales Graph Data (Selected Period)
+  const missingItems = Array.from(missingItemsMap.values());
   const daysInPeriod = Math.ceil((endBound.getTime() - startBound.getTime()) / (1000 * 60 * 60 * 24));
   const salesGraphData = Array.from({ length: daysInPeriod }).map((_, i) => {
     const dayDate = new Date(startBound);
     dayDate.setDate(dayDate.getDate() + i);
-
     const dailySales = periodSalesItems.filter((item: any) => new Date(item.sale.createdAt).toDateString() === dayDate.toDateString());
     const dailyTotal = dailySales.reduce((acc: number, curr: any) => acc + Number(curr.totalPrice), 0);
     const dailyCount = dailySales.length;
-
     const dailyPurchases = periodPurchases.filter((p: any) => new Date(p.createdAt).toDateString() === dayDate.toDateString()).length;
-
-    return {
-      date: dayDate.getDate().toString(),
-      total: dailyTotal,
-      salesCount: dailyCount,
-      purchaseCount: dailyPurchases
-    };
+    return { date: dayDate.getDate().toString(), total: dailyTotal, salesCount: dailyCount, purchaseCount: dailyPurchases };
   });
 
   return (
     <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
-
-      {/* Standardized Page Header */}
       <PageHeader
         title={`${assetLabel} Merkezi`}
         description="Envanter yönetimi, finansal takip ve alım-satım süreçlerinin merkezi."
@@ -179,11 +189,10 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
         }
       />
 
-      {/* Stock Cards Row */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <MonitorSmartphone className="h-4 w-4 text-muted-foreground/80" />
-          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
+          <h2 className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-[0.2em]">Stok Durum Paneli</h2>
         </div>
         <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 scrollbar-none sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-5">
           <div className="min-w-[200px] sm:min-w-0">
@@ -204,11 +213,12 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      {/* Finance Cards Row */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Coins className="h-4 w-4 text-muted-foreground/80" />
-          <h2 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em]">Finansal Göstergeler ({startDateParam ? `${startDateParam} - ${endDateParam}` : (month || "Bu Ay")})</h2>
+          <h2 className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-[0.2em]">
+            Finansal Göstergeler ({startDateParam ? `${startDateParam} - ${endDateParam}` : (month || "Bu Ay")})
+          </h2>
         </div>
         <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 scrollbar-none sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-5">
           <div className="min-w-[200px] sm:min-w-0">
@@ -239,7 +249,6 @@ export default async function DeviceHubPage({ searchParams }: { searchParams: { 
         </div>
       </div>
 
-      {/* Main Content: Filterable Table Client */}
       <DeviceListClient
         initialDevices={devices}
         initialDeviceId={deviceId}
@@ -263,19 +272,14 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
         <div className={`p-2.5 rounded-xl transition-colors ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div className={`text-[9px]  tracking-widest px-2 py-0.5 rounded-full ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
+        <div className={`text-[9px] tracking-widest px-2 py-0.5 rounded-full ${colors[color].split(" ")[0]} ${colors[color].split(" ")[1]}`}>
           {label}
         </div>
       </div>
       <div className="mt-2">
-        <h3 className="font-medium text-[26px]  text-foreground leading-none tracking-tight">{value}</h3>
-        <p className="text-[11px] text-muted-foreground/80  tracking-wide mt-2">{subLabel}</p>
+        <h3 className="font-medium text-[26px] text-foreground leading-none tracking-tight">{value}</h3>
+        <p className="text-[11px] text-muted-foreground/80 tracking-wide mt-2">{subLabel}</p>
       </div>
     </div>
   );
 }
-
-
-
-
-

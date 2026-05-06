@@ -232,8 +232,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
           where: { id: currentTicket.customerId },
           data: {
             loyaltyPoints: {
-              increment: earnedPoints,
-              decrement: usedPoints > 0 ? usedPoints : 0
+              increment: earnedPoints - usedPoints
             }
           }
         });
