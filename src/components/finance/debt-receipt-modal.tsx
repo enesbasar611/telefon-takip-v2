@@ -43,7 +43,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
         .filter((d: any) => d.type === 'DEBT' && d.currency === 'USD')
         .reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0);
 
-    const portfolioTotal = Math.round(totalTRY + (totalUSD * (rates?.usd || 32.5)));
+    const portfolioTotal = Math.ceil(totalTRY + (totalUSD * (rates?.usd || 32.5)));
 
     // Group items by date
     const groupedItems = debts.reduce((groups: any, item: any) => {
@@ -123,9 +123,11 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
                                                     ) : (
                                                         <TrendingUp className="w-3 h-3 text-rose-500 shrink-0" />
                                                     )}
-                                                    <span className={cn(item.type === 'PAYMENT' ? "text-emerald-700 font-black italic" : "text-slate-700")}>
-                                                        {item.notes || (item.type === 'PAYMENT' ? 'Tahsilat' : 'Ürün/Hizmet')}
-                                                    </span>
+                                                    <div className={cn("flex flex-col gap-1", item.type === 'PAYMENT' ? "text-emerald-700 font-black italic" : "text-slate-700")}>
+                                                        {(item.notes || (item.type === 'PAYMENT' ? 'Tahsilat' : 'Ürün/Hizmet')).split(',').map((note: string, nIdx: number) => (
+                                                            <span key={nIdx} className="block">{note.trim()}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className={cn(
@@ -146,38 +148,34 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
             </div>
 
             {/* Totals Section */}
-            <div className="bg-slate-950 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
-                <div className="absolute top-0 right-0 p-6 opacity-10">
-                    <CheckCircle2 className="w-24 h-24 -rotate-12" />
-                </div>
-
-                <div className="space-y-6 relative z-10">
-                    <div className="grid grid-cols-2 gap-6 border-b border-white/10 pb-4">
-                        <div className="text-center">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">KALAN TL</p>
-                            <p className="text-xl font-black tabular-nums">{totalTRY > 0 ? `₺${totalTRY.toLocaleString('tr-TR')}` : 'Borç Yok'}</p>
-                        </div>
-                        <div className="text-center border-l border-white/10">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">KALAN USD</p>
-                            <p className="text-xl font-black tabular-nums">{totalUSD > 0 ? `$${totalUSD.toLocaleString('tr-TR')}` : 'Borç Yok'}</p>
-                        </div>
+            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200">
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">TL BORCU</span>
+                        <span className="font-black text-slate-900 tabular-nums">₺{totalTRY.toLocaleString('tr-TR')}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">USD BORCU</span>
+                        <span className="font-black text-blue-600 tabular-nums">${totalUSD.toLocaleString('tr-TR')}</span>
                     </div>
 
-                    <div className="pt-2 text-center text-white">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-2">GÜNCEL TOPLAM BAKİYE</p>
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-start gap-1 justify-center">
-                                <span className="text-2xl font-bold mt-2 opacity-40">₺</span>
-                                <span className={cn(
-                                    "text-5xl font-black tabular-nums tracking-tighter",
-                                    portfolioTotal <= 0 ? "text-emerald-400" : "text-white"
-                                )}>
-                                    {portfolioTotal.toLocaleString('tr-TR')}
-                                </span>
+                    <div className="pt-4 mt-2 border-t border-slate-100">
+                        <div className="flex justify-between items-end">
+                            <div className="space-y-1">
+                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">GENEL KUR: $1 = ₺{rates?.usd || '32.5'}</span>
+                                <span className="block text-xs font-black text-slate-900 uppercase">GENEL TOPLAM</span>
                             </div>
-                            {portfolioTotal <= 0 && <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mt-2 bg-emerald-500/10 px-4 py-1 rounded-full border border-emerald-500/20 shadow-lg shadow-emerald-500/20">BORCU YOKTUR</p>}
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-slate-950 tabular-nums">₺{portfolioTotal.toLocaleString('tr-TR')}</span>
+                            </div>
                         </div>
                     </div>
+
+                    {portfolioTotal <= 0 && (
+                        <div className="mt-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">HESAP KAPALIDIR / BORCU YOKTUR</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

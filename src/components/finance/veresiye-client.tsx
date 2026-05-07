@@ -69,7 +69,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-import { collectGlobalCustomerPayment, startTrackingDebt, getCustomerStatement, getDebtStatsDetails } from "@/lib/actions/debt-actions";
+import { collectGlobalCustomerPayment, startTrackingDebt, getCustomerStatement, getDebtStatsDetails, deleteCustomerPayment, updateCustomerPayment, updateDebt } from "@/lib/actions/debt-actions";
 import { cn, formatCurrency } from "@/lib/utils";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { AddDebtModal } from "./add-debt-modal";
@@ -176,6 +176,60 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
 
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+
+    // Transaction Edit State
+    const [editingTransaction, setEditingTransaction] = useState<any>(null);
+    const [editTxAmount, setEditTxAmount] = useState<string>("");
+    const [editTxNotes, setEditTxNotes] = useState<string>("");
+
+    const handleDeleteTransaction = async (txId: string) => {
+        if (!confirm("Tahsilatı geri almak istiyor musunuz? Bu işlem kasanızdan tutarı düşecek ve borcu geri yükleyecektir.")) return;
+
+        startTransition(async () => {
+            const res = await deleteCustomerPayment(txId);
+            if (res.success) {
+                toast.success("Tahsilat geri alındı. Borç bakiyeleri güncellendi.");
+                // Update statement data if open
+                if (historyCustomer) {
+                    const statementRes = await getCustomerStatement(historyCustomer.id);
+                    if (statementRes.success) {
+                        setStatementData({
+                            debts: statementRes.debts || [],
+                            transactions: statementRes.transactions || []
+                        });
+                    }
+                }
+                router.refresh();
+            } else {
+                toast.error(res.error || "İşlem geri alınamadı.");
+            }
+        });
+    };
+
+    const handleUpdateTransaction = async () => {
+        if (!editingTransaction || !editTxAmount) return;
+
+        startTransition(async () => {
+            const res = await updateCustomerPayment(editingTransaction.id, Number(editTxAmount), editTxNotes);
+            if (res.success) {
+                toast.success("Tahsilat güncellendi.");
+                setEditingTransaction(null);
+                // Update statement data if open
+                if (historyCustomer) {
+                    const statementRes = await getCustomerStatement(historyCustomer.id);
+                    if (statementRes.success) {
+                        setStatementData({
+                            debts: statementRes.debts || [],
+                            transactions: statementRes.transactions || []
+                        });
+                    }
+                }
+                router.refresh();
+            } else {
+                toast.error(res.error || "Güncelleme yapılamadı.");
+            }
+        });
+    };
 
     const [paymentSummary, setPaymentSummary] = useState<{
         customerId: string;
@@ -1525,7 +1579,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div key={`tx-${item.id}`} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 transition-all border-dashed">
+                                            <div key={`tx-${item.id}`} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 transition-all border-dashed group">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white">
                                                         <TrendingUp className="w-3 h-3" />
@@ -1535,10 +1589,26 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         <span className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-right flex items-center gap-3">
                                                     <span className="text-sm font-black text-emerald-600 tabular-nums">
                                                         + ₺{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="sm" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingTransaction(item);
+                                                            setEditTxAmount(String(item.amount));
+                                                            setEditTxNotes(item.description || "");
+                                                        }} className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg">
+                                                            <Pencil className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteTransaction(item.id);
+                                                        }} className="h-6 w-6 p-0 text-rose-600 hover:text-rose-700 bg-rose-500/5 hover:bg-rose-500/10 rounded-lg">
+                                                            <RotateCcw className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )
@@ -1618,6 +1688,35 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-2">
                         <Button variant="ghost" onClick={() => setEditingDebt(null)}>İptal</Button>
                         <Button onClick={submitDebtUpdate} className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl">Kaydet</Button>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* --- Edit Transaction Modal --- */}
+            <AlertDialog open={!!editingTransaction} onOpenChange={(o) => { if (!o) setEditingTransaction(null); }}>
+                <AlertDialogContent className="w-full max-w-[400px] h-auto rounded-[2rem] p-6 bg-card border border-border/50">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Tahsilatı Düzenle</AlertDialogTitle>
+                        <AlertDialogDescription className="text-[11px] text-muted-foreground uppercase font-bold">
+                            Tahsilat miktarını ve açıklamasını buradan güncelleyebilirsiniz.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">TAHSİLAT TUTARI (TL)</Label>
+                            <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-12 bg-muted/30 border-border/50 font-mono text-lg text-emerald-600" />
+                            <p className="text-[10px] text-amber-500 italic">Dikkat: Tutar değişikliği borç bakiyesini otomatik olarak ayarlayacaktır.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">AÇIKLAMA</Label>
+                            <Input value={editTxNotes} onChange={(e) => setEditTxNotes(e.target.value)} className="h-12 bg-muted/30 border-border/50 text-foreground" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-2">
+                        <Button variant="ghost" onClick={() => setEditingTransaction(null)}>İptal</Button>
+                        <Button onClick={handleUpdateTransaction} disabled={isPending} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl min-w-[100px]">
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Güncelle"}
+                        </Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>

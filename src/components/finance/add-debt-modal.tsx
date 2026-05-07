@@ -245,25 +245,32 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 return;
             }
 
-            // Create the debt record with all items
-            const totalAmount = debtItems.reduce((acc, item) => acc + item.amount, 0);
-            const res = await createDebt({
-                customerId: customerRes.customerId,
-                amount: totalAmount,
-                currency: debtItems[0].currency, // Use first item's currency as primary
-                notes: debtItems.map(i => i.title).join(", "),
-                dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-                items: debtItems.map(item => ({
-                    title: item.title,
+            // Create separate debt records for each item as requested
+            let anyFailed = false;
+
+            for (const item of debtItems) {
+                const res = await createDebt({
+                    customerId: customerRes.customerId,
                     amount: item.amount,
                     currency: item.currency,
-                    productId: item.productId,
-                    quantity: item.quantity
-                }))
-            });
+                    notes: item.title,
+                    dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+                    items: [{
+                        title: item.title,
+                        amount: item.amount,
+                        currency: item.currency,
+                        productId: item.productId,
+                        quantity: item.quantity
+                    }]
+                });
 
-            if (res.success) {
-                toast({ title: "Başarılı", description: `Alacak kaydı ve ilgili stok hareketleri oluşturuldu.` });
+                if (!res.success) {
+                    anyFailed = true;
+                }
+            }
+
+            if (!anyFailed) {
+                toast({ title: "Başarılı", description: `${debtItems.length} adet alacak kaydı ve ilgili stok hareketleri oluşturuldu.` });
                 setOpen(false);
                 reset();
                 setPhoneValue("");
@@ -273,7 +280,12 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 if (onSuccess) onSuccess();
                 router.refresh();
             } else {
-                toast({ title: "Hata", description: "Kayıtlar oluşturulamadı.", variant: "destructive" });
+                toast({
+                    title: "Hata",
+                    description: "Bazı kayıtlar oluşturulamadı. Lütfen listeyi kontrol edin.",
+                    variant: "destructive"
+                });
+                router.refresh();
             }
         });
     };

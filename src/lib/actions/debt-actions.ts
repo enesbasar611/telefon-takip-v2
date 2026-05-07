@@ -526,3 +526,159 @@ export async function getDebtStatsDetails(filter: {
     return { success: false, error: "Detay verileri alınamadı." };
   }
 }
+
+export async function deleteCustomerPayment(transactionId: string) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId, shopId },
+      include: { customer: true }
+    });
+
+    if (!transaction || !transaction.customerId) {
+      return { success: false, error: "İşlem veya müşteri bulunamadı." };
+    }
+
+    const { customerId, amount, financeAccountId } = transaction;
+    let amountToRestore = Number(amount);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Restore Debts (Start from most recently modified)
+      const debtsToRestore = await tx.debt.findMany({
+        where: { customerId, shopId },
+        orderBy: { updatedAt: "desc" }
+      });
+
+      for (const debt of debtsToRestore) {
+        if (amountToRestore <= 0.001) break;
+
+        const paidAmount = Number(debt.amount) - Number(debt.remainingAmount);
+        if (paidAmount <= 0) continue;
+
+        const restoreForThisDebt = Math.min(amountToRestore, paidAmount);
+
+        await tx.debt.update({
+          where: { id: debt.id },
+          data: {
+            remainingAmount: { increment: restoreForThisDebt },
+            isPaid: false // If we restore any amount, it's definitely not fully paid anymore
+          }
+        });
+
+        amountToRestore -= restoreForThisDebt;
+      }
+
+      // 2. Decrement Account Balance
+      if (financeAccountId) {
+        await tx.financeAccount.update({
+          where: { id: financeAccountId },
+          data: { balance: { decrement: amount } }
+        });
+      }
+
+      // 3. Delete Transaction
+      await tx.transaction.delete({
+        where: { id: transactionId }
+      });
+    });
+
+    revalidatePath("/veresiye");
+    revalidatePath("/satis/kasa");
+    revalidatePath(`/musteriler/${customerId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteCustomerPayment error:", error);
+    return { success: false, error: error?.message || "İşlem geri alınamadı." };
+  }
+}
+
+export async function updateCustomerPayment(transactionId: string, newAmount: number, description?: string) {
+  try {
+    const shopId = await getShopId();
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId, shopId }
+    });
+
+    if (!transaction || !transaction.customerId) return { success: false, error: "İşlem bulunamadı." };
+
+    const oldAmount = Number(transaction.amount);
+    const diff = newAmount - oldAmount; // Positive = more money paid, Negative = less money paid
+
+    await prisma.$transaction(async (tx) => {
+      if (diff > 0) {
+        // More money paid: reduce more debt
+        let remainingDiff = diff;
+        const unpaidDebts = await tx.debt.findMany({
+          where: { customerId: transaction.customerId!, shopId, isPaid: false },
+          orderBy: { createdAt: "asc" }
+        });
+
+        for (const debt of unpaidDebts) {
+          if (remainingDiff <= 0.001) break;
+          const canPay = Number(debt.remainingAmount);
+          const toPay = Math.min(remainingDiff, canPay);
+
+          await tx.debt.update({
+            where: { id: debt.id },
+            data: {
+              remainingAmount: { decrement: toPay },
+              isPaid: (canPay - toPay) <= 0.01
+            }
+          });
+          remainingDiff -= toPay;
+        }
+      } else if (diff < 0) {
+        // Less money paid: restore some debt (using absolute diff)
+        let remainingRestore = Math.abs(diff);
+        const partiallyPaidDebts = await tx.debt.findMany({
+          where: { customerId: transaction.customerId!, shopId },
+          orderBy: { updatedAt: "desc" }
+        });
+
+        for (const debt of partiallyPaidDebts) {
+          if (remainingRestore <= 0.001) break;
+          const paidAmt = Number(debt.amount) - Number(debt.remainingAmount);
+          if (paidAmt <= 0) continue;
+
+          const restore = Math.min(remainingRestore, paidAmt);
+          await tx.debt.update({
+            where: { id: debt.id },
+            data: {
+              remainingAmount: { increment: restore },
+              isPaid: false
+            }
+          });
+          remainingRestore -= restore;
+        }
+      }
+
+      // Update Account
+      if (transaction.financeAccountId && diff !== 0) {
+        await tx.financeAccount.update({
+          where: { id: transaction.financeAccountId },
+          data: { balance: { increment: diff } }
+        });
+      }
+
+      // Update Transaction
+      await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          amount: newAmount,
+          ...(description && { description })
+        }
+      });
+    });
+
+    revalidatePath("/veresiye");
+    revalidatePath(`/musteriler/${transaction.customerId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("updateCustomerPayment error:", error);
+    return { success: false, error: error?.message || "Güncelleme yapılamadı." };
+  }
+}

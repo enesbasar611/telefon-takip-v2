@@ -17,6 +17,8 @@ import {
     Receipt,
     Loader2,
     Printer,
+    Pencil,
+    RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -59,7 +61,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { collectGlobalCustomerPayment } from "@/lib/actions/debt-actions";
+import { collectGlobalCustomerPayment, deleteCustomerPayment, updateCustomerPayment } from "@/lib/actions/debt-actions";
 import { DebtReceiptModal } from "@/components/finance/debt-receipt-modal";
 
 interface CustomerDebtPanelProps {
@@ -88,6 +90,11 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
     const [accountId, setAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
     const [usdRate, setUsdRate] = useState<number>(34.5);
+
+    // Edit Payment State
+    const [editingTransaction, setEditingTransaction] = useState<any>(null);
+    const [editTxAmount, setEditTxAmount] = useState<string>("");
+    const [editTxNotes, setEditTxNotes] = useState<string>("");
 
     const debts = customer?.debts || [];
     const unpaidDebts = debts.filter((d: any) => !d.isPaid);
@@ -175,6 +182,35 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                 router.refresh();
             } else {
                 toast.error(result.error || "Ödeme alınamadı.");
+            }
+        });
+    };
+
+    const handleDeleteTransaction = async (txId: string) => {
+        if (!confirm("Tahsilatı geri almak istiyor musunuz? Bu işlem kasanızdan tutarı düşecek ve borcu geri yükleyecektir.")) return;
+
+        startTransition(async () => {
+            const res = await deleteCustomerPayment(txId);
+            if (res.success) {
+                toast.success("Tahsilat geri alındı. Borç bakiyeleri güncellendi.");
+                router.refresh();
+            } else {
+                toast.error(res.error || "İşlem geri alınamadı.");
+            }
+        });
+    };
+
+    const handleUpdateTransaction = async () => {
+        if (!editingTransaction || !editTxAmount) return;
+
+        startTransition(async () => {
+            const res = await updateCustomerPayment(editingTransaction.id, Number(editTxAmount), editTxNotes);
+            if (res.success) {
+                toast.success("Tahsilat güncellendi.");
+                setEditingTransaction(null);
+                router.refresh();
+            } else {
+                toast.error(res.error || "Güncelleme yapılamadı.");
             }
         });
     };
@@ -410,12 +446,13 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                                 <TableHead>Yöntem</TableHead>
                                 <TableHead>Tutar</TableHead>
                                 <TableHead>Kasa/Banka</TableHead>
+                                <TableHead className="text-right">İşlem</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {transactions.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm italic">
+                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-sm italic">
                                         Henüz bir tahsilat kaydı bulunmamaktadır.
                                     </TableCell>
                                 </TableRow>
@@ -438,6 +475,30 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                                         </TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
                                             {tx.financeAccount?.name || "-"}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                                    onClick={() => {
+                                                        setEditingTransaction(tx);
+                                                        setEditTxAmount(tx.amount.toString());
+                                                        setEditTxNotes(tx.description || "");
+                                                    }}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                                    onClick={() => handleDeleteTransaction(tx.id)}
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -573,6 +634,53 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                 shopName={shop?.name}
                 shopPhone={shop?.phone}
             />
+
+            {/* Edit Transaction Modal */}
+            <Dialog open={!!editingTransaction} onOpenChange={(open) => !open && setEditingTransaction(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Tahsilatı Düzenle</DialogTitle>
+                        <DialogDescription>
+                            Tahsilat tutarını veya açıklamasını güncelleyin.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-tx-amount" className="text-right">Tutar</Label>
+                            <Input
+                                id="edit-tx-amount"
+                                type="number"
+                                value={editTxAmount}
+                                onChange={(e) => setEditTxAmount(e.target.value)}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-tx-notes" className="text-right">Not</Label>
+                            <Input
+                                id="edit-tx-notes"
+                                value={editTxNotes}
+                                onChange={(e) => setEditTxNotes(e.target.value)}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic px-4">
+                            * Tutar değişikliği, müşterinin borç bakiyesini ve ilgili kasa hesabını otomatik olarak etkiler.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingTransaction(null)}>İptal</Button>
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={handleUpdateTransaction}
+                            disabled={isPending}
+                        >
+                            {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Güncelle
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
