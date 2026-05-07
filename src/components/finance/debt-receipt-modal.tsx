@@ -32,9 +32,11 @@ interface DebtReceiptModalProps {
     rates?: {
         usd: number;
     };
+    initialShowPaid?: boolean;
+    logoUrl?: string;
 }
 
-const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid }: any) => {
+const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid, logoUrl }: any) => {
     // Totals always show current balance (unpaid only)
     const unpaidDebts = debts.filter((d: any) => d.type === 'DEBT' && !d.isPaid);
 
@@ -71,6 +73,11 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid 
 
             {/* Header */}
             <div className="text-center pb-6 border-b-2 border-dashed border-slate-100 mb-8">
+                {logoUrl && (
+                    <div className="mb-4 flex justify-center">
+                        <img src={logoUrl} alt="Logo" className="h-12 w-auto grayscale contrast-125" />
+                    </div>
+                )}
                 <h1 className="text-xl font-black uppercase tracking-widest text-slate-950 mb-1">{shopName || "TELEFON DÜNYASI"}</h1>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] mb-4">HESAP EKSTRESİ</p>
 
@@ -196,10 +203,10 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid 
     );
 };
 
-export function DebtReceiptModal({ open, onClose, customer, debts, shopName, shopPhone, rates }: DebtReceiptModalProps) {
+export function DebtReceiptModal({ open, onClose, customer, debts, shopName, shopPhone, rates, initialShowPaid = false, logoUrl }: DebtReceiptModalProps) {
     const receiptRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [showPaid, setShowPaid] = useState(false);
+    const [showPaid, setShowPaid] = useState(initialShowPaid);
 
     const generateImage = useCallback(async () => {
         if (!receiptRef.current) return null;
@@ -307,6 +314,7 @@ img{max-width:420px;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,0.15)}
                                 shopPhone={shopPhone}
                                 rates={rates}
                                 showPaid={showPaid}
+                                logoUrl={logoUrl}
                             />
                         </div>
                     </div>

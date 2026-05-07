@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { updateReceiptSettings } from "@/lib/actions/receipt-settings";
-import { Save, Printer, Eye, Settings2, Info, ShoppingCart, Wrench, Package } from "lucide-react";
+import { Save, Printer, Eye, Settings2, Info, ShoppingCart, Wrench, Package, ImagePlus, X, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -93,6 +93,61 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                                     <h2 className="font-bold text-xl text-slate-900 dark:text-white">ÜST BİLGİ ALANI</h2>
                                 </div>
                                 <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground tracking-wider font-bold">FİRMA ÜNVANI VE SLOGAN YAPILANDURMASI</p>
+                            </div>
+
+                            {/* Logo Upload Section */}
+                            <div className="space-y-4">
+                                <Label className="font-medium text-[10px] text-muted-foreground tracking-[0.2em] ml-1">Firma Logosu</Label>
+                                <div className="flex items-center gap-6">
+                                    <div className="relative w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 dark:border-border/50 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-white/[0.03] group/logo">
+                                        {localSettings.logoUrl ? (
+                                            <>
+                                                <img src={localSettings.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                                                <button
+                                                    onClick={() => setLocalSettings({ ...localSettings, logoUrl: null })}
+                                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="h-6 w-6 text-white" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                <ImagePlus className="h-6 w-6" />
+                                                <span className="text-[8px] font-bold">YÜKLE</span>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const formData = new FormData();
+                                                    formData.append("files", file);
+                                                    try {
+                                                        const res = await fetch("/api/finance/upload", {
+                                                            method: "POST",
+                                                            body: formData
+                                                        });
+                                                        const data = await res.json();
+                                                        if (data.success) {
+                                                            setLocalSettings({ ...localSettings, logoUrl: data.attachments[0].url });
+                                                        }
+                                                    } catch (err) {
+                                                        toast({ title: "Yükleme hatası", variant: "destructive" });
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">Logo Kullanımı</p>
+                                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                            Yüklediğiniz logo fişin en üstünde ortalanmış şekilde görünecektir. Siyah-beyaz ve yüksek kontrastlı logolar termal yazıcılarda daha iyi sonuç verir.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -193,6 +248,11 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                             {/* Thermal Paper Simulation */}
                             <div className="bg-white text-black p-10 min-h-[600px] shadow-2xl font-sans text-[11px] leading-snug">
                                 <div className="text-center border-b border-black border-dashed pb-6 mb-6">
+                                    {localSettings.logoUrl && (
+                                        <div className="mb-4 flex justify-center">
+                                            <img src={localSettings.logoUrl} alt="Logo" className="h-12 w-auto grayscale contrast-125" />
+                                        </div>
+                                    )}
                                     <h3 className="font-medium  text-lg leading-none">{localSettings.title || "FİRMA ÜNVANI"}</h3>
                                     <p className=" text-[10px] mt-1.5 opacity-80">{localSettings.subtitle || "ALT BAŞLIK"}</p>
                                     <p className="mt-2 ">{localSettings.phone}</p>

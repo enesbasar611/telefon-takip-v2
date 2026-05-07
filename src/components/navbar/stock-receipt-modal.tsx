@@ -57,6 +57,11 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                     {/* Thermal Preview */}
                     <div className="receipt-preview bg-white text-black p-6 rounded-xl border border-slate-200 font-mono text-[9px] leading-relaxed shadow-inner">
                         <div className="text-center border-b border-black border-dashed pb-3 mb-3">
+                            {settings?.logoUrl && (
+                                <div className="mb-2 flex justify-center">
+                                    <img src={settings.logoUrl} alt="Logo" className="h-6 w-auto grayscale contrast-125" />
+                                </div>
+                            )}
                             <h3 className="font-medium  text-xs">{settings?.title || "BAŞAR TEKNİK"}</h3>
                             <p className=" text-[8px] mt-0.5">{settings?.subtitle || "EKSİK ÜRÜN & TEDARİK LİSTESİ"}</p>
                             <p className="text-[8px] mt-1">Tel: {settings?.phone}</p>

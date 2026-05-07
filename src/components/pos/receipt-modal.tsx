@@ -80,6 +80,11 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
           {/* Receipt Preview (Thermal Layout) */}
           <div className="receipt-preview bg-white text-black p-8 rounded-2xl shadow-inner border border-slate-200 font-mono text-[10px] leading-relaxed">
             <div className="text-center border-b border-black border-dashed pb-4 mb-4">
+              {settings?.logoUrl && (
+                <div className="mb-3 flex justify-center">
+                  <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-125" />
+                </div>
+              )}
               <h3 className="font-medium  text-sm">{settings?.title || "BAŞAR TEKNİK"}</h3>
               <p className=" text-[9px] mt-0.5">{settings?.subtitle || "PROFESYONEL TEKNİK SERVİS"}</p>
               <p className="mt-1">Tel: {settings?.phone || "+90 (5xx) xxx xx xx"}</p>

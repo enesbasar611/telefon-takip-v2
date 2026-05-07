@@ -117,9 +117,10 @@ interface VeresiyeClientProps {
     };
     settings?: any[];
     shop?: any;
+    receiptSettings?: any;
 }
 
-export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings, shop }: VeresiyeClientProps) {
+export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings, shop, receiptSettings }: VeresiyeClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'tracking'>('all');
     const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
@@ -163,6 +164,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     // Receipt Modal State
     const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
     const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
+    const [receiptShowPaid, setReceiptShowPaid] = useState(false);
 
     // Global Payment State
     const [paymentCustomer, setPaymentCustomer] = useState<any>(null);
@@ -1924,22 +1926,43 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
                         <Button
                             variant="outline"
-                            onClick={() => {
+                            disabled={isPending}
+                            onClick={async () => {
                                 if (paymentSummary) {
-                                    const cust = debts.find(d => d.customerId === paymentSummary.customerId)?.customer;
-                                    if (cust) {
-                                        setReceiptCustomer(cust);
-                                        // Include all debts of this customer for the receipt to show paid portions too
-                                        setReceiptDebts(debts.filter(d => d.customerId === paymentSummary.customerId));
-                                    }
+                                    startTransition(async () => {
+                                        const res = await getCustomerStatement(paymentSummary.customerId);
+                                        if (res.success) {
+                                            const cust = debts.find(d => d.customerId === paymentSummary.customerId)?.customer;
+                                            if (cust) {
+                                                setReceiptCustomer(cust);
+                                                // Prepare merged list for receipt: Debt records + Transaction records
+                                                const mergedDebts = [
+                                                    ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                    ...(res.transactions || []).map((t: any) => ({
+                                                        ...t,
+                                                        type: 'PAYMENT',
+                                                        amount: t.amount,
+                                                        createdAt: t.createdAt,
+                                                        description: t.description || 'Tahsilat'
+                                                    }))
+                                                ];
+                                                setReceiptDebts(mergedDebts);
+                                                setReceiptShowPaid(true); // Always show paid records for a payment receipt
+                                            }
+                                        }
+                                        setPaymentSummary(null);
+                                        router.refresh();
+                                    });
                                 }
-                                setPaymentSummary(null);
-                                router.refresh();
                             }}
                             className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs gap-2"
                         >
-                            <Printer className="w-4 h-4" />
-                            Fiş Yazdır
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                                <>
+                                    <Printer className="w-4 h-4" />
+                                    Fiş Yazdır
+                                </>
+                            )}
                         </Button>
                         <Button onClick={() => {
                             setPaymentSummary(null);
@@ -2101,16 +2124,17 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 receiptCustomer && (
                     <DebtReceiptModal
                         open={!!receiptCustomer}
-                        onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); }}
+                        onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); setReceiptShowPaid(false); }}
                         customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId }}
                         debts={receiptDebts}
-                        shopName={shop?.name}
-                        shopPhone={shop?.phone}
+                        shopName={receiptSettings?.title || shop?.name}
+                        shopPhone={receiptSettings?.phone || shop?.phone}
                         rates={rates}
+                        initialShowPaid={receiptShowPaid}
+                        logoUrl={receiptSettings?.logoUrl}
                     />
                 )
             }
         </div >
     );
 }
-

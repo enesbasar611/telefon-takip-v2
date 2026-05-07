@@ -39,16 +39,27 @@ function VeresiyeSkeleton() {
 }
 
 async function VeresiyeData() {
-  const [debts, thisMonthCollected, accounts, rates, settings, shop] = await Promise.all([
+  const [debts, thisMonthCollected, accounts, rates, settings, shop, receiptSettings] = await Promise.all([
     getDebts(),
     getThisMonthCollected(),
     getAccounts(),
     import("@/lib/auth").then(m => m.getShopId()).then(id => import("@/lib/actions/currency-actions").then(m => m.getExchangeRates(id))),
     getSettings(),
-    import("@/lib/actions/setting-actions").then(m => m.getShop())
+    import("@/lib/actions/setting-actions").then(m => m.getShop()),
+    import("@/lib/actions/receipt-settings").then(m => m.getReceiptSettings("pos"))
   ]);
 
-  return <VeresiyeClient debts={debts} thisMonthCollected={thisMonthCollected} accounts={accounts} rates={rates} settings={settings} shop={shop} />;
+  return (
+    <VeresiyeClient
+      debts={debts}
+      thisMonthCollected={thisMonthCollected}
+      accounts={accounts}
+      rates={rates}
+      settings={settings}
+      shop={shop}
+      receiptSettings={receiptSettings}
+    />
+  );
 }
 
 export default function VeresiyePage() {

@@ -680,6 +680,7 @@ model ReceiptSettings {
   id        String   @id
   title     String   @default("BAŞAR TEKNİK")
   subtitle  String   @default("PROFESYONEL TEKNİK SERVİS")
+  logoUrl   String?
   phone     String   @default("+90 (5xx) xxx xx xx")
   address   String?
   footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")

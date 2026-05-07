@@ -89,6 +89,11 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                     {/* Receipt Preview (Thermal Layout) */}
                     <div className="receipt-preview bg-white text-black p-8 rounded-2xl shadow-inner border border-slate-200 font-sans text-[10px] leading-snug">
                         <div className="text-center border-b-2 border-black pb-4 mb-4">
+                            {settings?.logoUrl && (
+                                <div className="mb-3 flex justify-center">
+                                    <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-125" />
+                                </div>
+                            )}
                             <h3 className="font-medium  text-sm">{settings?.title || "BAŞAR TEKNİK"}</h3>
                             <p className=" text-[8px] mt-0.5 opacity-80">{settings?.subtitle || "Mobil servis & teknik destek"}</p>
                             <div className="mt-2 text-[7px]  space-y-0.5">
