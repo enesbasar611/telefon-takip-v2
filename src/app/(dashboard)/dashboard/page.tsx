@@ -58,14 +58,14 @@ async function DashboardContentData() {
   const assetLabel = getIndustryLabel(shop, "customerAsset");
 
   const statItems = [
-    { id: "stat_sales", type: "DAILY_SALES", label: "Kasa Bakiyesi", value: statsData?.todaySales || "0", subValue: `Kasa: ${statsData?.kasaBalance || "0"}`, iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel" },
+    { id: "stat_sales", type: "DAILY_SALES", label: "Kasa Bakiyesi", value: statsData?.kasaBalance || "0", subValue: `Günün Satışı: ${statsData?.todaySales || "0"}`, iconId: "Wallet", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel" },
     { id: "stat_income", type: "REPAIR_INCOME", label: `${serviceLabel} Gelirleri`, value: statsData?.todayRepairIncome || "0", iconId: "Wrench", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%" },
     { id: "stat_collections", type: "COLLECTIONS", label: "Tahsilatlar", value: statsData?.collectedPayments || "0", iconId: "Banknote", colorClass: "text-amber-500", bgClass: "bg-amber-500/10" },
     { id: "stat_pending", type: "PENDING_SERVICES", label: `Bekleyen ${serviceLabel || 'Servis'}ler`, value: statsData?.pendingServices || "0", iconId: "Clock", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { id: "stat_ready", type: "READY_DEVICES", label: `Hazır ${assetLabel || 'Cihaz'}lar`, value: statsData?.readyDevices || "0", iconId: "CheckCircle2", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
     { id: "stat_stock", type: "CRITICAL_STOCK", label: "Kritik stok", value: statsData?.criticalStock || "0", iconId: "AlertTriangle", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
     { id: "stat_debts", type: "TOTAL_DEBTS", label: "Toplam borçlar", value: statsData?.totalDebts || "0", iconId: "ArrowDownCircle", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10" },
-    { id: "stat_accounts", type: "CASH_BALANCE", label: "Kasa & Hesaplar", value: statsData?.cashBalance || "0", iconId: "Wallet", colorClass: "text-primary", bgClass: "bg-primary/10" },
+    { id: "stat_accounts", type: "CASH_BALANCE", label: "Satış Hacmi", value: statsData?.todaySales || "0", iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10" },
   ];
 
   const defaultLayout = [

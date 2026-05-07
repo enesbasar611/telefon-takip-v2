@@ -8,9 +8,10 @@ import {
     Printer,
     MessageCircle,
     Receipt,
-    CheckCircle2,
+    TrendingUp,
     TrendingDown,
-    TrendingUp
+    Eye,
+    EyeOff
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -33,20 +34,26 @@ interface DebtReceiptModalProps {
     };
 }
 
-const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) => {
-    // Only count DEBT types for totals, as transactions/payments are subtracted from balance
-    const totalTRY = debts
-        .filter((d: any) => d.type === 'DEBT' && d.currency !== 'USD')
+const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid }: any) => {
+    // Totals always show current balance (unpaid only)
+    const unpaidDebts = debts.filter((d: any) => d.type === 'DEBT' && !d.isPaid);
+
+    const totalTRY = unpaidDebts
+        .filter((d: any) => d.currency !== 'USD')
         .reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0);
 
-    const totalUSD = debts
-        .filter((d: any) => d.type === 'DEBT' && d.currency === 'USD')
+    const totalUSD = unpaidDebts
+        .filter((d: any) => d.currency === 'USD')
         .reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0);
 
     const portfolioTotal = Math.ceil(totalTRY + (totalUSD * (rates?.usd || 32.5)));
 
+    // Filter items to display based on showPaid
+    // If showPaid is false, only show UNPAID DEBTS (exclude payments and paid debts)
+    const displayDebts = showPaid ? debts : debts.filter((d: any) => d.type === 'DEBT' && !d.isPaid);
+
     // Group items by date
-    const groupedItems = debts.reduce((groups: any, item: any) => {
+    const groupedItems = displayDebts.reduce((groups: any, item: any) => {
         const date = format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr });
         if (!groups[date]) {
             groups[date] = [];
@@ -111,35 +118,39 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {groupedItems[date].map((item: any, idx: number) => (
-                                        <tr key={idx} className={cn(
-                                            "transition-colors",
-                                            item.type === 'PAYMENT' ? "bg-emerald-50/20" : "bg-white hover:bg-slate-50/50"
-                                        )}>
-                                            <td className="border border-slate-200 px-4 py-3 text-xs font-bold leading-tight">
-                                                <div className="flex items-center gap-2">
-                                                    {item.type === 'PAYMENT' ? (
-                                                        <TrendingDown className="w-3 h-3 text-emerald-500 shrink-0" />
-                                                    ) : (
-                                                        <TrendingUp className="w-3 h-3 text-rose-500 shrink-0" />
-                                                    )}
-                                                    <div className={cn("flex flex-col gap-1", item.type === 'PAYMENT' ? "text-emerald-700 font-black italic" : "text-slate-700")}>
-                                                        {(item.notes || (item.type === 'PAYMENT' ? 'Tahsilat' : 'Ürün/Hizmet')).split(',').map((note: string, nIdx: number) => (
-                                                            <span key={nIdx} className="block">{note.trim()}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className={cn(
-                                                "border border-slate-200 px-4 py-3 text-sm font-black tabular-nums text-right",
-                                                item.type === 'PAYMENT' ? "text-emerald-600" : (item.currency === 'USD' ? "text-blue-600" : "text-slate-950")
+                                    {groupedItems[date].map((item: any, idx: number) => {
+                                        const isDebt = item.type !== 'PAYMENT';
+                                        return (
+                                            <tr key={idx} className={cn(
+                                                "transition-colors",
+                                                !isDebt ? "bg-emerald-50/20" : "bg-white hover:bg-slate-50/50"
                                             )}>
-                                                {item.type === 'PAYMENT' ? '-' : (item.currency === 'USD' ? '$' : '₺')}
-                                                {Number(item.amount).toLocaleString('tr-TR')}
-                                                {item.type === 'PAYMENT' && <span className="text-[10px] ml-0.5">₺</span>}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                <td className="border border-slate-200 px-4 py-3 text-xs font-bold leading-tight">
+                                                    <div className="flex items-center gap-2">
+                                                        {!isDebt ? (
+                                                            <TrendingDown className="w-3 h-3 text-emerald-500 shrink-0" />
+                                                        ) : (
+                                                            <TrendingUp className="w-3 h-3 text-rose-500 shrink-0" />
+                                                        )}
+                                                        <div className={cn("flex flex-col gap-1", !isDebt ? "text-emerald-700 font-black italic" : "text-slate-700")}>
+                                                            <span className="text-slate-900 font-extrabold uppercase truncate max-w-[140px] text-[11px] leading-tight flex items-center gap-2">
+                                                                {item.description || item.notes || (isDebt ? 'Ürün/Hizmet' : 'Tahsilat')}
+                                                                {item.isPaid && <span className="text-[7px] bg-emerald-100 text-emerald-600 px-1 rounded-sm">ÖDENDİ</span>}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className={cn(
+                                                    "border border-slate-200 px-4 py-3 text-sm font-black tabular-nums text-right",
+                                                    !isDebt ? "text-emerald-600" : (item.currency === 'USD' ? "text-blue-600" : "text-slate-950")
+                                                )}>
+                                                    {!isDebt ? '-' : (item.currency === 'USD' ? '$' : '₺')}
+                                                    {Number(item.amount).toLocaleString('tr-TR')}
+                                                    {!isDebt && <span className="text-[10px] ml-0.5">₺</span>}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -148,32 +159,28 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
             </div>
 
             {/* Totals Section */}
-            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200">
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">TL BORCU</span>
-                        <span className="font-black text-slate-900 tabular-nums">₺{totalTRY.toLocaleString('tr-TR')}</span>
+            <div className="mt-8 pt-6 border-t border-black border-dashed">
+                <div className="space-y-1 text-[11px] font-bold">
+                    <div className="flex justify-between">
+                        <span className="uppercase">TL BORCU:</span>
+                        <span className="tabular-nums">₺{totalTRY.toLocaleString('tr-TR')}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">USD BORCU</span>
-                        <span className="font-black text-blue-600 tabular-nums">${totalUSD.toLocaleString('tr-TR')}</span>
+                    <div className="flex justify-between">
+                        <span className="uppercase">USD BORCU:</span>
+                        <span className="tabular-nums">${totalUSD.toLocaleString('tr-TR')}</span>
                     </div>
 
-                    <div className="pt-4 mt-2 border-t border-slate-100">
-                        <div className="flex justify-between items-end">
-                            <div className="space-y-1">
-                                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">GENEL KUR: $1 = ₺{rates?.usd || '32.5'}</span>
-                                <span className="block text-xs font-black text-slate-900 uppercase">GENEL TOPLAM</span>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-2xl font-black text-slate-950 tabular-nums">₺{portfolioTotal.toLocaleString('tr-TR')}</span>
-                            </div>
+                    <div className="pt-2 mt-1 border-t border-black border-dashed flex justify-between items-end">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[7px] font-medium opacity-70 uppercase tracking-tighter">KUR: $1 = ₺{rates?.usd || '32.5'}</span>
+                            <span className="text-sm font-black uppercase">GENEL TOPLAM:</span>
                         </div>
+                        <span className="text-xl font-black tabular-nums">₺{portfolioTotal.toLocaleString('tr-TR')}</span>
                     </div>
 
                     {portfolioTotal <= 0 && (
-                        <div className="mt-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
-                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">HESAP KAPALIDIR / BORCU YOKTUR</span>
+                        <div className="mt-4 py-2 border border-black border-dashed text-center">
+                            <span className="text-[10px] font-black uppercase tracking-widest">HESAP KAPALIDIR / BORCU YOKTUR</span>
                         </div>
                     )}
                 </div>
@@ -192,6 +199,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates }: any) =>
 export function DebtReceiptModal({ open, onClose, customer, debts, shopName, shopPhone, rates }: DebtReceiptModalProps) {
     const receiptRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [showPaid, setShowPaid] = useState(false);
 
     const generateImage = useCallback(async () => {
         if (!receiptRef.current) return null;
@@ -269,18 +277,37 @@ img{max-width:420px;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,0.15)}
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-[500px] p-0 gap-0 bg-background border-none rounded-[2.5rem] overflow-hidden shadow-2xl">
                 {/* Header Action Bar */}
-                <div className="flex items-center justify-between px-8 py-6 border-b border-border/10 bg-muted/20 pr-16 text-foreground">
+                <div className="flex items-center justify-between px-8 py-6 border-b border-border/10 bg-muted/20 pr-14 text-foreground relative">
                     <div className="flex items-center gap-3">
                         <Receipt className="h-5 w-5 text-primary" />
                         <h2 className="text-sm font-black uppercase tracking-widest">{customer.name} - EKSTRE</h2>
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPaid(!showPaid)}
+                        className={cn(
+                            "rounded-xl gap-2 text-[9px] font-black uppercase tracking-widest h-10 px-4",
+                            showPaid ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-slate-500/10 text-slate-600 hover:bg-slate-500/20"
+                        )}
+                    >
+                        {showPaid ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        {showPaid ? "Ödenmişleri Gizle" : "Ödenmişleri Göster"}
+                    </Button>
                 </div>
 
                 {/* Preview Area */}
                 <div className="bg-muted/10 p-8">
                     <div className="max-h-[55vh] overflow-y-auto rounded-3xl border border-border bg-white shadow-2xl custom-scrollbar shadow-black/5">
                         <div ref={receiptRef}>
-                            <ReceiptContent customer={customer} debts={debts} shopName={shopName} shopPhone={shopPhone} rates={rates} />
+                            <ReceiptContent
+                                customer={customer}
+                                debts={debts}
+                                shopName={shopName}
+                                shopPhone={shopPhone}
+                                rates={rates}
+                                showPaid={showPaid}
+                            />
                         </div>
                     </div>
                 </div>

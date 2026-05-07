@@ -26,20 +26,26 @@ export const getDashboardStats = async (shopId: string) => {
               criticalStock: true,
             }
           }),
+          // Actual cash-basis sales (exclude DEBT)
           prisma.sale.aggregate({
-            where: { shopId, createdAt: { gte: today } },
+            where: {
+              shopId,
+              createdAt: { gte: today },
+              paymentMethod: { not: "DEBT" }
+            },
             _sum: { finalAmount: true }
           }),
           prisma.serviceTicket.aggregate({
             where: { shopId, status: "DELIVERED", deliveredAt: { gte: today } },
             _sum: { actualCost: true }
           }),
+          // Actual income (exclude DEBT transactions)
           prisma.transaction.aggregate({
             where: {
               shopId,
               type: "INCOME",
-              createdAt: { gte: today }
-              // paymentMethod: { not: "DEBT" } // Removed to include all sales/incomes per user request
+              createdAt: { gte: today },
+              paymentMethod: { not: "DEBT" }
             },
             _sum: { amount: true }
           }),
@@ -67,6 +73,7 @@ export const getDashboardStats = async (shopId: string) => {
         const lowStockCount = productsList.filter(p => p.stock <= p.criticalStock).length;
         const kasaBalance = Number(kasaAccountObject.balance) || 0;
         const todaySalesAmount = Number(todaySalesAggResult._sum.finalAmount) || 0;
+        const collectedToday = Number(todayTransactionsResult._sum.amount) || 0;
 
         let kasaOpeningBalance = 0;
         try {
@@ -85,7 +92,7 @@ export const getDashboardStats = async (shopId: string) => {
           kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
           kasaOpeningBalanceRaw: kasaOpeningBalance,
           todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncomeResult._sum.actualCost) || 0)}`,
-          collectedPayments: `₺${formatCurrency(Number(todayTransactionsResult._sum.amount) || 0)}`,
+          collectedPayments: `₺${formatCurrency(collectedToday)}`,
           pendingServices: pendingServicesValue.toString(),
           readyDevices: readyDevicesValue.toString(),
           criticalStock: lowStockCount.toString(),
@@ -107,7 +114,7 @@ export const getDashboardStats = async (shopId: string) => {
       }
     },
     [`dashboard-stats-${shopId}`],
-    { tags: [`dashboard-${shopId}`], revalidate: 3600 } // Cache for 1 hour
+    { tags: [`dashboard-${shopId}`], revalidate: 10 } // Reduced to 10 seconds for real-time feel
   )();
 };
 

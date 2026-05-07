@@ -158,7 +158,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
 
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
-    const [portfolioData, setPortfolioData] = useState<{ tickets: any[], sales: any[], debts: any[] }>({ tickets: [], sales: [], debts: [] });
+    const [portfolioData, setPortfolioData] = useState<{ tickets: any[], sales: any[], debts: any[], transactions: any[] }>({ tickets: [], sales: [], debts: [], transactions: [] });
 
     // Receipt Modal State
     const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
@@ -527,7 +527,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 setPaymentMethod("CASH");
                 setSelectedAccountId("");
                 setSelectedDebtIds([]); // Reset selection after payment
-                router.refresh();
             } else {
                 toast.error(res.error || "Tahsilat sırasında bir hata oluştu.");
             }
@@ -586,7 +585,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             setPortfolioData({
                 tickets: fullInfo.tickets || [],
                 sales: fullInfo.sales || [],
-                debts: fullInfo.debts || []
+                debts: fullInfo.debts || [],
+                transactions: fullInfo.transactions || []
             });
         }
     };
@@ -968,7 +968,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     className={cn(
                                                         "group relative p-4 md:px-8 py-4 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-muted/5 transition-all overflow-hidden",
                                                         selectedCustomerIds.includes(item.customerId) && "bg-indigo-500/[0.04] dark:bg-indigo-500/10",
-                                                        (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500/[0.02]" : "bg-rose-500/[0.02]",
+                                                        (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500/[0.04]" : "bg-rose-500/[0.04]",
                                                         idx !== aggregatedData.length - 1 && "border-b border-border/5"
                                                     )}
                                                 >
@@ -1044,12 +1044,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     <div className="flex flex-row items-center gap-4 md:min-w-[150px]">
                                                         <div className="flex flex-row items-center gap-3">
                                                             {item.totalRemainingTRY > 0 && (
-                                                                <span className="text-sm md:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter">
+                                                                <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter">
                                                                     ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
                                                                 </span>
                                                             )}
                                                             {item.totalRemainingUSD > 0 && (
-                                                                <span className="text-sm md:text-base font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tighter">
+                                                                <span className="text-sm md:text-base font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter">
                                                                     ${item.totalRemainingUSD.toLocaleString('tr-TR')}
                                                                 </span>
                                                             )}
@@ -1059,7 +1059,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                             {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && (
                                                                 <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
                                                                     <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
-                                                                    <span className="text-sm md:text-base font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                                                                    <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">
                                                                         ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
                                                                     </span>
                                                                 </div>
@@ -1742,7 +1742,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             <Button
                                 onClick={() => {
                                     setReceiptCustomer(portfolioCustomer);
-                                    setReceiptDebts(debts.filter((d: any) => d.customerId === portfolioCustomer.id && !d.isPaid));
+                                    setReceiptDebts(debts.filter((d: any) => d.customerId === portfolioCustomer.id));
                                 }}
                                 className="h-14 px-8 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-3 transition-all active:scale-95 shadow-2xl"
                             >
@@ -1791,7 +1791,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     {[
                                         ...portfolioData.sales.map(s => ({ ...s, type: 'SALE', label: 'Satış İşlemi', amount: s.finalAmount || 0, formattedDate: new Date(s.createdAt) })),
                                         ...portfolioData.tickets.map(t => ({ ...t, type: 'TICKET', label: 'Teknik Servis', amount: t.actualCost || 0, formattedDate: new Date(t.createdAt) })),
-                                        ...portfolioData.debts.map(d => ({ ...d, type: 'DEBT', label: 'Alacak Kaydı', amount: d.amount || 0, formattedDate: new Date(d.createdAt) }))
+                                        ...portfolioData.debts.map(d => ({ ...d, type: 'DEBT', label: 'Alacak Kaydı', amount: d.amount || 0, formattedDate: new Date(d.createdAt) })),
+                                        ...portfolioData.transactions.filter(tx => tx.type === 'INCOME').map(tx => ({ ...tx, type: 'COLLECTION', label: 'Tahsilat', amount: tx.amount || 0, formattedDate: new Date(tx.createdAt) }))
                                     ]
                                         .sort((a: any, b: any) => b.formattedDate.getTime() - a.formattedDate.getTime())
                                         .slice(0, 9)
@@ -1800,9 +1801,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                 <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shrink-0",
                                                     item.type === 'SALE' ? "bg-indigo-100 text-indigo-600" :
                                                         item.type === 'TICKET' ? "bg-amber-100 text-amber-600" :
-                                                            "bg-rose-100 text-rose-600"
+                                                            item.type === 'COLLECTION' ? "bg-emerald-100 text-emerald-600" :
+                                                                "bg-rose-100 text-rose-600"
                                                 )}>
-                                                    {item.type === 'SALE' ? <CreditCard className="w-5 h-5 md:w-6 md:h-6" /> : item.type === 'TICKET' ? <Phone className="w-5 h-5 md:w-6 md:h-6" /> : <FileText className="w-5 h-5 md:w-6 md:h-6" />}
+                                                    {item.type === 'SALE' ? <CreditCard className="w-5 h-5 md:w-6 md:h-6" /> :
+                                                        item.type === 'TICKET' ? <Phone className="w-5 h-5 md:w-6 md:h-6" /> :
+                                                            item.type === 'COLLECTION' ? <Wallet className="w-5 h-5 md:w-6 md:h-6" /> :
+                                                                <FileText className="w-5 h-5 md:w-6 md:h-6" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
@@ -1817,13 +1822,37 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     <span className="block text-[10px] text-slate-400 mt-0.5">{item.formattedDate.toLocaleDateString('tr-TR')}</span>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end">
-                                                    <span className="text-base md:text-lg font-black text-slate-900 tabular-nums">
-                                                        {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
+                                                    <span className={cn("text-base md:text-lg font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600" : "text-slate-900")}>
+                                                        {item.type === 'COLLECTION' ? '+' : ''}{item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
                                                     {item.currency === 'USD' && (
                                                         <span className="text-[10px] font-bold text-slate-400 tabular-nums">
                                                             ~₺{Math.round(Number(item.amount) * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
                                                         </span>
+                                                    )}
+                                                    {item.type === 'COLLECTION' && (
+                                                        <div className="flex gap-1 mt-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-blue-500 rounded-lg hover:bg-blue-50"
+                                                                onClick={() => {
+                                                                    setEditingTransaction(item);
+                                                                    setEditTxAmount(item.amount.toString());
+                                                                    setEditTxNotes(item.description || "");
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-rose-500 rounded-lg hover:bg-rose-50"
+                                                                onClick={() => handleDeleteTransaction(item.id)}
+                                                            >
+                                                                <RotateCcw className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -1839,7 +1868,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             </AlertDialog>
 
             {/* --- Payment Summary Confirmation Dialog --- */}
-            <AlertDialog open={!!paymentSummary} onOpenChange={(o) => { if (!o) setPaymentSummary(null); }}>
+            <AlertDialog open={!!paymentSummary} onOpenChange={(o) => {
+                if (!o) {
+                    setPaymentSummary(null);
+                    router.refresh();
+                }
+            }}>
                 <AlertDialogContent className="max-w-[500px] bg-white rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
                     <div className="p-8 bg-emerald-500 text-white flex flex-col items-center gap-4 text-center">
                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -1900,13 +1934,17 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     }
                                 }
                                 setPaymentSummary(null);
+                                router.refresh();
                             }}
                             className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs gap-2"
                         >
                             <Printer className="w-4 h-4" />
                             Fiş Yazdır
                         </Button>
-                        <Button onClick={() => setPaymentSummary(null)} className="flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
+                        <Button onClick={() => {
+                            setPaymentSummary(null);
+                            router.refresh();
+                        }} className="flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -2019,6 +2057,30 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     {(statsModalType === 'COLLECTED' || item.type === 'INCOME') ? "Tahsil Edildi" : "Kalan Borç"}
                                                 </span>
                                             </div>
+                                            {statsModalType === 'COLLECTED' && (
+                                                <div className="flex gap-2 ml-4">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-full"
+                                                        onClick={() => {
+                                                            setEditingTransaction(item);
+                                                            setEditTxAmount(item.amount.toString());
+                                                            setEditTxNotes(item.description || "");
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-100 rounded-full"
+                                                        onClick={() => handleDeleteTransaction(item.id)}
+                                                    >
+                                                        <RotateCcw className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -2031,21 +2093,23 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             Kapat
                         </Button>
                     </div>
-                </AlertDialogContent>
-            </AlertDialog>
+                </AlertDialogContent >
+            </AlertDialog >
 
             {/* Borç Fişi Modal */}
-            {receiptCustomer && (
-                <DebtReceiptModal
-                    open={!!receiptCustomer}
-                    onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); }}
-                    customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId }}
-                    debts={receiptDebts}
-                    shopName={shop?.name}
-                    shopPhone={shop?.phone}
-                    rates={rates}
-                />
-            )}
+            {
+                receiptCustomer && (
+                    <DebtReceiptModal
+                        open={!!receiptCustomer}
+                        onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); }}
+                        customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId }}
+                        debts={receiptDebts}
+                        shopName={shop?.name}
+                        shopPhone={shop?.phone}
+                        rates={rates}
+                    />
+                )
+            }
         </div >
     );
 }

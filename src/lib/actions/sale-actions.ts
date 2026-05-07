@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { PaymentMethod, TransactionType } from "@prisma/client";
 import { addShortageItem } from "./shortage-actions";
 import { getOrCreateAccountByType } from "./finance-actions";
@@ -182,6 +182,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
     revalidatePath("/stok");
     revalidatePath("/satis/kasa");
     revalidatePath("/veresiye");
+    revalidateTag(`dashboard-${shopId}`);
     if (data.customerId) {
       revalidatePath(`/musteriler/${data.customerId}`);
     }

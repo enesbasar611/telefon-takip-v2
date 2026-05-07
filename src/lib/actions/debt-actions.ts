@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getDebts() {
@@ -117,6 +117,7 @@ export async function createDebt(data: {
     revalidatePath("/stok");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, debt: serializePrisma(debt) };
   } catch (error) {
     console.error("createDebt error:", error);
@@ -131,6 +132,7 @@ export async function deleteDebt(debtId: string) {
       where: { id: debtId, shopId }
     });
     revalidatePath("/veresiye");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("deleteDebt error:", error);
@@ -249,6 +251,7 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
     revalidatePath("/satis/kasa");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("collectDebtPayment error:", error);
@@ -416,6 +419,7 @@ export async function collectGlobalCustomerPayment(
     revalidatePath("/satis/kasa");
     revalidatePath("/musteriler");
     revalidatePath(`/musteriler/${customerId}`);
+    revalidateTag(`dashboard-${shopId}`);
 
     return {
       success: true,

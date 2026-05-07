@@ -390,11 +390,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
           setSelectedCustomerId(undefined);
           toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
 
-          // 4. Notifications
+          // 5. Notifications
           window.dispatchEvent(new CustomEvent("notification-update"));
-
-          // 5. Navigate to persistent URL: This causes a refresh while keeping the modal safe via server-side props
-          router.push(`/satis?saleId=${result.data.id}`);
         } else {
           toast({ title: "Hata", description: result.error, variant: "destructive" });
         }

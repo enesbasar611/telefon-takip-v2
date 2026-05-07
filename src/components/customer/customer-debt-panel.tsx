@@ -293,7 +293,7 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                                setReceiptDebts(unpaidDebts);
+                                setReceiptDebts(debts);
                                 setReceiptVisible(true);
                             }}
                             disabled={unpaidDebts.length === 0}
