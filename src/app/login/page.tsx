@@ -164,6 +164,11 @@ export default function LoginPage() {
                     <p className="text-center mt-8 text-[11px] text-slate-600 font-medium uppercase tracking-widest px-4 leading-relaxed">
                         Bu sistem sadece yetkili personel kullanımı içindir. <br /> Tüm işlemler kayıt altına alınmaktadır.
                     </p>
+
+                    <div className="flex justify-center gap-6 mt-6">
+                        <a href="/privacy-policy" className="text-[10px] text-slate-700 hover:text-slate-400 transition-colors uppercase tracking-widest font-medium underline underline-offset-4">Gizlilik Politikası</a>
+                        <a href="/terms" className="text-[10px] text-slate-700 hover:text-slate-400 transition-colors uppercase tracking-widest font-medium underline underline-offset-4">Kullanım Koşulları</a>
+                    </div>
                 </motion.div>
             </div>
         </div>
