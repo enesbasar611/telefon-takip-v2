@@ -13,7 +13,8 @@ interface CourierPageProps {
 export default async function CourierPage({ searchParams }: CourierPageProps) {
     const session = await getSession();
 
-    if (!session || (session.user.role !== "COURIER" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    const allowedRoles = ["COURIER", "ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"];
+    if (!session || (!allowedRoles.includes(session.user.role))) {
         redirect("/");
     }
 
