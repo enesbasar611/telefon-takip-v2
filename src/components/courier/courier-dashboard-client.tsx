@@ -485,7 +485,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                         </div>
                                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
                                             {couriers.map(c => {
-                                                const courierItems = allShortages.filter((st: any) => st.assignedToId === c.id);
+                                                const courierItems = items.filter((st: any) => st.assignedToId === c.id);
                                                 const totalToday = courierItems.length;
                                                 const resolvedToday = courierItems.filter((st: any) => st.isResolved).length;
                                                 const remainingCount = courierItems.filter((st: any) => !st.isResolved).length;

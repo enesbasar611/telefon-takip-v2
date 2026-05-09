@@ -27,7 +27,7 @@ export async function getGlobalShortageList(dateStr?: string) {
   const shopId = await getShopId(false);
   if (!shopId) return [];
 
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
 
   let dateFilter = {};
   if (dateStr) {
@@ -38,10 +38,9 @@ export async function getGlobalShortageList(dateStr?: string) {
     dateFilter = { createdAt: { gte: startOfDay, lte: endOfDay } };
   }
 
-  // Only ADMIN/SUPER_ADMIN sees everything. Others are shop-specific.
-  const baseWhere = isAdmin
-    ? { assignedToId: null, isResolved: false, ...dateFilter }
-    : { shopId, assignedToId: null, isResolved: false, ...dateFilter };
+  // Only SUPER_ADMIN without shopId sees everything across DB (though getShopId usually throws or returns a dummy for them)
+  // For safety, ALWAYS bind to shopId.
+  const baseWhere = { shopId, assignedToId: null, isResolved: false, ...dateFilter };
 
   // 1. Get manual shortage entries
   const manualItems = await prisma.shortageItem.findMany({
@@ -56,9 +55,7 @@ export async function getGlobalShortageList(dateStr?: string) {
 
   // 2. Get low stock products
   const lowStockProducts = await prisma.product.findMany({
-    where: isAdmin
-      ? { stock: { lte: prisma.product.fields.criticalStock } }
-      : { shopId, stock: { lte: prisma.product.fields.criticalStock } },
+    where: { shopId, stock: { lte: prisma.product.fields.criticalStock } },
     include: {
       shortageItems: {
         where: { isResolved: false }
@@ -163,7 +160,7 @@ export async function getCourierTasks(dateStr?: string) {
     const shopId = await getShopId();
     if (!shopId) return { success: true, items: [] };
     const userId = await getUserId();
-    const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
 
     // Logic:
     // ADMIN/SUPER_ADMIN: Global visibility of all assigned tasks.
@@ -178,7 +175,7 @@ export async function getCourierTasks(dateStr?: string) {
     }
 
     const whereClause: any = isAdmin
-      ? { assignedToId: { not: null }, ...dateFilter }
+      ? { shopId, assignedToId: { not: null }, ...dateFilter }
       : { shopId, assignedToId: userId, ...dateFilter };
 
     const items = await prisma.shortageItem.findMany({
