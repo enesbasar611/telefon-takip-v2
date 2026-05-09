@@ -44,10 +44,22 @@ export default withAuth(
             }
 
             // 4. ROLE & PERMISSION PROTECTION
+            const isCourierOnly = role === "COURIER";
+
+            // Strictly restrict Couriers to /kurye only
+            if (isCourierOnly && !pathname.startsWith("/kurye") && pathname !== "/") {
+                return NextResponse.redirect(new URL("/kurye", req.url));
+            }
+
             const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN" || role === "SHOP_MANAGER";
             const isManager = role === "MANAGER" || isAdmin;
 
             if ((pathname.startsWith("/personel") || pathname.startsWith("/ayarlar")) && !isManager) {
+                return NextResponse.redirect(new URL("/", req.url));
+            }
+
+            const canViewCourier = role === "COURIER" || isAdmin;
+            if (pathname.startsWith("/kurye") && !canViewCourier) {
                 return NextResponse.redirect(new URL("/", req.url));
             }
 

@@ -50,6 +50,11 @@ const getMenuItems = (shop: any, userRole?: string) => {
       label: "Anasayfa",
       href: "/dashboard",
     },
+    ...(userRole === "COURIER" || userRole === "ADMIN" || userRole === "SUPER_ADMIN" || userRole === "SHOP_MANAGER" ? [{
+      icon: Truck,
+      label: "Kurye Görevleri",
+      href: "/kurye",
+    }] : []),
     {
       icon: Calendar,
       label: "Randevu Merkezi",
@@ -418,7 +423,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                     session?.user?.role === 'TECHNICIAN' ? 'Teknisyen' :
                       session?.user?.role === 'CASHIER' ? 'Kasiyer' :
                         session?.user?.role === 'STAFF' ? 'Personel' :
-                          'Yükleniyor...'}
+                          session?.user?.role === 'COURIER' ? 'Kurye' :
+                            'Yükleniyor...'}
               </span>
               {session?.user?.role === 'SUPER_ADMIN' && session?.user?.shopId && (
                 <span className="text-[9px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter w-fit">

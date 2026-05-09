@@ -35,9 +35,9 @@ export function PageHeader({
                     <h1 className="font-semibold text-2xl md:text-4xl lg:text-6xl text-slate-900 dark:text-white tracking-tighter leading-none">
                         {title}
                     </h1>
-                    <p className="text-xs md:text-base text-slate-500 dark:text-muted-foreground/80 max-w-2xl leading-relaxed font-medium">
+                    <div className="text-xs md:text-base text-slate-500 dark:text-muted-foreground/80 max-w-2xl leading-relaxed font-medium">
                         {description}
-                    </p>
+                    </div>
                 </div>
             </div>
             {actions && <div className="flex items-center gap-2 md:gap-3 self-end md:self-auto">{actions}</div>}

@@ -7,7 +7,17 @@ import { getDeadStockCount } from "./product-actions";
 import { getOrCreateKasaAccount } from "./finance-actions";
 import { getExchangeRates } from "./currency-actions";
 
-export const getDashboardStats = async (shopId: string) => {
+export const getDashboardStats = async (shopId: string | null) => {
+  if (!shopId) {
+    return serializePrisma({
+      todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
+      kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
+      collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
+      criticalStock: "0", totalDebts: "₺0", cashBalance: "₺0",
+      pendingProcurementCount: "0", deadStockCount: "0",
+      totalDevices: "0",
+    });
+  }
   return unstable_cache(
     async () => {
       try {
@@ -118,7 +128,8 @@ export const getDashboardStats = async (shopId: string) => {
   )();
 };
 
-export const getRecentSales = async (shopId: string, limit: number = 5) => {
+export const getRecentSales = async (shopId: string | null, limit: number = 5) => {
+  if (!shopId) return [];
   try {
     const tickets = await prisma.serviceTicket.findMany({
       where: { shopId },
@@ -136,7 +147,8 @@ export const getRecentSales = async (shopId: string, limit: number = 5) => {
   }
 }
 
-export async function getRecentTransactions(shopId: string) {
+export async function getRecentTransactions(shopId: string | null) {
+  if (!shopId) return [];
   try {
     const transactions = await prisma.transaction.findMany({
       where: { shopId },
@@ -158,7 +170,8 @@ export async function getRecentTransactions(shopId: string) {
   }
 }
 
-export const getTopProducts = async (shopId: string, limit: number = 5) => {
+export const getTopProducts = async (shopId: string | null, limit: number = 5) => {
+  if (!shopId) return [];
   try {
     const products = await prisma.product.findMany({
       where: { shopId },
@@ -187,7 +200,7 @@ export const getTopProducts = async (shopId: string, limit: number = 5) => {
   }
 }
 
-export async function getDashboardInit(shopId: string) {
+export async function getDashboardInit(shopId: string | null) {
   const [stats, rates] = await Promise.all([
     getDashboardStats(shopId),
     getExchangeRates(shopId),

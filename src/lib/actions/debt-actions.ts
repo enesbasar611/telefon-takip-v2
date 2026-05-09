@@ -6,12 +6,12 @@ import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getDebts() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const debts = await prisma.debt.findMany({
       where: { shopId },
       include: {
         customer: true,
-        // @ts-expect-error - sale relation exists in schema but client is out of sync
         sale: {
           include: {
             items: {
@@ -441,7 +441,6 @@ export async function getCustomerStatement(customerId: string) {
     const debts = await prisma.debt.findMany({
       where: { customerId, shopId },
       include: {
-        // @ts-expect-error - sale relation exists in schema but client is out of sync
         sale: {
           include: {
             items: {
@@ -458,16 +457,32 @@ export async function getCustomerStatement(customerId: string) {
       where: { customerId, shopId },
       orderBy: { createdAt: "desc" }
     });
+
+    // Also fetch all sales with their items for this customer
+    const sales = await prisma.sale.findMany({
+      where: { customerId, shopId },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
     return {
       success: true,
       debts: serializePrisma(debts),
-      transactions: serializePrisma(transactions)
+      transactions: serializePrisma(transactions),
+      sales: serializePrisma(sales)
     };
   } catch (error) {
     console.error("getCustomerStatement error:", error);
     return { success: false, error: "Ekstre verileri alınamadı." };
   }
 }
+
 
 export async function getDebtStatsDetails(filter: {
   type: 'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED';

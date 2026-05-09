@@ -13,7 +13,8 @@ import {
   Package,
   Minus,
   Plus,
-  UserPlus2
+  UserPlus2,
+  Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,16 +23,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { approveShortageItem } from "@/lib/actions/shortage-actions";
+import {
+  approveShortageItem,
+  getCouriers,
+  assignShortageToCourier
+} from "@/lib/actions/shortage-actions";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
+import { getCustomersPaginated } from "@/lib/actions/customer-actions";
 import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, getInitials, getDeterministicColor } from "@/lib/utils";
 import { StockReceiptModal } from "./stock-receipt-modal";
+import { Badge } from "@/components/ui/badge";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { useSupplierOrders } from "@/lib/context/supplier-order-context";
+import { useSupplierOrders } from "@/lib/context/supplier-order-context"; import {
+  User,
+  UserPlus,
+  Store,
+  Phone,
+  ChevronDown as ChevronDownIcon
+} from "lucide-react";
 import { useShortage } from "@/lib/context/shortage-context";
 
 type Tab = "main" | string; // "main" = Ana Eksik Liste, supplierId = supplier tab
@@ -55,10 +68,23 @@ export function ShortageList() {
   const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [couriers, setCouriers] = useState<any[]>([]);
+
+  // Requester States
+  const [requesterType, setRequesterType] = useState<"SHOP" | "CUSTOMER" | "NEW">("SHOP");
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [newRequesterName, setNewRequesterName] = useState("");
+  const [newRequesterPhone, setNewRequesterPhone] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerResults, setCustomerResults] = useState<any[]>([]);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [showCustomerResults, setShowCustomerResults] = useState(false);
+  const customerSearchRef = useRef<HTMLDivElement>(null);
 
   const fetchSuppliers = useCallback(async () => {
-    const data = await getSuppliers();
-    setSuppliers(data);
+    const [sData, cData] = await Promise.all([getSuppliers(), getCouriers()]);
+    setSuppliers(sData);
+    setCouriers(cData);
   }, []);
 
   useEffect(() => {
@@ -67,6 +93,9 @@ export function ShortageList() {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
+      }
+      if (customerSearchRef.current && !customerSearchRef.current.contains(event.target as Node)) {
+        setShowCustomerResults(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -79,6 +108,22 @@ export function ShortageList() {
       fetchSuppliers();
     }
   }, [activeTab, fetchSuppliers]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (customerSearch.length >= 2) {
+        setIsSearchingCustomer(true);
+        const res = await getCustomersPaginated({ search: customerSearch, limit: 5 });
+        setCustomerResults(res.data);
+        setIsSearchingCustomer(false);
+        setShowCustomerResults(true);
+      } else {
+        setCustomerResults([]);
+        setShowCustomerResults(false);
+      }
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [customerSearch]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -115,7 +160,13 @@ export function ShortageList() {
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      await addShortage({ name: newName, quantity: 1 });
+      await addShortage({
+        name: newName,
+        quantity: 1,
+        requesterName: requesterType === "NEW" ? newRequesterName : (requesterType === "SHOP" ? "Dükkan" : selectedCustomer?.name),
+        requesterPhone: requesterType === "NEW" ? newRequesterPhone : selectedCustomer?.phone,
+        customerId: requesterType === "CUSTOMER" ? selectedCustomer?.id : undefined
+      });
       setNewName("");
       setShowResults(false);
     } finally {
@@ -126,7 +177,14 @@ export function ShortageList() {
   const handleSelectProduct = async (product: any) => {
     setAdding(true);
     try {
-      await addShortage({ productId: product.id, name: product.name, quantity: 1 });
+      await addShortage({
+        productId: product.id,
+        name: product.name,
+        quantity: 1,
+        requesterName: requesterType === "NEW" ? newRequesterName : (requesterType === "SHOP" ? "Dükkan" : selectedCustomer?.name),
+        requesterPhone: requesterType === "NEW" ? newRequesterPhone : selectedCustomer?.phone,
+        customerId: requesterType === "CUSTOMER" ? selectedCustomer?.id : undefined
+      });
       setNewName("");
       setShowResults(false);
     } finally {
@@ -138,6 +196,16 @@ export function ShortageList() {
     const val = parseInt(qty);
     if (isNaN(val)) return;
     await updateShortageQty(id, val);
+  };
+
+  const handleAssignToCourier = async (shortageId: string, courierId: string | null) => {
+    const res = await assignShortageToCourier(shortageId, courierId);
+    if (res.success) {
+      toast.success(courierId ? "Kuryeye atandı." : "Atama kaldırıldı.");
+      // The context will handle the refresh due to revalidatePath
+    } else {
+      toast.error(res.error);
+    }
   };
 
   const handleSendToSupplier = async (supplier: any, item: any) => {
@@ -258,9 +326,65 @@ export function ShortageList() {
           {/* Tab: Main Shortage List */}
           {activeTab === "main" && (
             <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-xs  text-blue-500">Eksikler Listesi</h3>
-                <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full ">{items.length} ÜRÜN</span>
+              <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-3 rounded-xl mb-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <UserPlus className="h-3 w-3 text-blue-400" /> Sipariş Veren
+                  </p>
+                  <div className="flex bg-card/60 p-1 rounded-lg border border-border/50">
+                    <button onClick={() => setRequesterType("SHOP")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "SHOP" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>DÜKKAN</button>
+                    <button onClick={() => setRequesterType("CUSTOMER")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "CUSTOMER" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>KAYITLI</button>
+                    <button onClick={() => setRequesterType("NEW")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "NEW" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>YENİ</button>
+                  </div>
+                </div>
+
+                {requesterType === "CUSTOMER" && (
+                  <div className="relative" ref={customerSearchRef}>
+                    {selectedCustomer ? (
+                      <div className="flex items-center justify-between p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-blue-400">{selectedCustomer.name}</span>
+                          <span className="text-[8px] text-muted-foreground">{selectedCustomer.phone || "Telefon Yok"}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)} className="h-6 w-6 hover:bg-rose-500 hover:text-black">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          placeholder="Müşteri ara..."
+                          value={customerSearch}
+                          onChange={(e) => setCustomerSearch(e.target.value)}
+                          onFocus={() => customerSearch.length >= 2 && setShowCustomerResults(true)}
+                          className="h-8 text-[10px] bg-card border-border/50 pl-8"
+                        />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                        {isSearchingCustomer && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />}
+                      </div>
+                    )}
+                    {showCustomerResults && customerResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-40 overflow-y-auto">
+                        {customerResults.map(c => (
+                          <button key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerResults(false); setCustomerSearch(""); }} className="w-full flex items-center justify-between p-2 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-bold text-gray-200">{c.name}</span>
+                              <span className="text-[9px] text-gray-500">{c.phone}</span>
+                            </div>
+                            {c.debts?.length > 0 && <Badge className="bg-rose-500/10 text-rose-500 text-[8px] scale-75">BORÇLU</Badge>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {requesterType === "NEW" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="İsim..." value={newRequesterName} onChange={(e) => setNewRequesterName(e.target.value)} className="h-8 text-[10px] bg-card border-border/50" />
+                    <Input placeholder="Telefon..." value={newRequesterPhone} onChange={(e) => setNewRequesterPhone(e.target.value)} className="h-8 text-[10px] bg-card border-border/50" />
+                  </div>
+                )}
               </div>
 
               <div className="relative" ref={searchRef}>
@@ -309,71 +433,152 @@ export function ShortageList() {
                 )}
               </div>
 
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
                 {loading ? (
                   <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
                 ) : items.length === 0 ? (
                   <p className="text-[10px] text-center text-gray-600 py-4">Şu an eksik ürün bulunmuyor.</p>
-                ) : (
-                  items.map((item) => (
-                    <div key={item.id} className="group relative flex flex-col p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all gap-3 shadow-sm">
-                      {/* Top Action Buttons */}
-                      <div className="absolute top-2 right-2 flex items-center gap-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black rounded-lg transition-all" title="Tedarikçiye Gönder">
-                              <UserPlus2 className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent side="left" align="start" className="w-48 p-1 bg-card border-border shadow-2xl">
-                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                              <p className="text-[8px]  text-muted-foreground/80 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
-                              {suppliers.length === 0 ? (
-                                <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
-                              ) : (
-                                suppliers.map(s => (
-                                  <button
-                                    key={s.id}
-                                    onClick={() => handleSendToSupplier(s, item)}
-                                    className="w-full text-left px-2 py-1.5 text-[10px]  text-gray-300 hover:bg-blue-500 hover:text-black rounded transition-colors"
-                                  >
-                                    {s.name}
-                                  </button>
-                                ))
-                              )}
+                ) : (() => {
+                  const grouped = items.reduce((acc: any, item: any) => {
+                    const key = item.customerId || item.requesterName || "Dükkan";
+                    if (!acc[key]) acc[key] = { label: item.customer?.name || item.requesterName || "Dükkan", phone: item.customer?.phone || item.requesterPhone, items: [] };
+                    acc[key].items.push(item);
+                    return acc;
+                  }, {});
+
+                  return Object.entries(grouped).map(([key, group]: any) => (
+                    <div key={key} className="space-y-3 pb-2 border-b border-white/[0.03] last:border-0">
+                      <div className="flex items-center gap-2 px-1 sticky top-0 bg-card z-10 py-1">
+                        <div className={cn(
+                          "h-6 w-6 rounded-full flex items-center justify-center border text-white font-black text-[8px] shadow-sm uppercase shrink-0",
+                          getDeterministicColor(group.label)
+                        )}>
+                          {getInitials(group.label)}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">{group.label}</span>
+                          {group.phone && <span className="text-[8px] text-muted-foreground">{group.phone}</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 ml-2">
+                        {group.items.map((item: any) => (
+                          <div key={item.id} className="group relative flex flex-col p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all gap-3 shadow-sm">
+                            {/* Top Action Buttons */}
+                            <div className="absolute top-2 right-2 flex items-center gap-1">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black rounded-lg transition-all" title="Tedarikçiye Gönder">
+                                    <UserPlus2 className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent side="left" align="start" className="w-48 p-1 bg-card border-border shadow-2xl">
+                                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                    <p className="text-[8px]  text-muted-foreground/80 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
+                                    {suppliers.length === 0 ? (
+                                      <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
+                                    ) : (
+                                      suppliers.map(s => (
+                                        <button
+                                          key={s.id}
+                                          onClick={() => handleSendToSupplier(s, item)}
+                                          className="w-full text-left px-2 py-1.5 text-[10px]  text-gray-300 hover:bg-blue-500 hover:text-black rounded transition-colors"
+                                        >
+                                          {s.name}
+                                        </button>
+                                      ))
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+
+                              <div className="flex items-center gap-1 transition-opacity">
+                                <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black rounded-lg transition-all" title="Stok Tamamla">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                                <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-black rounded-lg transition-all" title="Kaldır">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
-                          </PopoverContent>
-                        </Popover>
 
-                        <div className="flex items-center gap-1 transition-opacity">
-                          <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black rounded-lg transition-all" title="Stok Tamamla">
-                            <CheckCircle2 className="h-4 w-4" />
-                          </Button>
-                          <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-black rounded-lg transition-all" title="Kaldır">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
+                            <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
+                              <span className="text-[10px] font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
+                            </div>
 
-                      <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
-                        <span className="text-[10px] font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
-                      </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[8px]  text-muted-foreground/80 uppercase">Alınacak</span>
+                                <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-card border-border/50 text-[10px] px-2  text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
+                              </div>
+                              <div className="flex flex-col gap-1 items-end">
+                                <span className="text-[8px]  text-muted-foreground/80 uppercase">Mevcut</span>
+                                <div className="h-8 flex items-center justify-end px-3 bg-card/50 rounded-lg border border-border/50 w-full">
+                                  <span className={cn("text-[11px] ", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
+                                </div>
+                              </div>
+                            </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[8px]  text-muted-foreground/80 uppercase">Alınacak</span>
-                          <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-card border-border/50 text-[10px] px-2  text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
-                        </div>
-                        <div className="flex flex-col gap-1 items-end">
-                          <span className="text-[8px]  text-muted-foreground/80 uppercase">Mevcut</span>
-                          <div className="h-8 flex items-center justify-end px-3 bg-card/50 rounded-lg border border-border/50 w-full">
-                            <span className={cn("text-[11px] ", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
+                            {/* Courier Slot */}
+                            <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/[0.03]">
+                              <div className="flex items-center gap-2">
+                                <Truck className={cn("h-3.5 w-3.5", item.assignedToId ? "text-orange-500" : "text-muted-foreground/30")} />
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
+                                  {item.assignedTo ? `${item.assignedTo.name} ${item.assignedTo.surname}` : "ATANMADI"}
+                                </span>
+                                {item.isTaken && (
+                                  <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-1.5 py-0 text-[8px] font-black scale-90">ALINDI</Badge>
+                                )}
+                              </div>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[8px] uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 rounded-md">
+                                    {item.assignedToId ? "DEĞİŞTİR" : "ATA"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" align="end" className="w-48 p-1 bg-card border-border shadow-2xl">
+                                  <div className="space-y-1">
+                                    <p className="text-[8px] text-muted-foreground uppercase px-2 py-1 tracking-tighter">Kurye Seç</p>
+                                    {couriers.length === 0 ? (
+                                      <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Kurye bulunamadı</p>
+                                    ) : (
+                                      <>
+                                        {couriers.map(c => (
+                                          <button
+                                            key={c.id}
+                                            onClick={() => handleAssignToCourier(item.id, c.id)}
+                                            className={cn(
+                                              "w-full text-left px-2 py-1.5 text-[10px] rounded transition-colors flex items-center justify-between",
+                                              item.assignedToId === c.id ? "bg-orange-500/10 text-orange-400" : "text-gray-300 hover:bg-blue-500 hover:text-black"
+                                            )}
+                                          >
+                                            {c.name} {c.surname}
+                                            {item.assignedToId === c.id && <CheckCircle2 className="h-3 w-3" />}
+                                          </button>
+                                        ))}
+                                        {item.assignedToId && (
+                                          <>
+                                            <Separator className="my-1 bg-white/5" />
+                                            <button
+                                              onClick={() => handleAssignToCourier(item.id, null)}
+                                              className="w-full text-left px-2 py-1.5 text-[10px] text-rose-500 hover:bg-rose-500 hover:text-white rounded transition-colors"
+                                            >
+                                              Atamayı Kaldır
+                                            </button>
+                                          </>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
 
               {items.length > 0 && (

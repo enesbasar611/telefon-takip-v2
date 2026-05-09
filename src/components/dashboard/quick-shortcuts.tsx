@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, ShoppingCart, Package, Wrench, Smartphone, Banknote, Users, Settings, LucideIcon, ExternalLink } from "lucide-react";
+import { Plus, X, ShoppingCart, Package, Wrench, Smartphone, Banknote, Users, Settings, LucideIcon, ExternalLink, Archive, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import Link from "next/link";
@@ -43,6 +43,12 @@ const SHORTCUT_GROUPS = [
             { label: "Müşteriler", path: "/musteriler", icon: Users, iconName: "Users" },
             { label: "Sistem Ayarları", path: "/ayarlar", icon: Settings, iconName: "Settings" },
         ]
+    },
+    {
+        name: "Veri & Yedek",
+        items: [
+            { label: "Sistem Yedeği", path: "/api/export?format=json", icon: Archive, iconName: "Archive" },
+        ]
     }
 ];
 
@@ -56,7 +62,9 @@ const iconMap: Record<string, LucideIcon> = {
     Banknote,
     Users,
     Settings,
-    Plus
+    Plus,
+    Archive,
+    Database
 };
 
 export function QuickShortcuts() {
@@ -106,27 +114,37 @@ export function QuickShortcuts() {
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
             {shortcuts.map((shortcut) => {
                 const Icon = iconMap[shortcut.iconName] || ExternalLink;
+                const isApi = shortcut.path.startsWith("/api/");
+                const content = (
+                    <div className="flex flex-col items-center justify-center p-3 h-20 sm:h-24 w-28 sm:w-32 bg-card/40 hover:bg-card/80 border border-border/40 hover:border-primary/40 rounded-2xl transition-all hover:-translate-y-1 shadow-sm backdrop-blur-md overflow-hidden">
+                        <div className="relative">
+                            <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary mb-2" />
+                            {FLAT_AVAILABLE.find(f => f.path === shortcut.path)?.isFullscreen && (
+                                <div className="absolute -top-1 -right-2 bg-primary/20 rounded-full p-0.5 border border-primary/30">
+                                    <ExternalLink className="w-2 h-2 text-primary" />
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-center leading-tight text-neutral-600 dark:text-neutral-400">
+                            {shortcut.label.toUpperCase()}
+                        </span>
+                        <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ExternalLink className="w-3 h-3 text-primary/30" />
+                        </div>
+                    </div>
+                );
+
                 return (
                     <div key={shortcut.id} className="relative group">
-                        <Link
-                            href={shortcut.path}
-                            className="flex flex-col items-center justify-center p-3 h-20 sm:h-24 w-28 sm:w-32 bg-card/40 hover:bg-card/80 border border-border/40 hover:border-primary/40 rounded-2xl transition-all hover:-translate-y-1 shadow-sm backdrop-blur-md overflow-hidden"
-                        >
-                            <div className="relative">
-                                <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary mb-2" />
-                                {FLAT_AVAILABLE.find(f => f.path === shortcut.path)?.isFullscreen && (
-                                    <div className="absolute -top-1 -right-2 bg-primary/20 rounded-full p-0.5 border border-primary/30">
-                                        <ExternalLink className="w-2 h-2 text-primary" />
-                                    </div>
-                                )}
-                            </div>
-                            <span className="text-[9px] sm:text-[10px] font-bold text-center leading-tight text-neutral-600 dark:text-neutral-400">
-                                {shortcut.label.toUpperCase()}
-                            </span>
-                            <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ExternalLink className="w-3 h-3 text-primary/30" />
-                            </div>
-                        </Link>
+                        {isApi ? (
+                            <a href={shortcut.path} download>
+                                {content}
+                            </a>
+                        ) : (
+                            <Link href={shortcut.path}>
+                                {content}
+                            </Link>
+                        )}
                         <button
                             onClick={() => removeShortcut(shortcut.id)}
                             className="absolute -top-1 -right-1 h-5 w-5 bg-rose-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"

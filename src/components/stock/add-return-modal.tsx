@@ -29,7 +29,8 @@ import {
     User,
     Store,
     RefreshCcw,
-    X
+    X,
+    CheckCircle2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -37,11 +38,29 @@ import { searchProducts } from "@/lib/actions/product-actions";
 import { getCustomersPaginated } from "@/lib/actions/customer-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { createMultipleReturnTickets } from "@/lib/actions/return-actions";
+import { getCustomerStatement } from "@/lib/actions/debt-actions";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface InitialReturnItem {
+    productId: string;
+    name: string;
+    quantity: number;
+    refundAmount: number;
+    debtId?: string;
+    saleId?: string;
+}
 
 interface AddReturnModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess?: () => void;
+    initialData?: {
+        sourceType?: "CUSTOMER" | "SUPPLIER";
+        sourceId?: string;
+        sourceName?: string;
+        items?: InitialReturnItem[];
+    };
 }
 
 interface ReturnItem {
@@ -55,10 +74,15 @@ interface ReturnItem {
     notes?: string;
 }
 
-export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModalProps) {
+export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
     const [loading, setLoading] = useState(false);
-    const [sourceType, setSourceType] = useState<"CUSTOMER" | "SUPPLIER" | "DEALER">("CUSTOMER");
-    const [selectedSourceId, setSelectedSourceId] = useState<string>("");
+    const [sourceType, setSourceType] = useState<"CUSTOMER" | "SUPPLIER">(initialData?.sourceType || "CUSTOMER");
+    const [selectedSourceId, setSelectedSourceId] = useState<string>(initialData?.sourceId || "");
+    const [sourceSearch, setSourceSearch] = useState(initialData?.sourceName || "");
+    const [sourceOpen, setSourceOpen] = useState(false);
+
+    const [customerSales, setCustomerSales] = useState<any[]>([]);
+    const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
 
     // Search Results
     const [items, setItems] = useState<ReturnItem[]>([]);
@@ -69,15 +93,46 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
     const [sources, setSources] = useState<any[]>([]);
     const [isLoadingSources, setIsLoadingSources] = useState(false);
 
+    // Sync initialData when modal opens
+    useEffect(() => {
+        if (open && initialData) {
+            if (initialData.sourceType) setSourceType(initialData.sourceType);
+            if (initialData.sourceId) setSelectedSourceId(initialData.sourceId);
+            if (initialData.sourceName) setSourceSearch(initialData.sourceName);
+            if (initialData.items && initialData.items.length > 0) {
+                setItems(initialData.items.map(i => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    productId: i.productId,
+                    name: i.name,
+                    quantity: i.quantity,
+                    reason: "GENERAL_RETURN",
+                    refundAmount: i.refundAmount,
+                    restockProduct: true,
+                    ...(i.debtId ? { debtId: i.debtId } : {}),
+                    ...(i.saleId ? { saleId: i.saleId } : {}),
+                } as any)));
+            }
+        }
+        if (!open) {
+            // Reset on close only if no initialData (to avoid stale state on re-open)
+            setItems([]);
+            setSelectedSourceId("");
+            setSourceSearch("");
+            setSourceType("CUSTOMER");
+            setProductSearch("");
+            setProductResults([]);
+        }
+    }, [open]);
+
     // Fetch sources based on sourceType
     useEffect(() => {
         const fetchSources = async () => {
             setIsLoadingSources(true);
             try {
                 if (sourceType === "CUSTOMER") {
-                    const res = await getCustomersPaginated({ limit: 100 });
+                    const res = await getCustomersPaginated({ limit: 200 });
                     setSources(res.data || []);
-                } else if (sourceType === "SUPPLIER" || sourceType === "DEALER") {
+                } else if (sourceType === "SUPPLIER") {
                     const res = await getSuppliers();
                     setSources(res || []);
                 }
@@ -92,6 +147,42 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
             fetchSources();
         }
     }, [sourceType, open]);
+
+
+    useEffect(() => {
+        if (sourceType === "CUSTOMER" && selectedSourceId) {
+            setIsLoadingPurchases(true);
+            getCustomerStatement(selectedSourceId).then(res => {
+                if (res.success) {
+                    const directSales: any[] = (res.sales as any[]) || [];
+                    const debts: any[] = (res.debts as any[]) || [];
+
+                    // Collect sale IDs already in directSales to avoid duplicates
+                    const existingSaleIds = new Set(directSales.map((s: any) => s.id));
+
+                    // Extract debt-linked sales that aren't already in directSales
+                    const debtSales: any[] = debts
+                        .filter((d: any) => d.sale && d.sale.items?.length > 0 && !existingSaleIds.has(d.sale.id))
+                        .map((d: any) => ({
+                            ...d.sale,
+                            // Mark these as veresiye so we can badge them differently
+                            _fromDebt: true,
+                            _debtId: d.id,
+                        }));
+
+                    const merged = [...directSales, ...debtSales]
+                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                    setCustomerSales(merged);
+                } else {
+                    setCustomerSales([]);
+                }
+                setIsLoadingPurchases(false);
+            });
+        } else {
+            setCustomerSales([]);
+        }
+    }, [selectedSourceId, sourceType]);
 
     // Product search
     useEffect(() => {
@@ -142,7 +233,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
     };
 
     const handleSubmit = async () => {
-        if (!selectedSourceId && sourceType !== "DEALER") {
+        if (!selectedSourceId) {
             toast.error("Lütfen bir kaynak (Müşteri/Tedarikçi) seçin.");
             return;
         }
@@ -162,8 +253,11 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
                 reason: item.reason,
                 notes: item.notes,
                 restockProduct: item.restockProduct,
+                // Assign to properly linked debt or sale if passed
+                debtId: (item as any).debtId,
+                saleId: (item as any).saleId,
                 customerId: sourceType === "CUSTOMER" ? selectedSourceId : undefined,
-                supplierId: (sourceType === "SUPPLIER" || sourceType === "DEALER") ? selectedSourceId : undefined,
+                supplierId: sourceType === "SUPPLIER" ? selectedSourceId : undefined,
             }));
 
             const res = await createMultipleReturnTickets(tickets);
@@ -213,8 +307,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
                                         <SelectValue placeholder="Kaynak Türörü Seçin" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-xl border-border/40 shadow-xl">
-                                        <SelectItem value="CUSTOMER">Müşteri İadesi</SelectItem>
-                                        <SelectItem value="DEALER">Bayi İadesi</SelectItem>
+                                        <SelectItem value="CUSTOMER">Müşteri / Bayi İadesi</SelectItem>
                                         <SelectItem value="SUPPLIER">Tedarikçi İadesi</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -223,22 +316,151 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
                             <div className="space-y-3">
                                 <Label className="text-sm font-bold flex items-center gap-2">
                                     <User className="h-4 w-4 text-primary" />
-                                    {sourceType === "CUSTOMER" ? "Müşteri Seçin" : "İlgili Kişi/Kurum"}
+                                    {sourceType === "CUSTOMER" ? "Müşteri / Bayi Seçin" : "Tedarikçi Seçin"}
                                 </Label>
-                                <Select value={selectedSourceId} onValueChange={setSelectedSourceId} disabled={isLoadingSources}>
-                                    <SelectTrigger className="h-12 rounded-xl border-border/40 bg-muted/20">
-                                        <SelectValue placeholder={isLoadingSources ? "Yükleniyor..." : "Seçim Yapın"} />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border/40 shadow-xl max-h-[300px]">
-                                        {sources.map(source => (
-                                            <SelectItem key={source.id} value={source.id}>
-                                                {source.name} {source.phone ? `(${source.phone})` : ""}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={sourceOpen} onOpenChange={setSourceOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={sourceOpen}
+                                            disabled={isLoadingSources}
+                                            className="w-full justify-between h-12 rounded-xl border-border/40 bg-muted/20"
+                                        >
+                                            {selectedSourceId
+                                                ? sources.find((s) => s.id === selectedSourceId)?.name
+                                                : isLoadingSources ? "Yükleniyor..." : "Seçim Yapın veya Arayın..."}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] sm:w-[400px] p-0 rounded-xl shadow-xl border-border/40" side="bottom" align="start">
+                                        <div className="flex items-center border-b border-border/40 px-3">
+                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <Input
+                                                placeholder="Arama yap..."
+                                                value={sourceSearch}
+                                                onChange={(e) => setSourceSearch(e.target.value)}
+                                                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none focus-visible:ring-0"
+                                            />
+                                        </div>
+                                        <ScrollArea className="h-[200px] overflow-y-auto">
+                                            <div className="p-1">
+                                                {sources.filter(s => s.name.toLowerCase().includes(sourceSearch.toLowerCase()) || (s.phone && s.phone.includes(sourceSearch))).length === 0 ? (
+                                                    <div className="py-6 text-center text-sm text-muted-foreground">Kayıt bulunamadı.</div>
+                                                ) : (
+                                                    sources.filter(s => s.name.toLowerCase().includes(sourceSearch.toLowerCase()) || (s.phone && s.phone.includes(sourceSearch))).map((source) => (
+                                                        <div
+                                                            key={source.id}
+                                                            onClick={() => {
+                                                                setSelectedSourceId(source.id);
+                                                                setSourceOpen(false);
+                                                            }}
+                                                            className={cn(
+                                                                "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted/50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                                                                selectedSourceId === source.id && "bg-primary/10 text-primary font-medium"
+                                                            )}
+                                                        >
+                                                            <div className="flex flex-col">
+                                                                <span>{source.name}</span>
+                                                                {source.phone && <span className="text-[10px] text-muted-foreground">{source.phone}</span>}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
+
+                        {/* Customer Purchase History - all items from all sales */}
+                        {sourceType === "CUSTOMER" && selectedSourceId && (
+                            <div className="space-y-3 border border-border/40 rounded-3xl p-4 bg-muted/10">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-sm font-bold flex items-center gap-2 text-primary">
+                                        <Package className="h-4 w-4" />
+                                        Müşterinin Satın Aldığı Ürünler
+                                    </Label>
+                                    {isLoadingPurchases && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                                </div>
+                                {isLoadingPurchases ? (
+                                    <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                                ) : customerSales.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground text-center py-4">Bu müşteriye ait satış kaydı bulunamadı.</p>
+                                ) : (
+                                    <ScrollArea className="h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                                        <div className="flex flex-col gap-2">
+                                            {customerSales.map((sale: any) =>
+                                                sale.items?.map((saleItem: any) => {
+                                                    if (!saleItem.product) return null;
+                                                    const alreadyAdded = items.find(i => i.productId === saleItem.productId && (i as any).saleId === sale.id);
+                                                    const isVeresiye = sale._fromDebt || sale.paymentMethod === 'DEBT';
+                                                    return (
+                                                        <div
+                                                            key={`${sale.id}-${saleItem.productId}`}
+                                                            className={cn(
+                                                                "flex items-center justify-between p-3 rounded-xl border bg-background transition-all gap-3",
+                                                                alreadyAdded
+                                                                    ? "border-primary/40 bg-primary/5"
+                                                                    : "border-border/50 hover:border-primary/30"
+                                                            )}
+                                                        >
+                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                <span className="text-sm font-semibold truncate">{saleItem.product.name}</span>
+                                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                                    <span className="text-[10px] text-muted-foreground">
+                                                                        {new Date(sale.createdAt).toLocaleDateString('tr-TR')} • {sale.saleNumber}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold text-indigo-500">
+                                                                        {saleItem.quantity} Adet × ₺{Number(saleItem.unitPrice).toLocaleString('tr-TR')}
+                                                                    </span>
+                                                                    <span className={cn(
+                                                                        "text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full",
+                                                                        isVeresiye
+                                                                            ? "bg-rose-500/10 text-rose-600"
+                                                                            : "bg-emerald-500/10 text-emerald-600"
+                                                                    )}>
+                                                                        {isVeresiye ? 'Veresiye' : sale.paymentMethod === 'CASH' ? 'Nakit' : sale.paymentMethod === 'CARD' ? 'Kart' : sale.paymentMethod}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                disabled={!!alreadyAdded}
+                                                                variant={alreadyAdded ? "secondary" : "outline"}
+                                                                className={cn(
+                                                                    "rounded-lg h-8 text-xs font-semibold shrink-0 transition-all",
+                                                                    !alreadyAdded && "hover:bg-primary hover:text-white border-primary/30"
+                                                                )}
+                                                                onClick={() => {
+                                                                    setItems(prev => [...prev, {
+                                                                        id: Math.random().toString(36).substr(2, 9),
+                                                                        productId: saleItem.productId,
+                                                                        name: saleItem.product.name,
+                                                                        quantity: saleItem.quantity,
+                                                                        reason: "GENERAL_RETURN",
+                                                                        refundAmount: Number(saleItem.unitPrice) * saleItem.quantity,
+                                                                        restockProduct: true,
+                                                                        saleId: sale.id,
+                                                                        debtId: sale._debtId,
+                                                                    } as any]);
+                                                                }}
+                                                            >
+                                                                {alreadyAdded ? (
+                                                                    <><CheckCircle2 className="w-3 h-3 mr-1" /> Eklendi</>
+                                                                ) : (
+                                                                    <><Plus className="w-3 h-3 mr-1" /> Ekle</>
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </ScrollArea>
+                                )}
+                            </div>
+                        )}
 
                         {/* Product Search */}
                         <div className="space-y-4 relative">
@@ -317,7 +539,9 @@ export function AddReturnModal({ open, onOpenChange, onSuccess }: AddReturnModal
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="space-y-1 flex-1">
                                                     <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
-                                                    <p className="text-[11px] text-muted-foreground uppercase tracking-tight">KİMLİK: {item.productId.slice(-6)}</p>
+                                                    <p className="text-[11px] text-muted-foreground uppercase tracking-tight">
+                                                        KİMLİK: {item.productId ? String(item.productId).slice(-6) : ((item as any).debtId ? `DEBT-${String((item as any).debtId).slice(-6)}` : 'MANUEL')}
+                                                    </p>
                                                 </div>
                                                 <Button
                                                     variant="ghost"

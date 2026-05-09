@@ -48,7 +48,12 @@ export async function syncAllRates(providedShopId?: string) {
 }
 
 // 2. KRİTİK DEĞİŞİKLİK: Anlık veriyi döndür, sync'i arka planda yap (non-blocking)
-export const getExchangeRates = async (shopId: string) => {
+export const getExchangeRates = async (shopId: string | null) => {
+  if (!shopId) {
+    return {
+      usd: 34, eur: 37, ga: 3000, dealerProfit: 200, customerProfit: 700, lastUpdate: new Date()
+    };
+  }
   // DB'den direkt çek (cache bypass - layout'ta sadece bir kez çağrılır)
   let settings = await prisma.setting.findMany({
     where: {

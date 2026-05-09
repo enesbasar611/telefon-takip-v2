@@ -88,7 +88,7 @@ export function ShopTab({ shop }: ShopTabProps) {
                                             <div className="flex flex-col py-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-semibold">{(config as any).name}</span>
-                                                    {key === shop.industry && <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                                                    {key === shop?.industry && <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />}
                                                 </div>
                                                 <span className="text-[10px] text-muted-foreground/70">{(config as any).labels.customerAsset} yönetimi için optimize edildi</span>
                                             </div>

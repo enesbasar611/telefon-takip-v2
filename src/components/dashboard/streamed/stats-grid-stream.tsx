@@ -5,7 +5,7 @@ import { StatsClientWrapper } from "./stats-client-wrapper";
 import { getShopId } from "@/lib/auth";
 
 export async function StatsGridStream({ labels }: { labels?: Record<string, string> }) {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
     const statsDataRaw = await getDashboardStats(shopId);
     const statsData = serializePrisma(statsDataRaw);
 

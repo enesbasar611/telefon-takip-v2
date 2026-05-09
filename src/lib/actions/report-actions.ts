@@ -7,7 +7,8 @@ import { getShopId } from "@/lib/auth";
 
 export async function getSalesReport(startDate?: Date, endDate?: Date) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const start = startDate || startOfMonth(new Date());
     const end = endDate || endOfMonth(new Date());
 
@@ -37,7 +38,8 @@ export async function getSalesReport(startDate?: Date, endDate?: Date) {
 
 export async function getServiceMetrics() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const statuses = await prisma.serviceTicket.groupBy({
       by: ['status'],
       where: { shopId },
@@ -57,7 +59,8 @@ export async function getServiceMetrics() {
 
 export async function getDashboardStats() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { activeServices: 0, dailySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, completedServicesThisMonth: 0, thisMonthSales: 0, prevMonthSales: 0 };
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
     const monthStart = startOfMonth(new Date());

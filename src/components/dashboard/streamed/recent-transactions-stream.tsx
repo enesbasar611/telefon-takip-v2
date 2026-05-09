@@ -11,7 +11,8 @@ import { getRecentTransactions } from "@/lib/actions/dashboard-actions";
 import { getShopId } from "@/lib/auth";
 
 export async function RecentTransactionsStream() {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return null;
     const recentTransactionsRaw = await getRecentTransactions(shopId);
     const recentTransactions = serializePrisma(recentTransactionsRaw);
 
@@ -45,7 +46,7 @@ export async function RecentTransactionsStream() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20">
-                            {recentTransactions.map((t: any) => (
+                            {recentTransactions.slice(0, 6).map((t: any) => (
                                 <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
                                     <td className="px-8 py-5">
                                         <div className="text-foreground text-sm tracking-tight">
@@ -74,6 +75,14 @@ export async function RecentTransactionsStream() {
                         </tbody>
                     </table>
                 </div>
+                {recentTransactions.length > 6 && (
+                    <div className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
+                        <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.25em] group-hover:text-primary transition-colors">
+                            {recentTransactions.length - 6} KAYIT DAHA VAR
+                        </span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/30 rotate-90 mt-1 animate-bounce" />
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

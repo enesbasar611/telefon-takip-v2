@@ -4,7 +4,7 @@ import { serializePrisma } from "@/lib/utils";
 import { getShopId } from "@/lib/auth";
 
 export async function SmartInsightsStream() {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
     const statsDataRaw = await getDashboardStats(shopId);
     const statsData = serializePrisma(statsDataRaw);
 

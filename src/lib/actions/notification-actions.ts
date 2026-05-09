@@ -35,7 +35,8 @@ export async function getSystemNotifications(options?: {
   category?: NotificationCategory;
 }) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { notifications: [], total: 0, hasMore: false, unreadCount: 0 };
     const page = options?.page || 1;
     const limit = options?.limit || 100; // Use a large number if not paginating for navbar
     const skip = (page - 1) * limit;
@@ -46,15 +47,34 @@ export async function getSystemNotifications(options?: {
 
     // Fetch user-specific notification states from DB
     const dbStates = await (prisma as any).notification.findMany({
-      where: { isDeleted: false, shopId }
+      where: { isDeleted: false, shopId },
+      orderBy: { createdAt: "desc" }
     });
 
-    const deletedIds = new Set(await (prisma as any).notification.findMany({
-      where: { isDeleted: true, shopId },
-      select: { id: true }
-    }).then((res: any[]) => res.map((r: any) => r.id)));
+    const deletedIds = new Set();
+    const readIds = new Set();
 
-    const readIds = new Set(dbStates.filter((n: any) => n.isRead).map((n: any) => n.id));
+    dbStates.forEach((n: any) => {
+      if (n.isDeleted) deletedIds.add(n.id);
+      if (n.isRead) readIds.add(n.id);
+
+      // Add existing DB notifications to the list
+      // Only if they aren't "virtual" placeholders (which we'll generate below)
+      if (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.isDeleted) {
+        notifications.push({
+          id: n.id,
+          type: n.type as any,
+          category: (n.category === "SYSTEM" ? "Tümü" : n.category) as any,
+          title: n.title,
+          message: n.message,
+          createdAt: n.createdAt,
+          referenceId: n.referenceId,
+          status: n.status,
+          isRead: n.isRead,
+          metadata: n.metadata
+        });
+      }
+    });
 
     // 1. CRITICAL_STOCK (Stok)
     const criticalProducts = await prisma.product.findMany({

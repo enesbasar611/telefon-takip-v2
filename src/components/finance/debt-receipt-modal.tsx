@@ -48,7 +48,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
         .filter((d: any) => d.currency === 'USD')
         .reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0);
 
-    const portfolioTotal = Math.ceil(totalTRY + (totalUSD * (rates?.usd || 32.5)));
+    const currentUsdRate = Number(rates?.usd) || 34.5;
+    const portfolioTotal = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
 
     // Filter items to display based on showPaid
     // If showPaid is false, only show UNPAID DEBTS (exclude payments and paid debts)
@@ -140,8 +141,15 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                             <TrendingUp className="w-3 h-3 text-rose-500 shrink-0" />
                                                         )}
                                                         <div className={cn("flex flex-col gap-1", !isDebt ? "text-emerald-700 font-black italic" : "text-slate-700")}>
-                                                            <span className="text-slate-900 font-extrabold uppercase truncate max-w-[140px] text-[11px] leading-tight flex items-center gap-2">
-                                                                {item.description || item.notes || (isDebt ? 'Ürün/Hizmet' : 'Tahsilat')}
+                                                            <span className="text-slate-900 font-extrabold uppercase truncate max-w-[240px] text-[11px] leading-tight flex items-center gap-2">
+                                                                {(() => {
+                                                                    const desc = item.description || item.notes || (isDebt ? 'Ürün/Hizmet' : 'Tahsilat');
+                                                                    // Hide internal "Kurye Teslimatı" but keep product name if present
+                                                                    if (desc.includes('(Kurye Teslimatı)')) {
+                                                                        return desc.replace('(Kurye Teslimatı)', '').trim();
+                                                                    }
+                                                                    return desc;
+                                                                })()}
                                                                 {item.isPaid && <span className="text-[7px] bg-emerald-100 text-emerald-600 px-1 rounded-sm">ÖDENDİ</span>}
                                                             </span>
                                                         </div>
@@ -151,7 +159,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                     "border border-slate-200 px-4 py-3 text-sm font-black tabular-nums text-right",
                                                     !isDebt ? "text-emerald-600" : (item.currency === 'USD' ? "text-blue-600" : "text-slate-950")
                                                 )}>
-                                                    {!isDebt ? '-' : (item.currency === 'USD' ? '$' : '₺')}
+                                                    {!isDebt ? '-' : ''}
+                                                    {isDebt && (item.currency === 'USD' ? '$' : '₺')}
                                                     {Number(item.amount).toLocaleString('tr-TR')}
                                                     {!isDebt && <span className="text-[10px] ml-0.5">₺</span>}
                                                 </td>
@@ -179,7 +188,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
                     <div className="pt-2 mt-1 border-t border-black border-dashed flex justify-between items-end">
                         <div className="flex flex-col gap-0.5">
-                            <span className="text-[7px] font-medium opacity-70 uppercase tracking-tighter">KUR: $1 = ₺{rates?.usd || '32.5'}</span>
+                            <span className="text-[7px] font-medium opacity-70 uppercase tracking-tighter">KUR: $1 = ₺{currentUsdRate}</span>
                             <span className="text-sm font-black uppercase">GENEL TOPLAM:</span>
                         </div>
                         <span className="text-xl font-black tabular-nums">₺{portfolioTotal.toLocaleString('tr-TR')}</span>

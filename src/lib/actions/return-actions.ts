@@ -90,7 +90,7 @@ export async function createReturnTicket(data: {
   }
 }
 
-export async function approveReturn(id: string) {
+export async function processReturn(id: string, action: any, extraNotes?: string) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -106,49 +106,76 @@ export async function approveReturn(id: string) {
     await prisma.$transaction(async (tx) => {
       await tx.returnTicket.update({
         where: { id },
-        data: { returnStatus: "APPROVED" },
+        data: {
+          returnStatus: action,
+          notes: extraNotes ? `${ticket.notes ? ticket.notes + ' | ' : ''}${extraNotes}` : ticket.notes
+        },
       });
 
-      if (ticket.restockProduct && ticket.productId) {
-        await tx.product.update({
-          where: { id: ticket.productId },
-          data: { stock: { increment: ticket.quantity } },
-        });
+      // Handle Stock
+      if (action === "RESTOCKED" || action === "REFUNDED") {
+        if (ticket.restockProduct && ticket.productId) {
+          await tx.product.update({
+            where: { id: ticket.productId },
+            data: { stock: { increment: ticket.quantity } },
+          });
 
-        await tx.inventoryMovement.create({
-          data: {
-            productId: ticket.productId,
-            quantity: ticket.quantity,
-            type: "IN",
-            notes: `İade Onayı: ${ticket.ticketNumber}`,
-            shopId,
-          },
-        });
-      }
-
-      if (ticket.sourceType === "DEBT" && ticket.debtId && ticket.refundAmount) {
-        const debt = await tx.debt.findUnique({ where: { id: ticket.debtId } });
-        if (debt) {
-          const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(ticket.refundAmount));
-          await tx.debt.update({
-            where: { id: ticket.debtId },
+          await tx.inventoryMovement.create({
             data: {
-              remainingAmount: newRemaining,
-              isPaid: newRemaining <= 0,
+              productId: ticket.productId,
+              quantity: ticket.quantity,
+              type: "IN",
+              notes: `İade Alındı: ${ticket.ticketNumber}`,
+              shopId,
             },
           });
         }
-      } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
-        await tx.transaction.create({
-          data: {
-            type: "EXPENSE",
-            amount: ticket.refundAmount,
-            description: `Satış İadesi Para İadesi: ${ticket.ticketNumber}`,
-            category: "İade",
-            userId,
-            shopId,
-          },
-        });
+      } else if (action === "EXCHANGED") {
+        if (ticket.productId) {
+          // Decrement stock because we gave them a new replacement product from our stock
+          await tx.product.update({
+            where: { id: ticket.productId },
+            data: { stock: { decrement: ticket.quantity } },
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              productId: ticket.productId,
+              quantity: ticket.quantity,
+              type: "OUT",
+              notes: `İade Yenisiyle Değişim: ${ticket.ticketNumber}`,
+              shopId,
+            },
+          });
+        }
+      }
+
+      // Handle Finance
+      if (action === "RESTOCKED" || action === "REFUNDED") {
+        if (ticket.debtId && ticket.refundAmount) {
+          const debt = await tx.debt.findUnique({ where: { id: ticket.debtId } });
+          if (debt) {
+            const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(ticket.refundAmount));
+            await tx.debt.update({
+              where: { id: ticket.debtId },
+              data: {
+                remainingAmount: newRemaining,
+                isPaid: newRemaining <= 0,
+              },
+            });
+          }
+        } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
+          await tx.transaction.create({
+            data: {
+              type: "EXPENSE",
+              amount: ticket.refundAmount,
+              description: `Satış İadesi Tutarı: ${ticket.ticketNumber}`,
+              category: "İade",
+              userId,
+              shopId,
+            },
+          });
+        }
       }
     });
 
@@ -156,8 +183,8 @@ export async function approveReturn(id: string) {
     revalidatePath("/veresiye");
     return { success: true };
   } catch (error) {
-    console.error("approveReturn error:", error);
-    return { success: false, error: "İade onaylanırken hata oluştu." };
+    console.error("processReturn error:", error);
+    return { success: false, error: "İade işlenirken hata oluştu." };
   }
 }
 

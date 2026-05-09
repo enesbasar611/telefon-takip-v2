@@ -49,6 +49,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreateStaffModal } from "./create-staff-modal";
+import { StaffDeleteModal } from "./staff-delete-modal";
 import {
     getStaffLogs,
     updateRoleTemplate,
@@ -76,6 +77,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface StaffMember {
     id: string;
     name: string | null;
+    surname: string | null;
     email: string;
     role: Role;
     image: string | null;
@@ -84,6 +86,7 @@ interface StaffMember {
     commissionRate: number;
     assignedTickets: any[];
     sales: any[];
+    shortageTasks?: any[];
     canSell: boolean;
     canService: boolean;
     canStock: boolean;
@@ -104,6 +107,7 @@ function RoleBadge({ role }: { role: string }) {
         MANAGER: { label: "MÜDÜR", className: "bg-purple-500/10 text-purple-500" },
         CASHIER: { label: "KASİYER", className: "bg-emerald-500/10 text-emerald-500" },
         TECHNICIAN: { label: "TEKNİSYEN", className: "bg-blue-500/10 text-blue-500" },
+        COURIER: { label: "KURYE", className: "bg-orange-500/10 text-orange-500" },
         STAFF: { label: "PERSONEL", className: "bg-slate-500/10 text-muted-foreground/80" },
     };
 
@@ -197,6 +201,7 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                                 <SelectItem value="CASHIER" className=" text-xs uppercase tracking-widest">Kasiyer</SelectItem>
                                 <SelectItem value="TECHNICIAN" className=" text-xs uppercase tracking-widest">Teknisyen</SelectItem>
                                 <SelectItem value="STAFF" className=" text-xs uppercase tracking-widest">Personel</SelectItem>
+                                <SelectItem value="COURIER" className=" text-xs uppercase tracking-widest">Kurye</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -308,7 +313,7 @@ function RoleTemplateModal({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"].map((role) => {
+                            {["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF", "COURIER"].map((role) => {
                                 const t = templates.find(temp => temp.role === role) || {
                                     canSell: true,
                                     canService: true,
@@ -321,7 +326,8 @@ function RoleTemplateModal({
                                             {role === 'ADMIN' ? 'YÖNETİCİ' :
                                                 role === 'MANAGER' ? 'MÜDÜR' :
                                                     role === 'CASHIER' ? 'KASİYER' :
-                                                        role === 'TECHNICIAN' ? 'TEKNİSYEN' : 'PERSONEL'}
+                                                        role === 'TECHNICIAN' ? 'TEKNİSYEN' :
+                                                            role === 'COURIER' ? 'KURYE' : 'PERSONEL'}
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <Checkbox
@@ -378,9 +384,10 @@ import { PageHeader } from "@/components/ui/page-header";
 export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [] }: StaffManagementClientProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
-    const [filter, setFilter] = useState<"all" | "SUPER_ADMIN" | "TECHNICIAN" | "MANAGER" | "CASHIER">("all");
+    const [filter, setFilter] = useState<"all" | "SUPER_ADMIN" | "TECHNICIAN" | "MANAGER" | "CASHIER" | "COURIER">("all");
     const [localStaff, setLocalStaff] = useState<StaffMember[]>(initialStaff || []);
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
 
@@ -504,7 +511,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                 { id: "SUPER_ADMIN", label: "SÜPER EDN" },
                                 { id: "TECHNICIAN", label: "TEKNİSYENLER" },
                                 { id: "MANAGER", label: "MÜDÜRLER" },
-                                { id: "CASHIER", label: "KASİYERLER" }
+                                { id: "CASHIER", label: "KASİYERLER" },
+                                { id: "COURIER", label: "KURYELER" }
                             ].map(t => (
                                 <Button
                                     key={t.id}
@@ -554,16 +562,33 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                     </Avatar>
                                                     <div className="flex flex-col gap-1 text-left">
                                                         <span className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                                            {member.name}
+                                                            {member.name} {member.surname || ""}
                                                         </span>
                                                         <RoleBadge role={member.role} />
                                                     </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-sm font-bold text-foreground/80">
-                                                {member.assignedTickets.length + member.sales.length}
+                                                {member.role === 'COURIER' && member.shortageTasks
+                                                    ? member.shortageTasks.length
+                                                    : (member.assignedTickets?.length || 0) + (member.sales?.length || 0)}
                                             </TableCell>
-                                            <TableCell className="text-sm font-bold text-emerald-500">%98.5</TableCell>
+                                            <TableCell className={cn(
+                                                "text-sm font-bold",
+                                                member.role === 'COURIER'
+                                                    ? (
+                                                        (member.shortageTasks?.filter((t: any) => t.isResolved || t.isTaken).length || 0) / Math.max(member.shortageTasks?.length || 1, 1) >= 0.8
+                                                            ? "text-emerald-500"
+                                                            : "text-amber-500"
+                                                    )
+                                                    : "text-emerald-500"
+                                            )}>
+                                                {member.role === 'COURIER' && member.shortageTasks
+                                                    ? `%${member.shortageTasks.length > 0
+                                                        ? Math.round(((member.shortageTasks.filter((t: any) => t.isResolved || t.isTaken).length) / member.shortageTasks.length) * 100)
+                                                        : 100}`
+                                                    : "%98.5"}
+                                            </TableCell>
                                             <TableCell className="text-xs font-bold text-muted-foreground">Şimdi aktif</TableCell>
                                             <TableCell className="text-right pr-8">
                                                 <DropdownMenu>
@@ -583,7 +608,13 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                             <Shield className="w-4 h-4 text-blue-500" /> Düzenle & Yetkilendir
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator className="bg-muted dark:bg-white/5" />
-                                                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer py-3 text-xs text-rose-500 font-bold">
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setSelectedMember(member);
+                                                                setDeleteModalOpen(true);
+                                                            }}
+                                                            className="rounded-xl gap-2 cursor-pointer py-3 text-xs text-rose-500 font-bold"
+                                                        >
                                                             <XCircle className="w-4 h-4" /> Personeli Çıkar
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -763,6 +794,13 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 onClose={() => setEditModalOpen(false)}
                 member={selectedMember}
                 onUpdate={() => router.refresh()}
+            />
+            <StaffDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                member={selectedMember}
+                otherStaff={localStaff.filter(s => s.id !== selectedMember?.id)}
+                onDeleted={() => router.refresh()}
             />
             <RoleTemplateModal
                 isOpen={templateModalOpen}

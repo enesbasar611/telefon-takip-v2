@@ -40,8 +40,9 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Geçersiz giriş bilgileri");
                 }
 
+                const email = credentials.email.toLowerCase();
                 const user = await prisma.user.findUnique({
-                    where: { email: credentials.email }
+                    where: { email }
                 });
 
                 if (!user || !user.password) {
@@ -239,7 +240,10 @@ export const auth = async () => {
     return session;
 };
 
-export const getShopId = async (): Promise<string> => {
+export function getShopId(): Promise<string>;
+export function getShopId(required: true): Promise<string>;
+export function getShopId(required: false): Promise<string | null>;
+export async function getShopId(required = true): Promise<string | null> {
     const session = await auth();
 
     // Fast path: shopId is already in the token
@@ -260,7 +264,11 @@ export const getShopId = async (): Promise<string> => {
         }
     }
 
-    throw new Error("Unauthorized: No Shop ID found");
+    if (required) {
+        throw new Error("Unauthorized: No Shop ID found");
+    }
+
+    return null;
 };
 
 export const getUserId = async () => {

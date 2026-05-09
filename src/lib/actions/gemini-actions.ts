@@ -160,10 +160,20 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
 
         const result = await model.generateContent(promptParts);
         const response = await result.response;
-        const text = response.text();
+        let text = response.text();
 
         if (!text || !text.trim()) {
             return { error: "Gemini boş metin döndürdü. Açıklamanızı farklı şekilde ifade edip tekrar deneyin." };
+        }
+
+        if (responseType === "json") {
+            let rawText = text.trim();
+            if (rawText.startsWith("```json")) {
+                rawText = rawText.replace(/^```json/, "").replace(/```$/, "").trim();
+            } else if (rawText.startsWith("```")) {
+                rawText = rawText.replace(/^```/, "").replace(/```$/, "").trim();
+            }
+            text = rawText;
         }
 
         return { text };
@@ -948,7 +958,7 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
 
 export async function generateIndustryConfigWithAI(sectorName: string): Promise<{ success: true; data: { serviceFields: any[], productFields: any[], accessories: string[] } } | { success: false; error: string }> {
     const { getShopId } = await import("@/lib/auth");
-    const shopId = await getShopId();
+    const shopId = await getShopId(false) || "";
 
     // Mapping for UI values to config keys
     const sectorMapping: Record<string, string> = {
@@ -1020,7 +1030,7 @@ export async function onboardingAISectorAnalysis(sectorName: string): Promise<{
     }
 } | { success: false; error: string }> {
     const { getShopId } = await import("@/lib/auth");
-    const shopId = await getShopId();
+    const shopId = await getShopId(false) || "";
 
     // Mapping for UI values
     const sectorMapping: Record<string, string> = {
@@ -1083,7 +1093,7 @@ Kurallar:
 
 export async function generateAndCacheIndustryTemplate(sectorName: string) {
     const { getShopId } = await import("@/lib/auth");
-    const shopId = await getShopId();
+    const shopId = await getShopId(false) || "";
 
     // ── STEP 1: PRE-SLUGGER ─────────────────────────────────────────────────
     // Normalize any variant name ("Terzi Salonu", "Moda Evi") → canonical slug ("terzi")
@@ -1198,7 +1208,7 @@ CANONICAL SLUG: ${canonicalSlug}
         return template;
     } catch (e: any) {
         console.error("Failed to parse or save AI config:", e);
-        throw new Error("Sektör şablonu işlenemedi.");
+        throw new Error(`Sektör şablonu işlenemedi: ${e.message}`);
     }
 }
 

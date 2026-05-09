@@ -26,6 +26,7 @@ import {
     hexToHsl,
     settingsArrayToRecord,
 } from "@/lib/appearance-settings";
+import { AnnouncementModal } from "@/components/dashboard/announcement-modal";
 
 export default async function DashboardLayout({
     children,
@@ -105,6 +106,8 @@ export default async function DashboardLayout({
     const appFontWeight = getSafeFontWeight(appearance.fontWeight);
     const radius = getRadiusForButtonStyle(appearance.buttonStyle || defaultAppearanceSettings.buttonStyle);
 
+    const isCourier = role === "COURIER";
+
     return (
         <QueryProvider>
             <ProgressBarProvider>
@@ -117,26 +120,39 @@ export default async function DashboardLayout({
                                     href={`https://fonts.googleapis.com/css2?family=${appFontImport.gfont}&display=swap`}
                                 />
                                 <style>{`:root { --brand-color: ${brandColor}; --brand-color-muted: ${brandColor}1a; --primary: ${primaryHsl}; --ring: ${primaryHsl}; --app-font: '${appFont}', system-ui, -apple-system, sans-serif; --app-font-weight: ${appFontWeight}; --radius: ${radius}; } body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select { font-family: var(--app-font); font-weight: var(--app-font-weight) !important; }`}</style>
-                                <GlobalSearch />
+
+                                <AnnouncementModal />
+
+                                {!isCourier && <GlobalSearch />}
+
                                 {isSuperAdmin && (session.user as any).shopId && !shop?.name?.toLowerCase().includes("başar") && (
                                     <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
                                 )}
+
                                 {shop?.industry && <IndustryBackground industry={shop.industry} />}
-                                <div className="flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0">
-                                    <Sidebar
-                                        className="hidden lg:flex"
-                                        user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
-                                        shop={shop}
-                                    />
-                                    <DashboardContent>
-                                        <Navbar shop={shop} />
-                                        <main className="flex-1 lg:p-10 p-0 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full">
-                                            <div className="max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300">
+
+                                <div className={`flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0 ${isCourier ? 'flex-col' : ''}`}>
+                                    {!isCourier && (
+                                        <Sidebar
+                                            className="hidden lg:flex"
+                                            user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
+                                            shop={shop}
+                                        />
+                                    )}
+
+                                    <DashboardContent className={isCourier ? "p-0" : ""}>
+                                        {!isCourier && <Navbar shop={shop} />}
+                                        <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
+                                            <div className={isCourier
+                                                ? "w-full min-h-screen pb-20 relative z-10"
+                                                : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300"
+                                            }>
                                                 {children}
                                             </div>
                                         </main>
                                     </DashboardContent>
-                                    <BottomNav />
+
+                                    {!isCourier && <BottomNav />}
                                 </div>
                             </ShortageProvider>
                         </SupplierOrderProvider>

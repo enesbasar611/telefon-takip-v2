@@ -12,6 +12,7 @@ import { z } from "zod";
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
   const shopId = await getShopId();
+  if (!shopId) return;
   const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
   if (product && product.stock <= 0) {
     await addShortageItem({
@@ -44,6 +45,7 @@ export const getProducts = cache(async function getProducts(options: {
 
   try {
     const shopId = await getShopId();
+    if (!shopId) return { products: [], totalCount: 0 };
     const where: any = { shopId };
 
     if (categoryId) where.categoryId = categoryId;
@@ -109,6 +111,7 @@ export const searchProducts = cache(async function searchProducts(query: string)
   try {
     if (!query || query.length < 2) return [];
     const shopId = await getShopId();
+    if (!shopId) return [];
 
     const products = await prisma.product.findMany({
       where: {
@@ -148,6 +151,7 @@ export const searchProducts = cache(async function searchProducts(query: string)
 export const getCategories = cache(async function getCategories() {
   try {
     const shopId = await getShopId();
+    if (!shopId) return [];
     const categories = await prisma.category.findMany({
       where: { shopId }
     });
@@ -160,6 +164,7 @@ export const getCategories = cache(async function getCategories() {
 export const getProductsForCategorySummary = cache(async function getProductsForCategorySummary() {
   try {
     const shopId = await getShopId();
+    if (!shopId) return [];
     const products = await prisma.product.findMany({
       where: { shopId, stock: { gt: 0 } },
       select: {
@@ -1063,6 +1068,7 @@ export async function bulkCreateProducts(products: z.input<typeof productSchema>
 export async function quickUpdateStock(barcode: string, quantity: number, notes?: string) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const userId = await getUserId();
     const upBarcode = barcode.toUpperCase();
 
@@ -1123,6 +1129,7 @@ export async function quickUpdateStock(barcode: string, quantity: number, notes?
 export async function getProductByBarcode(barcode: string) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı" };
     const product = await prisma.product.findFirst({
       where: { barcode: barcode.toUpperCase(), shopId },
       include: {
@@ -1139,6 +1146,7 @@ export async function getProductByBarcode(barcode: string) {
 export async function adjustStockById(id: string, quantity: number, notes?: string) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const userId = await getUserId();
 
     const product = await prisma.product.findUnique({

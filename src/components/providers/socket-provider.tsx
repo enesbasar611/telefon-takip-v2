@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import io from "socket.io-client";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface SocketContextType {
     socket: any | null;
@@ -19,13 +20,26 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
+    const { data: session, status } = useSession();
     const [socket, setSocket] = useState<any | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
+        // Sadece giriş yapılmışsa ve shopId varsa bağlan
+        if (status !== "authenticated" || !session?.user?.shopId) {
+            if (socket) {
+                console.log("[SOCKET] Oturum kapalı, bağlantı kesiliyor");
+                socket.disconnect();
+                setSocket(null);
+                setIsConnected(false);
+            }
+            return;
+        }
+
+        const shopId = session.user.shopId;
         const socketUrl = window.location.origin;
 
-        console.log("[SOCKET] Başlatılıyor:", socketUrl);
+        console.log(`[SOCKET] ${shopId} için başlatılıyor:`, socketUrl);
 
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
@@ -42,16 +56,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         socketInstance.on("connect", () => {
             const transport = (socketInstance as any).io?.engine?.transport?.name || "Bilinmiyor";
-            console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Transport: ${transport}`);
+            console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Shop: ${shopId} | Transport: ${transport}`);
+
+            // Odaya katıl
+            socketInstance.emit("join_room", shopId);
+
             setIsConnected(true);
             toast.success("Barkod sunucusuna bağlandı");
         });
 
         socketInstance.on("connect_error", (err: any) => {
             console.error("[SOCKET] BAĞLANTI HATASI:", err.message);
-            // Mobil cihazlarda debug'ı kolaylaştırmak için toast
+            // Sadece mobil cihazlarda hata göster
             if (window.innerWidth < 768) {
-                toast.error(`Bağlantı Hatası: ${err.message}`);
+                toast.error(`Barkod Bağlantı Hatası: ${err.message}`);
             }
             setIsConnected(false);
         });
@@ -64,16 +82,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         // Debug: Sunucuya özel ping gönder
         const pingInterval = setInterval(() => {
             if (socketInstance.connected) {
-                socketInstance.emit("ping_status", { time: new Date().toISOString() });
+                socketInstance.emit("ping_status", {
+                    time: new Date().toISOString(),
+                    shopId: shopId
+                });
             }
         }, 15000);
 
         setSocket(socketInstance);
+
         return () => {
             clearInterval(pingInterval);
             socketInstance.disconnect();
         };
-    }, []);
+    }, [status, session?.user?.shopId]);
 
     return (
         <SocketContext.Provider value={{ socket, isConnected }}>

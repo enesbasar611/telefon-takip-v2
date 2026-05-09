@@ -55,6 +55,7 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {} }: D
         // Mid-Section (Analysis & Main Lists)
         { id: "revenue", cols: 4, rows: 4 },
         { id: "ai_insights", cols: 2, rows: 4 },
+        { id: "shortage_status", cols: 2, rows: 5 },
         { id: "service_queue", cols: 2, rows: 5 },
         { id: "receivables", cols: 2, rows: 5 },
         { id: "activity", cols: 2, rows: 5 },

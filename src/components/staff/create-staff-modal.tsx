@@ -34,7 +34,7 @@ const staffSchema = z.object({
   surname: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
   email: z.string().email("Geçerli bir e-posta giriniz"),
   password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
-  role: z.enum(["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF"]),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF", "COURIER"]),
   branch: z.string().min(1, "Şube seçiniz"),
   gender: z.enum(["MALE", "FEMALE"]),
   phone: z.string().optional(),
@@ -266,13 +266,14 @@ export function CreateStaffModal() {
                   <SelectItem value="CASHIER" className="">Kasiyer</SelectItem>
                   <SelectItem value="TECHNICIAN" className="">Teknisyen</SelectItem>
                   <SelectItem value="STAFF" className="">Satış Danışmanı / Personel</SelectItem>
+                  <SelectItem value="COURIER" className="">Kurye</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
-              <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube">
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs">
+              <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube" disabled>
+                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs opacity-70">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3 h-3 text-muted-foreground" />
                     <SelectValue placeholder="Bir şube seçin..." />
@@ -280,7 +281,6 @@ export function CreateStaffModal() {
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border/50 text-white rounded-xl">
                   <SelectItem value="Ana Şube">Ana Şube</SelectItem>
-                  <SelectItem value="Şube 2">Şube 2</SelectItem>
                 </SelectContent>
               </Select>
             </div>

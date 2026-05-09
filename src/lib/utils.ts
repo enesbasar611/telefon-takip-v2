@@ -142,3 +142,27 @@ export function parseCurrency(value: string): number {
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 }
+
+/**
+ * Gets initials from a name (max 2 characters).
+ */
+export function getInitials(name: string): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toLocaleUpperCase('tr-TR');
+  return (parts[0][0] + parts[parts.length - 1][0]).toLocaleUpperCase('tr-TR');
+}
+
+/**
+ * Returns a deterministic tailwind background color based on a string.
+ */
+export function getDeterministicColor(name: string): string {
+  const colors = [
+    "bg-blue-500", "bg-emerald-500", "bg-rose-500", "bg-amber-500",
+    "bg-violet-500", "bg-cyan-500", "bg-orange-500", "bg-fuchsia-500",
+    "bg-indigo-500", "bg-teal-500"
+  ];
+  if (!name) return colors[0];
+  const charCodeSum = name.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return colors[charCodeSum % colors.length];
+}

@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +31,11 @@ import { CreateTransactionModal } from "@/components/finance/create-transaction-
 
 export function Navbar({ shop }: { shop?: any }) {
   const { isFinancialVisible, toggleFinancialVisibility, isLayoutEditing, toggleLayoutEditing } = useUI();
+  const { data: session } = useSession();
   const { setTheme } = useTheme();
   const router = useRouter();
+
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'SHOP_MANAGER';
 
   return (
     <>
@@ -62,26 +66,28 @@ export function Navbar({ shop }: { shop?: any }) {
           </Button>
 
           {/* Action Containers - Only visible on Desktop */}
-          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-muted/40 rounded-2xl border border-border/40">
-            <CreateServiceModal
-              shop={shop}
-              trigger={
-                <Button variant="ghost" size="sm" className="flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
-                  <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="">Yeni Servis</span>
-                </Button>
-              }
-            />
-            <CreateTransactionModal
-              trigger={
-                <Button variant="ghost" size="sm" className="flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-none transition-all group">
-                  <Landmark className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-                  <span className=" whitespace-nowrap">Gelir / Gider</span>
-                </Button>
-              }
-            />
-            <POSDrawer />
-          </div>
+          {isAdmin && (
+            <div className="hidden lg:flex items-center gap-1.5 p-1 bg-muted/40 rounded-2xl border border-border/40">
+              <CreateServiceModal
+                shop={shop}
+                trigger={
+                  <Button variant="ghost" size="sm" className="flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-none transition-all group">
+                    <PlusCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                    <span className="">Yeni Servis</span>
+                  </Button>
+                }
+              />
+              <CreateTransactionModal
+                trigger={
+                  <Button variant="ghost" size="sm" className="flex gap-2 text-sm font-semibold text-foreground bg-muted/40 border border-border rounded-xl px-4 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-none transition-all group">
+                    <Landmark className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <span className=" whitespace-nowrap">Gelir / Gider</span>
+                  </Button>
+                }
+              />
+              <POSDrawer />
+            </div>
+          )}
 
           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
             <div className="hidden lg:flex items-center gap-3">
@@ -99,7 +105,7 @@ export function Navbar({ shop }: { shop?: any }) {
 
 
 
-              <ShortageList />
+              {isAdmin && <ShortageList />}
               <ModeToggle />
             </div>
 

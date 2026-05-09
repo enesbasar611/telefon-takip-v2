@@ -48,11 +48,41 @@ const TYPE_CONFIG: Record<string, { label: string; icon: any; colors: string; do
         colors: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
         dot: "bg-emerald-500",
     },
+    IN: {
+        label: "GİRİŞ",
+        icon: ArrowDownLeft,
+        colors: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        dot: "bg-emerald-500",
+    },
+    PURCHASE: {
+        label: "GİRİŞ",
+        icon: ArrowDownLeft,
+        colors: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        dot: "bg-emerald-500",
+    },
     STOCK_OUT: {
         label: "ÇIKIŞ",
         icon: ArrowUpRight,
         colors: "bg-rose-500/10 text-rose-400 border-rose-500/20",
         dot: "bg-rose-500",
+    },
+    OUT: {
+        label: "ÇIKIŞ",
+        icon: ArrowUpRight,
+        colors: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        dot: "bg-rose-500",
+    },
+    SALE: {
+        label: "SATIŞ",
+        icon: ArrowUpRight,
+        colors: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        dot: "bg-blue-500",
+    },
+    SERVICE_USE: {
+        label: "SERVİS",
+        icon: ArrowUpRight,
+        colors: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+        dot: "bg-indigo-500",
     },
     ADJUSTMENT: {
         label: "DÜZELTME",
@@ -90,8 +120,8 @@ export function StockMovementsClient({
         startTransition(() => router.push(`${pathname}?${params.toString()}`));
     };
 
-    const inCount = movements.filter(m => m.type === "STOCK_IN").length;
-    const outCount = movements.filter(m => m.type === "STOCK_OUT").length;
+    const inCount = movements.filter(m => ["STOCK_IN", "IN", "PURCHASE"].includes(m.type)).length;
+    const outCount = movements.filter(m => ["STOCK_OUT", "OUT", "SALE", "SERVICE_USE"].includes(m.type)).length;
 
     return (
         <div className="space-y-6 pb-24">

@@ -3,7 +3,7 @@ import { getShopId } from "@/lib/auth";
 import { MobileStatsHeader } from "../mobile-stats-header";
 
 export async function MobileStatsStream() {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
     const stats = await getDashboardStats(shopId);
 
     const formattedStats = {

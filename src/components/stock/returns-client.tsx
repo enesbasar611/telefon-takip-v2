@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useState, useMemo, useTransition, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
     Search,
     RefreshCcw,
@@ -25,6 +26,7 @@ import {
     Plus,
     Navigation
 } from "lucide-react";
+import { processReturn, rejectReturn } from "@/lib/actions/return-actions";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -73,7 +75,6 @@ import {
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
-import { approveReturn, rejectReturn } from "@/lib/actions/return-actions";
 import { cn } from "@/lib/utils";
 
 interface ReturnsClientProps {
@@ -81,6 +82,7 @@ interface ReturnsClientProps {
 }
 
 export function ReturnsClient({ initialData }: ReturnsClientProps) {
+    const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [sourceFilter, setSourceFilter] = useState("all");
@@ -89,10 +91,42 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
 
     // Modals
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
+    const [returnAction, setReturnAction] = useState<string>("RESTOCKED");
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [isAddReturnOpen, setIsAddReturnOpen] = useState(false);
     const [rejectNotes, setRejectNotes] = useState("");
+    const [addReturnInitialData, setAddReturnInitialData] = useState<any>(undefined);
+
+    // Auto-open modal from URL params (e.g. from veresiye page)
+    useEffect(() => {
+        const customerId = searchParams.get("customerId");
+        const customerName = searchParams.get("customerName");
+        const debtId = searchParams.get("debtId");
+        const productId = searchParams.get("productId");
+        const productName = searchParams.get("productName");
+        const quantity = searchParams.get("quantity");
+        const refundAmount = searchParams.get("refundAmount");
+        const saleId = searchParams.get("saleId");
+
+        if (customerId && (productId || debtId)) {
+            setAddReturnInitialData({
+                sourceType: "CUSTOMER" as const,
+                sourceId: customerId,
+                sourceName: customerName || "",
+                items: [{
+                    productId: productId || undefined,
+                    name: productName || "",
+                    quantity: parseInt(quantity || "1"),
+                    refundAmount: parseFloat(refundAmount || "0"),
+                    debtId: debtId || undefined,
+                    saleId: saleId || undefined,
+                }]
+            });
+            setIsAddReturnOpen(true);
+        }
+    }, [searchParams]);
+
 
     const filteredData = useMemo(() => {
         return initialData.filter(ticket => {
@@ -125,9 +159,9 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
     const handleApprove = async () => {
         if (!selectedTicket) return;
         startTransition(async () => {
-            const res = await approveReturn(selectedTicket.id);
+            const res = await processReturn(selectedTicket.id, returnAction as any);
             if (res.success) {
-                toast.success("İade onaylandı. Stok ve bakiyeler güncellendi.");
+                toast.success("İade onaylandı. İşlem başarıyla uygulandı.");
                 setIsApproveModalOpen(false);
                 setSelectedTicket(null);
                 router.refresh();
@@ -159,6 +193,14 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                 return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]"><Clock className="w-3 h-3 mr-1" /> Bekliyor</Badge>;
             case "APPROVED":
                 return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> Onaylandı</Badge>;
+            case "RESTOCKED":
+                return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> İade Alındı (Stok)</Badge>;
+            case "EXCHANGED":
+                return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> Yenisi Verildi</Badge>;
+            case "SENT_TO_SUPPLIER":
+                return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> Tedarikçiye Gönderildi</Badge>;
+            case "REFUNDED":
+                return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" /> Tamamen İade Edildi</Badge>;
             case "REJECTED":
                 return <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/20 px-2 py-0.5 rounded-full text-[10px]"><XCircle className="w-3 h-3 mr-1" /> Reddedildi</Badge>;
             default:
@@ -313,7 +355,7 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                                 <div className={cn(
                                                     "w-10 h-10 rounded-xl flex items-center justify-center",
                                                     ticket.returnStatus === "PENDING" ? "bg-amber-500/10 text-amber-500" :
-                                                        ticket.returnStatus === "APPROVED" ? "bg-emerald-500/10 text-emerald-500" :
+                                                        ticket.returnStatus !== "REJECTED" ? "bg-emerald-500/10 text-emerald-500" :
                                                             "bg-rose-500/10 text-rose-500"
                                                 )}>
                                                     <Navigation className="w-5 h-5" />
@@ -383,10 +425,11 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                                                 className="rounded-lg gap-2 text-xs text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10"
                                                                 onClick={() => {
                                                                     setSelectedTicket(ticket);
+                                                                    setReturnAction("RESTOCKED");
                                                                     setIsApproveModalOpen(true);
                                                                 }}
                                                             >
-                                                                <CheckCircle2 className="w-3.5 h-3.5" /> İadeyi Onayla
+                                                                <CheckCircle2 className="w-3.5 h-3.5" /> İadeyi İşle
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 className="rounded-lg gap-2 text-xs text-rose-500 focus:text-rose-500 focus:bg-rose-500/10"
@@ -418,13 +461,28 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                                 <CheckCircle2 className="w-5 h-5" />
                             </div>
-                            İadeyi Onaylıyor musunuz?
+                            İadeyi Onaylıyor musunuz? İşlem Yöntemi Seçin:
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm">
-                            Bu işlemi onayladığınızda:<br />
-                            {selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.</span>}<br />
-                            {selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">• Müşterinin borç bakiye tutarı ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} azalacaktır.</span>}
-                            {selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} çıkış yapılacaktır.</span>}
+                            <div className="mt-4 mb-4">
+                                <Select value={returnAction} onValueChange={setReturnAction}>
+                                    <SelectTrigger className="w-full bg-muted/30 border-none rounded-xl h-12">
+                                        <SelectValue placeholder="İşlem Seçin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="RESTOCKED">İade Alındı (Stoğa Eklendi)</SelectItem>
+                                        <SelectItem value="EXCHANGED">Yenisi Verildi (Değiştirildi)</SelectItem>
+                                        <SelectItem value="SENT_TO_SUPPLIER">Tedarikçiye İade Gönderildi</SelectItem>
+                                        <SelectItem value="REFUNDED">Tamamen İade Yapıldı (Borç Düş/Para İadesi)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.<br /></span>}
+                            {returnAction === "EXCHANGED" && <span className="text-rose-500 font-medium">• {selectedTicket?.quantity} Adet sağlam ürün stoktan düşülecektir.<br /></span>}
+
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">• Müşterinin borç bakiye tutarı ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} azalacaktır.</span>}
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} para iadesi çıkışı yapılacaktır.</span>}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
@@ -474,7 +532,11 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
             </AlertDialog>
             <AddReturnModal
                 open={isAddReturnOpen}
-                onOpenChange={setIsAddReturnOpen}
+                onOpenChange={(v) => {
+                    setIsAddReturnOpen(v);
+                    if (!v) setAddReturnInitialData(undefined);
+                }}
+                initialData={addReturnInitialData}
                 onSuccess={() => {
                     router.refresh();
                 }}

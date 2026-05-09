@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
 import { Suspense } from "react";
 export const dynamic = "force-dynamic";
 
@@ -18,10 +20,11 @@ import { MobileDashboard } from "@/components/dashboard/mobile-dashboard";
 import { LiveClock } from "@/components/dashboard/live-clock";
 import { QuickShortcuts } from "@/components/dashboard/quick-shortcuts";
 import { DashboardEditButton } from "@/components/dashboard/dashboard-edit-button";
+import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-status-card";
 
 import { getProfile } from "@/lib/actions/staff-actions";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-
+import { AnnouncementsModal } from "@/components/dashboard/announcements-modal";
 import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { StatWidgetWrapper } from "@/components/dashboard/stat-widget-wrapper";
 import { getShopId } from "@/lib/auth";
@@ -43,7 +46,7 @@ import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queu
 import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
 
 async function DashboardContentData() {
-  const shopId = await getShopId();
+  const shopId = await getShopId(false);
   const [shop, categories, profile, statsDataRaw] = await Promise.all([
     getShop(),
     getCategories(),
@@ -72,6 +75,7 @@ async function DashboardContentData() {
     ...statItems.map(s => s.id),
     "revenue",
     ...(showService ? ["service_status"] : []),
+    "shortage_status",
     "ai_insights",
     "receivables",
     ...(showService ? ["service_queue"] : []),
@@ -80,7 +84,23 @@ async function DashboardContentData() {
     "inventory"
   ];
 
-  const layout = Array.isArray(profile?.dashboardLayout) ? (profile.dashboardLayout as string[]) : defaultLayout;
+  const savedLayout = profile?.dashboardLayout as any[];
+  let layout: any[];
+
+  if (Array.isArray(savedLayout) && savedLayout.length > 0) {
+    // Smart Merge: Identify items in defaultLayout that are not in the savedLayout
+    const missingItems = defaultLayout.filter(defaultId => {
+      return !savedLayout.some(item => {
+        const itemId = typeof item === 'string' ? item : item.id;
+        return itemId === defaultId;
+      });
+    });
+
+    // Append new items to the existing layout
+    layout = [...savedLayout, ...missingItems];
+  } else {
+    layout = defaultLayout;
+  }
 
   const widgets: any = {
     revenue: (
@@ -97,6 +117,9 @@ async function DashboardContentData() {
       <Suspense fallback={<StatsSkeleton />}>
         <SmartInsightsStream />
       </Suspense>
+    ),
+    shortage_status: (
+      <ShortageStatusCard />
     ),
     receivables: (
       <Suspense fallback={<ListSkeleton />}>
@@ -137,11 +160,13 @@ async function DashboardContentData() {
 
   const widgetLabels: Record<string, string> = {
     receivables: "Alacaklarım",
+    shortage_status: "Kurye Durumu",
   };
   statItems.forEach(s => { widgetLabels[s.id] = s.label; });
 
   return (
     <>
+      <AnnouncementsModal />
       <DashboardOnboardingClient categories={categories} shop={shop} />
       <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
         <PageHeader
@@ -190,7 +215,12 @@ async function DashboardContentData() {
   );
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await getSession();
+  if (session?.user?.role === "COURIER") {
+    redirect("/kurye");
+  }
+
   return (
     <DashboardProvider>
       <Suspense fallback={<StatsSkeleton />}>

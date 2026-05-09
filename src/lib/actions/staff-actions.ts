@@ -4,7 +4,7 @@ import { Role } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { serializePrisma, formatName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-import { getShopId, getUserId } from "@/lib/auth";
+import { getShopId, getUserId, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
 export const getStaff = async (shopId?: string) => {
@@ -19,6 +19,9 @@ export const getStaff = async (shopId?: string) => {
                             where: { status: "DELIVERED", shopId: finalShopId }
                         },
                         sales: {
+                            where: { shopId: finalShopId }
+                        },
+                        shortageTasks: {
                             where: { shopId: finalShopId }
                         }
                     },
@@ -64,7 +67,7 @@ export const getStaffShell = async (shopId?: string) => {
 export async function getProfile() {
     try {
         const userId = await getUserId();
-        const shopId = await getShopId();
+        const shopId = await getShopId(false);
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
@@ -76,16 +79,18 @@ export async function getProfile() {
                         address: true,
                     }
                 },
-                assignedTickets: {
-                    where: { shopId },
-                    orderBy: { createdAt: 'desc' },
-                    take: 10,
-                    include: {
-                        customer: {
-                            select: { name: true }
+                ...(shopId ? {
+                    assignedTickets: {
+                        where: { shopId },
+                        orderBy: { createdAt: 'desc' as const },
+                        take: 10,
+                        include: {
+                            customer: {
+                                select: { name: true }
+                            }
                         }
                     }
-                }
+                } : {})
             }
         });
 
@@ -124,9 +129,16 @@ export async function createStaff(data: {
 }) {
     try {
         const shopId = await getShopId();
+        const session = await auth();
+
+        if (data.role === "SUPER_ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Süper Admin yetkisi atanamaz." };
+        }
+
+        const normalizedEmail = data.email.toLowerCase();
 
         // Check if email already exists
-        const existing = await prisma.user.findUnique({ where: { email: data.email } });
+        const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (existing) {
             return { success: false, error: "Bu e-posta adresi zaten kullanımda." };
         }
@@ -154,7 +166,7 @@ export async function createStaff(data: {
             data: {
                 name: formatName(data.name),
                 surname: data.surname,
-                email: data.email,
+                email: normalizedEmail,
                 phone: data.phone,
                 image: data.image,
                 role: data.role,
@@ -181,6 +193,20 @@ export async function createStaff(data: {
 export async function updateStaff(userId: string, data: any) {
     try {
         const shopId = await getShopId();
+        const session = await auth();
+
+        const targetUser = await prisma.user.findUnique({ where: { id: userId, shopId } });
+        if (!targetUser) {
+            return { success: false, error: "Personel bulunamadı." };
+        }
+
+        if (targetUser.role === "SUPER_ADMIN" && session?.user?.id !== userId && session?.user?.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Süper Admin üzerinde değişiklik yapamazsınız." };
+        }
+
+        if (data.role === "SUPER_ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Süper Admin yetkisi veremezsiniz." };
+        }
 
         const updateData: any = { ...data };
         if (data.name) updateData.name = formatName(data.name);
@@ -219,13 +245,93 @@ export async function updateStaffCommission(userId: string, rate: number) {
     }
 }
 
-export async function deleteStaff(userId: string) {
+export async function checkStaffDeletion(userId: string) {
     try {
         const shopId = await getShopId();
-        await prisma.user.delete({ where: { id: userId, shopId } });
+        const user = await prisma.user.findUnique({
+            where: { id: userId, shopId },
+            include: {
+                _count: {
+                    select: {
+                        assignedTickets: { where: { status: { not: "DELIVERED" } } },
+                        shortageTasks: { where: { isResolved: false } }
+                    }
+                }
+            }
+        });
+
+        if (!user) return { success: false, error: "Kullanıcı bulunamadı." };
+
+        const pendingTasks = user._count.assignedTickets + user._count.shortageTasks;
+
+        return {
+            success: true,
+            hasPendingTasks: pendingTasks > 0,
+            pendingTasks,
+            role: user.role
+        };
+    } catch (error) {
+        console.error("Error checking staff deletion:", error);
+        return { success: false, error: "Kontrol yapılamadı." };
+    }
+}
+
+export async function deleteStaff(userId: string, options?: {
+    action: 'TRANSFER' | 'DELETE_ALL' | 'DETACH';
+    transferToId?: string;
+}) {
+    try {
+        const shopId = await getShopId();
+        const session = await auth();
+
+        const targetUser = await prisma.user.findUnique({ where: { id: userId, shopId } });
+        if (!targetUser) {
+            return { success: false, error: "Personel bulunamadı." };
+        }
+
+        if (targetUser.role === "SUPER_ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Süper Admin hesabı silinemez." };
+        }
+
+        await prisma.$transaction(async (tx) => {
+            if (options) {
+                if (options.action === 'TRANSFER' && options.transferToId) {
+                    // Transfer active tasks
+                    await tx.shortageItem.updateMany({
+                        where: { assignedToId: userId, isResolved: false },
+                        data: { assignedToId: options.transferToId }
+                    });
+                    // For service tickets, we might also want to transfer assigned technician
+                    await tx.serviceTicket.updateMany({
+                        where: { technicianId: userId, status: { not: "DELIVERED" } },
+                        data: { technicianId: options.transferToId }
+                    });
+                } else if (options.action === 'DELETE_ALL') {
+                    // Delete unassigned shortage items (courier tasks are shortage items)
+                    await tx.shortageItem.deleteMany({
+                        where: { assignedToId: userId, isResolved: false }
+                    });
+                    // Note: We don't delete service tickets, we just unassign them or keep them
+                } else if (options.action === 'DETACH') {
+                    // Just unassign
+                    await tx.shortageItem.updateMany({
+                        where: { assignedToId: userId, isResolved: false },
+                        data: { assignedToId: null }
+                    });
+                    await tx.serviceTicket.updateMany({
+                        where: { technicianId: userId, status: { not: "DELIVERED" } },
+                        data: { technicianId: null }
+                    });
+                }
+            }
+
+            await tx.user.delete({ where: { id: userId, shopId } });
+        });
+
         revalidatePath("/personel");
         return { success: true };
     } catch (error) {
+        console.error("Error deleting staff:", error);
         return { success: false, error: "Personel silinemedi." };
     }
 }

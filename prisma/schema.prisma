@@ -105,6 +105,8 @@ model User {
   transactions    Transaction[]
   shop            Shop?           @relation(fields: [shopId], references: [id])
   dashboardLayout Json?
+  points          Int             @default(0)
+  shortageTasks   ShortageItem[]  @relation("ShortageAssignment")
 }
 
 model Customer {
@@ -128,6 +130,7 @@ model Customer {
   sales          Sale[]
   tickets        ServiceTicket[]
   transactions   Transaction[]
+  shortageItems  ShortageItem[]
 
   @@unique([shopId, phone])
 }
@@ -393,6 +396,17 @@ model ShortageItem {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   shopId     String
+  assignedToId String?
+  isTaken      Boolean  @default(false)
+  takenAt      DateTime?
+  
+  // Requester Info
+  requesterName  String?
+  requesterPhone String?
+  customerId     String?
+
+  assignedTo   User?      @relation("ShortageAssignment", fields: [assignedToId], references: [id])
+  customer     Customer?  @relation(fields: [customerId], references: [id])
   product    Product? @relation(fields: [productId], references: [id])
   shop       Shop     @relation(fields: [shopId], references: [id])
 }
@@ -740,6 +754,7 @@ enum Role {
   CASHIER
   STAFF
   TECHNICIAN
+  COURIER
   USER
 }
 
@@ -778,6 +793,10 @@ enum ReturnStatus {
   PENDING
   APPROVED
   REJECTED
+  RESTOCKED
+  EXCHANGED
+  SENT_TO_SUPPLIER
+  REFUNDED
 }
 
 enum AccountType {

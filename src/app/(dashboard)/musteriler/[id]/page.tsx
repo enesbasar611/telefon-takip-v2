@@ -291,63 +291,59 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                 <CustomerDebtPanel customer={customer} accounts={accounts} shop={shop} />
                             </TabsContent>
 
-                            <TabsContent value="history" className="space-y-6 outline-none">
+                            <TabsContent value="history" className="space-y-2 outline-none">
                                 {[...(customer.tickets || []), ...(customer.sales || [])]
                                     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                    .map((item: any, idx: number) => (
-                                        <div key={idx} className="bg-card p-8 rounded-xl border border-border flex items-center justify-between hover:bg-muted/10 transition-all group shadow-sm">
-                                            <div className="flex items-center gap-6">
-                                                <div className={cn(
-                                                    "h-16 w-16 rounded-[1.25rem] flex items-center justify-center relative shadow-sm",
-                                                    item.ticketNumber ? 'bg-blue-600/10 text-blue-500 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                                )}>
-                                                    {item.ticketNumber ? <Wrench className="h-7 w-7" /> : <ShoppingCart className="h-7 w-7" />}
-                                                    <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-blue-500 border-4 border-card" />
+                                    .map((item: any, idx: number) => {
+                                        // Build display title
+                                        const saleItemNames = !item.ticketNumber && item.items?.length > 0
+                                            ? item.items.map((i: any) => i.product?.name || 'Ürün').join(', ')
+                                            : null;
+
+                                        const title = item.ticketNumber
+                                            ? `${item.deviceBrand} ${item.deviceModel}`
+                                            : saleItemNames || item.saleNumber;
+
+                                        return (
+                                            <div key={idx} className="bg-card px-4 py-3 rounded-xl border border-border flex items-center justify-between hover:bg-muted/10 transition-all group shadow-sm gap-4">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={cn(
+                                                        "h-8 w-8 rounded-xl flex items-center justify-center shrink-0",
+                                                        item.ticketNumber ? 'bg-blue-600/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'
+                                                    )}>
+                                                        {item.ticketNumber ? <Wrench className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-semibold text-sm truncate group-hover:text-blue-600 transition-colors leading-tight">
+                                                            {title}
+                                                        </h4>
+                                                        <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                                                            <span>{format(new Date(item.createdAt), "d MMM yyyy", { locale: tr })}</span>
+                                                            <span className="opacity-40">•</span>
+                                                            <span className="text-blue-500 font-bold">#{item.ticketNumber || item.saleNumber}</span>
+                                                            {item.ticketNumber && item.problemDesc && (
+                                                                <>
+                                                                    <span className="opacity-40">•</span>
+                                                                    <span className="truncate max-w-[120px]">{item.problemDesc}</span>
+                                                                </>
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-bold text-lg group-hover:text-blue-600 transition-colors">
-                                                        {item.ticketNumber
-                                                            ? `${item.deviceBrand} ${item.deviceModel} (Teknik servis)`
-                                                            : item.items?.some((i: any) => i.product?.category?.name.toLowerCase().includes('telefon') || i.product?.category?.name.toLowerCase().includes('cihaz'))
-                                                                ? `${item.saleNumber} (Cihaz satışı)`
-                                                                : `${item.saleNumber} (Ürün satışı)`
-                                                        }
-                                                    </h4>
-                                                    <p className="text-xs text-muted-foreground  mt-1">
-                                                        {format(new Date(item.createdAt), "d MMMM yyyy, HH:mm", { locale: tr })} • <span className="text-blue-500 font-extrabold">#{item.ticketNumber || item.saleNumber}</span>
-                                                    </p>
-                                                    {item.ticketNumber && (
-                                                        <div className="flex flex-wrap gap-2 mt-3">
-                                                            {item.imei && (
-                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><Hash className="h-3 w-3 mr-1" /> {item.imei}</Badge>
-                                                            )}
-                                                            {item.problemDesc && (
-                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><AlertCircle className="h-3 w-3 mr-1 text-orange-500" /> {item.problemDesc}</Badge>
-                                                            )}
-                                                            {item.devicePassword && (
-                                                                <Badge variant="outline" className="text-[10px] bg-muted/50 border-border/50 text-muted-foreground"><ShieldCheck className="h-3 w-3 mr-1 text-indigo-500" /> Şifre: {item.devicePassword}</Badge>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-12">
-                                                <div className="text-right hidden sm:block">
-                                                    <p className="text-[10px]  text-muted-foreground mb-1.5">Durum sınıfı</p>
+                                                <div className="flex items-center gap-4 shrink-0">
                                                     <Badge variant="outline" className={cn(
-                                                        "text-[10px]  border-none px-4 py-1.5 rounded-xl shadow-sm",
-                                                        item.status === 'DELIVERED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                                                        "text-[9px] border-none px-2.5 py-1 rounded-lg hidden sm:flex",
+                                                        item.status === 'DELIVERED' || !item.status ? 'bg-emerald-500/10 text-emerald-600' : 'bg-blue-500/10 text-blue-500'
                                                     )}>
                                                         {item.status ? statusLabels[item.status] : "Tamamlandı"}
                                                     </Badge>
-                                                </div>
-                                                <div className="text-right min-w-[120px]">
-                                                    <p className="text-[10px]  text-muted-foreground mb-1.5">Net tutar</p>
-                                                    <span className="text-2xl font-extrabold">₺{formatCurrency(Number(item.actualCost) || Number(item.finalAmount) || 0)}</span>
+                                                    <span className="text-sm font-bold tabular-nums">
+                                                        ₺{formatCurrency(Number(item.actualCost) || Number(item.finalAmount) || 0)}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 }
                             </TabsContent>
 

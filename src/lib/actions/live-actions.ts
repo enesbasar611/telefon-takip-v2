@@ -5,7 +5,8 @@ import { getShopId } from "@/lib/auth";
 
 export async function getLiveActivity() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const [serviceLogs, transactions] = await Promise.all([
       prisma.serviceLog.findMany({
         where: { shopId },

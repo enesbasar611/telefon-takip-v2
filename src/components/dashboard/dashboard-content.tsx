@@ -1,8 +1,9 @@
 "use client";
+import { cn } from "@/lib/utils";
 
-export function DashboardContent({ children }: { children: React.ReactNode }) {
+export function DashboardContent({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className="flex-1 flex flex-col overflow-hidden h-full relative">
+        <div className={cn("flex-1 flex flex-col overflow-hidden h-full relative", className)}>
             {children}
         </div>
     );

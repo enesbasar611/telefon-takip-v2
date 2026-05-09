@@ -2,14 +2,23 @@
 
 import React, { createContext, useContext, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getShortageItems, addShortageItem as addShortageItemAction, deleteShortageItem as deleteShortageAction, updateShortageQuantity as updateShortageQtyAction, resolveShortageItems as resolveShortageItemsAction } from "@/lib/actions/shortage-actions";
+import { getShortageItems, addShortageItem as addShortageItemAction, addShortageItems as addShortageBulkAction, deleteShortageItem as deleteShortageAction, updateShortageQuantity as updateShortageQtyAction, resolveShortageItems as resolveShortageItemsAction } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
 
 interface ShortageContextType {
     items: any[];
     loading: boolean;
     refresh: () => void;
-    addShortage: (data: { productId?: string; name: string; quantity: number }) => Promise<void>;
+    addShortage: (data: {
+        productId?: string;
+        name: string;
+        quantity: number;
+        requesterName?: string;
+        requesterPhone?: string;
+        customerId?: string;
+        assignedToId?: string;
+    }) => Promise<void>;
+    addShortageBulk: (items: any[]) => Promise<void>;
     removeShortage: (id: string, silent?: boolean) => Promise<void>;
     updateQty: (id: string, qty: number) => Promise<void>;
 }
@@ -24,18 +33,36 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
         refetchOnWindowFocus: true,
     });
 
-    const addShortage = async (data: { productId?: string; name: string; quantity: number }) => {
+    const addShortage = async (data: {
+        productId?: string;
+        name: string;
+        quantity: number;
+        requesterName?: string;
+        requesterPhone?: string;
+        customerId?: string;
+        assignedToId?: string;
+    }) => {
         try {
             const res = await addShortageItemAction(data);
             if (res.success) {
-                if (res.isDuplicate) {
-                    toast.warning(res.message);
-                } else {
-                    toast.success(`${data.name} eksik listesine eklendi.`);
-                    await refresh();
-                }
+                toast.success(`${data.name} eksik listesine eklendi.`);
+                await refresh();
             } else {
                 toast.error(res.error || "Ekleme başarısız.");
+            }
+        } catch (err) {
+            toast.error("Bir hata oluştu.");
+        }
+    };
+
+    const addShortageBulk = async (items: any[]) => {
+        try {
+            const res = await addShortageBulkAction(items);
+            if (res.success) {
+                toast.success(`${items.length} ürün başarıyla kuryeye atandı.`);
+                await refresh();
+            } else {
+                toast.error(res.error || "Toplu ekleme başarısız.");
             }
         } catch (err) {
             toast.error("Bir hata oluştu.");
@@ -58,7 +85,7 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <ShortageContext.Provider value={{ items, loading, refresh, addShortage, removeShortage, updateQty }}>
+        <ShortageContext.Provider value={{ items, loading, refresh, addShortage, addShortageBulk, removeShortage, updateQty }}>
             {children}
         </ShortageContext.Provider>
     );

@@ -17,7 +17,8 @@ import {
   Wrench,
   Package,
   ShoppingCart,
-  Users
+  Users,
+  ChevronRight
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -39,9 +40,9 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
           LIVE
         </Badge>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-0 custom-scrollbar">
+      <CardContent className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">
         <div className="divide-y divide-slate-100 dark:divide-white/5">
-          {activity.map((item) => (
+          {activity.slice(0, 5).map((item) => (
             <div key={item.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 group">
               <div className="flex items-start gap-5">
                 <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary/10 border-secondary/20 text-secondary'}`}>
@@ -61,6 +62,14 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
               </div>
             </div>
           ))}
+          {activity.length > 5 && (
+            <div className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
+              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.25em] group-hover:text-primary transition-colors">
+                {activity.length - 5} KAYIT DAHA VAR
+              </span>
+              <ChevronRight className="h-3 w-3 text-muted-foreground/30 rotate-90 mt-1 animate-bounce" />
+            </div>
+          )}
           {activity.length === 0 && (
             <div className="p-10 text-center text-gray-600 text-[10px]">
               Henüz etkinlik yok.

@@ -5,7 +5,8 @@ import { getTopProducts } from "@/lib/actions/dashboard-actions";
 import { getShopId } from "@/lib/auth";
 
 export async function TopProductsStream() {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return null;
     const topProductsRaw = await getTopProducts(shopId, 5);
     const topProducts = serializePrisma(topProductsRaw);
 

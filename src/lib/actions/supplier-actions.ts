@@ -7,7 +7,8 @@ import { getShopId } from "@/lib/auth";
 
 export async function getSuppliers() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const suppliers = await prisma.supplier.findMany({
       where: { shopId },
       include: {
@@ -40,6 +41,7 @@ export async function createSupplier(data: {
 }) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const supplier = await prisma.supplier.create({
       data: {
         ...data,
@@ -57,6 +59,7 @@ export async function createSupplier(data: {
 export async function deleteSupplier(id: string, force: boolean = false) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const supplier = await prisma.supplier.findUnique({
       where: { id, shopId },
       include: {
@@ -134,7 +137,8 @@ export async function deleteSupplier(id: string, force: boolean = false) {
 
 export async function getPurchaseOrders() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const orders = await prisma.purchaseOrder.findMany({
       where: { shopId },
       include: {
@@ -153,6 +157,7 @@ export async function getPurchaseOrders() {
 export async function createPurchaseOrder(data: { supplierId: string; totalAmount: number; status: OrderStatus }) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const generatedOrderNo = `PO-${data.supplierId.slice(-4)}-${Date.now()}`;
     const order = await prisma.purchaseOrder.create({
       data: {
@@ -185,6 +190,7 @@ export async function updateSupplier(id: string, data: Partial<{
 }>) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
     const supplier = await prisma.supplier.update({
       where: { id, shopId },
       data: {
@@ -202,7 +208,8 @@ export async function updateSupplier(id: string, data: Partial<{
 
 export async function getCriticalAndOutOfStockProducts() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const products = await prisma.product.findMany({
       where: { shopId },
       include: { category: true },

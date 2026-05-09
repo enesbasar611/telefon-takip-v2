@@ -8,7 +8,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 export const getSettings = cache(async function getSettings() {
-  const shopId = await getShopId();
+  const shopId = await getShopId(false);
   if (!shopId) return [];
 
   return unstable_cache(
@@ -26,7 +26,7 @@ export const getSettings = cache(async function getSettings() {
 });
 
 export const getShop = cache(async function getShop() {
-  const shopId = await getShopId();
+  const shopId = await getShopId(false);
   if (!shopId) return null;
 
   return unstable_cache(
@@ -48,7 +48,8 @@ export const getShop = cache(async function getShop() {
 
 export async function updateSetting(key: string, value: string, revalidate = true) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     await prisma.setting.upsert({
       where: { shopId_key: { shopId, key } },
       update: { value },
@@ -69,7 +70,8 @@ export async function updateSetting(key: string, value: string, revalidate = tru
 
 export async function bulkUpdateSettings(settings: Record<string, string>) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     const promises = Object.entries(settings).map(([key, value]) =>
       prisma.setting.upsert({
         where: { shopId_key: { shopId, key } },
@@ -91,7 +93,8 @@ export async function bulkUpdateSettings(settings: Record<string, string>) {
 
 export async function updateShop(data: any) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     await prisma.shop.update({
       where: { id: shopId },
       data: {
@@ -115,7 +118,8 @@ export async function updateShop(data: any) {
 
 export async function updateShopModules(enabledModules: string[]) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     await prisma.shop.update({
       where: { id: shopId },
       data: { enabledModules } as any,
@@ -131,7 +135,8 @@ export async function updateShopModules(enabledModules: string[]) {
 
 export async function saveAIIndustryConfig(serviceFields: any[], inventoryFields: any[], accessories: string[]) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     const shop = await prisma.shop.findUnique({ where: { id: shopId } });
     if (!shop) throw new Error("Dükkan bulunamadı.");
 

@@ -21,7 +21,10 @@ import { ScannerHelpModal } from "@/components/scanner/scanner-help-modal";
 
 type ActiveTab = 'scan' | 'search' | 'cart' | 'stock';
 
+import { useSession } from "next-auth/react";
+
 export default function MobileScannerPage() {
+    const { data: session, status } = useSession();
     const { socket, isConnected } = useSocket();
     const [isPending, startTransition] = useTransition();
     const [roomId, setRoomId] = useState<string | null>(null);
@@ -93,13 +96,15 @@ export default function MobileScannerPage() {
         const params = new URLSearchParams(window.location.search);
         const urlRoom = params.get("room");
 
-        if (urlRoom) {
+        // Önce oturumdaki shopId'yi, yoksa URL'deki odayı kullan
+        if (session?.user?.shopId) {
+            setRoomId(session.user.shopId);
+        } else if (urlRoom) {
             setRoomId(urlRoom);
             localStorage.setItem("scanner_room_id", urlRoom);
         } else {
             const savedRoom = localStorage.getItem("scanner_room_id");
             if (savedRoom) setRoomId(savedRoom);
-            else toast.error("Kayıtlı bir oda bulunamadı. Lütfen QR okutun.");
         }
 
         // Load History
@@ -122,7 +127,7 @@ export default function MobileScannerPage() {
 
         // Fetch customers
         getCustomers().then(setCustomers);
-    }, []);
+    }, [session]);
 
     // Persist Tab & Cart
     useEffect(() => {
@@ -492,7 +497,21 @@ export default function MobileScannerPage() {
         };
     }, [roomId, isConnected, activeTab]);
 
-    if (!isConnected) {
+    // Giriş kontrolü (Middleware'e ek olarak UI katmanı)
+    if (status === "unauthenticated") {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 text-white p-6 tabular-nums text-center">
+                <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
+                    <User className="w-10 h-10 text-red-500" />
+                </div>
+                <h3 className="text-2xl font-black tracking-tight mb-2">Giriş Yapılmadı</h3>
+                <p className="text-neutral-500 text-sm max-w-xs mb-8">Barkod okuyucuyu kullanmak için dükkan hesabınızla giriş yapmalısınız.</p>
+                <Button onClick={() => window.location.href = "/login"} className="bg-white text-black hover:bg-neutral-200 rounded-2xl px-12 h-14 font-black">GİRİŞ YAP</Button>
+            </div>
+        );
+    }
+
+    if (status === "loading" || !isConnected) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 text-white p-6 tabular-nums">
                 <div className="text-center space-y-6 max-w-xs animate-in zoom-in-50 duration-500">
@@ -501,8 +520,10 @@ export default function MobileScannerPage() {
                         <ShieldCheck className="w-10 h-10 text-blue-500 absolute inset-0 m-auto" />
                     </div>
                     <div>
-                        <h3 className="text-2xl font-black tracking-tight">Sunucuya Bağlanıyor</h3>
-                        <p className="text-neutral-500 text-sm mt-2 font-medium">Bağlantı güvenli tünel üzerinden kuruluyor...</p>
+                        <h3 className="text-2xl font-black tracking-tight">{!isConnected ? "Sunucuya Bağlanıyor" : "Oturum Açılıyor"}</h3>
+                        <p className="text-neutral-500 text-sm mt-2 font-medium">
+                            {status === "loading" ? "Kimlik bilgileri doğrulanıyor..." : "Bağlantı güvenli tünel üzerinden kuruluyor..."}
+                        </p>
                     </div>
                 </div>
             </div>

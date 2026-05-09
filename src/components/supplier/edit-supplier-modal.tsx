@@ -32,6 +32,7 @@ import {
 import { updateSupplier } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const supplierSchema = z.object({
     name: z.string().min(2, "Firma adı zorunludur"),
@@ -232,22 +233,18 @@ export function EditSupplierModal({ isOpen, onClose, supplier }: EditSupplierMod
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="phone" className="font-medium text-[10px] tracking-wider text-muted-foreground/80 uppercase">TELEFON</Label>
-                                            <div className="relative">
-                                                <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
-                                                <Controller
-                                                    name="phone"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            type="tel"
-                                                            placeholder="+90 (___) ___ __ __"
-                                                            className="pl-9 bg-background border-border/50 h-10 rounded-xl text-sm text-foreground focus-visible:ring-blue-500"
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(formatPhone(e.target.value))}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
+                                            <Controller
+                                                name="phone"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <PhoneInput
+                                                        placeholder="Telefon..."
+                                                        {...field}
+                                                        value={field.value || ""}
+                                                        onChange={(val) => field.onChange(val)}
+                                                    />
+                                                )}
+                                            />
                                         </div>
                                     </div>
 

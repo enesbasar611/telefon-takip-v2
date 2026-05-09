@@ -10,7 +10,8 @@ import { z } from "zod";
 
 export async function getCustomers() {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
     const customers = await prisma.customer.findMany({
       where: { shopId },
       include: {
@@ -34,7 +35,8 @@ export async function getCustomersPaginated(params: {
   typeFilter?: string
 }) {
   try {
-    const shopId = await getShopId();
+    const shopId = await getShopId(false);
+    if (!shopId) return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 };
 
     const page = params.page || 1;
     const limit = params.limit || 50;
