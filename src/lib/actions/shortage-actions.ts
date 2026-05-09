@@ -608,7 +608,8 @@ export async function getCourierNotifications() {
 export async function finishCourierDay(courierId: string) {
   try {
     const session = await auth();
-    if (session?.user?.role !== "ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+    const allowedRoles = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"];
+    if (!session?.user?.role || !allowedRoles.includes(session.user.role)) {
       return { success: false, error: "Yetkiniz yok." };
     }
     const shopId = await getShopId();

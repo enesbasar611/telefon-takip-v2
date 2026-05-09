@@ -90,7 +90,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
     const [isUnassignedOpen, setIsUnassignedOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'single' | 'double'>('double');
-    const isAdmin = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(userRole || "");
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(initialDate || "");
@@ -336,7 +336,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
             if (res.success) {
                 // If transfer target is another courier, we need to assign them
                 if (transferTargetId !== "pool") {
-                    const remainingItems = allShortages.filter((st: any) => st.assignedToId === finishingCourier.id && !st.isResolved);
+                    const remainingItems = items.filter((st: any) => st.assignedToId === finishingCourier.id && !st.isResolved);
                     if (remainingItems.length > 0) {
                         const ids = remainingItems.map((i: any) => i.id);
                         const { assignShortageBulkToCourier } = await import("@/lib/actions/shortage-actions");
@@ -1099,8 +1099,8 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                         <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex gap-3">
                             <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
                             <p className="text-xs font-medium text-orange-600 dark:text-orange-400 leading-relaxed">
-                                {allShortages.filter((st: any) => st.assignedToId === finishingCourier?.id && !st.isResolved).length} adet
-                                alınmamış ürün seçilen kuryeye veya boş havuza aktarılacaktır.
+                                {items.filter((st: any) => st.assignedToId === finishingCourier?.id && !st.isResolved).length} adet
+                                ürün seçilen kuryeye veya boş havuza aktarılacaktır.
                             </p>
                         </div>
                     </div>

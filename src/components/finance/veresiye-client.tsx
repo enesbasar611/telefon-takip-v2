@@ -183,6 +183,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
+    React.useEffect(() => {
+        const savedViewMode = localStorage.getItem('veresiye_viewMode');
+        if (savedViewMode === 'grid' || savedViewMode === 'list') {
+            setViewMode(savedViewMode as 'list' | 'grid');
+        }
+    }, []);
+
+    const handleViewModeChange = (mode: 'list' | 'grid') => {
+        setViewMode(mode);
+        localStorage.setItem('veresiye_viewMode', mode);
+    };
+
     // Transaction Edit State
     const [editingTransaction, setEditingTransaction] = useState<any>(null);
     const [editTxAmount, setEditTxAmount] = useState<string>("");
@@ -942,7 +954,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 {/* View Toggle Buttons */}
                                 <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
                                     <button
-                                        onClick={() => setViewMode('list')}
+                                        onClick={() => handleViewModeChange('list')}
                                         className={cn(
                                             "p-2 rounded-lg transition-all",
                                             viewMode === 'list'
@@ -954,7 +966,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         <List className="w-4 h-4" />
                                     </button>
                                     <button
-                                        onClick={() => setViewMode('grid')}
+                                        onClick={() => handleViewModeChange('grid')}
                                         className={cn(
                                             "p-2 rounded-lg transition-all",
                                             viewMode === 'grid'
