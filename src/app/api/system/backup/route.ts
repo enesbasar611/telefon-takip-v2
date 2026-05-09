@@ -10,8 +10,14 @@ import { getGoogleDriveClient, ensureBackupFolder, uploadBackup } from "@/lib/go
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token");
+    const authHeader = req.headers.get("Authorization");
 
-    if (token !== process.env.CRON_SECRET && process.env.NODE_ENV === "production") {
+    // Vercel Cron sends Authorization: Bearer <CRON_SECRET>
+    const isAuthorized =
+        token === process.env.CRON_SECRET ||
+        authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    if (!isAuthorized && process.env.NODE_ENV === "production") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -64,52 +70,38 @@ export async function GET(req: Request) {
 }
 
 async function getExportDataForShop(shopId: string) {
-    const categories: any[] = ["customers", "products", "categories", "services", "sales", "transactions", "suppliers", "agenda"];
+    const categories: string[] = [
+        "customers", "products", "categories", "services", "sales", "transactions",
+        "suppliers", "agenda", "debts", "financeAccounts", "receiptSettings", "reminders",
+        "saleItems", "serviceUsedParts", "inventoryMovements", "supplierTransactions",
+        "serviceLogs", "returnTickets", "settings"
+    ];
     const result: Record<string, any[]> = {};
 
     await Promise.all(categories.map(async (cat: string) => {
+        let rawData: any[] = [];
         switch (cat) {
-            case "customers":
-                result.customers = await prisma.customer.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "products":
-                result.products = await prisma.product.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "categories":
-                result.categories = await prisma.category.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "services":
-                result.services = await prisma.serviceTicket.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "sales":
-                result.sales = await prisma.sale.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "transactions":
-                result.transactions = await prisma.transaction.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "suppliers":
-                result.suppliers = await prisma.supplier.findMany({
-                    where: { shopId },
-                });
-                break;
-            case "agenda":
-                result.agenda = await (prisma as any).agendaEvent.findMany({
-                    where: { shopId },
-                });
-                break;
+            case "customers": rawData = await prisma.customer.findMany({ where: { shopId } }); break;
+            case "products": rawData = await prisma.product.findMany({ where: { shopId } }); break;
+            case "categories": rawData = await prisma.category.findMany({ where: { shopId } }); break;
+            case "services": rawData = await prisma.serviceTicket.findMany({ where: { shopId } }); break;
+            case "sales": rawData = await prisma.sale.findMany({ where: { shopId } }); break;
+            case "transactions": rawData = await prisma.transaction.findMany({ where: { shopId } }); break;
+            case "suppliers": rawData = await prisma.supplier.findMany({ where: { shopId } }); break;
+            case "agenda": rawData = await (prisma as any).agendaEvent.findMany({ where: { shopId } }); break;
+            case "debts": rawData = await prisma.debt.findMany({ where: { shopId } }); break;
+            case "financeAccounts": rawData = await prisma.financeAccount.findMany({ where: { shopId } }); break;
+            case "receiptSettings": rawData = await prisma.receiptSettings.findMany({ where: { shopId } }); break;
+            case "reminders": rawData = await prisma.reminder.findMany({ where: { shopId } }); break;
+            case "saleItems": rawData = await prisma.saleItem.findMany({ where: { shopId } }); break;
+            case "serviceUsedParts": rawData = await prisma.serviceUsedPart.findMany({ where: { shopId } }); break;
+            case "inventoryMovements": rawData = await prisma.inventoryMovement.findMany({ where: { shopId } }); break;
+            case "supplierTransactions": rawData = await prisma.supplierTransaction.findMany({ where: { shopId } }); break;
+            case "serviceLogs": rawData = await prisma.serviceLog.findMany({ where: { shopId } }); break;
+            case "returnTickets": rawData = await prisma.returnTicket.findMany({ where: { shopId } }); break;
+            case "settings": rawData = await prisma.setting.findMany({ where: { shopId } }); break;
         }
+        result[cat] = JSON.parse(JSON.stringify(rawData));
     }));
 
     return result;

@@ -13,7 +13,12 @@ export async function GET(req: Request) {
             categories = categoriesParam.split(",") as ExportCategory[];
         } else {
             // Default to all
-            categories = ["customers", "products", "categories", "services", "sales", "transactions", "suppliers", "agenda"];
+            categories = [
+                "customers", "products", "categories", "services", "sales", "transactions",
+                "suppliers", "agenda", "debts", "financeAccounts", "receiptSettings", "reminders",
+                "saleItems", "serviceUsedParts", "inventoryMovements", "supplierTransactions",
+                "serviceLogs", "returnTickets", "settings"
+            ];
         }
 
         const data = await getExportData(categories);

@@ -283,3 +283,20 @@ function MetricCard({ icon: Icon, label, value, subLabel, color }: any) {
     </div>
   );
 }
+
+export default function DeviceHubPage({
+  searchParams,
+}: {
+  searchParams: { month?: string; startDate?: string; endDate?: string; deviceId?: string };
+}) {
+  return (
+    <Suspense fallback={<DeviceHubSkeleton />}>
+      <DeviceHubData 
+        month={searchParams.month}
+        startDateParam={searchParams.startDate}
+        endDateParam={searchParams.endDate}
+        deviceId={searchParams.deviceId}
+      />
+    </Suspense>
+  );
+}

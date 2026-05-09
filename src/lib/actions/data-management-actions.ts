@@ -8,7 +8,10 @@ import { revalidateTag, revalidatePath } from "next/cache";
 
 export type ExportCategory =
     | "customers" | "products" | "categories" | "services"
-    | "sales" | "transactions" | "suppliers" | "agenda";
+    | "sales" | "transactions" | "suppliers" | "agenda"
+    | "debts" | "financeAccounts" | "receiptSettings" | "reminders"
+    | "saleItems" | "serviceUsedParts" | "inventoryMovements"
+    | "supplierTransactions" | "serviceLogs" | "returnTickets" | "settings";
 
 export async function getExportData(categories: ExportCategory[]) {
     const shopId = await getShopId();
@@ -18,53 +21,43 @@ export async function getExportData(categories: ExportCategory[]) {
         let rawData: any[] = [];
         switch (cat) {
             case "customers":
-                rawData = await prisma.customer.findMany({
-                    where: { shopId },
-                    select: { id: true, name: true, phone: true, email: true, address: true, notes: true, loyaltyPoints: true, type: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.customer.findMany({ where: { shopId } }); break;
             case "products":
-                rawData = await prisma.product.findMany({
-                    where: { shopId },
-                    select: { id: true, sku: true, barcode: true, name: true, description: true, buyPrice: true, sellPrice: true, stock: true, criticalStock: true, location: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.product.findMany({ where: { shopId } }); break;
             case "categories":
-                rawData = await prisma.category.findMany({
-                    where: { shopId },
-                    select: { id: true, name: true, parentId: true, order: true },
-                });
-                break;
+                rawData = await prisma.category.findMany({ where: { shopId } }); break;
             case "services":
-                rawData = await prisma.serviceTicket.findMany({
-                    where: { shopId },
-                    select: { id: true, ticketNumber: true, deviceModel: true, deviceBrand: true, problemDesc: true, status: true, estimatedCost: true, actualCost: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.serviceTicket.findMany({ where: { shopId } }); break;
             case "sales":
-                rawData = await prisma.sale.findMany({
-                    where: { shopId },
-                    select: { id: true, saleNumber: true, totalAmount: true, finalAmount: true, paymentMethod: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.sale.findMany({ where: { shopId } }); break;
             case "transactions":
-                rawData = await prisma.transaction.findMany({
-                    where: { shopId },
-                    select: { id: true, type: true, amount: true, description: true, category: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.transaction.findMany({ where: { shopId } }); break;
             case "suppliers":
-                rawData = await prisma.supplier.findMany({
-                    where: { shopId },
-                    select: { id: true, name: true, phone: true, email: true, address: true, createdAt: true },
-                });
-                break;
+                rawData = await prisma.supplier.findMany({ where: { shopId } }); break;
             case "agenda":
-                rawData = await (prisma as any).agendaEvent.findMany({
-                    where: { shopId },
-                    select: { id: true, title: true, type: true, date: true, notes: true, isCompleted: true, createdAt: true },
-                });
-                break;
+                rawData = await (prisma as any).agendaEvent.findMany({ where: { shopId } }); break;
+            case "debts":
+                rawData = await prisma.debt.findMany({ where: { shopId } }); break;
+            case "financeAccounts":
+                rawData = await prisma.financeAccount.findMany({ where: { shopId } }); break;
+            case "receiptSettings":
+                rawData = await prisma.receiptSettings.findMany({ where: { shopId } }); break;
+            case "reminders":
+                rawData = await prisma.reminder.findMany({ where: { shopId } }); break;
+            case "saleItems":
+                rawData = await prisma.saleItem.findMany({ where: { shopId } }); break;
+            case "serviceUsedParts":
+                rawData = await prisma.serviceUsedPart.findMany({ where: { shopId } }); break;
+            case "inventoryMovements":
+                rawData = await prisma.inventoryMovement.findMany({ where: { shopId } }); break;
+            case "supplierTransactions":
+                rawData = await prisma.supplierTransaction.findMany({ where: { shopId } }); break;
+            case "serviceLogs":
+                rawData = await prisma.serviceLog.findMany({ where: { shopId } }); break;
+            case "returnTickets":
+                rawData = await prisma.returnTicket.findMany({ where: { shopId } }); break;
+            case "settings":
+                rawData = await prisma.setting.findMany({ where: { shopId } }); break;
         }
 
         // Sanitize data: Convert Decimals and serialize
@@ -76,62 +69,111 @@ export async function getExportData(categories: ExportCategory[]) {
 
 // ────────── IMPORT ──────────────────────────────────────────────────────────
 
-export async function importData(data: Record<string, any[]>): Promise<{ success: boolean; stats: Record<string, number>; error?: string }> {
+export async function importData(data: Record<string, any[]>, mode: "merge" | "restore" = "restore"): Promise<{ success: boolean; stats: Record<string, number>; error?: string }> {
     const shopId = await getShopId();
     const stats: Record<string, number> = {};
 
     try {
         await prisma.$transaction(async (tx: any) => {
-            if (data.customers?.length) {
-                let count = 0;
-                for (const c of data.customers) {
-                    try {
-                        await tx.customer.upsert({
-                            where: { shopId_phone: { shopId, phone: c.phone || `import-${c.id}` } },
-                            create: { name: c.name || "İsimsiz", phone: c.phone, email: c.email, address: c.address, notes: c.notes, type: c.type || "BIREYSEL", shopId },
-                            update: { name: c.name, email: c.email, address: c.address, notes: c.notes },
-                        });
-                        count++;
-                    } catch { /* skip duplicate */ }
-                }
-                stats.customers = count;
+            if (mode === "restore") {
+                // Wipe data completely before restoring (except WhatsApp/Gemini keys)
+                const deleteOrder = [
+                    tx.attachment.deleteMany({ where: { shopId } }),
+                    tx.saleItem.deleteMany({ where: { shopId } }),
+                    tx.serviceUsedPart.deleteMany({ where: { shopId } }),
+                    tx.serviceLog.deleteMany({ where: { shopId } }),
+                    tx.returnTicket.deleteMany({ where: { shopId } }),
+                    tx.inventoryMovement.deleteMany({ where: { shopId } }),
+                    tx.inventoryLog.deleteMany({ where: { shopId } }),
+                    tx.transaction.deleteMany({ where: { shopId } }),
+                    tx.sale.deleteMany({ where: { shopId } }),
+                    tx.serviceTicket.deleteMany({ where: { shopId } }),
+                    tx.dailySession.deleteMany({ where: { shopId } }),
+                    tx.debt.deleteMany({ where: { shopId } }),
+                    tx.deviceHubInfo.deleteMany({ where: { shopId } }),
+                    tx.product.deleteMany({ where: { shopId } }),
+                    tx.shortageItem.deleteMany({ where: { shopId } }),
+                    tx.customer.deleteMany({ where: { shopId } }),
+                    tx.supplierTransaction.deleteMany({ where: { shopId } }),
+                    tx.purchaseOrderItem.deleteMany({ where: { shopId } }),
+                    tx.purchaseOrder.deleteMany({ where: { shopId } }),
+                    tx.supplier.deleteMany({ where: { shopId } }),
+                    tx.stockAIAlert.deleteMany({ where: { shopId } }),
+                    tx.notification.deleteMany({ where: { shopId } }),
+                    tx.reminder.deleteMany({ where: { shopId } }),
+                    tx.agendaEvent.deleteMany({ where: { shopId } }),
+                    tx.setting.deleteMany({ where: { shopId, NOT: { OR: [{ key: { startsWith: "whatsapp" } }, { key: "gemini_api_key" }] } } }),
+                    tx.receiptSettings.deleteMany({ where: { shopId } }),
+                    tx.financeAccount.deleteMany({ where: { shopId } }),
+                    tx.category.deleteMany({ where: { shopId } })
+                ];
+                for (const del of deleteOrder) await del;
             }
 
-            if (data.categories?.length) {
-                let count = 0;
-                // Import top-level first, then sub-categories
-                const sorted = [...data.categories].sort((a, b) => (!a.parentId ? -1 : 1));
-                for (const c of sorted) {
-                    try {
-                        await tx.category.upsert({
-                            where: { shopId_name: { shopId, name: c.name } },
-                            create: { name: c.name, order: c.order || 0, shopId },
-                            update: { order: c.order || 0 },
-                        });
-                        count++;
-                    } catch { /* skip */ }
-                }
-                stats.categories = count;
-            }
+            // Define topological restore order
+            const restoreOrder = [
+                { key: "settings", model: tx.setting },
+                { key: "receiptSettings", model: tx.receiptSettings },
+                { key: "financeAccounts", model: tx.financeAccount },
+                { key: "customers", model: tx.customer },
+                { key: "suppliers", model: tx.supplier },
+                { key: "reminders", model: tx.reminder },
+                { key: "agenda", model: tx.agendaEvent },
+                { key: "categories", model: tx.category, selfRelational: true }, // parentId
+                { key: "products", model: tx.product },
+                { key: "serviceTickets", model: tx.serviceTicket },
+                { key: "debts", model: tx.debt },
+                { key: "supplierTransactions", model: tx.supplierTransaction },
+                { key: "sales", model: tx.sale },
+                { key: "saleItems", model: tx.saleItem },
+                { key: "serviceUsedParts", model: tx.serviceUsedPart },
+                { key: "serviceLogs", model: tx.serviceLog },
+                { key: "inventoryMovements", model: tx.inventoryMovement },
+                { key: "returnTickets", model: tx.returnTicket },
+                { key: "transactions", model: tx.transaction },
+            ];
 
-            if (data.suppliers?.length) {
-                let count = 0;
-                for (const s of data.suppliers) {
-                    try {
-                        await (tx as any).supplier.upsert({
-                            where: { id: s.id },
-                            create: { id: s.id, name: s.name, phone: s.phone, email: s.email, address: s.address, shopId },
-                            update: { name: s.name, phone: s.phone, email: s.email },
-                        });
-                        count++;
-                    } catch { /* skip */ }
+            for (const step of restoreOrder) {
+                const items = data[step.key];
+                if (items && items.length > 0) {
+                    if (step.selfRelational) {
+                        // For self-relations like categories with parentId, insert roots first
+                        const sorted = [...items].sort((a, b) => (!a.parentId ? -1 : 1));
+                        for (const item of sorted) {
+                            try {
+                                await step.model.create({ data: { ...item, shopId } });
+                                stats[step.key] = (stats[step.key] || 0) + 1;
+                            } catch { /* ignore dups */ }
+                        }
+                    } else {
+                        // Bulk create is faster but we might need to skip duplicates
+                        try {
+                            const res = await step.model.createMany({
+                                data: items.map(item => ({ ...item, shopId })),
+                                skipDuplicates: true
+                            });
+                            stats[step.key] = res.count;
+                        } catch (e: any) {
+                            console.error(`Restore error on ${step.key}:`, e.message);
+                            // Fallback to row-by-row if createMany fails due to edge cases
+                            for (const item of items) {
+                                try {
+                                    await step.model.create({ data: { ...item, shopId } });
+                                    stats[step.key] = (stats[step.key] || 0) + 1;
+                                } catch { /* ignore */ }
+                            }
+                        }
+                    }
                 }
-                stats.suppliers = count;
             }
         });
 
+        revalidateTag(`dashboard-${shopId}`);
+        revalidatePath("/", "layout");
+
         return { success: true, stats };
     } catch (error: any) {
+        console.error("importData error", error);
         return { success: false, stats, error: error.message };
     }
 }
@@ -363,8 +405,10 @@ export async function backupToDriveAction() {
 
         // Prepare backup data
         const data = await getExportData([
-            "customers", "products", "categories", "services",
-            "sales", "transactions", "suppliers", "agenda"
+            "customers", "products", "categories", "services", "sales", "transactions",
+            "suppliers", "agenda", "debts", "financeAccounts", "receiptSettings", "reminders",
+            "saleItems", "serviceUsedParts", "inventoryMovements", "supplierTransactions",
+            "serviceLogs", "returnTickets", "settings"
         ]);
 
         const fileName = `yedek_${new Date().toISOString().split('T')[0]}_${new Date().getTime()}.json`;

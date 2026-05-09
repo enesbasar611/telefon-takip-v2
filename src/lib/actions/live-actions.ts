@@ -23,7 +23,7 @@ export async function getLiveActivity() {
     ]);
 
     const activity = [
-      ...serviceLogs.map(log => ({
+      ...serviceLogs.map((log: any) => ({
         id: `log-${log.id}`,
         type: 'SERVICE',
         title: log.ticket.ticketNumber,
@@ -32,7 +32,7 @@ export async function getLiveActivity() {
         user: log.ticket.customer?.name || 'Müşteri',
         status: log.status
       })),
-      ...transactions.map(tr => ({
+      ...transactions.map((tr: any) => ({
         id: `tr-${tr.id}`,
         type: 'FINANCE',
         title: tr.type === 'INCOME' ? 'Tahsilat' : 'Gider',

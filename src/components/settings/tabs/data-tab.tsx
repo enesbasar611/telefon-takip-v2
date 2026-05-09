@@ -24,6 +24,17 @@ const CATEGORIES = [
     { id: "transactions", label: "Finansal İşlemler" },
     { id: "suppliers", label: "Tedarikçiler" },
     { id: "agenda", label: "Ajanda" },
+    { id: "debts", label: "Veresiyeler" },
+    { id: "financeAccounts", label: "Kasa & Hesaplar" },
+    { id: "supplierTransactions", label: "Tedarikçi İşlemleri" },
+    { id: "saleItems", label: "Satış Detayları" },
+    { id: "serviceUsedParts", label: "Servis Kullanılan Parçalar" },
+    { id: "inventoryMovements", label: "Stok Hareketleri" },
+    { id: "serviceLogs", label: "Servis Geçmişi Logları" },
+    { id: "returnTickets", label: "İadeler ve Arızalar" },
+    { id: "reminders", label: "Hatırlatıcılar" },
+    { id: "settings", label: "Sistem Ayarları" },
+    { id: "receiptSettings", label: "Fiş Ayarları" }
 ];
 
 export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
@@ -294,6 +305,7 @@ export function DataTab({ formData, onChange, savingKeys }: DataTabProps) {
                                             if (checked) {
                                                 const res = await ensureGoogleDriveFolderAction();
                                                 if (res.success) {
+                                                    onChange("googleDriveFolderId", res.folderId, false);
                                                     toast.success("Google Drive klasörü başarıyla bağlandı.");
                                                 } else {
                                                     toast.error(res.error);

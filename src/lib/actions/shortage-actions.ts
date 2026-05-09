@@ -69,8 +69,8 @@ export async function getGlobalShortageList(dateStr?: string) {
 
   // Filter out products that already have a manual shortage entry
   const missingProductAlerts = lowStockProducts
-    .filter(p => p.shortageItems.length === 0)
-    .map(p => ({
+    .filter((p: any) => p.shortageItems.length === 0)
+    .map((p: any) => ({
       id: `alert-${p.id}`,
       name: p.name,
       quantity: 1, // Default to 1 for alerts

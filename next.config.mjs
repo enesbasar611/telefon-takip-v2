@@ -9,7 +9,7 @@ const nextConfig = {
         ignoreDuringBuilds: true,
     },
     experimental: {
-        serverComponentsExternalPackages: ["puppeteer-extra", "puppeteer-extra-plugin-stealth", "puppeteer"],
+        serverComponentsExternalPackages: ["puppeteer-extra", "puppeteer-extra-plugin-stealth", "puppeteer", "whatsapp-web.js", "unzipper"],
     },
 };
 
