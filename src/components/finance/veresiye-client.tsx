@@ -707,16 +707,36 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     };
 
     const exportToExcel = () => {
-        const data = aggregatedData.map(item => ({
-            Müşteri: item.name,
-            Telefon: item.phone || "-",
-            "Toplam Borç": item.totalRemainingTRY,
-            "Son İşlem": format(item.lastActivity, "dd MMMM yyyy", { locale: tr })
-        }));
+        const data = aggregatedData.flatMap(item => {
+            if (!item.debtItems || item.debtItems.length === 0) {
+                return [{
+                    "Müşteri": item.name,
+                    "Telefon": item.phone || "-",
+                    "Toplam Borç (TL)": item.totalRemainingTRY,
+                    "Toplam Borç (USD)": item.totalRemainingUSD,
+                    "Alınan Ürün/İşlem": "-",
+                    "İşlem Tutarı": 0,
+                    "Kalan Tutar": 0,
+                    "Para Birimi": "-",
+                    "Tarih": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
+                }];
+            }
+            return item.debtItems.map((debt: any) => ({
+                "Müşteri": item.name,
+                "Telefon": item.phone || "-",
+                "Toplam Borç (TL)": item.totalRemainingTRY,
+                "Toplam Borç (USD)": item.totalRemainingUSD,
+                "Alınan Ürün/İşlem": debt.notes || "-",
+                "İşlem Tutarı": Number(debt.amount),
+                "Kalan Tutar": Number(debt.remainingAmount),
+                "Para Birimi": debt.currency || "TRY",
+                "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
+            }));
+        });
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Veresiye Listesi");
-        XLSX.writeFile(wb, "Veresiye_Listesi.xlsx");
+        XLSX.utils.book_append_sheet(wb, ws, "Veresiye Detaylı Liste");
+        XLSX.writeFile(wb, "Veresiye_Detayli_Liste.xlsx");
     };
 
     return (
@@ -755,13 +775,32 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                         </Button>
                         <Button
                             onClick={() => {
-                                const data = aggregatedData.map(item => ({
-                                    Müşteri: item.name,
-                                    Telefon: item.phone || "-",
-                                    "Borç (TL)": item.totalRemainingTRY,
-                                    "Borç (USD)": item.totalRemainingUSD,
-                                    "Son İşlem": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
-                                }));
+                                const data = aggregatedData.flatMap(item => {
+                                    if (!item.debtItems || item.debtItems.length === 0) {
+                                        return [{
+                                            "Müşteri": item.name,
+                                            "Telefon": item.phone || "-",
+                                            "Toplam Borç (TL)": item.totalRemainingTRY,
+                                            "Toplam Borç (USD)": item.totalRemainingUSD,
+                                            "Alınan Ürün/İşlem": "-",
+                                            "İşlem Tutarı": 0,
+                                            "Kalan Tutar": 0,
+                                            "Para Birimi": "-",
+                                            "Tarih": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
+                                        }];
+                                    }
+                                    return item.debtItems.map((debt: any) => ({
+                                        "Müşteri": item.name,
+                                        "Telefon": item.phone || "-",
+                                        "Toplam Borç (TL)": item.totalRemainingTRY,
+                                        "Toplam Borç (USD)": item.totalRemainingUSD,
+                                        "Alınan Ürün/İşlem": debt.notes || "-",
+                                        "İşlem Tutarı": Number(debt.amount),
+                                        "Kalan Tutar": Number(debt.remainingAmount),
+                                        "Para Birimi": debt.currency || "TRY",
+                                        "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
+                                    }));
+                                });
                                 const ws = XLSX.utils.json_to_sheet(data);
                                 const csv = XLSX.utils.sheet_to_csv(ws);
                                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

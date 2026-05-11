@@ -233,7 +233,9 @@ export async function getDetailedExportData() {
         Kategori: i.category?.name || 'Genel',
         Stok_Adedi: i.stock,
         Kritik_Stok: i.criticalStock,
-        Satış_Fiyatı: Number(i.sellPrice)
+        Alış_Fiyatı_TL: Number(i.buyPrice || 0),
+        Alış_Fiyatı_USD: Number(i.buyPriceUsd || 0),
+        Satış_Fiyatı_TL: Number(i.sellPrice)
       }))
     });
   } catch (error) {

@@ -17,7 +17,7 @@ export function DeviceExportButton({ devices, categories, selectedMonth }: Devic
         const headers = [
             "ID", "Cihaz Adı", "Marka", "Model", "IMEI", "Kondisyon",
             "Renk", "Hafıza", "RAM", "Pil Sağlığı",
-            "Alış Fiyatı", "Satış Fiyatı", "Eklenme Tarihi"
+            "Alış Fiyatı", "Alış Fiyatı (USD)", "Satış Fiyatı", "Eklenme Tarihi"
         ];
 
         // CSV Rows
@@ -33,6 +33,7 @@ export function DeviceExportButton({ devices, categories, selectedMonth }: Devic
             d.deviceInfo?.ram || "-",
             d.deviceInfo?.batteryHealth ? `%${d.deviceInfo.batteryHealth}` : "-",
             d.buyPrice.toString(),
+            d.buyPriceUsd ? d.buyPriceUsd.toString() : "-",
             d.sellPrice.toString(),
             new Date(d.createdAt).toLocaleDateString("tr-TR")
         ]);
