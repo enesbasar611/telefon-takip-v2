@@ -4,10 +4,15 @@ import React, { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 
+interface DashboardSetting {
+    key: string;
+    value: unknown;
+}
+
 interface DashboardDataContextType {
     rates: any;
     stats: any;
-    settings: any[];
+    settings: DashboardSetting[];
     isLoading: boolean;
     refresh: () => void;
     defaultCurrency: "TRY" | "USD";
@@ -25,7 +30,7 @@ export function DashboardDataProvider({
     children: React.ReactNode;
     initialRates: any;
     initialStats: any;
-    initialSettings: any[];
+    initialSettings: DashboardSetting[];
     shopId?: string;
 }) {
     const { data, isLoading, refetch: refresh } = useQuery({
@@ -36,7 +41,7 @@ export function DashboardDataProvider({
         refetchOnWindowFocus: true,
     });
 
-    const settings = data?.settings || initialSettings || [];
+    const settings: DashboardSetting[] = data?.settings || initialSettings || [];
     const defaultCurrency = (settings.find(s => s.key === "defaultCurrency")?.value as any) || "TRY";
 
     return (

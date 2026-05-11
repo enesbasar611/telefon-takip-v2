@@ -323,7 +323,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
                 <DebtReceiptModal
                     open={receiptOpen}
                     onClose={() => setReceiptOpen(false)}
-                    customer={{ name: selectedCustomer.name, phone: selectedCustomer.phone }}
+                    customer={{ id: selectedCustomer.id, name: selectedCustomer.name, phone: selectedCustomer.phone }}
                     debts={customerDebts}
                     shopName={shopName}
                     shopPhone={shopPhone}

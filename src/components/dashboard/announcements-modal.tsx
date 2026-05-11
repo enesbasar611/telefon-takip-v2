@@ -23,6 +23,8 @@ const iconMap: Record<string, any> = {
     Sparkles,
 };
 
+const settingValueToString = (value: unknown) => typeof value === "string" ? value : "";
+
 export function AnnouncementsModal() {
     const { settings } = useDashboardData();
     const [open, setOpen] = useState(false);
@@ -36,7 +38,7 @@ export function AnnouncementsModal() {
         if (hasBeenShown) return;
 
         // Get seen IDs from both DB settings and localStorage for maximum robustness
-        const dbSeenRaw = settings?.find(s => s.key === "seen_announcements")?.value || "";
+        const dbSeenRaw = settingValueToString(settings?.find(s => s.key === "seen_announcements")?.value);
         const dbSeenIds = dbSeenRaw.split(",").filter(Boolean);
         const localSeenIds = (localStorage.getItem("seen_announcement_ids") || "").split(",").filter(Boolean);
 
@@ -56,7 +58,7 @@ export function AnnouncementsModal() {
     const handleClose = async () => {
         setOpen(false);
         const seenIds = unseenAnnouncements.map(a => a.id);
-        const dbSeenRaw = settings?.find(s => s.key === "seen_announcements")?.value || "";
+        const dbSeenRaw = settingValueToString(settings?.find(s => s.key === "seen_announcements")?.value);
         const existingIds = dbSeenRaw.split(",").filter(Boolean);
 
         const newSeenIds = Array.from(new Set([...existingIds, ...seenIds])).join(",");

@@ -213,6 +213,7 @@ export async function addShortageItems(items: Array<{
     // Given the logic in addShortageItem (updating existing), we should probably reuse that logic.
 
     const results = [];
+    let duplicateCount = 0;
     for (const data of items) {
       // Check if an unresolved item with same productId or name AND same requester already exists
       const existing = await prisma.shortageItem.findFirst({
@@ -228,6 +229,7 @@ export async function addShortageItems(items: Array<{
       });
 
       if (existing) {
+        duplicateCount += 1;
         await prisma.shortageItem.update({
           where: { id: existing.id },
           data: {
@@ -257,7 +259,16 @@ export async function addShortageItems(items: Array<{
     revalidatePath("/stok");
     revalidatePath("/stok/hareketler");
 
-    return { success: true };
+    const isDuplicate = duplicateCount > 0;
+    return {
+      success: true,
+      isDuplicate,
+      message: isDuplicate
+        ? duplicateCount === items.length
+          ? "Urun zaten eksikler listesinde; miktari guncellendi."
+          : `${duplicateCount} urun zaten eksikler listesinde; miktari guncellendi.`
+        : undefined
+    };
   } catch (error) {
     console.error("Add bulk shortage items error:", error);
     return { success: false, error: "Toplu ekleme başarısız oldu." };
