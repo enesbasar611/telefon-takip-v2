@@ -94,20 +94,36 @@ export const getDashboardStats = async (shopId: string | null) => {
           kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
         } catch { /* ignore */ }
 
+        const repairIncomeAmount = Number(todayRepairIncomeResult._sum.actualCost) || 0;
+        const totalDebtsAmount = Number(totalDebtsResult._sum.balance) || 0;
+
+        // Fetch exchange rate for USD conversions
+        let usdRate = 32.5;
+        try {
+          const ratesData = await getExchangeRates(shopId);
+          usdRate = ratesData?.usd || 32.5;
+        } catch { /* ignore */ }
+
         return serializePrisma({
           todaySales: `₺${formatCurrency(todaySalesAmount)}`,
           todaySalesRaw: todaySalesAmount,
+          todaySalesUSD: todaySalesAmount / usdRate,
           kasaBalance: `₺${formatCurrency(kasaBalance)}`,
           kasaBalanceRaw: kasaBalance,
+          kasaBalanceUSD: kasaBalance / usdRate,
           kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
           kasaOpeningBalanceRaw: kasaOpeningBalance,
-          todayRepairIncome: `₺${formatCurrency(Number(todayRepairIncomeResult._sum.actualCost) || 0)}`,
+          todayRepairIncome: `₺${formatCurrency(repairIncomeAmount)}`,
+          todayRepairIncomeUSD: repairIncomeAmount / usdRate,
           collectedPayments: `₺${formatCurrency(collectedToday)}`,
+          collectedPaymentsUSD: collectedToday / usdRate,
           pendingServices: pendingServicesValue.toString(),
           readyDevices: readyDevicesValue.toString(),
           criticalStock: lowStockCount.toString(),
-          totalDebts: `₺${formatCurrency(Number(totalDebtsResult._sum.balance) || 0)}`,
+          totalDebts: `₺${formatCurrency(totalDebtsAmount)}`,
+          totalDebtsUSD: totalDebtsAmount / usdRate,
           cashBalance: `₺${formatCurrency(kasaBalance)}`,
+          usdRate,
           pendingProcurementCount: pendingProcurementCountValue.toString(),
           deadStockCount: deadStockCountValue.toString(),
           totalDevices: (totalDevicesCountValue || 0).toString(),
@@ -201,10 +217,11 @@ export const getTopProducts = async (shopId: string | null, limit: number = 5) =
 }
 
 export async function getDashboardInit(shopId: string | null) {
-  const [stats, rates] = await Promise.all([
+  const [stats, rates, settings] = await Promise.all([
     getDashboardStats(shopId),
     getExchangeRates(shopId),
+    prisma.setting.findMany({ where: { shopId: shopId || "" } }),
   ]);
 
-  return { stats, rates };
+  return { stats, rates, settings: serializePrisma(settings) };
 }

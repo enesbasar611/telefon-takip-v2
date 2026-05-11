@@ -174,7 +174,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     return () => clearInterval(interval);
   }, []);
 
-  const menuItems = getMenuItems(currentShop, user?.role || session?.user?.role);
+  const userRole = session?.user?.role || user?.role;
+  const menuItems = getMenuItems(currentShop, userRole);
 
   useEffect(() => {
     setLocalActivePath(pathname);

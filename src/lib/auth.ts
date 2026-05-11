@@ -8,7 +8,8 @@ import { Role } from "@prisma/client";
 import { sendApprovalCodeToAdmin } from "@/lib/mail";
 
 
-const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "qwerty61.enes@gmail.com";
+const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ALTERNATIVE_SUPER_ADMIN = process.env.ALTERNATIVE_ADMIN_EMAIL;
 
 function generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -163,7 +164,7 @@ export const authOptions: NextAuthOptions = {
     events: {
         async signIn({ user }) {
             // Automatically promote & approve the Super Admin
-            if (user.email === SUPER_ADMIN_EMAIL) {
+            if (user.email === SUPER_ADMIN_EMAIL || user.email === ALTERNATIVE_SUPER_ADMIN) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
@@ -190,7 +191,7 @@ export const authOptions: NextAuthOptions = {
         },
         async createUser({ user }) {
             // New users registered via OAuth (PrismaAdapter)
-            const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+            const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL || user.email === ALTERNATIVE_SUPER_ADMIN;
             const roleStr = isSuperAdmin ? "SUPER_ADMIN" : "SHOP_MANAGER";
 
             if (isSuperAdmin) {

@@ -415,12 +415,6 @@ export async function collectGlobalCustomerPayment(
       return { success: false, error: "Müşteri ID bulunamadı." };
     }
 
-    revalidatePath("/veresiye");
-    revalidatePath("/satis/kasa");
-    revalidatePath("/musteriler");
-    revalidatePath(`/musteriler/${customerId}`);
-    revalidateTag(`dashboard-${shopId}`);
-
     return {
       success: true,
       remainingTRY: Number(totalRemainingTRY.toFixed(2)),

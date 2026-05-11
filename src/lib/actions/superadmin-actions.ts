@@ -101,7 +101,9 @@ export async function updateShopStatus(shopId: string, isActive: boolean) {
 
 export async function impersonateShop(shopId: string) {
     try {
+        console.log(`[Impersonate] Initiating for shopId: ${shopId}`);
         const user = await checkSuperAdmin();
+        console.log(`[Impersonate] Super Admin verified: ${user.email} (${user.id})`);
 
         // Update the user's shopId in the database.
         await prisma.user.update({
@@ -109,15 +111,19 @@ export async function impersonateShop(shopId: string) {
             data: { shopId }
         });
 
+        console.log(`[Impersonate] Successfully updated shopId in DB to: ${shopId}`);
         return { success: true };
     } catch (error: any) {
+        console.error(`[Impersonate] Failed: ${error.message}`);
         return { success: false, error: "Kimliğe bürünme başarısız: " + error.message };
     }
 }
 
 export async function stopImpersonating() {
     try {
+        console.log(`[StopImpersonate] Initiating`);
         const user = await checkSuperAdmin();
+        console.log(`[StopImpersonate] Super Admin verified: ${user.email} (${user.id})`);
 
         // Clear the shopId — getShopId() has a Super Admin fallback that finds the
         // home shop automatically, so setting null here is safe.
@@ -126,8 +132,10 @@ export async function stopImpersonating() {
             data: { shopId: null }
         });
 
+        console.log(`[StopImpersonate] Successfully cleared shopId in DB`);
         return { success: true };
     } catch (error: any) {
+        console.error(`[StopImpersonate] Failed: ${error.message}`);
         return { success: false, error: "Dönüş başarısız: " + error.message };
     }
 }

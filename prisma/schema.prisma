@@ -226,6 +226,7 @@ model Product {
   buyPrice       Decimal             @db.Decimal(10, 2)
   buyPriceUsd    Decimal?            @db.Decimal(10, 2)
   sellPrice      Decimal             @db.Decimal(10, 2)
+  sellPriceUsd   Decimal?            @db.Decimal(10, 2)
   stock          Int                 @default(0)
   criticalStock  Int                 @default(5)
   isSecondHand   Boolean             @default(false)

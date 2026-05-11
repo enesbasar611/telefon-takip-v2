@@ -5,17 +5,20 @@ import { LogOut, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { stopImpersonating } from "@/lib/actions/superadmin-actions";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 export function ImpersonationBanner({ shopName }: { shopName: string }) {
+    const { update } = useSession();
     const [isPending, startTransition] = useTransition();
 
     const handleStopImpersonating = () => {
         startTransition(async () => {
             const result = await stopImpersonating();
             if (result.success) {
+                console.log("[StopImpersonate] Updating session cache...");
+                await update();
                 toast.success("Admin paneline dönüldü.");
                 // Hard redirect ensures a fresh HTTP request with the updated JWT cookie.
-                // Soft navigation (router.push) can race with the cookie update from update().
                 window.location.href = "/admin/shops";
             } else {
                 toast.error(result.error || "Hata oluştu.");

@@ -8,15 +8,17 @@ interface StatWidgetWrapperProps {
     stat: any;
     type: StatType;
     statsData: any;
+    defaultCurrency?: string;
 }
 
-export function StatWidgetWrapper({ stat, type, statsData }: StatWidgetWrapperProps) {
+export function StatWidgetWrapper({ stat, type, statsData, defaultCurrency }: StatWidgetWrapperProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
         <>
             <StatCard
                 {...stat}
+                defaultCurrency={defaultCurrency}
                 onClick={() => setIsOpen(true)}
             />
             <StatDetailModal

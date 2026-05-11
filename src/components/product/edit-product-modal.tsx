@@ -38,6 +38,7 @@ const productSchema = z.object({
     buyPrice: z.string().min(1, "Alış fiyatı gereklidir"),
     buyPriceUsd: z.string().optional(),
     sellPrice: z.string().min(1, "Satış fiyatı gereklidir"),
+    sellPriceUsd: z.string().optional(),
     stock: z.string().min(1, "Stok miktarı gereklidir"),
     criticalStock: z.string().min(1, "Kritik stok gereklidir"),
     barcode: z.string().optional(),
@@ -80,6 +81,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                 buyPrice: product.buyPrice.toString(),
                 buyPriceUsd: product.buyPriceUsd?.toString() || "",
                 sellPrice: product.sellPrice.toString(),
+                sellPriceUsd: product.sellPriceUsd?.toString() || "",
                 stock: product.stock.toString(),
                 criticalStock: product.criticalStock.toString(),
                 barcode: product.barcode || "",
@@ -97,6 +99,14 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
         }
     };
 
+    const handleSellUsdChange = (usdVal: number) => {
+        setValue("sellPriceUsd", String(usdVal));
+        if (usdVal > 0 && exchangeRates?.usd) {
+            const tlVal = Math.ceil(usdVal * exchangeRates.usd);
+            setValue("sellPrice", String(tlVal));
+        }
+    };
+
     const onSubmit = async (data: any) => {
         startTransition(async () => {
             const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
@@ -107,6 +117,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                 buyPrice: Number(data.buyPrice),
                 buyPriceUsd: data.buyPriceUsd ? Number(data.buyPriceUsd) : null,
                 sellPrice: Number(data.sellPrice),
+                sellPriceUsd: data.sellPriceUsd ? Number(data.sellPriceUsd) : null,
                 stock: Number(data.stock),
                 criticalStock: Number(data.criticalStock),
                 barcode: barcode || data.barcode,
@@ -210,16 +221,28 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2.5">
-                                    <Label htmlFor="sellPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                        <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış Fiyatı
-                                    </Label>
-                                    <PriceInput
-                                        id="sellPrice"
-                                        value={watch("sellPrice")}
-                                        onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
-                                    />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2.5">
+                                        <Label htmlFor="sellPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                                            <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış (TL)
+                                        </Label>
+                                        <PriceInput
+                                            id="sellPrice"
+                                            value={watch("sellPrice")}
+                                            onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
+                                            className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                        />
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        <Label htmlFor="sellPriceUsd" className="font-bold text-[10px] text-emerald-500/70 uppercase tracking-[0.2em] ml-1">Dollar ($)</Label>
+                                        <PriceInput
+                                            id="sellPriceUsd"
+                                            value={watch("sellPriceUsd")}
+                                            onChange={(v) => handleSellUsdChange(Number(v))}
+                                            prefix="$"
+                                            className="bg-emerald-500/5 border-emerald-500/20 rounded-2xl h-14 text-sm text-emerald-500 font-bold"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

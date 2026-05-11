@@ -94,6 +94,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(initialDate || "");
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -806,7 +811,9 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                                     <Badge variant="outline" className="bg-blue-500/5 text-blue-400 border-blue-500/10 text-[9px] px-2 py-0.5 font-black">
                                                                         {item.quantity} ADET
                                                                     </Badge>
-                                                                    <span className="text-[9px] font-black opacity-30 uppercase">{new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    <span className="text-[9px] font-black opacity-30 uppercase">
+                                                                        {mounted ? new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                                    </span>
                                                                     {isAdmin && item.assignedTo && (
                                                                         <Badge className="bg-zinc-500/20 text-zinc-400 border-zinc-500/20 text-[8px] font-black uppercase">
                                                                             {item.assignedTo.name} {item.assignedTo.surname}

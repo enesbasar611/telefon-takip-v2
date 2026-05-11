@@ -26,7 +26,7 @@ import {
     hexToHsl,
     settingsArrayToRecord,
 } from "@/lib/appearance-settings";
-import { AnnouncementModal } from "@/components/dashboard/announcement-modal";
+import { AnnouncementsModal } from "@/components/dashboard/announcements-modal";
 
 export default async function DashboardLayout({
     children,
@@ -112,16 +112,15 @@ export default async function DashboardLayout({
         <QueryProvider>
             <ProgressBarProvider>
                 <UIProvider>
-                    <DashboardDataProvider initialRates={initialRates} initialStats={null} shopId={shopId || ""}>
+                    <DashboardDataProvider initialRates={initialRates} initialStats={null} initialSettings={settings} shopId={shopId || ""}>
                         <SupplierOrderProvider>
                             <ShortageProvider>
                                 <link
                                     rel="stylesheet"
                                     href={`https://fonts.googleapis.com/css2?family=${appFontImport.gfont}&display=swap`}
                                 />
-                                <style>{`:root { --brand-color: ${brandColor}; --brand-color-muted: ${brandColor}1a; --primary: ${primaryHsl}; --ring: ${primaryHsl}; --app-font: '${appFont}', system-ui, -apple-system, sans-serif; --app-font-weight: ${appFontWeight}; --radius: ${radius}; } body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select { font-family: var(--app-font); font-weight: var(--app-font-weight) !important; }`}</style>
 
-                                <AnnouncementModal />
+                                <AnnouncementsModal />
 
                                 {!isCourier && <GlobalSearch />}
 
@@ -147,6 +146,23 @@ export default async function DashboardLayout({
                                                 ? "w-full min-h-screen pb-20 relative z-10"
                                                 : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300"
                                             }>
+                                                <style dangerouslySetInnerHTML={{
+                                                    __html: `
+                                                        :root {
+                                                            --brand-color: ${brandColor};
+                                                            --brand-color-muted: ${brandColor}1a;
+                                                            --primary: ${primaryHsl};
+                                                            --ring: ${primaryHsl};
+                                                            --app-font: '${appFont}', system-ui, -apple-system, sans-serif;
+                                                            --app-font-weight: ${appFontWeight};
+                                                            --radius: ${radius};
+                                                        }
+                                                        body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select {
+                                                            font-family: var(--app-font);
+                                                            font-weight: var(--app-font-weight) !important;
+                                                        }
+                                                    `
+                                                }} />
                                                 {children}
                                             </div>
                                         </main>
@@ -162,6 +178,3 @@ export default async function DashboardLayout({
         </QueryProvider>
     );
 }
-
-
-

@@ -31,6 +31,7 @@ export interface AIProductResult {
     buyPrice: number;
     buyPriceUsd?: number | null;
     sellPrice: number;
+    sellPriceUsd?: number | null;
     stock: number;
     criticalStock: number;
     barcode?: string;
@@ -68,10 +69,12 @@ async function buildProductContext() {
     return products.slice(0, 300).map((p: any) => p.name);
 }
 
-function buildSystemPrompt(categoryList: any[], productList: string[] = [], exchangeRate: number = 35) {
+function buildSystemPrompt(categoryList: any[], productList: string[] = [], exchangeRate: number = 35, defaultCurrency: string = "TRY") {
     const usdRate = exchangeRate > 1 ? exchangeRate : 35;
     const limited = categoryList.slice(0, 80);
     return `Sen bir telefon & teknik servis dükkanı yazılımının envanter asistanısın.
+
+MAĞAZA VARSAYILAN PARA BİRİMİ: ${defaultCurrency}
 
 MEVCUT KATEGORİ AĞACI:
 ${JSON.stringify(limited, null, 2)}
@@ -85,8 +88,9 @@ HİYERARŞİK KATEGORİ VE EŞLEŞTİRME KURALLARI:
 3. Eğer kullanıcı "iPhone 11'den 15'e kadar" dediyse ve 12-13 zaten varsa, sadece 11, 14, 15 ve bunların Pro/Max versiyonlarını (eğer istenmişse) oluştur.
 4. "Şarj Aletleri > Type-C > Samsung 25W" gibi bir yapı girdiyse, categoryPath: ["Şarj Aletleri", "Type-C"] olmalı.
 5. Mevcut kategorilerle eşleşiyorsa ID'leri kullan, yeni bir kategori hiyerarşisi seziyorsan isimleri kullan.
- 6. FİLER DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer alış fiyatında "dolar", "USD" veya "$" işareti varsa buyPriceUsd alanına o rakamı yaz, buyPrice (TL) alanına ise o rakamın ${usdRate} katını yaz (sonucu yukarı yuvarla, tam sayı olsun).
-7. confidence: "high", "medium", "low".
+6. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı (alış veya satış) "dolar", "USD" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz. 
+7. EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan. Varsayılan ${defaultCurrency} ise ve kullanıcı sadece rakam yazdıysa onu ${defaultCurrency} olarak kabul et.
+8. confidence: "high", "medium", "low".
 İstisnalar: Telefon ekleme önerilerilerinde gereksiz model kalabalığı yapma.`;
 }
 
@@ -97,6 +101,7 @@ const SINGLE_SCHEMA = `{
   "buyPrice": number,
   "buyPriceUsd": "number | null",
   "sellPrice": number,
+  "sellPriceUsd": "number | null",
   "stock": number,
   "criticalStock": number,
   "barcode": "string | null",
@@ -113,6 +118,7 @@ const BULK_SCHEMA = `{
       "buyPrice": number,
       "buyPriceUsd": "number | null",
       "sellPrice": number,
+      "sellPriceUsd": "number | null",
       "stock": number,
       "criticalStock": number,
       "barcode": "string | null",
@@ -130,6 +136,7 @@ function sanitizeProduct(parsed: any): AIProductResult {
         buyPrice: Number(parsed.buyPrice) || 0,
         buyPriceUsd: parsed.buyPriceUsd ? Number(parsed.buyPriceUsd) : null,
         sellPrice: Number(parsed.sellPrice) || 0,
+        sellPriceUsd: parsed.sellPriceUsd ? Number(parsed.sellPriceUsd) : null,
         stock: Number(parsed.stock) || 1,
         criticalStock: Number(parsed.criticalStock) || 3,
         barcode: parsed.barcode && parsed.barcode !== "null" ? parsed.barcode : undefined,
@@ -203,9 +210,14 @@ export async function parseProductWithAI(
     const rates = await getExchangeRates(shopId);
     const usdRate = rates.usd > 1 ? rates.usd : 35;
 
+    const setting = await prisma.setting.findUnique({
+        where: { shopId_key: { shopId, key: "defaultCurrency" } }
+    });
+    const defaultCurrency = setting?.value || "TRY";
+
     const categoryList = await buildCategoryContext();
     const productList = await buildProductContext();
-    const systemPrompt = buildSystemPrompt(categoryList, productList, usdRate);
+    const systemPrompt = buildSystemPrompt(categoryList, productList, usdRate, defaultCurrency);
     const userPrompt = `SADECE GEÇERLİ JSON DÖNDÜR (başka metin yok):\n${SINGLE_SCHEMA}\n\nKULLANICI AÇIKLAMASI:\n${description}`;
 
     const result = await callGemini(shopId, [systemPrompt, userPrompt]);
@@ -234,14 +246,21 @@ export async function parseBulkProductsWithAI(
     const rates = await getExchangeRates(shopId);
     const usdRate = rates.usd > 1 ? rates.usd : 35;
 
+    const setting = await prisma.setting.findUnique({
+        where: { shopId_key: { shopId, key: "defaultCurrency" } }
+    });
+    const defaultCurrency = setting?.value || "TRY";
+
     const systemPrompt = `Sen bir telefon & teknik servis dükkanı yazılımının envanter asistanısın.
 Kullanıcı BİRDEN FAZLA ürün tanımlamış olabilir. Şu kurallara uy:
+- MAĞAZA VARSAYILAN PARA BİRİMİ: ${defaultCurrency}
 - MEVCUT ÜRÜNLER: ${JSON.stringify(productList.slice(0, 100))}
 - Eğer bir ürün yukarıdaki MEVCUT ÜRÜNLER listesinde varsa, onu tekrar EKLEME. Sadece listede olmayanları veya yeni modelleri ekle.
 - "iPhone 11'den 15'e kadar" gibi seri ifadeleri her model için ayrı kayıt oluştur (max 20 ürün)
 - "X adet" ifadesi stock anlamına gelir, ayrı ürün değil
 - categoryPath: ["kategori1", "kategori2"] listesi döndür.
-- FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar", "USD" veya "$" olarak belirttiyse, buyPriceUsd alanına o rakamı yaz, buyPrice (TL) alanına ise o rakamın ${usdRate} katını yaz (sonucu yukarı yuvarla).
+- FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar", "USD" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
+- EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan.
 - SADECE GEÇERLİ JSON DÖNDÜR.`;
 
     const userPrompt = `SADECE GEÇERLİ JSON DÖNDÜR:\n${BULK_SCHEMA}\n\nKULLANICI AÇIKLAMASI:\n${description}`;
@@ -268,6 +287,7 @@ export interface AICategoryNode {
         buyPrice: number;
         buyPriceUsd?: number | null;
         sellPrice: number;
+        sellPriceUsd?: number | null;
         stock: number;
         criticalStock: number;
         barcode?: string;
@@ -294,6 +314,7 @@ export async function parseCategoryTreeWithAI(
           "buyPrice": number,
           "buyPriceUsd": "number | null",
           "sellPrice": number,
+          "sellPriceUsd": "number | null",
           "stock": number,
           "criticalStock": number,
           "barcode": "string | null",
@@ -309,15 +330,22 @@ export async function parseCategoryTreeWithAI(
     const usdRate = rates.usd > 1 ? rates.usd : 35;
 
     const productList = await buildProductContext();
+    const setting = await prisma.setting.findUnique({
+        where: { shopId_key: { shopId, key: "defaultCurrency" } }
+    });
+    const defaultCurrency = setting?.value || "TRY";
+
     const systemPrompt = `Sen bir telefon & teknik servis dükkanı yazılımının envanter asistanısın.
 Kullanıcı bir kategori hiyerarşisi ve ürün tanımı yazıyor.
+MAĞAZA VARSAYILAN PARA BİRİMİ: ${defaultCurrency}
 MEVCUT ÜRÜNLER (Mükerrer eklememek için kontrol et): ${JSON.stringify(productList.slice(0, 50))}
 Kurallara uy:
 1. Eğer bir ürün yukarıdaki MEVCUT ÜRÜNLER listesinde birebir aynı isimle varsa, onu tekrar EKLEME. 
 2. "Şarj Aletleri > Type-C > 27W" gibi hiyerarşiler → her seviye ayrı kategori düğümü
 3. Her kategorinin parentName'ini bir üst seviyenin name'i olarak doldur (root → null)
 4. Seri modeller için HER MODEL ayrı ürün satırı olarak oluştur (max 20 ürün)
-5. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar" veya "$" olarak belirttiyse, buyPriceUsd alanına o rakamı yaz, buyPrice (TL) alanına ise o rakamın ${usdRate} katını yaz (sonucu yukarı yuvarla).
+5. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
+6. EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan.
 SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `KULLANICI AÇIKLAMASI:\n${description}`;
@@ -335,6 +363,7 @@ SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
                 buyPrice: Number(p.buyPrice) || 0,
                 buyPriceUsd: p.buyPriceUsd ? Number(p.buyPriceUsd) : null,
                 sellPrice: Number(p.sellPrice) || 0,
+                sellPriceUsd: p.sellPriceUsd ? Number(p.sellPriceUsd) : null,
                 stock: Number(p.stock) || 1,
                 criticalStock: Number(p.criticalStock) || 3,
                 barcode: p.barcode && p.barcode !== "null" ? p.barcode : undefined,
@@ -427,6 +456,7 @@ async function getProductSummaryFiltered(filters: { categoryName?: string; searc
         buyPrice: Number(p.buyPrice),
         buyPriceUsd: p.buyPriceUsd ? Number(p.buyPriceUsd) : null,
         sellPrice: Number(p.sellPrice),
+        sellPriceUsd: p.sellPriceUsd ? Number(p.sellPriceUsd) : null,
         stock: p.stock,
         location: p.location || "Yok"
     }));
@@ -485,6 +515,7 @@ export interface AIUpdateOperation {
     name: string;
     newName?: string;
     sellPrice?: number;
+    sellPriceUsd?: number;
     buyPriceUsd?: number;
     stock?: number;
     location?: string;
@@ -594,6 +625,7 @@ export async function parseBulkUpdateWithAI(command: string): Promise<{ success:
       "name": "string",
       "newName": "string | null",
       "sellPrice": "number | null",
+      "sellPriceUsd": "number | null",
       "buyPriceUsd": "number | null",
       "stock": "number | null",
       "location": "string | null",
@@ -613,6 +645,7 @@ export async function parseBulkUpdateWithAI(command: string): Promise<{ success:
         name: p.name,
         buyPriceUsd: p.buyPriceUsd,
         sellPrice: p.sellPrice || 0,
+        sellPriceUsd: p.sellPriceUsd,
         location: p.location || "Yok"
     }));
 
@@ -633,7 +666,7 @@ DENETLEME KURALLARI (Polis Modu):
 2. Eğer bir ürünün sellPrice değeri 0 ise ve kullanıcı 'Yüzde zam yap' diyorsa (örn: %10 zam), bu ürünü updates listesine EKLEME, warnings listesine ekle (örn: "[Ürün Adı] fiyatı 0 olduğu için yüzde hesaplanamadı").
 3. Eğer kullanıcı 'Rafı/Lokasyonu değiştir' diyor ama bir ürünün kategorisi belirsizse bunu warnings'e ekle.
 4. Verisi tam olanları (id, name ve en az bir değişiklik alanı doluysa) status: 'Halledildi', eksik olanları 'Eksik Veri' olarak sınıflandır.
-5. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar", "USD" veya "$" olarak belirttiyse, buyPriceUsd alanına o rakamı yaz, buyPrice (TL) alanına ise o rakamın ${usdRate} katını yaz (sonucu yukarı yuvarla).
+5. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar", "USD" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
 
 GÖREVLER:
 - updateProductLocation: Ürünlerin raf bilgisini (location) değiştirir.

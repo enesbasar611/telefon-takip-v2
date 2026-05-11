@@ -24,7 +24,6 @@ import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-stat
 
 import { getProfile } from "@/lib/actions/staff-actions";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { AnnouncementsModal } from "@/components/dashboard/announcements-modal";
 import { getDashboardStats } from "@/lib/actions/dashboard-actions";
 import { StatWidgetWrapper } from "@/components/dashboard/stat-widget-wrapper";
 import { getShopId } from "@/lib/auth";
@@ -47,11 +46,12 @@ import { TopProductsStream } from "@/components/dashboard/streamed/top-products-
 
 async function DashboardContentData() {
   const shopId = await getShopId(false);
-  const [shop, categories, profile, statsDataRaw] = await Promise.all([
+  const [shop, categories, profile, statsDataRaw, settings] = await Promise.all([
     getShop(),
     getCategories(),
     getProfile(),
-    getDashboardStats(shopId)
+    getDashboardStats(shopId),
+    import("@/lib/actions/setting-actions").then(m => m.getSettings()),
   ]);
 
   const statsData = serializePrisma(statsDataRaw);
@@ -59,16 +59,17 @@ async function DashboardContentData() {
   const showService = isModuleEnabled(shop, "SERVICE");
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
   const assetLabel = getIndustryLabel(shop, "customerAsset");
+  const defaultCurrency = (settings as any[])?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
 
   const statItems = [
-    { id: "stat_sales", type: "DAILY_SALES", label: "Kasa Bakiyesi", value: statsData?.kasaBalance || "0", subValue: `Günün Satışı: ${statsData?.todaySales || "0"}`, iconId: "Wallet", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel" },
-    { id: "stat_income", type: "REPAIR_INCOME", label: `${serviceLabel} Gelirleri`, value: statsData?.todayRepairIncome || "0", iconId: "Wrench", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%" },
-    { id: "stat_collections", type: "COLLECTIONS", label: "Tahsilatlar", value: statsData?.collectedPayments || "0", iconId: "Banknote", colorClass: "text-amber-500", bgClass: "bg-amber-500/10" },
+    { id: "stat_sales", type: "DAILY_SALES", label: "Kasa Bakiyesi", value: statsData?.kasaBalance || "0", subValue: `Günün Satışı: ${statsData?.todaySales || "0"}`, iconId: "Wallet", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel", usdValue: statsData?.kasaBalanceUSD },
+    { id: "stat_income", type: "REPAIR_INCOME", label: `${serviceLabel} Gelirleri`, value: statsData?.todayRepairIncome || "0", iconId: "Wrench", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%", usdValue: statsData?.todayRepairIncomeUSD },
+    { id: "stat_collections", type: "COLLECTIONS", label: "Tahsilatlar", value: statsData?.collectedPayments || "0", iconId: "Banknote", colorClass: "text-amber-500", bgClass: "bg-amber-500/10", usdValue: statsData?.collectedPaymentsUSD },
     { id: "stat_pending", type: "PENDING_SERVICES", label: `Bekleyen ${serviceLabel || 'Servis'}ler`, value: statsData?.pendingServices || "0", iconId: "Clock", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { id: "stat_ready", type: "READY_DEVICES", label: `Hazır ${assetLabel || 'Cihaz'}lar`, value: statsData?.readyDevices || "0", iconId: "CheckCircle2", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
     { id: "stat_stock", type: "CRITICAL_STOCK", label: "Kritik stok", value: statsData?.criticalStock || "0", iconId: "AlertTriangle", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
-    { id: "stat_debts", type: "TOTAL_DEBTS", label: "Toplam borçlar", value: statsData?.totalDebts || "0", iconId: "ArrowDownCircle", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10" },
-    { id: "stat_accounts", type: "CASH_BALANCE", label: "Satış Hacmi", value: statsData?.todaySales || "0", iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10" },
+    { id: "stat_debts", type: "TOTAL_DEBTS", label: "Toplam borçlar", value: statsData?.totalDebts || "0", iconId: "ArrowDownCircle", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", usdValue: statsData?.totalDebtsUSD },
+    { id: "stat_accounts", type: "CASH_BALANCE", label: "Satış Hacmi", value: statsData?.todaySales || "0", iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10", usdValue: statsData?.todaySalesUSD },
   ];
 
   const defaultLayout = [
@@ -154,6 +155,7 @@ async function DashboardContentData() {
         stat={stat}
         type={stat.type as any}
         statsData={statsData}
+        defaultCurrency={defaultCurrency}
       />
     );
   });
@@ -166,7 +168,6 @@ async function DashboardContentData() {
 
   return (
     <>
-      <AnnouncementsModal />
       <DashboardOnboardingClient categories={categories} shop={shop} />
       <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
         <PageHeader

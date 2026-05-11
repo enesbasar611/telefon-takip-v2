@@ -54,6 +54,14 @@ export default withAuth(
             const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN" || role === "SHOP_MANAGER";
             const isManager = role === "MANAGER" || isAdmin;
 
+            if (pathname.startsWith("/admin") && !isSuperAdmin) {
+                return NextResponse.redirect(new URL("/dashboard", req.url));
+            }
+
+            if (pathname.startsWith("/ayarlar/sektorler") && !isSuperAdmin) {
+                return NextResponse.redirect(new URL("/ayarlar", req.url));
+            }
+
             if ((pathname.startsWith("/personel") || pathname.startsWith("/ayarlar")) && !isManager) {
                 return NextResponse.redirect(new URL("/", req.url));
             }

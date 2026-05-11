@@ -1,11 +1,17 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { DollarSign, Euro, Coins, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function CurrencyTicker() {
     const { rates } = useDashboardData();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     if (!rates) return null;
 
@@ -23,7 +29,9 @@ export function CurrencyTicker() {
                     <div key={idx} className="flex items-center gap-2">
                         <item.icon className={cn("h-3.5 w-3.5", item.color)} />
                         <span className="text-[11px] font-bold text-muted-foreground uppercase">{item.label}</span>
-                        <span className="text-[11px] font-black text-foreground">₺{item.value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-[11px] font-black text-foreground">
+                            {mounted ? `₺${item.value.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+                        </span>
                     </div>
                 ))}
             </div>

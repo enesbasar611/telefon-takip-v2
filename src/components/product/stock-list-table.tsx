@@ -200,10 +200,10 @@ export function StockListTable({
   const onAddToShortage = async (product: any) => {
     try {
       const res = await addShortageItem({ productId: product.id, name: product.name, quantity: 1 });
-      if (res.isDuplicate) {
-        toast.warning(res.message);
-      } else {
+      if (res.success) {
         toast.success(`${product.name} eksikler listesine eklendi.`);
+      } else {
+        toast.error("İşlem başarısız.");
       }
     } catch (error) {
       toast.error("İşlem başarısız.");
@@ -470,7 +470,14 @@ export function StockListTable({
                   </div>
                   <div className="bg-muted/40 p-3 rounded-xl border border-border flex flex-col justify-center text-right">
                     <p className="text-[9px] font-medium text-muted-foreground/80 mb-1.5 uppercase tracking-wider">SATIŞ FİYATI</p>
-                    <span className="text-[14px] font-semibold text-foreground">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[14px] font-semibold text-foreground">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      {product.sellPriceUsd && (
+                        <span className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          ${product.sellPriceUsd}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -624,7 +631,14 @@ export function StockListTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
-                      <span className="text-[14px] font-semibold text-foreground transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      <div className="flex items-center gap-2">
+                        {product.sellPriceUsd && (
+                          <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            ${product.sellPriceUsd}
+                          </span>
+                        )}
+                        <span className="text-[14px] font-semibold text-foreground transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[9px] uppercase tracking-widest text-rose-500">Maliyet:</span>
                         <div className="flex items-center gap-1.5 bg-rose-500/5 px-2 py-0.5 rounded-lg border border-rose-500/30">

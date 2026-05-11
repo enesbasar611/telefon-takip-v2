@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useState, useMemo, useTransition, useEffect } from "react";
 import {
     CreditCard,
     Wallet,
@@ -130,6 +130,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [debtFilter, setDebtFilter] = useState<'all' | 'hasDebt' | 'noDebt'>('all');
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const defaultCurrency = settings?.find(s => s.key === "defaultCurrency")?.value || "TRY";
+    const usdRate = rates?.usd || 32.5;
 
     // Payment States
     const [paymentAmount, setPaymentAmount] = useState("");
@@ -139,6 +141,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
     const [whatsappCustomer, setWhatsappCustomer] = useState<any>(null);
     const [whatsappMessageContent, setWhatsappMessageContent] = useState<string>("");
+
+    // Bulk WhatsApp States
+    const [bulkWhatsAppModalOpen, setBulkWhatsAppModalOpen] = useState(false);
+    const [bulkCustomersToSend, setBulkCustomersToSend] = useState<any[]>([]);
 
     const filteredAccountsCount = (type: string) => accounts.filter(acc => acc.type === type).length;
 
@@ -155,7 +161,13 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [statsModalOpen, setStatsModalOpen] = useState(false);
     const [statsModalType, setStatsModalType] = useState<'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED' | null>(null);
     const [statsModalData, setStatsModalData] = useState<any[]>([]);
+    const [isExporting, setIsExporting] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const [statsIsLoading, setStatsIsLoading] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const [statsDates, setStatsDates] = useState<{ start?: string; end?: string }>({});
     const [editNotes, setEditNotes] = useState<string>("");
     const [editCurrency, setEditCurrency] = useState<string>("TRY");
@@ -187,6 +199,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         const savedViewMode = localStorage.getItem('veresiye_viewMode');
         if (savedViewMode === 'grid' || savedViewMode === 'list') {
             setViewMode(savedViewMode as 'list' | 'grid');
+        }
+        // Restore last-used currency preference
+        const savedCurrency = localStorage.getItem('preferred_currency');
+        if (savedCurrency === 'USD' || savedCurrency === 'TRY') {
+            setPaymentCurrency(savedCurrency);
         }
     }, []);
 
@@ -263,6 +280,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         debts: any[];
         transactions: any[];
     } | null>(null);
+
+    const [needsRefresh, setNeedsRefresh] = useState(false);
+
+    useEffect(() => {
+        if (needsRefresh && !paymentSummary && !whatsappModalOpen && !receiptCustomer && !paymentCustomer) {
+            router.refresh();
+            setNeedsRefresh(false);
+        }
+    }, [needsRefresh, paymentSummary, whatsappModalOpen, receiptCustomer, paymentCustomer, router]);
 
     // Layout visibility checks
     const isAnalysisHidden = settings?.find(s => s.key === "layout_hidden_veresiye_analysis")?.value === "true";
@@ -399,26 +425,36 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const statsData = [
         {
             type: 'RECEIVABLE_TRY' as const,
-            title: "Toplam Alacak (TL)",
-            value: `₺${totalReceivableTRY.toLocaleString('tr-TR')}`,
-            subValue: `${activeDebtorCount} Aktif Müşteri`,
+            title: defaultCurrency === 'USD' ? "Toplam Alacak (USD)" : "Toplam Alacak (TL)",
+            value: !mounted ? "--" : (defaultCurrency === 'USD'
+                ? `$${totalReceivableUSD.toLocaleString('tr-TR')}`
+                : `₺${totalReceivableTRY.toLocaleString('tr-TR')}`),
+            subValue: !mounted ? "--" : (defaultCurrency === 'USD'
+                ? `~₺${Math.round(totalReceivableUSD * usdRate).toLocaleString('tr-TR')}`
+                : `${activeDebtorCount} Aktif Müşteri`),
             icon: CreditCard,
             color: "text-emerald-500",
             bg: "bg-emerald-500/10"
         },
         {
             type: 'RECEIVABLE_USD' as const,
-            title: "Toplam Alacak (USD)",
-            value: `$${totalReceivableUSD.toLocaleString('tr-TR')}`,
-            subValue: `~₺${Math.round(totalReceivableUSD * (rates?.usd || 32.5)).toLocaleString('tr-TR')}`,
+            title: defaultCurrency === 'USD' ? "Toplam Alacak (TL)" : "Toplam Alacak (USD)",
+            value: !mounted ? "--" : (defaultCurrency === 'USD'
+                ? `₺${totalReceivableTRY.toLocaleString('tr-TR')}`
+                : `$${totalReceivableUSD.toLocaleString('tr-TR')}`),
+            subValue: !mounted ? "--" : (defaultCurrency === 'USD'
+                ? `${activeDebtorCount} Aktif Müşteri`
+                : `~₺${Math.round(totalReceivableUSD * usdRate).toLocaleString('tr-TR')}`),
             icon: Wallet,
             color: "text-blue-500",
             bg: "bg-blue-500/10"
         },
         {
             type: 'GENERAL_TOTAL' as const,
-            title: "Genel Portfolio (TL)",
-            value: `₺${Math.round(totalReceivableTRY + (totalReceivableUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}`,
+            title: defaultCurrency === 'USD' ? "Genel Portfolio (USD)" : "Genel Portfolio (TL)",
+            value: !mounted ? "--" : (defaultCurrency === 'USD'
+                ? `$${Math.round(totalReceivableUSD + (totalReceivableTRY / usdRate)).toLocaleString('tr-TR')}`
+                : `₺${Math.round(totalReceivableTRY + (totalReceivableUSD * usdRate)).toLocaleString('tr-TR')}`),
             subValue: "TL + USD Birleşik",
             icon: TrendingUp,
             color: "text-amber-500",
@@ -427,7 +463,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         {
             type: 'COLLECTED' as const,
             title: "Bu Ay Tahsilat",
-            value: `₺${thisMonthCollected.toLocaleString('tr-TR')}`,
+            value: !mounted ? "--" : `₺${thisMonthCollected.toLocaleString('tr-TR')}`,
             subValue: "Tahsil Edilen Tutar",
             icon: CheckCircle2,
             color: "text-indigo-500",
@@ -442,7 +478,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         let g1 = 0, g2 = 0, g3 = 0;
         debts.filter(d => !d.isPaid).forEach(d => {
             const days = (now.getTime() - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-            const amt = Number(d.remainingAmount);
+            let amt = Number(d.remainingAmount);
+
+            // Normalize to default currency for calculations
+            if (defaultCurrency === 'TRY' && d.currency === 'USD') {
+                amt = amt * usdRate;
+            } else if (defaultCurrency === 'USD' && (!d.currency || d.currency === 'TRY')) {
+                amt = amt / usdRate;
+            }
+
             if (days <= 30) g1 += amt;
             else if (days <= 60) g2 += amt;
             else g3 += amt;
@@ -453,7 +497,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             '31-60': { amount: g2, percentage: (g2 / total) * 100 },
             '60+': { amount: g3, percentage: (g3 / total) * 100 },
         };
-    }, [debts, now]);
+    }, [debts, now, defaultCurrency, usdRate]);
 
     // --- Actions ---
     const handleCurrencySwitch = (newCurrency: "TRY" | "USD") => {
@@ -470,6 +514,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         }
 
         setPaymentCurrency(newCurrency);
+        localStorage.setItem('preferred_currency', newCurrency);
         if (converted > 0) {
             setPaymentAmount(String(parseFloat(converted.toFixed(2))));
         } else {
@@ -501,24 +546,29 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
             if (res.success) {
                 toast.success("Ödeme başarıyla tahsil edildi.");
+                setNeedsRefresh(true);
 
                 // Trigger whatsapp receipt if customer has phone
                 if (paymentCustomer.phone) {
+                    setNeedsRefresh(true);
                     setWhatsappCustomer(paymentCustomer);
                     const paidText = paymentCurrency === "USD" ? `$${amount.toLocaleString('tr-TR')}` : `₺${amount.toLocaleString('tr-TR')}`;
-                    let msg = `Merhaba ${paymentCustomer.name},\n\n`;
-                    msg += `${paidText} tutarındaki ödemeniz (Tahsilat) başarıyla alınmış ve açık hesabınızdan düşülmüştür.\n`;
-                    if (paymentNotes) {
-                        msg += `Açıklama: ${paymentNotes}\n`;
+                    let msg = `*${paymentCustomer.name} - Tahsilat Makbuzu*\n\n`;
+                    msg += `✅ Toplam Ödeme: ${paidText} alındı.\n\n`;
+
+                    const paidItems = selectedDebtIds.length > 0
+                        ? paymentCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id))
+                        : [];
+
+                    if (paidItems.length > 0) {
+                        msg += `*Ödeme Detayı:*\n`;
+                        paidItems.forEach((d: any) => {
+                            msg += `• ${d.notes || 'Borç'}: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')}\n`;
+                        });
+                        msg += `\n`;
                     }
 
-                    msg += `\n*Güncel Kalan Bakiyeniz:*\n`;
-                    if (res.remainingTRY && Number(res.remainingTRY) > 0) msg += `TL: ₺${Number(res.remainingTRY).toLocaleString('tr-TR')}\n`;
-                    if (res.remainingUSD && Number(res.remainingUSD) > 0) msg += `Dolar: $${Number(res.remainingUSD).toLocaleString('tr-TR')}\n`;
-                    if ((!res.remainingTRY || Number(res.remainingTRY) <= 0) && (!res.remainingUSD || Number(res.remainingUSD) <= 0)) {
-                        msg += `Tüm borçlarınız kapanmıştır. (Bakiye: 0)\n`;
-                    }
-                    msg += `\nBizi tercih ettiğiniz için teşekkür ederiz. İyi çalışmalar.`;
+                    msg += `_İyi çalışmalar._`;
 
                     setWhatsappMessageContent(msg);
                     setWhatsappModalOpen(true);
@@ -636,34 +686,47 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 return;
             }
 
-            let message = `*${customer.name} - GÜNCEL HESAP EKSTRESİ*\n\n`;
-            message += `_Aşağıda dükkanımıza olan borçlarınız ve yaptığınız ödemelerin detaylı dökümü bulunmaktadır:_\n\n`;
+            let message = `*${customer.name} - Hesap Özeti*\n\n`;
 
-            const combined = [
-                ...(res.debts || []).map((d: any) => ({
-                    date: new Date(d.createdAt),
-                    text: `🔴 Borç: ${d.notes || 'Hizmet/Ürün'} - ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')} ${d.isPaid ? '(Ödendi)' : `(Kalan: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.remainingAmount).toLocaleString('tr-TR')})`}`
-                })),
-                ...(res.transactions || []).map((t: any) => ({
-                    date: new Date(t.createdAt),
-                    text: `🟢 Ödeme: ${Number(t.amount).toLocaleString('tr-TR')} TL`
-                }))
-            ].sort((a, b) => a.date.getTime() - b.date.getTime());
+            const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
+            if (unpaid.length > 0) {
+                // Group items by date synchronously
+                const groups: Record<string, any[]> = {};
+                for (const d of unpaid) {
+                    const dateStr = format(new Date(d.createdAt), "dd MMM yyyy", { locale: tr }).toUpperCase();
+                    if (!groups[dateStr]) groups[dateStr] = [];
+                    groups[dateStr].push(d);
+                }
 
-            combined.forEach((item, index) => {
-                const dateStr = item.date.toLocaleDateString('tr-TR');
-                message += `${index + 1}. ${dateStr}\n   ${item.text}\n\n`;
-            });
+                Object.keys(groups).forEach(date => {
+                    message += `*${date}*\n`;
+                    groups[date].forEach(d => {
+                        let amountStr = d.currency === 'USD' ? `$${Number(d.remainingAmount).toLocaleString('tr-TR')}` : `₺${Number(d.remainingAmount).toLocaleString('tr-TR')}`;
+                        if (d.currency === 'USD') {
+                            amountStr += ` (~₺${(Number(d.remainingAmount) * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})`;
+                        }
+                        message += `• ${d.notes || 'Borç'}: ${amountStr}\n`;
+                    });
+                    message += `\n`;
+                });
+            }
 
-            message += `*--------------------------*\n`;
-            message += `*TOPLAM GÜNCEL BORÇ:*\n`;
-            if (customer.totalRemainingTRY > 0) message += `💰 TL: ₺${customer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
-            if (customer.totalRemainingUSD > 0) message += `💰 Dolar: $${customer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+            message += `*Toplam Güncel Borç:*\n`;
+            let totalTRY = customer.totalRemainingTRY || 0;
+            let totalUSD = customer.totalRemainingUSD || 0;
 
-            if (customer.totalRemainingTRY <= 0 && customer.totalRemainingUSD <= 0) {
-                message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
+            if (totalTRY > 0) message += `₺${totalTRY.toLocaleString('tr-TR')}\n`;
+            if (totalUSD > 0) {
+                message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${(totalUSD * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})\n`;
+            }
+
+            if (totalTRY <= 0 && totalUSD <= 0) {
+                message += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
             } else {
-                message += `\n_En kısa sürede ödeme yapmanızı rica ederiz. İyi çalışmalar._`;
+                const combinedTotal = totalTRY + (totalUSD * usdRate);
+                message += `--------------------\n`;
+                message += `*Genel Toplam:* ₺${Math.ceil(combinedTotal).toLocaleString('tr-TR')}\n`;
+                message += `\n_İyi çalışmalar._`;
             }
 
             setWhatsappMessageContent(message);
@@ -675,7 +738,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         }
     };
 
-    const handleBulkWhatsAppReminders = async () => {
+    const handleBulkWhatsAppReminders = () => {
         if (selectedCustomerIds.length === 0) {
             toast.error("Lütfen en az bir müşteri seçin.");
             return;
@@ -688,22 +751,74 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             return;
         }
 
-        toast.info(`${customersToSend.length} müşteri için hatırlatma pencereleri açılıyor...`);
+        setBulkCustomersToSend(customersToSend);
+        setBulkWhatsAppModalOpen(true);
+    };
 
-        // We can't really "bulk send" automatically without an API, but we can open them one by one or show a summary.
-        // User asked for "toplu mesaj atma özelliği" - I'll implement a logic that iterates and prompts.
-        for (const customer of customersToSend) {
-            let msg = `*Borç Hatırlatması*\n\nMerhaba ${customer.name},\n\nDükkanımızda kayıtlı güncel borç bakiyeniz bulunmaktadır:\n`;
-            if (customer.totalRemainingTRY > 0) msg += `- ₺${customer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
-            if (customer.totalRemainingUSD > 0) msg += `- $${customer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
-            msg += `\nÖdeme durumunuzu kontrol etmenizi rica ederiz. İyi çalışmalar.`;
+    const handleConfirmBulkWhatsApp = async () => {
+        setBulkWhatsAppModalOpen(false);
+        const toastId = toast.loading(`${bulkCustomersToSend.length} müşteri için detaylı borç ekstresi hazırlanıyor...`);
 
-            const encodedMsg = encodeURIComponent(msg);
-            const url = `https://wa.me/90${(customer.phone ?? "").replace(/\D/g, '')}?text=${encodedMsg}`;
-            window.open(url, '_blank');
+        try {
+            for (const customer of bulkCustomersToSend) {
+                const res = await getCustomerStatement(customer.customerId);
+                if (!res.success) continue;
+
+                let message = `*${customer.name} - Hesap Özeti*\n\n`;
+
+                const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
+                if (unpaid.length > 0) {
+                    const groups: Record<string, any[]> = {};
+                    for (const d of unpaid) {
+                        const dateStr = format(new Date(d.createdAt), "dd MMM yyyy", { locale: tr }).toUpperCase();
+                        if (!groups[dateStr]) groups[dateStr] = [];
+                        groups[dateStr].push(d);
+                    }
+
+                    Object.keys(groups).forEach(date => {
+                        message += `*${date}*\n`;
+                        groups[date].forEach(d => {
+                            let amountStr = d.currency === 'USD' ? `$${Number(d.remainingAmount).toLocaleString('tr-TR')}` : `₺${Number(d.remainingAmount).toLocaleString('tr-TR')}`;
+                            if (d.currency === 'USD') {
+                                amountStr += ` (~₺${(Number(d.remainingAmount) * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})`;
+                            }
+                            message += `• ${d.notes || 'Borç'}: ${amountStr}\n`;
+                        });
+                        message += `\n`;
+                    });
+                }
+
+                message += `*Toplam Güncel Borç:*\n`;
+                let totalTRY = customer.totalRemainingTRY || 0;
+                let totalUSD = customer.totalRemainingUSD || 0;
+
+                if (totalTRY > 0) message += `₺${totalTRY.toLocaleString('tr-TR')}\n`;
+                if (totalUSD > 0) {
+                    message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${(totalUSD * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})\n`;
+                }
+
+                if (totalTRY <= 0 && totalUSD <= 0) {
+                    message += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
+                } else {
+                    const combinedTotal = totalTRY + (totalUSD * usdRate);
+                    message += `--------------------\n`;
+                    message += `*Genel Toplam:* ₺${Math.ceil(combinedTotal).toLocaleString('tr-TR')}\n`;
+                    message += `\n_İyi çalışmalar._`;
+                }
+
+                const encodedMsg = encodeURIComponent(message);
+                const url = `https://wa.me/90${(customer.phone ?? "").replace(/\D/g, '')}?text=${encodedMsg}`;
+                window.open(url, '_blank');
+
+                // Add a small delay so browser doesn't block popups completely
+                await new Promise(resolve => setTimeout(resolve, 600));
+            }
+            toast.success("Tüm mesaj pencereleri açıldı.", { id: toastId });
+            setSelectedCustomerIds([]);
+        } catch (error) {
+            console.error(error);
+            toast.error("Bir hata oluştu.", { id: toastId });
         }
-
-        setSelectedCustomerIds([]);
     };
 
     const exportToExcel = () => {
@@ -877,7 +992,9 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     <div key={i} className="space-y-4">
                                         <div className="flex justify-between items-end">
                                             <span className="text-[10px]  text-muted-foreground/80 uppercase">{g.label}</span>
-                                            <span className={cn("text-xs  tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>₺{g.amount.toLocaleString('tr-TR')}</span>
+                                            <span className={cn("text-xs  tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>
+                                                {defaultCurrency === 'USD' ? '$' : '₺'}{g.amount.toLocaleString('tr-TR', { minimumFractionDigits: defaultCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                         <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-[2px]">
                                             <motion.div
@@ -1140,14 +1257,24 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         <div className={cn("flex flex-row items-center gap-4", viewMode === 'list' && "md:min-w-[150px]")}>
                                                             <div className="flex flex-row items-center gap-3">
                                                                 {item.totalRemainingTRY > 0 && (
-                                                                    <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                        ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
-                                                                    </span>
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                            ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
+                                                                            ${(item.totalRemainingTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </span>
+                                                                    </div>
                                                                 )}
                                                                 {item.totalRemainingUSD > 0 && (
-                                                                    <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                        ${item.totalRemainingUSD.toLocaleString('tr-TR')}
-                                                                    </span>
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                            ${item.totalRemainingUSD.toLocaleString('tr-TR')}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
+                                                                            ₺{Math.round(item.totalRemainingUSD * usdRate).toLocaleString('tr-TR')}
+                                                                        </span>
+                                                                    </div>
                                                                 )}
                                                                 {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && (
                                                                     <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">ÖDENDİ</span>
@@ -2010,7 +2137,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             <AlertDialog open={!!paymentSummary} onOpenChange={(o) => {
                 if (!o) {
                     setPaymentSummary(null);
-                    router.refresh();
                 }
             }}>
                 <AlertDialogContent className="max-w-[500px] bg-white rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
@@ -2069,6 +2195,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     startTransition(async () => {
                                         const res = await getCustomerStatement(paymentSummary.customerId);
                                         if (res.success) {
+                                            setNeedsRefresh(true);
                                             const cust = debts.find(d => d.customerId === paymentSummary.customerId)?.customer;
                                             if (cust) {
                                                 setReceiptCustomer(cust);
@@ -2088,7 +2215,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                             }
                                         }
                                         setPaymentSummary(null);
-                                        router.refresh();
                                     });
                                 }
                             }}
@@ -2103,7 +2229,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                         </Button>
                         <Button onClick={() => {
                             setPaymentSummary(null);
-                            router.refresh();
                         }} className="flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
                     </div>
                 </AlertDialogContent>
@@ -2272,6 +2397,33 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     />
                 )
             }
-        </div >
+            <AlertDialog open={bulkWhatsAppModalOpen} onOpenChange={setBulkWhatsAppModalOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Toplu WhatsApp Mesajı</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Aşağıdaki {bulkCustomersToSend.length} müşteriye ayrı ayrı güncel hesap ekstremeleri oluşturulacak ve WhatsApp pencereleri açılacaktır. Onaylıyor musunuz?
+                            <div className="mt-4 max-h-40 overflow-y-auto w-full p-2 bg-slate-50 border rounded-md text-slate-800 text-sm">
+                                <ul className="list-disc list-inside">
+                                    {bulkCustomersToSend.map(c => (
+                                        <li key={c.customerId}>{c.name} ({c.phone})</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={handleConfirmBulkWhatsApp}
+                        >
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            Mesajları Aç
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     );
 }

@@ -4,7 +4,7 @@ import { serializePrisma } from "@/lib/utils";
 import { formatTitleCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
-import { getShopId, getUserId } from "@/lib/auth";
+import { getShopId, getUserId, auth } from "@/lib/auth";
 import { productSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateProductBarcode } from "@/lib/barcode-utils";
@@ -252,6 +252,7 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
         buyPrice: data.buyPrice,
         buyPriceUsd: data.buyPriceUsd ?? null,
         sellPrice: data.sellPrice,
+        sellPriceUsd: data.sellPriceUsd ?? null,
         stock: data.stock,
         criticalStock: data.criticalStock,
         barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
@@ -450,6 +451,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
         buyPrice: data.buyPrice !== undefined ? Math.ceil(Number(data.buyPrice)) : undefined,
         buyPriceUsd: data.buyPriceUsd !== undefined ? (data.buyPriceUsd ? Number(data.buyPriceUsd) : null) : undefined,
         sellPrice: productFields.sellPrice ? Number(productFields.sellPrice) : undefined,
+        sellPriceUsd: data.sellPriceUsd !== undefined ? (data.sellPriceUsd ? Number(data.sellPriceUsd) : null) : undefined,
         stock: newStock,
         criticalStock: productFields.criticalStock !== undefined ? Number(productFields.criticalStock) : undefined,
         categoryId: productFields.categoryId || undefined,
@@ -688,7 +690,13 @@ export async function quickSellProduct(productId: string, quantity: number) {
 
 export async function getDeadStockCount(providedShopId?: string) {
   try {
-    const shopId = providedShopId || await getShopId();
+    const session = await auth();
+    let shopId = await getShopId();
+
+    // Only SUPER_ADMIN can override shopId manually
+    if (providedShopId && session?.user?.role === "SUPER_ADMIN") {
+      shopId = providedShopId;
+    }
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 

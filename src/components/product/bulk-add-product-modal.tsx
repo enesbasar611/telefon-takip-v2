@@ -131,6 +131,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                         buyPrice: row.buyPrice,
                         buyPriceUsd: row.buyPriceUsd ?? null,
                         sellPrice: row.sellPrice,
+                        sellPriceUsd: row.sellPriceUsd ?? null,
                         stock: row.stock,
                         criticalStock: row.criticalStock,
                         barcode: row.barcode,
@@ -339,7 +340,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                                     value={row.buyPriceUsd}
                                                                     onChange={e => updateRow(row._id, "buyPriceUsd", Number(e.target.value))}
                                                                     disabled={row._status === "saved"}
-                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px]  text-emerald-700 dark:text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
+                                                                    className="h-6 bg-amber-500/5 border-amber-500/20 rounded-md text-[11px]  text-amber-700 dark:text-amber-400 w-20 text-right pl-5 disabled:opacity-60"
                                                                 />
                                                             </div>
                                                         )}
@@ -356,13 +357,30 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <Input
-                                                        type="number"
-                                                        value={row.sellPrice}
-                                                        onChange={e => updateRow(row._id, "sellPrice", Number(e.target.value))}
-                                                        disabled={row._status === "saved"}
-                                                        className="h-8 bg-muted border-emerald-500/20 rounded-lg text-[12px]  text-emerald-600 dark:text-emerald-300 w-24 text-right disabled:opacity-60"
-                                                    />
+                                                    <div className="flex flex-col items-end gap-1 min-w-[90px]">
+                                                        {row.sellPriceUsd != null && (
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1.5 text-[10px]  text-emerald-500/50">$</span>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={row.sellPriceUsd}
+                                                                    onChange={e => updateRow(row._id, "sellPriceUsd", Number(e.target.value))}
+                                                                    disabled={row._status === "saved"}
+                                                                    className="h-6 bg-emerald-500/5 border-emerald-500/20 rounded-md text-[11px]  text-emerald-700 dark:text-emerald-400 w-20 text-right pl-5 disabled:opacity-60"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <div className="relative">
+                                                            <span className="absolute left-2 top-2 text-[10px]  text-emerald-500/50">₺</span>
+                                                            <Input
+                                                                type="number"
+                                                                value={row.sellPrice}
+                                                                onChange={e => updateRow(row._id, "sellPrice", Number(e.target.value))}
+                                                                disabled={row._status === "saved"}
+                                                                className="h-8 bg-muted border-emerald-500/20 rounded-lg text-[12px]  text-emerald-600 dark:text-emerald-300 w-24 text-right pl-5 disabled:opacity-60"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <Input
@@ -422,7 +440,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                                         const newRow: ProductRow = {
                                             _id: `row-manual-${Date.now()}`, _status: "pending",
                                             name: "Yeni Ürün", categoryId: null, categoryPath: [],
-                                            buyPrice: 0, buyPriceUsd: null, sellPrice: 0, stock: 1, criticalStock: 3, confidence: "low"
+                                            buyPrice: 0, buyPriceUsd: null, sellPrice: 0, sellPriceUsd: null, stock: 1, criticalStock: 3, confidence: "low"
                                         };
                                         setRows(prev => [...prev, newRow]);
                                     }}

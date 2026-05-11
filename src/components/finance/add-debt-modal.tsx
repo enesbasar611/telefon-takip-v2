@@ -25,6 +25,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 interface AddDebtModalProps {
     children?: React.ReactNode;
@@ -74,6 +75,24 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
     const { toast } = useToast();
     const router = useRouter();
+
+    const { defaultCurrency } = useDashboardData();
+
+    // Restore last-used currency preference on mount
+    useEffect(() => {
+        const saved = localStorage.getItem("preferred_currency");
+        if (saved === "USD" || saved === "TRY") {
+            setItemCurrency(saved);
+        } else if (defaultCurrency) {
+            setItemCurrency(defaultCurrency as "TRY" | "USD");
+        }
+    }, [defaultCurrency]);
+
+    // Persist currency preference whenever it changes
+    const handleSetItemCurrency = (currency: "TRY" | "USD") => {
+        setItemCurrency(currency);
+        localStorage.setItem("preferred_currency", currency);
+    };
 
     const {
         register,
@@ -430,8 +449,8 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                 <div className="md:col-span-2 space-y-2">
                                     <Label className="text-[9px] text-muted-foreground uppercase">Birim</Label>
                                     <div className="flex bg-muted p-1 rounded-xl h-11">
-                                        <button type="button" onClick={() => setItemCurrency("TRY")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "TRY" ? "bg-white dark:bg-zinc-800 shadow-sm text-emerald-500" : "text-muted-foreground")}>TL</button>
-                                        <button type="button" onClick={() => setItemCurrency("USD")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "USD" ? "bg-white dark:bg-zinc-800 shadow-sm text-blue-500" : "text-muted-foreground")}>USD</button>
+                                        <button type="button" onClick={() => handleSetItemCurrency("TRY")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "TRY" ? "bg-white dark:bg-zinc-800 shadow-sm text-emerald-500" : "text-muted-foreground")}>TL</button>
+                                        <button type="button" onClick={() => handleSetItemCurrency("USD")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "USD" ? "bg-white dark:bg-zinc-800 shadow-sm text-blue-500" : "text-muted-foreground")}>USD</button>
                                     </div>
                                 </div>
                                 <div className="md:col-span-2">

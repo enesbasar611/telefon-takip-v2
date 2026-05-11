@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import {
     Store, Zap, ArrowRight, Code2, Users, Receipt, Calendar, Loader2,
     MoreVertical, Settings, Trash2, ShieldAlert, CheckCircle2, XCircle, Plus, Layout
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function ShopsClient({ initialShops }: { initialShops: any[] }) {
+    const { update } = useSession();
     const router = useRouter();
     const [shops, setShops] = useState(initialShops);
     const [activeShop, setActiveShop] = useState<any | null>(null);
@@ -47,19 +49,35 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
     const [deleteProgress, setDeleteProgress] = useState(0);
 
     const handleImpersonate = async (shop: any) => {
+        console.log("[handleImpersonate] Triggered for shop:", shop.name);
         if (!confirm(`Dikkat: "${shop.name}" dükkanının kimliğine bürüneceksiniz. Onaylıyor musunuz?`)) {
+            console.log("[handleImpersonate] User cancelled confirm.");
             return;
         }
 
         setImpersonatingId(shop.id);
-        const res = await impersonateShop(shop.id);
-        setImpersonatingId(null);
+        try {
+            console.log("[handleImpersonate] Calling impersonateShop action...");
+            const res = await impersonateShop(shop.id);
+            console.log("[handleImpersonate] Action response:", res);
 
-        if (res.success) {
-            toast.success(`${shop.name} kimliğine geçildi. Yönlendiriliyorsunuz...`);
-            window.location.href = "/dashboard";
-        } else {
-            toast.error(res.error);
+            if (res.success) {
+                // Force session update before redirect
+                console.log("[handleImpersonate] Success, updating session...");
+                await update();
+                console.log("[handleImpersonate] Session updated, redirecting...");
+
+                toast.success(`${shop.name} kimliğine geçildi. Yönlendiriliyorsunuz...`);
+                // Use window.location for a hard refresh to ensure all server components pick up the new session
+                window.location.href = "/dashboard";
+            } else {
+                setImpersonatingId(null);
+                toast.error(res.error);
+            }
+        } catch (error: any) {
+            console.error("[handleImpersonate] Exception:", error);
+            setImpersonatingId(null);
+            toast.error("Bir hata oluştu: " + error.message);
         }
     };
 

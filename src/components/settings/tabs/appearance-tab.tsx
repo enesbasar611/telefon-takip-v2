@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, DollarSign, TrendingUp } from "lucide-react";
 import {
     fontFamilies,
     getRadiusForButtonStyle,
@@ -244,6 +244,57 @@ export function AppearanceTab({ formData, onChange, savingKeys }: AppearanceTabP
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Default Currency */}
+            <div className="pt-6 border-t border-slate-200 dark:border-[#222] space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <Label className="text-sm font-semibold text-slate-900 dark:text-white">Varsayılan Para Birimi</Label>
+                        <p className="text-xs text-muted-foreground/80 dark:text-muted-foreground">Sistem genelinde varsayılan para birimi. Modaller, fiyat girişleri ve dashboard bu ayarı kullanır.</p>
+                    </div>
+                    {savingKeys.has("defaultCurrency") && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
+                </div>
+                <div className="flex gap-4">
+                    {[
+                        { label: "Türk Lirası", symbol: "₺", value: "TRY", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500" },
+                        { label: "Amerikan Doları", symbol: "$", value: "USD", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500" },
+                    ].map((c) => {
+                        const isActive = (formData.defaultCurrency || "TRY") === c.value;
+                        return (
+                            <button
+                                key={c.value}
+                                onClick={() => onChange("defaultCurrency", c.value, true)}
+                                disabled={savingKeys.has("defaultCurrency")}
+                                className={cn(
+                                    "flex-1 flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-200 relative shadow-sm",
+                                    isActive
+                                        ? `${c.border} ${c.bg}`
+                                        : "border-slate-200 dark:border-[#222] bg-white dark:bg-[#111] hover:border-slate-300 dark:hover:border-[#333]"
+                                )}
+                            >
+                                {isActive && (
+                                    <div className={cn("absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center", c.bg.replace('/10', ''), isActive ? (c.value === 'USD' ? 'bg-blue-500' : 'bg-emerald-500') : '')}>
+                                        <Check className="h-2.5 w-2.5 text-white" />
+                                    </div>
+                                )}
+                                <span className={cn("text-2xl font-black", isActive ? c.color : "text-muted-foreground")}>{c.symbol}</span>
+                                <div className="text-left">
+                                    <span className={cn("text-sm font-bold block", isActive ? c.color : "text-muted-foreground")}>{c.value}</span>
+                                    <span className="text-[10px] text-muted-foreground/60">{c.label}</span>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+                {(formData.defaultCurrency || "TRY") === "USD" && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                        <DollarSign className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                        <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                            <strong>Dolar modu aktif:</strong> Dashboard kasa ve gelir kartları USD cinsinden gösterilecek, TL karşılığı küçük yazıyla altında görünecek. Yeni borç ve ürün eklerken USD varsayılan seçili gelecek.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Layout Settings */}

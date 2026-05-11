@@ -16,19 +16,26 @@ interface MobileStatsHeaderProps {
         activeRepairs: number;
         kasaBalance: string;
         kasaBalanceRaw: number;
+        kasaBalanceUSD: number;
         totalDevices: number;
     };
     onStatClick?: (type: StatType) => void;
+    defaultCurrency?: string;
 }
 
-export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps) {
+export function MobileStatsHeader({ stats, onStatClick, defaultCurrency }: MobileStatsHeaderProps) {
     const [selectedType, setSelectedType] = useState<StatType | null>(null);
     const router = useRouter();
 
     const cards = [
         {
-            label: "Güncel Kasa",
-            value: stats.kasaBalance,
+            label: defaultCurrency === "USD" ? "Güncel Kasa (USD)" : "Güncel Kasa (TL)",
+            value: defaultCurrency === "USD"
+                ? `$${stats.kasaBalanceUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : stats.kasaBalance,
+            subValue: defaultCurrency === "USD"
+                ? `~₺${Math.round(stats.kasaBalanceRaw).toLocaleString('tr-TR')}`
+                : `~$${(stats.kasaBalanceRaw / 32.5).toFixed(1)}`,
             icon: TrendingUp,
             color: "text-blue-500",
             bg: "bg-blue-500/10",
@@ -95,6 +102,11 @@ export function MobileStatsHeader({ stats, onStatClick }: MobileStatsHeaderProps
                                 <span className="text-xl font-black mt-1 leading-none tracking-tight">
                                     {card.value}
                                 </span>
+                                {card.subValue && (
+                                    <span className="text-[9px] text-muted-foreground/50 font-medium mt-1">
+                                        {card.subValue}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </motion.div>

@@ -34,9 +34,16 @@ export function StatCard({
     bgClass,
     trend,
     badge,
-    onClick
+    onClick,
+    usdValue,
+    defaultCurrency,
 }: any) {
     const Icon = IconMap[iconId] || ShoppingCart;
+    const showUSD = defaultCurrency === "USD" && usdValue !== undefined && usdValue !== null;
+
+    const displayValue = showUSD
+        ? `$${Number(usdValue).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : value;
 
     return (
         <Card
@@ -55,7 +62,12 @@ export function StatCard({
                         <Icon className={cn("h-7 w-7", colorClass)} />
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                        {trend && (
+                        {showUSD && (
+                            <span className="text-[10px] bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 text-blue-500 tracking-tighter uppercase font-bold">
+                                USD
+                            </span>
+                        )}
+                        {trend && !showUSD && (
                             <span className="text-[10px] bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
                                 {trend} Δ
                             </span>
@@ -75,14 +87,25 @@ export function StatCard({
                 <div className="mt-8 relative">
                     <p className="text-[10px] mb-2 text-muted-foreground/60 tracking-[0.2em] uppercase">{label}</p>
                     <div className="flex items-baseline gap-2">
-                        {typeof value === 'string' && value.includes('₺') ? (
-                            <RevealFinancial amount={value} className={cn("text-4xl tracking-tight", colorClass)} />
+                        {typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
+                            <RevealFinancial amount={displayValue} className={cn("text-4xl tracking-tight", colorClass)} />
                         ) : (
-                            <h3 className={cn("text-5xl tracking-tighter", colorClass)}>{value}</h3>
+                            <h3 className={cn("text-5xl tracking-tighter", colorClass)}>{displayValue}</h3>
                         )}
                     </div>
-                    {subValue && (
+                    {/* TL secondary value when USD mode is active */}
+                    {showUSD && value && (
+                        <p className="text-[11px] text-muted-foreground/40 mt-1.5 tracking-tight font-medium">
+                            {value} TL karşılığı
+                        </p>
+                    )}
+                    {/* Normal subValue */}
+                    {!showUSD && subValue && (
                         <p className="text-[11px] text-muted-foreground/50 mt-2 tracking-tight">{subValue}</p>
+                    )}
+                    {/* subValue always shown below the TL line */}
+                    {showUSD && subValue && (
+                        <p className="text-[10px] text-muted-foreground/35 mt-0.5 tracking-tight">{subValue}</p>
                     )}
                 </div>
             </CardContent>

@@ -3,9 +3,11 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { industries as hardcodedIndustries } from "@/config/industries";
+import { checkSuperAdmin } from "./superadmin-actions";
 
 export async function getIndustryTemplates() {
     try {
+        await checkSuperAdmin();
         const templates = await prisma.industryTemplate.findMany({
             orderBy: { createdAt: "desc" }
         });
@@ -24,6 +26,7 @@ export async function updateIndustryTemplate(id: string, data: {
     dashboardStats?: any;
 }) {
     try {
+        await checkSuperAdmin();
         const updated = await prisma.industryTemplate.update({
             where: { id },
             data: {
@@ -44,6 +47,7 @@ export async function updateIndustryTemplate(id: string, data: {
 
 export async function seedIndustryTemplates() {
     try {
+        await checkSuperAdmin();
         const results = [];
         for (const [slug, config] of Object.entries(hardcodedIndustries)) {
             const industry = config as any;
@@ -92,6 +96,7 @@ function getHexColor(themeColor: string) {
 
 export async function deleteIndustryTemplate(id: string) {
     try {
+        await checkSuperAdmin();
         await prisma.industryTemplate.delete({ where: { id } });
         revalidatePath("/admin/settings/sektorler");
         return { success: true };

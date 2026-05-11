@@ -12,6 +12,11 @@ import { cn } from "@/lib/utils";
 export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
   const { rates } = useDashboardData();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!rates) {
     return (
@@ -56,7 +61,9 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <DollarSign className="h-3.5 w-3.5 text-blue-500" strokeWidth={1.5} />
               <span className="text-foreground font-semibold uppercase">Dolar</span>
             </div>
-            <span className="text-foreground font-extrabold tracking-tight">₺{rates.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold tracking-tight">
+              {mounted ? `₺${rates.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+            </span>
           </button>
         }
       />
@@ -70,7 +77,9 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <Euro className="h-3.5 w-3.5 text-emerald-500" strokeWidth={1.5} />
               <span className="text-foreground font-semibold uppercase">Euro</span>
             </div>
-            <span className="text-foreground font-extrabold tracking-tight">₺{rates.eur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold tracking-tight">
+              {mounted ? `₺${rates.eur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+            </span>
           </button>
         }
       />
@@ -84,7 +93,9 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <Coins className="h-3.5 w-3.5 text-yellow-500" strokeWidth={1.5} />
               <span className="text-foreground font-semibold uppercase">Altın</span>
             </div>
-            <span className="text-foreground font-extrabold tracking-tight">₺{rates.ga.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-foreground font-extrabold tracking-tight">
+              {mounted ? `₺${rates.ga.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+            </span>
           </button>
         }
       />

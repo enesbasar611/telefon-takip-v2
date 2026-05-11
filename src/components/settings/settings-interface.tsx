@@ -3,9 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback, useMemo, useTransition, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate } from "lucide-react";
+import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate, ShieldAlert } from "lucide-react";
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 // Tab Components
 import { AppearanceTab } from "./tabs/appearance-tab";
@@ -17,6 +18,7 @@ import { CustomersTab } from "./tabs/customers-tab";
 import { ShopTab } from "./tabs/shop-tab";
 import { ModulesTab } from "./tabs/modules-tab";
 import { FormsTab } from "./tabs/forms-tab";
+import { AdminTab } from "./tabs/admin-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -24,9 +26,10 @@ interface SettingsProps {
   initialSettings: any[];
   receiptSettings: any[];
   shop: any;
+  isSuperAdmin?: boolean;
 }
 
-const tabs = [
+const defaultTabs = [
   { id: "appearance", label: "Görünüm", icon: Palette, desc: "Tema ve renkler" },
   { id: "shop", label: "Dükkan", icon: Store, desc: "Sektör ve bilgiler" },
   { id: "forms", label: "Dinamik Formlar", icon: LayoutTemplate, desc: "Sektörel form ayarları" },
@@ -38,7 +41,17 @@ const tabs = [
   { id: "automation", label: "Otomasyon", icon: Zap, desc: "Kurallar ve onaylar" },
 ];
 
-export function SettingsInterface({ initialSettings, receiptSettings, shop }: SettingsProps) {
+export function SettingsInterface({ initialSettings, receiptSettings, shop, isSuperAdmin = false }: SettingsProps) {
+  const tabs = useMemo(() => {
+    if (isSuperAdmin) {
+      return [
+        ...defaultTabs,
+        { id: "admin", label: "Admin Araçları", icon: ShieldAlert, desc: "Platform yönetimi" }
+      ];
+    }
+    return defaultTabs;
+  }, [isSuperAdmin]);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTabStates] = useState(searchParams.get("tab") || "shop");
@@ -135,8 +148,6 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
 
   return (
     <div className="flex flex-col gap-8 pb-24">
-      {/* Page Header ... (lines 73-138) */}
-      {/* ... skipping header ... */}
       <PageHeader
         title="Sistem Ayarları"
         description="Platform parametrelerini ve işletme tercihlerini yönetin."
@@ -225,6 +236,9 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop }: Se
               )}
               {activeTab === "automation" && (
                 <AutomationTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "admin" && isSuperAdmin && (
+                <AdminTab />
               )}
             </div>
           </div>
