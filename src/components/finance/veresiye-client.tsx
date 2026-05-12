@@ -230,7 +230,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     if (statementRes.success) {
                         setStatementData({
                             debts: statementRes.debts || [],
-                            transactions: statementRes.transactions || []
+                            transactions: statementRes.transactions || [],
+                            activeReturns: statementRes.activeReturns || []
                         });
                     }
                 }
@@ -255,7 +256,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     if (statementRes.success) {
                         setStatementData({
                             debts: statementRes.debts || [],
-                            transactions: statementRes.transactions || []
+                            transactions: statementRes.transactions || [],
+                            activeReturns: statementRes.activeReturns || []
                         });
                     }
                 }
@@ -279,7 +281,18 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [statementData, setStatementData] = useState<{
         debts: any[];
         transactions: any[];
+        activeReturns?: any[];
     } | null>(null);
+
+    const hasActiveReturn = (debtId?: string, saleId?: string, productId?: string) => {
+        const activeReturns = statementData?.activeReturns || [];
+        return activeReturns.some((returnTicket: any) =>
+            ["PENDING", "APPROVED", "SENT_TO_SUPPLIER"].includes(returnTicket.returnStatus) &&
+            (!debtId || returnTicket.debtId === debtId) &&
+            (!saleId || returnTicket.saleId === saleId) &&
+            (!productId || returnTicket.productId === productId)
+        );
+    };
 
     const [needsRefresh, setNeedsRefresh] = useState(false);
 
@@ -1161,10 +1174,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                             try {
                                                                 const res = await getCustomerStatement(item.customerId);
                                                                 if (res.success) {
-                                                                    setStatementData({
-                                                                        debts: res.debts || [],
-                                                                        transactions: res.transactions || []
-                                                                    });
+                   setStatementData({
+                       debts: res.debts || [],
+                       transactions: res.transactions || [],
+                       activeReturns: res.activeReturns || []
+                   });
                                                                 } else {
                                                                     toast.error(res.error || "Geçmiş verileri alınamadı.");
                                                                 }
@@ -1768,20 +1782,28 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                         </div>
                                                         {item.sale?.items && item.sale.items.length > 0 && (
                                                             <div className="mt-2 pl-4 border-l-2 border-indigo-500/20 flex flex-col gap-1">
-                                                                {item.sale.items.map((si: any, sidx: number) => (
+                                                                {item.sale.items.map((si: any, sidx: number) => {
+                                                                    const itemCurrency = item.currency || "TRY";
+                                                                    const returnAlreadyActive = hasActiveReturn(item.id, item.saleId || item.sale?.id, si.productId);
+                                                                    return (
                                                                     <div key={sidx} className="text-[10px] text-muted-foreground flex items-center justify-between gap-2 group/item pr-1">
                                                                         <div className="flex items-center gap-2 min-w-0">
                                                                             <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
                                                                             <span className="font-bold text-foreground/80">{si.quantity}x</span>
                                                                             <span className="truncate max-w-[160px]">{si.product?.name}</span>
-                                                                            <span className="opacity-60 shrink-0">(@ ₺{formatCurrency(si.unitPrice)})</span>
+                                                                            <span className="opacity-60 shrink-0">(@ {itemCurrency === "USD" ? "$" : "₺"}{formatCurrency(si.unitPrice)})</span>
                                                                         </div>
                                                                         {si.product && (
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="sm"
+                                                                                disabled={returnAlreadyActive}
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
+                                                                                    if (returnAlreadyActive) {
+                                                                                        toast.error("Bu ürün için tamamlanmamış bir iade kaydı var.");
+                                                                                        return;
+                                                                                    }
                                                                                     const params = new URLSearchParams({
                                                                                         customerId: historyCustomer.customerId,
                                                                                         customerName: historyCustomer.name,
@@ -1789,19 +1811,23 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                                                         productName: si.product.name,
                                                                                         quantity: String(si.quantity),
                                                                                         refundAmount: String(Number(si.unitPrice) * si.quantity),
+                                                                                        refundCurrency: itemCurrency,
+                                                                                        unitPrice: String(Number(si.unitPrice)),
+                                                                                        saleNumber: item.sale?.saleNumber || "",
+                                                                                        soldAt: item.sale?.createdAt || item.createdAt || "",
                                                                                         saleId: item.saleId || item.sale?.id || "",
                                                                                         debtId: item.id,
                                                                                     });
                                                                                     router.push(`/stok/iade?${params.toString()}`);
                                                                                 }}
-                                                                                className="h-5 px-2 text-[9px] font-bold rounded-lg bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white opacity-0 group-hover/item:opacity-100 transition-all shrink-0 uppercase tracking-widest"
+                                                                                className="h-5 px-2 text-[9px] font-bold rounded-lg bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white opacity-0 group-hover/item:opacity-100 transition-all shrink-0 uppercase tracking-widest disabled:opacity-60 disabled:hover:bg-muted disabled:hover:text-muted-foreground"
                                                                             >
-                                                                                <ArrowLeftRight className="w-2.5 h-2.5 mr-1" />
-                                                                                İadeye
+                                                                                {returnAlreadyActive ? <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> : <ArrowLeftRight className="w-2.5 h-2.5 mr-1" />}
+                                                                                {returnAlreadyActive ? "İadede" : "İadeye"}
                                                                             </Button>
                                                                         )}
                                                                     </div>
-                                                                ))}
+                                                                )})}
                                                             </div>
                                                         )}
 
@@ -1818,26 +1844,37 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                     </div>
                                                     {!item.isPaid && (
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {(() => {
+                                                                const returnAlreadyActive = hasActiveReturn(item.id);
+                                                                return (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
+                                                                disabled={returnAlreadyActive}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (returnAlreadyActive) {
+                                                                        toast.error("Bu borç için tamamlanmamış bir iade kaydı var.");
+                                                                        return;
+                                                                    }
                                                                     const params = new URLSearchParams({
                                                                         customerId: historyCustomer.customerId,
                                                                         customerName: historyCustomer.name,
                                                                         debtId: item.id,
                                                                         productName: item.notes || 'Borç/Ürün İadesi',
                                                                         refundAmount: String(item.amount),
+                                                                        refundCurrency: item.currency || "TRY",
                                                                         quantity: "1"
                                                                     });
                                                                     router.push(`/stok/iade?${params.toString()}`);
                                                                 }}
-                                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-orange-600 bg-muted hover:bg-muted/80 rounded-lg"
-                                                                title="İadeye Gönder"
+                                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-orange-600 bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-60"
+                                                                title={returnAlreadyActive ? "İade işlemi tamamlanmadan tekrar gönderilemez" : "İadeye Gönder"}
                                                             >
-                                                                <ArrowLeftRight className="w-3 h-3" />
+                                                                {returnAlreadyActive ? <CheckCircle2 className="w-3 h-3" /> : <ArrowLeftRight className="w-3 h-3" />}
                                                             </Button>
+                                                                );
+                                                            })()}
                                                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingDebt(item); setEditAmount(String(item.amount)); setEditNotes(item.notes || ""); setEditCurrency(item.currency || "TRY"); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-indigo-600 bg-muted hover:bg-muted/80 rounded-lg"><Pencil className="w-3 h-3" /></Button>
                                                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteDebt(item.id); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 bg-muted hover:bg-muted/80 rounded-lg"><Trash2 className="w-3 h-3" /></Button>
                                                         </div>

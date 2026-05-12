@@ -465,11 +465,31 @@ export async function getCustomerStatement(customerId: string) {
       orderBy: { createdAt: "desc" }
     });
 
+    const activeReturns = await prisma.returnTicket.findMany({
+      where: {
+        customerId,
+        shopId,
+      },
+      select: {
+        id: true,
+        productId: true,
+        debtId: true,
+        saleId: true,
+        quantity: true,
+        refundAmount: true,
+        refundCurrency: true,
+        returnStatus: true,
+        ticketNumber: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
     return {
       success: true,
       debts: serializePrisma(debts),
       transactions: serializePrisma(transactions),
-      sales: serializePrisma(sales)
+      sales: serializePrisma(sales),
+      activeReturns: serializePrisma(activeReturns)
     };
   } catch (error) {
     console.error("getCustomerStatement error:", error);

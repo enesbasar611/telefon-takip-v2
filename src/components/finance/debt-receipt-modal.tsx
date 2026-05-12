@@ -38,7 +38,7 @@ interface DebtReceiptModalProps {
 
 const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid, logoUrl }: any) => {
     // Totals always show current balance (unpaid only)
-    const unpaidDebts = debts.filter((d: any) => d.type === 'DEBT' && !d.isPaid);
+    const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
 
     const totalTRY = unpaidDebts
         .filter((d: any) => d.currency !== 'USD')
@@ -53,7 +53,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
     // Filter items to display based on showPaid
     // If showPaid is false, only show UNPAID DEBTS (exclude payments and paid debts)
-    const displayDebts = showPaid ? debts : debts.filter((d: any) => d.type === 'DEBT' && !d.isPaid);
+    const displayDebts = showPaid ? debts : debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
 
     // Group items by date
     const groupedItems = displayDebts.reduce((groups: any, item: any) => {
@@ -93,10 +93,10 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             <div className="space-y-4 mb-6 min-h-[50px]">
                 {Object.keys(groupedItems).map((date) => {
                     const dailyTRY = groupedItems[date]
-                        .filter((item: any) => item.type === 'DEBT' && item.currency !== 'USD')
+                        .filter((item: any) => item.type !== 'PAYMENT' && item.currency !== 'USD')
                         .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
                     const dailyUSD = groupedItems[date]
-                        .filter((item: any) => item.type === 'DEBT' && item.currency === 'USD')
+                        .filter((item: any) => item.type !== 'PAYMENT' && item.currency === 'USD')
                         .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
                     const dailyPayment = groupedItems[date]
                         .filter((item: any) => item.type === 'PAYMENT')

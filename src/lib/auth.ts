@@ -11,6 +11,17 @@ import { sendApprovalCodeToAdmin } from "@/lib/mail";
 const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ALTERNATIVE_SUPER_ADMIN = process.env.ALTERNATIVE_ADMIN_EMAIL;
 
+function isSuperAdminEmail(email?: string | null): boolean {
+    if (!email) return false;
+    const normalizedEmail = email.toLowerCase();
+    return [
+        SUPER_ADMIN_EMAIL,
+        ALTERNATIVE_SUPER_ADMIN,
+    ]
+        .filter(Boolean)
+        .some((adminEmail) => adminEmail!.toLowerCase() === normalizedEmail);
+}
+
 function generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -21,6 +32,7 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
             authorization: {
                 params: {
                     prompt: "consent",
@@ -56,17 +68,32 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Hatalı şifre");
                 }
 
+                const isSuperAdmin = isSuperAdminEmail(user.email);
+                if (isSuperAdmin && (user.role !== "SUPER_ADMIN" || !user.isApproved || !user.canFinance || !user.canDelete || !user.canEdit)) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            role: "SUPER_ADMIN" as Role,
+                            isApproved: true,
+                            verificationCode: null,
+                            canFinance: true,
+                            canDelete: true,
+                            canEdit: true
+                        }
+                    });
+                }
+
                 return {
                     id: user.id,
                     email: user.email,
                     name: user.name,
-                    role: user.role,
+                    role: isSuperAdmin ? "SUPER_ADMIN" : user.role,
                     shopId: user.shopId,
-                    isApproved: user.isApproved,
+                    isApproved: isSuperAdmin ? true : user.isApproved,
                     canSell: user.canSell,
                     canService: user.canService,
                     canStock: user.canStock,
-                    canFinance: user.canFinance,
+                    canFinance: isSuperAdmin ? true : user.canFinance,
                 };
             }
         })
@@ -110,36 +137,40 @@ export const authOptions: NextAuthOptions = {
             // the shopId in DB the very next JWT evaluation (triggered by update() or
             // any navigation) will automatically carry the fresh value — no merging needed.
             if (token.id) {
-                const dbUser = await (prisma.user as any).findUnique({
-                    where: { id: token.id },
-                    select: {
-                        id: true,
-                        shopId: true,
-                        role: true,
-                        isApproved: true,
-                        canSell: true,
-                        canService: true,
-                        canStock: true,
-                        canFinance: true,
-                        shop: {
-                            select: { isActive: true }
+                try {
+                    const dbUser = await (prisma.user as any).findUnique({
+                        where: { id: token.id },
+                        select: {
+                            id: true,
+                            shopId: true,
+                            role: true,
+                            isApproved: true,
+                            canSell: true,
+                            canService: true,
+                            canStock: true,
+                            canFinance: true,
+                            shop: {
+                                select: { isActive: true }
+                            }
                         }
+                    });
+
+                    // Force logout if user no longer exists
+                    if (!dbUser) {
+                        return null as any;
                     }
-                });
 
-                // Force logout if user no longer exists
-                if (!dbUser) {
-                    return null as any;
+                    token.shopId = dbUser.shopId;
+                    token.role = dbUser.role;
+                    token.isApproved = dbUser.isApproved;
+                    token.canSell = dbUser.canSell;
+                    token.canService = dbUser.canService;
+                    token.canStock = dbUser.canStock;
+                    token.canFinance = dbUser.canFinance;
+                    token.isShopActive = (dbUser as any).shop?.isActive ?? true;
+                } catch (error) {
+                    console.error("NextAuth token DB sync failed:", error);
                 }
-
-                token.shopId = dbUser.shopId;
-                token.role = dbUser.role;
-                token.isApproved = dbUser.isApproved;
-                token.canSell = dbUser.canSell;
-                token.canService = dbUser.canService;
-                token.canStock = dbUser.canStock;
-                token.canFinance = dbUser.canFinance;
-                token.isShopActive = (dbUser as any).shop?.isActive ?? true;
             }
 
             return token;
@@ -164,7 +195,7 @@ export const authOptions: NextAuthOptions = {
     events: {
         async signIn({ user }) {
             // Automatically promote & approve the Super Admin
-            if (user.email === SUPER_ADMIN_EMAIL || user.email === ALTERNATIVE_SUPER_ADMIN) {
+            if (isSuperAdminEmail(user.email)) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {

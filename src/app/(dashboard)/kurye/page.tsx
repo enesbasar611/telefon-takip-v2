@@ -33,14 +33,18 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
         const prisma = (await import("@/lib/prisma")).default;
         const shopIdString = session.user.shopId;
         if (shopIdString) {
-            adminNotifications = await prisma.notification.findMany({
-                where: {
-                    shopId: shopIdString,
-                    type: "COURIER_END_DAY",
-                    isRead: false
-                },
-                orderBy: { createdAt: "desc" }
-            });
+            try {
+                adminNotifications = await prisma.notification.findMany({
+                    where: {
+                        shopId: shopIdString,
+                        type: "COURIER_END_DAY",
+                        isRead: false
+                    },
+                    orderBy: { createdAt: "desc" }
+                });
+            } catch (error) {
+                console.error("Courier admin notifications error:", error);
+            }
         }
     }
 

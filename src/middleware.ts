@@ -1,7 +1,7 @@
 import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
-export default withAuth(
+const authMiddleware = withAuth(
     function middleware(req) {
         const token = req.nextauth.token;
         const isAuth = !!token;
@@ -97,8 +97,23 @@ export default withAuth(
     }
 );
 
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
+    if (req.nextUrl.pathname.startsWith("/login")) {
+        const response = NextResponse.next();
+        response.cookies.delete("next-auth.session-token");
+        response.cookies.delete("__Secure-next-auth.session-token");
+        response.cookies.delete("next-auth.callback-url");
+        response.cookies.delete("__Secure-next-auth.callback-url");
+        response.cookies.delete("next-auth.csrf-token");
+        response.cookies.delete("__Host-next-auth.csrf-token");
+        return response;
+    }
+
+    return authMiddleware(req as any, event as any);
+}
+
 export const config = {
     matcher: [
-        "/((?!api|login|register|privacy-policy|terms|_next/static|_next/image|favicon.ico|socket.io|public).*)",
+        "/((?!api|register|privacy-policy|terms|_next/static|_next/image|favicon.ico|favicon.svg|socket.io|public).*)",
     ],
 };

@@ -6,6 +6,23 @@ import { revalidatePath } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 import { ReturnStatus, ReturnReason } from "@prisma/client";
 
+const ACTIVE_RETURN_STATUSES: ReturnStatus[] = ["PENDING", "APPROVED", "SENT_TO_SUPPLIER"];
+
+function buildActiveReturnWhere(data: {
+  productId?: string;
+  customerId?: string;
+  debtId?: string;
+  saleId?: string;
+}) {
+  return {
+    productId: data.productId,
+    customerId: data.customerId,
+    ...(data.debtId ? { debtId: data.debtId } : { debtId: null }),
+    ...(data.saleId ? { saleId: data.saleId } : { saleId: null }),
+    returnStatus: { in: ACTIVE_RETURN_STATUSES },
+  };
+}
+
 export async function getReturnTickets(filters?: {
   sourceType?: string;
   status?: string;
@@ -60,6 +77,21 @@ export async function createReturnTicket(data: {
     const count = await prisma.returnTicket.count({ where: { shopId } });
     const ticketNumber = `RET-${new Date().getFullYear()}${(count + 1).toString().padStart(4, "0")}`;
 
+    const existingActiveReturn = await prisma.returnTicket.findFirst({
+      where: {
+        shopId,
+        ...buildActiveReturnWhere(data),
+      },
+      select: { ticketNumber: true },
+    });
+
+    if (existingActiveReturn) {
+      return {
+        success: false,
+        error: `Bu ürün için ${existingActiveReturn.ticketNumber} numaralı iade işlemi henüz tamamlanmamış.`,
+      };
+    }
+
     const ticket = await prisma.returnTicket.create({
       data: {
         ticketNumber,
@@ -82,7 +114,22 @@ export async function createReturnTicket(data: {
       },
     });
 
+    if (data.debtId && data.refundAmount) {
+      const debt = await prisma.debt.findUnique({ where: { id: data.debtId, shopId } });
+      if (debt) {
+        const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(data.refundAmount));
+        await prisma.debt.update({
+          where: { id: data.debtId },
+          data: {
+            remainingAmount: newRemaining,
+            isPaid: newRemaining <= 0,
+          },
+        });
+      }
+    }
+
     revalidatePath("/stok/iade");
+    revalidatePath("/veresiye");
     return { success: true, ticket: serializePrisma(ticket) };
   } catch (error) {
     console.error("createReturnTicket error:", error);
@@ -152,7 +199,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 
       // Handle Finance
       if (action === "RESTOCKED" || action === "REFUNDED") {
-        if (ticket.debtId && ticket.refundAmount) {
+        if (ticket.debtId && ticket.refundAmount && ticket.sourceType !== "DEBT") {
           const debt = await tx.debt.findUnique({ where: { id: ticket.debtId } });
           if (debt) {
             const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(ticket.refundAmount));
@@ -191,18 +238,39 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 export async function rejectReturn(id: string, notes?: string) {
   try {
     const shopId = await getShopId();
-    await prisma.returnTicket.update({
-      where: { id, shopId },
-      data: {
-        returnStatus: "REJECTED",
-        notes: notes || undefined,
-      },
+    await prisma.$transaction(async (tx) => {
+      const ticket = await tx.returnTicket.findUnique({ where: { id, shopId } });
+      if (!ticket) throw new Error("İade kaydı bulunamadı.");
+      if (ticket.returnStatus !== "PENDING") throw new Error("Sadece bekleyen iadeler reddedilebilir.");
+
+      if (ticket.debtId && ticket.refundAmount && ticket.sourceType === "DEBT") {
+        const debt = await tx.debt.findUnique({ where: { id: ticket.debtId, shopId } });
+        if (debt) {
+          const restoredRemaining = Number(debt.remainingAmount) + Number(ticket.refundAmount);
+          await tx.debt.update({
+            where: { id: ticket.debtId },
+            data: {
+              remainingAmount: Math.min(Number(debt.amount), restoredRemaining),
+              isPaid: false,
+            },
+          });
+        }
+      }
+
+      await tx.returnTicket.update({
+        where: { id, shopId },
+        data: {
+          returnStatus: "REJECTED",
+          notes: notes || undefined,
+        },
+      });
     });
     revalidatePath("/stok/iade");
+    revalidatePath("/veresiye");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("rejectReturn error:", error);
-    return { success: false, error: "İade reddedilirken hata oluştu." };
+    return { success: false, error: error.message || "İade reddedilirken hata oluştu." };
   }
 }
 export async function createMultipleReturnTickets(tickets: {
@@ -232,6 +300,18 @@ export async function createMultipleReturnTickets(tickets: {
         const data = tickets[i];
         const ticketNumber = `RET-${new Date().getFullYear()}${(baseCount + i + 1).toString().padStart(4, "0")}`;
 
+        const existingActiveReturn = await tx.returnTicket.findFirst({
+          where: {
+            shopId,
+            ...buildActiveReturnWhere(data),
+          },
+          select: { ticketNumber: true },
+        });
+
+        if (existingActiveReturn) {
+          throw new Error(`Bu ürün için ${existingActiveReturn.ticketNumber} numaralı iade işlemi henüz tamamlanmamış.`);
+        }
+
         const ticket = await tx.returnTicket.create({
           data: {
             ticketNumber,
@@ -254,14 +334,32 @@ export async function createMultipleReturnTickets(tickets: {
           },
         });
         createdTickets.push(ticket);
+
+        if (data.debtId && data.refundAmount) {
+          const debt = await tx.debt.findUnique({ where: { id: data.debtId, shopId } });
+          if (debt) {
+            const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(data.refundAmount));
+            await tx.debt.update({
+              where: { id: data.debtId },
+              data: {
+                remainingAmount: newRemaining,
+                isPaid: newRemaining <= 0,
+              },
+            });
+          }
+        }
       }
       return createdTickets;
     });
 
     revalidatePath("/stok/iade");
+    revalidatePath("/veresiye");
     return { success: true, tickets: serializePrisma(result) };
   } catch (error) {
     console.error("createMultipleReturnTickets error:", error);
-    return { success: false, error: "İade kayıtları oluşturulamadı." };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "İade kayıtları oluşturulamadı.",
+    };
   }
 }

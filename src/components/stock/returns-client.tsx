@@ -107,6 +107,10 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
         const productName = searchParams.get("productName");
         const quantity = searchParams.get("quantity");
         const refundAmount = searchParams.get("refundAmount");
+        const refundCurrency = searchParams.get("refundCurrency");
+        const unitPrice = searchParams.get("unitPrice");
+        const saleNumber = searchParams.get("saleNumber");
+        const soldAt = searchParams.get("soldAt");
         const saleId = searchParams.get("saleId");
 
         if (customerId && (productId || debtId)) {
@@ -119,6 +123,10 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                     name: productName || "",
                     quantity: parseInt(quantity || "1"),
                     refundAmount: parseFloat(refundAmount || "0"),
+                    refundCurrency: refundCurrency || "TRY",
+                    unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
+                    saleNumber: saleNumber || undefined,
+                    soldAt: soldAt || undefined,
                     debtId: debtId || undefined,
                     saleId: saleId || undefined,
                 }]
@@ -150,7 +158,7 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
             new Date(t.updatedAt).getMonth() === new Date().getMonth()
         ).length;
         const totalRefund = initialData
-            .filter(t => t.returnStatus === "APPROVED")
+            .filter(t => t.returnStatus === "APPROVED" && (t.refundCurrency || "TRY") !== "USD")
             .reduce((acc, t) => acc + Number(t.refundAmount || 0), 0);
 
         return { pending, approvedThisMonth, totalRefund };
@@ -396,7 +404,9 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-bold">₺{Number(ticket.refundAmount || 0).toLocaleString('tr-TR')}</span>
+                                                <span className="text-xs font-bold">
+                                                    {(ticket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(ticket.refundAmount || 0).toLocaleString('tr-TR')}
+                                                </span>
                                                 <span className="text-[9px] text-muted-foreground">{ticket.refundCurrency}</span>
                                             </div>
                                         </TableCell>
@@ -481,8 +491,8 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                             {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.<br /></span>}
                             {returnAction === "EXCHANGED" && <span className="text-rose-500 font-medium">• {selectedTicket?.quantity} Adet sağlam ürün stoktan düşülecektir.<br /></span>}
 
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">• Müşterinin borç bakiye tutarı ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} azalacaktır.</span>}
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından ₺{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} para iadesi çıkışı yapılacaktır.</span>}
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">• Müşteri borcu iade kaydı açılırken düşüldü; bu işlem tekrar borç düşmez.</span>}
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından {(selectedTicket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} para iadesi çıkışı yapılacaktır.</span>}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">

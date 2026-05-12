@@ -53,6 +53,7 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
     const [adding, setAdding] = useState(false);
     const [basket, setBasket] = useState<any[]>([]);
     const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+    const [orderPriority, setOrderPriority] = useState<"NORMAL" | "YUKSEK" | "ACIL">("NORMAL");
 
     // Courier state
     const [couriers, setCouriers] = useState<any[]>([]);
@@ -70,11 +71,38 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
     const searchRef = useRef<HTMLDivElement>(null);
     const customerSearchRef = useRef<HTMLDivElement>(null);
 
+    const resolveCriticalQuantity = (item: any, requestedQuantity: number) => {
+        if (requesterType !== "SHOP" || !item?.productId) return requestedQuantity;
+
+        const stock = Number(item.stock ?? item.product?.stock ?? 0);
+        const criticalStock = Number(item.criticalStock ?? item.product?.criticalStock ?? 0);
+        if (!criticalStock || stock > criticalStock || stock + requestedQuantity > criticalStock) {
+            return requestedQuantity;
+        }
+
+        const suggestedQuantity = Math.max(requestedQuantity, criticalStock + 1 - stock);
+        const nextStock = stock + requestedQuantity;
+        const suggestedStock = stock + suggestedQuantity;
+        const useSuggested = confirm(
+            `${item.name} için kritik stok seviyesi ${criticalStock}. ${requestedQuantity} adet gönderirseniz güncel stok ${nextStock} olacak ve ürün eksik listesinde kalacak.\n\nStoğu ${suggestedStock} yapmak ister misiniz?\n\nTamam: Evet, miktarı ${suggestedQuantity} yap\nİptal: Hayır, yine de gönder`
+        );
+
+        return useSuggested ? suggestedQuantity : requestedQuantity;
+    };
+
     useEffect(() => {
         // Fetch couriers on mount
         const fetchCouriers = async () => {
             const data = await getCouriers();
             setCouriers(data);
+            const savedCourierId = typeof window !== "undefined" ? localStorage.getItem("lastSelectedCourierId") : null;
+            const savedCourierExists = savedCourierId && data.some((courier: any) => courier.id === savedCourierId);
+            if (savedCourierExists) {
+                setSelectedCourierId(savedCourierId);
+            } else if (data.length === 1) {
+                setSelectedCourierId(data[0].id);
+                localStorage.setItem("lastSelectedCourierId", data[0].id);
+            }
         };
         fetchCouriers();
     }, []);
@@ -115,11 +143,24 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
             return;
         }
 
+        const finalQuantity = resolveCriticalQuantity(
+            {
+                productId: selectedProduct?.id,
+                name: selectedProduct ? selectedProduct.name : newName,
+                stock: selectedProduct?.stock,
+                criticalStock: selectedProduct?.criticalStock
+            },
+            quantity
+        );
+
         const newItem = {
             productId: selectedProduct?.id,
             name: selectedProduct ? selectedProduct.name : newName,
-            quantity: quantity,
-            barcode: selectedProduct?.barcode
+            quantity: finalQuantity,
+            barcode: selectedProduct?.barcode,
+            stock: selectedProduct?.stock,
+            criticalStock: selectedProduct?.criticalStock,
+            priority: orderPriority
         };
 
         setBasket(prev => [...prev, newItem]);
@@ -141,10 +182,20 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
         const itemsToAssign: any[] = [...basket];
 
         if (selectedProduct || newName.trim()) {
+            const finalQuantity = resolveCriticalQuantity(
+                {
+                    productId: selectedProduct?.id,
+                    name: selectedProduct ? selectedProduct.name : newName,
+                    stock: selectedProduct?.stock,
+                    criticalStock: selectedProduct?.criticalStock
+                },
+                quantity
+            );
             itemsToAssign.push({
                 productId: selectedProduct?.id,
                 name: selectedProduct ? selectedProduct.name : newName,
-                quantity: quantity
+                quantity: finalQuantity,
+                priority: orderPriority
             });
         }
 
@@ -169,7 +220,8 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
 
             const finalItems = itemsToAssign.map(item => ({
                 ...item,
-                ...requesterData
+                ...requesterData,
+                notes: `[ONCELIK:${item.priority || orderPriority}]`
             }));
 
             await addShortageBulk(finalItems);
@@ -340,7 +392,10 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                         {couriers.map((courier) => (
                             <button
                                 key={courier.id}
-                                onClick={() => setSelectedCourierId(courier.id)}
+                                onClick={() => {
+                                    setSelectedCourierId(courier.id);
+                                    localStorage.setItem("lastSelectedCourierId", courier.id);
+                                }}
                                 className={cn(
                                     "px-3 py-3 text-xs font-black rounded-xl border transition-all truncate flex flex-col items-start gap-1 relative overflow-hidden group",
                                     selectedCourierId === courier.id
@@ -356,6 +411,37 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                     </div>
                 </div>
             )}
+
+            <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-orange-400" /> Öncelik
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                    {[
+                        { value: "NORMAL", label: "Normal" },
+                        { value: "YUKSEK", label: "Yüksek" },
+                        { value: "ACIL", label: "Acil" }
+                    ].map((priority) => (
+                        <button
+                            key={priority.value}
+                            type="button"
+                            onClick={() => setOrderPriority(priority.value as "NORMAL" | "YUKSEK" | "ACIL")}
+                            className={cn(
+                                "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                orderPriority === priority.value
+                                    ? priority.value === "ACIL"
+                                        ? "bg-red-500 border-red-500 text-white"
+                                        : priority.value === "YUKSEK"
+                                            ? "bg-amber-500 border-amber-500 text-black"
+                                            : "bg-blue-500 border-blue-500 text-black"
+                                    : "bg-card/40 border-border/50 text-muted-foreground hover:border-orange-500/30"
+                            )}
+                        >
+                            {priority.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl relative" ref={searchRef}>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-1">

@@ -47,6 +47,10 @@ interface InitialReturnItem {
     name: string;
     quantity: number;
     refundAmount: number;
+    refundCurrency?: string;
+    unitPrice?: number;
+    saleNumber?: string;
+    soldAt?: string;
     debtId?: string;
     saleId?: string;
 }
@@ -70,9 +74,12 @@ interface ReturnItem {
     quantity: number;
     reason: string;
     refundAmount: number;
+    refundCurrency: string;
     restockProduct: boolean;
     notes?: string;
 }
+
+const currencySymbol = (currency?: string) => currency === "USD" ? "$" : "₺";
 
 export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
     const [loading, setLoading] = useState(false);
@@ -82,6 +89,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
     const [sourceOpen, setSourceOpen] = useState(false);
 
     const [customerSales, setCustomerSales] = useState<any[]>([]);
+    const [activeReturns, setActiveReturns] = useState<any[]>([]);
     const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
 
     // Search Results
@@ -107,7 +115,11 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                     quantity: i.quantity,
                     reason: "GENERAL_RETURN",
                     refundAmount: i.refundAmount,
+                    refundCurrency: i.refundCurrency || "TRY",
                     restockProduct: true,
+                    ...(i.unitPrice ? { unitPrice: i.unitPrice } : {}),
+                    ...(i.saleNumber ? { saleNumber: i.saleNumber } : {}),
+                    ...(i.soldAt ? { soldAt: i.soldAt } : {}),
                     ...(i.debtId ? { debtId: i.debtId } : {}),
                     ...(i.saleId ? { saleId: i.saleId } : {}),
                 } as any)));
@@ -168,19 +180,23 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                             // Mark these as veresiye so we can badge them differently
                             _fromDebt: true,
                             _debtId: d.id,
+                            _debtCurrency: d.currency || "TRY",
                         }));
 
                     const merged = [...directSales, ...debtSales]
                         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                     setCustomerSales(merged);
+                    setActiveReturns((res.activeReturns as any[]) || []);
                 } else {
                     setCustomerSales([]);
+                    setActiveReturns([]);
                 }
                 setIsLoadingPurchases(false);
             });
         } else {
             setCustomerSales([]);
+            setActiveReturns([]);
         }
     }, [selectedSourceId, sourceType]);
 
@@ -218,6 +234,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             quantity: 1,
             reason: "GENERAL_RETURN",
             refundAmount: 0,
+            refundCurrency: "TRY",
             restockProduct: true
         }]);
         setProductSearch("");
@@ -246,10 +263,11 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
         setLoading(true);
         try {
             const tickets = items.map(item => ({
-                sourceType,
+                sourceType: (item as any).debtId ? "DEBT" : sourceType,
                 productId: item.productId,
                 quantity: item.quantity,
                 refundAmount: item.refundAmount,
+                refundCurrency: item.refundCurrency,
                 reason: item.reason,
                 notes: item.notes,
                 restockProduct: item.restockProduct,
@@ -395,6 +413,12 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                     if (!saleItem.product) return null;
                                                     const alreadyAdded = items.find(i => i.productId === saleItem.productId && (i as any).saleId === sale.id);
                                                     const isVeresiye = sale._fromDebt || sale.paymentMethod === 'DEBT';
+                                                    const saleCurrency = sale._debtCurrency || "TRY";
+                                                    const returnAlreadyActive = activeReturns.some((returnTicket: any) =>
+                                                        returnTicket.productId === saleItem.productId &&
+                                                        returnTicket.saleId === sale.id &&
+                                                        (!sale._debtId || returnTicket.debtId === sale._debtId)
+                                                    );
                                                     return (
                                                         <div
                                                             key={`${sale.id}-${saleItem.productId}`}
@@ -412,7 +436,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                         {new Date(sale.createdAt).toLocaleDateString('tr-TR')} • {sale.saleNumber}
                                                                     </span>
                                                                     <span className="text-[10px] font-bold text-indigo-500">
-                                                                        {saleItem.quantity} Adet × ₺{Number(saleItem.unitPrice).toLocaleString('tr-TR')}
+                                                                        {saleItem.quantity} Adet × {currencySymbol(saleCurrency)}{Number(saleItem.unitPrice).toLocaleString('tr-TR')}
                                                                     </span>
                                                                     <span className={cn(
                                                                         "text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full",
@@ -426,13 +450,17 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                             </div>
                                                             <Button
                                                                 size="sm"
-                                                                disabled={!!alreadyAdded}
-                                                                variant={alreadyAdded ? "secondary" : "outline"}
+                                                                disabled={!!alreadyAdded || returnAlreadyActive}
+                                                                variant={alreadyAdded || returnAlreadyActive ? "secondary" : "outline"}
                                                                 className={cn(
                                                                     "rounded-lg h-8 text-xs font-semibold shrink-0 transition-all",
                                                                     !alreadyAdded && "hover:bg-primary hover:text-white border-primary/30"
                                                                 )}
                                                                 onClick={() => {
+                                                                    if (returnAlreadyActive) {
+                                                                        toast.error("Bu ürün için tamamlanmamış bir iade kaydı var.");
+                                                                        return;
+                                                                    }
                                                                     setItems(prev => [...prev, {
                                                                         id: Math.random().toString(36).substr(2, 9),
                                                                         productId: saleItem.productId,
@@ -440,13 +468,19 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                         quantity: saleItem.quantity,
                                                                         reason: "GENERAL_RETURN",
                                                                         refundAmount: Number(saleItem.unitPrice) * saleItem.quantity,
+                                                                        refundCurrency: saleCurrency,
                                                                         restockProduct: true,
                                                                         saleId: sale.id,
                                                                         debtId: sale._debtId,
+                                                                        unitPrice: Number(saleItem.unitPrice),
+                                                                        saleNumber: sale.saleNumber,
+                                                                        soldAt: sale.createdAt,
                                                                     } as any]);
                                                                 }}
                                                             >
-                                                                {alreadyAdded ? (
+                                                                {returnAlreadyActive ? (
+                                                                    <><CheckCircle2 className="w-3 h-3 mr-1" /> İadede</>
+                                                                ) : alreadyAdded ? (
                                                                     <><CheckCircle2 className="w-3 h-3 mr-1" /> Eklendi</>
                                                                 ) : (
                                                                     <><Plus className="w-3 h-3 mr-1" /> Ekle</>
@@ -542,6 +576,12 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                     <p className="text-[11px] text-muted-foreground uppercase tracking-tight">
                                                         KİMLİK: {item.productId ? String(item.productId).slice(-6) : ((item as any).debtId ? `DEBT-${String((item as any).debtId).slice(-6)}` : 'MANUEL')}
                                                     </p>
+                                                    {((item as any).unitPrice || (item as any).saleNumber) && (
+                                                        <p className="text-[10px] text-primary font-bold uppercase tracking-tight">
+                                                            {(item as any).saleNumber ? `${(item as any).saleNumber} • ` : ""}
+                                                            Birim: {currencySymbol(item.refundCurrency)}{Number((item as any).unitPrice || item.refundAmount / Math.max(item.quantity, 1)).toLocaleString("tr-TR")}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <Button
                                                     variant="ghost"
@@ -580,12 +620,28 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">İade Tutarı</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={item.refundAmount}
-                                                        onChange={(e) => updateItem(item.id, { refundAmount: parseFloat(e.target.value) || 0 })}
-                                                        className="h-10 rounded-xl border-border/40 bg-muted/20"
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <div className="relative flex-1">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                                                                {currencySymbol(item.refundCurrency)}
+                                                            </span>
+                                                            <Input
+                                                                type="number"
+                                                                value={item.refundAmount}
+                                                                onChange={(e) => updateItem(item.id, { refundAmount: parseFloat(e.target.value) || 0 })}
+                                                                className="h-10 rounded-xl border-border/40 bg-muted/20 pl-7"
+                                                            />
+                                                        </div>
+                                                        <Select value={item.refundCurrency} onValueChange={(v) => updateItem(item.id, { refundCurrency: v })}>
+                                                            <SelectTrigger className="h-10 w-20 rounded-xl border-border/40 bg-muted/20">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="rounded-xl border-border/40">
+                                                                <SelectItem value="TRY">TRY</SelectItem>
+                                                                <SelectItem value="USD">USD</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-col justify-end pb-1 pr-2">
                                                     <div className="flex items-center justify-between bg-muted/30 p-2 rounded-xl border border-border/40 h-10 w-full">

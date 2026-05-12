@@ -35,9 +35,10 @@ import {
     Check,
     ArrowUpCircle,
     User,
-    ListTodo
+    ListTodo,
+    X
 } from "lucide-react";
-import { markShortageAsTaken, assignShortageToCourier, approveShortageItem, deleteShortageItem, finishMyDay, finishCourierDay, getCourierNotifications, deleteShortageItems as deleteShortageItemsAction } from "@/lib/actions/shortage-actions";
+import { markShortageAsTaken, markShortageAsNotFound, assignShortageToCourier, approveShortageItem, deleteShortageItem, finishMyDay, finishCourierDay, getCourierNotifications, deleteShortageItems as deleteShortageItemsAction } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { AddShortageForm } from "@/components/shortage/add-shortage-form";
@@ -77,6 +78,37 @@ interface CourierDashboardClientProps {
     initialDate?: string;
 }
 
+const priorityWeight: Record<string, number> = {
+    ACIL: 3,
+    YUKSEK: 2,
+    NORMAL: 1,
+};
+
+const sortByCourierPriority = (list: any[]) =>
+    [...list].sort((a, b) => {
+        const scoreDiff = (b.courierPriorityScore || 0) - (a.courierPriorityScore || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
+
+const getPriorityClassName = (label?: string) => {
+    if (label === "ACIL") return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+    if (label === "YUKSEK") return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+    return "bg-zinc-500/10 text-zinc-500 border-zinc-500/20";
+};
+
+const getPriorityLabel = (label?: string) => {
+    if (label === "ACIL") return "ACIL";
+    if (label === "YUKSEK") return "YUKSEK";
+    return "NORMAL";
+};
+
+const cleanCourierNote = (notes?: string | null) =>
+    String(notes || "")
+        .replace("[BULUNMADI]", "")
+        .replace(/\[ONCELIK:(ACIL|YUKSEK|NORMAL)\]/gi, "")
+        .trim();
+
 export function CourierDashboardClient({ initialItems, initialAllShortages = [], categories = [], userId, userRole, couriers = [], initialNotifications = [], initialDate }: CourierDashboardClientProps) {
     const router = useRouter();
     const [items, setItems] = useState(initialItems);
@@ -95,10 +127,27 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(initialDate || "");
     const [mounted, setMounted] = useState(false);
+    const [shortcutCourierId, setShortcutCourierId] = useState<string>("");
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (!isAdmin) {
+            setShortcutCourierId(userId);
+            return;
+        }
+
+        const savedCourierId = typeof window !== "undefined" ? localStorage.getItem("lastSelectedCourierId") : null;
+        const savedCourierExists = savedCourierId && couriers.some((courier: any) => courier.id === savedCourierId);
+        const defaultCourierId = savedCourierExists ? savedCourierId : couriers[0]?.id;
+
+        if (defaultCourierId) {
+            setShortcutCourierId(defaultCourierId);
+            localStorage.setItem("lastSelectedCourierId", defaultCourierId);
+        }
+    }, [couriers, isAdmin, userId]);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -163,15 +212,42 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         return () => clearInterval(interval);
     }, [isAdmin]);
 
-    const filteredItems = items.filter(item =>
+    const filteredItems = sortByCourierPriority(items.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.shop?.name && item.shop.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.customer?.name && item.customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.requesterName && item.requesterName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    ));
 
-    const pendingShortages = allShortages.filter(s => !s.assignedToId);
+    const pendingShortages = sortByCourierPriority(allShortages.filter(s => !s.assignedToId));
+    const nextRouteItems = sortByCourierPriority(items.filter((item: any) => !item.isResolved)).slice(0, 3);
+    const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
+    const resolveCriticalShortcutQuantity = (item: any, requestedQuantity: number) => {
+        const stock = Number(item.product?.stock ?? item.stock ?? 0);
+        const criticalStock = Number(item.product?.criticalStock ?? item.criticalStock ?? 0);
+        if (!item.productId || !criticalStock || stock > criticalStock || stock + requestedQuantity > criticalStock) {
+            return requestedQuantity;
+        }
+
+        const suggestedQuantity = Math.max(requestedQuantity, criticalStock + 1 - stock);
+        const nextStock = stock + requestedQuantity;
+        const suggestedStock = stock + suggestedQuantity;
+        const useSuggested = confirm(
+            `${item.name} için kritik stok seviyesi ${criticalStock}. ${requestedQuantity} adet gönderirseniz güncel stok ${nextStock} olacak ve ürün eksik listesinde kalacak.\n\nStoğu ${suggestedStock} yapmak ister misiniz?\n\nTamam: Evet, miktarı ${suggestedQuantity} yap\nİptal: Hayır, yine de gönder`
+        );
+
+        return useSuggested ? suggestedQuantity : requestedQuantity;
+    };
+    const getCourierWorkload = (courierId: string) => {
+        const activeItems = items.filter((st: any) => st.assignedToId === courierId && !st.isResolved);
+        const priorityScore = activeItems.reduce((sum: number, item: any) => sum + (priorityWeight[item.courierPriorityLabel] || 1), 0);
+        return {
+            activeItems,
+            priorityScore,
+            highPriority: activeItems.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length
+        };
+    };
 
     const handleToggleTaken = async (id: string, currentStatus: boolean) => {
         setLoadingId(id);
@@ -204,16 +280,23 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
         // Optimistic update
         const movedItem = allShortages.find(s => s.id === shortageId);
-        const customQty = itemQuantities[shortageId] || movedItem?.quantity || 1;
+        const targetCourierId = isAdmin ? shortcutCourierId : userId;
+        if (!targetCourierId) {
+            toast.error("Atama için kurye seçin.");
+            setAssigningId(null);
+            return;
+        }
+        const requestedQty = itemQuantities[shortageId] || movedItem?.quantity || 1;
+        const customQty = movedItem ? resolveCriticalShortcutQuantity(movedItem, requestedQty) : requestedQty;
 
         if (movedItem) {
-            const updatedItem = { ...movedItem, assignedToId: userId, isTaken: false, quantity: customQty };
+            const updatedItem = { ...movedItem, assignedToId: targetCourierId, isTaken: false, quantity: customQty, requesterName: movedItem.requesterName || "Dükkan" };
             setItems(prev => [updatedItem, ...prev]);
             setAllShortages(prev => prev.filter(s => s.id !== shortageId));
         }
 
         try {
-            const res = await assignShortageToCourier(shortageId, userId, customQty);
+            const res = await assignShortageToCourier(shortageId, targetCourierId, customQty);
             if (res.success) {
                 toast.success("Görev listenize eklendi.");
                 router.refresh();
@@ -260,14 +343,20 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         if (!confirm("Bu siparişi silmek istediğinizden emin misiniz?")) return;
         setLoadingId(id);
 
-        // Optimistic update
-        setItems(prev => prev.filter(i => i.id !== id));
-        setAllShortages(prev => prev.filter(i => i.id !== id));
-        setSelectedIds(prev => prev.filter(sid => sid !== id));
-
         try {
-            const res = await deleteShortageItem(id);
+            let res = await deleteShortageItem(id);
+            if ((res as any).needsStockApproval) {
+                const forceDelete = confirm(`${res.error}\n\nTamam: Yine de sil\nİptal: Stok kaydını yapmaya dön`);
+                if (!forceDelete) {
+                    router.refresh();
+                    return;
+                }
+                res = await deleteShortageItem(id, true);
+            }
             if (res.success) {
+                setItems(prev => prev.filter(i => i.id !== id));
+                setAllShortages(prev => prev.filter(i => i.id !== id));
+                setSelectedIds(prev => prev.filter(sid => sid !== id));
                 toast.success("Sipariş silindi.");
                 router.refresh();
             } else {
@@ -285,18 +374,23 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         if (!confirm(`${ids.length} adet siparişi silmek istediğinizden emin misiniz?`)) return;
         setLoadingId("bulk");
 
-        // Optimistic update
-        setItems(prev => prev.filter(i => !ids.includes(i.id)));
-        setAllShortages(prev => prev.filter(i => !ids.includes(i.id)));
-        setSelectedIds(prev => prev.filter(sid => !ids.includes(sid)));
-        if (selectedIds.length <= ids.length) {
-            setIsSelectionMode(false);
-        }
-
         try {
-            const { deleteShortageItems } = await import("@/lib/actions/shortage-actions");
-            const res = await deleteShortageItems(ids);
+            let res = await deleteShortageItemsAction(ids);
+            if ((res as any).needsStockApproval) {
+                const forceDelete = confirm(`${res.error}\n\nTamam: Yine de sil\nİptal: Stok kaydını yapmaya dön`);
+                if (!forceDelete) {
+                    router.refresh();
+                    return;
+                }
+                res = await deleteShortageItemsAction(ids, true);
+            }
             if (res.success) {
+                setItems(prev => prev.filter(i => !ids.includes(i.id)));
+                setAllShortages(prev => prev.filter(i => !ids.includes(i.id)));
+                setSelectedIds(prev => prev.filter(sid => !ids.includes(sid)));
+                if (selectedIds.length <= ids.length) {
+                    setIsSelectionMode(false);
+                }
                 toast.success("Seçili siparişler silindi.");
                 router.refresh();
             } else {
@@ -385,8 +479,32 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
     const stats = {
         total: items.length,
-        taken: items.filter(i => i.isResolved).length,
-        remaining: items.filter(i => !i.isResolved).length
+        taken: items.filter(i => i.isTaken || i.isResolved).length,
+        remaining: items.filter(i => !i.isTaken && !i.isResolved).length
+    };
+
+    const handleToggleNotFound = async (id: string, currentStatus: boolean) => {
+        setLoadingId(id);
+
+        setItems(prev => prev.map(item =>
+            item.id === id ? { ...item, isNotFound: !currentStatus, isTaken: false, takenAt: null } : item
+        ));
+
+        try {
+            const res = await markShortageAsNotFound(id, !currentStatus);
+            if (res.success) {
+                toast.success(!currentStatus ? "Ürün bulunmadı olarak işaretlendi." : "Bulunmadı işareti kaldırıldı.");
+                router.refresh();
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+                router.refresh();
+            }
+        } catch (error) {
+            toast.error("Hata oluştu.");
+            router.refresh();
+        } finally {
+            setLoadingId(null);
+        }
     };
 
     const isCourierOnly = userRole === "COURIER";
@@ -491,9 +609,10 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
                                             {couriers.map(c => {
                                                 const courierItems = items.filter((st: any) => st.assignedToId === c.id);
+                                                const workload = getCourierWorkload(c.id);
                                                 const totalToday = courierItems.length;
-                                                const resolvedToday = courierItems.filter((st: any) => st.isResolved).length;
-                                                const remainingCount = courierItems.filter((st: any) => !st.isResolved).length;
+                                                const resolvedToday = courierItems.filter((st: any) => st.isTaken || st.isResolved).length;
+                                                const remainingCount = courierItems.filter((st: any) => !st.isTaken && !st.isResolved).length;
                                                 const successRate = totalToday > 0 ? Math.round((resolvedToday / totalToday) * 100) : 0;
                                                 const isWaitingApproval = activeCourierNotifications.some(n => n.referenceId === c.id);
 
@@ -531,6 +650,16 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                                 <span className="text-[7px] font-black text-orange-500/70 uppercase tracking-widest">KALAN</span>
                                                                 <span className="text-sm font-black text-orange-500">{remainingCount}</span>
                                                             </div>
+                                                        </div>
+
+                                                        <div className="bg-blue-500/5 border border-blue-500/10 p-2 rounded-2xl flex items-center justify-between">
+                                                            <span className="text-[7px] font-black text-blue-500/70 uppercase tracking-widest">YUK</span>
+                                                            <span className="text-sm font-black text-blue-500">{workload.priorityScore}</span>
+                                                            {workload.highPriority > 0 && (
+                                                                <Badge className="bg-red-500/10 text-red-500 border-none text-[7px] font-black">
+                                                                    {workload.highPriority} ONCELIK
+                                                                </Badge>
+                                                            )}
                                                         </div>
 
                                                         <Button
@@ -593,6 +722,40 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                     >
                         {stats.remaining > 0 ? "GÜNÜ BİTİR VE BİLDİR" : "SİPARİŞ YOK"}
                     </Button>
+                )}
+
+                {nextRouteItems.length > 0 && (
+                    <Card className="rounded-3xl border border-blue-500/10 bg-blue-500/[0.03] shadow-sm">
+                        <CardContent className="p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                    <ArrowUpCircle className="h-5 w-5 text-blue-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-tight">Onerilen Rota</h3>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                        {highPriorityCount} oncelikli gorev sirada
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1 lg:max-w-3xl">
+                                {nextRouteItems.map((item: any, index: number) => (
+                                    <div key={item.id} className="rounded-2xl bg-background/70 border border-border/60 p-3 min-w-0">
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">#{index + 1}</span>
+                                            <Badge variant="outline" className={cn("text-[8px] font-black border", getPriorityClassName(item.courierPriorityLabel))}>
+                                                {getPriorityLabel(item.courierPriorityLabel)}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-xs font-black uppercase truncate">{item.name}</p>
+                                        <p className="text-[9px] font-bold text-muted-foreground truncate mt-1">
+                                            {(item.courierPriorityReasons || []).join(" / ") || "Standart siralama"}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
 
                 <div className="flex gap-2">
@@ -758,7 +921,9 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                 className={cn(
                                                     "group transition-all duration-300 border shadow-sm relative overflow-hidden",
                                                     isAdmin ? "p-3 rounded-xl flex items-center gap-4" : "p-4 rounded-2xl flex flex-col",
-                                                    item.isTaken
+                                                    item.isNotFound
+                                                        ? "bg-red-500/10 dark:bg-red-500/10 border-red-500/30"
+                                                        : item.isTaken
                                                         ? "bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/20"
                                                         : "bg-card dark:bg-card/40 border-zinc-200 dark:border-white/5 hover:border-blue-500/30",
                                                     selectedIds.includes(item.id) && "border-blue-500/50 bg-blue-500/5"
@@ -779,18 +944,22 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                 )}
                                                 <div className={cn("flex items-center gap-4", isAdmin ? "flex-1" : "w-full")}>
                                                     <button
-                                                        onClick={() => handleToggleTaken(item.id, item.isTaken)}
+                                                        onClick={() => !item.isNotFound && handleToggleTaken(item.id, item.isTaken)}
                                                         disabled={loadingId === item.id}
                                                         className={cn(
                                                             "rounded-xl flex items-center justify-center transition-all shrink-0 shadow-lg group-active:scale-90",
                                                             isAdmin ? "h-10 w-10" : "h-12 w-12",
-                                                            item.isTaken
+                                                            item.isNotFound
+                                                                ? "bg-red-500 text-white"
+                                                                : item.isTaken
                                                                 ? "bg-emerald-500 text-white"
                                                                 : "bg-white/5 text-muted-foreground hover:bg-blue-500 hover:text-white border border-white/5"
                                                         )}
                                                     >
                                                         {loadingId === item.id ? (
                                                             <Clock className={cn(isAdmin ? "w-4 h-4" : "w-6 h-6", "animate-spin")} />
+                                                        ) : item.isNotFound ? (
+                                                            <X className={isAdmin ? "w-5 h-5" : "w-6 h-6"} />
                                                         ) : item.isTaken ? (
                                                             <CheckCircle2 className={isAdmin ? "w-5 h-5" : "w-6 h-6"} />
                                                         ) : (
@@ -808,9 +977,17 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                                     {item.name}
                                                                 </h4>
                                                                 <div className="flex flex-wrap items-center gap-2">
-                                                                    <Badge variant="outline" className="bg-blue-500/5 text-blue-400 border-blue-500/10 text-[9px] px-2 py-0.5 font-black">
-                                                                        {item.quantity} ADET
-                                                                    </Badge>
+                                                                    {item.isNotFound && (
+                                                                        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-[8px] px-2 py-0.5 font-black">
+                                                                            BULUNMADI
+                                                                        </Badge>
+                                                                    )}
+                                                                    {!item.isNotFound && getPriorityLabel(item.courierPriorityLabel) !== "NORMAL" && (
+                                                                        <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 font-black border", getPriorityClassName(item.courierPriorityLabel))}>
+                                                                            {getPriorityLabel(item.courierPriorityLabel)}
+                                                                        </Badge>
+                                                                    )}
+                                                                    <span className="text-[9px] font-black text-blue-400 uppercase">{item.quantity} adet</span>
                                                                     <span className="text-[9px] font-black opacity-30 uppercase">
                                                                         {mounted ? new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                                                     </span>
@@ -824,9 +1001,9 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
                                                             {isAdmin && (
                                                                 <div className="flex items-center gap-3 shrink-0">
-                                                                    {item.notes && (
+                                                                    {cleanCourierNote(item.notes) && (
                                                                         <div className="max-w-[200px] truncate bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-[9px] text-muted-foreground font-bold italic">
-                                                                            {item.notes}
+                                                                            {cleanCourierNote(item.notes)}
                                                                         </div>
                                                                     )}
                                                                     {item.isTaken && (
@@ -869,10 +1046,28 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                     </div>
                                                 </div>
 
-                                                {!isAdmin && item.notes && (
+                                                {!isAdmin && (
+                                                    <div className="mt-3 flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => handleToggleNotFound(item.id, item.isNotFound)}
+                                                            disabled={loadingId === item.id || item.isTaken}
+                                                            className={cn(
+                                                                "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest flex-1",
+                                                                item.isNotFound
+                                                                    ? "bg-red-500 text-white border-red-500"
+                                                                    : "border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white"
+                                                            )}
+                                                        >
+                                                            <X className="w-3 h-3 mr-1" />
+                                                            {item.isNotFound ? "İşareti Kaldır" : "Bulunmadı"}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                {!isAdmin && cleanCourierNote(item.notes) && (
                                                     <div className="mt-3 bg-zinc-100 dark:bg-black/10 p-2 rounded-lg border border-zinc-200 dark:border-white/5 text-[10px] text-muted-foreground font-bold italic flex items-start gap-1.5 line-clamp-2">
                                                         <AlertCircle className="w-3 h-3 mt-0.5 text-orange-500 shrink-0" />
-                                                        {item.notes}
+                                                        {cleanCourierNote(item.notes)}
                                                     </div>
                                                 )}
                                             </motion.div>
@@ -956,6 +1151,9 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                     )}>
                                                         {s.isAlert ? "KRİTİK" : "EKSİK"}
                                                     </Badge>
+                                                    <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 font-black border", getPriorityClassName(s.courierPriorityLabel))}>
+                                                        {getPriorityLabel(s.courierPriorityLabel)}
+                                                    </Badge>
                                                     <span className="text-[9px] font-bold text-muted-foreground uppercase truncate">
                                                         {s.requesterName || (s.isAlert ? (s.shopName || "SİSTEM") : (s.shopName || "Dükkan"))}
                                                     </span>
@@ -997,7 +1195,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                     )}
                                                     <Button
                                                         onClick={() => handleAssignShortcut(s.id)}
-                                                        disabled={assigningId === s.id}
+                                                        disabled={assigningId === s.id || (isAdmin && !shortcutCourierId)}
                                                         size="sm"
                                                         className={cn(
                                                             "h-10 px-4 rounded-xl font-black text-[10px] tracking-widest",

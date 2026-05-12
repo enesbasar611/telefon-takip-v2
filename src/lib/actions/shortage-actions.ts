@@ -5,12 +5,118 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
 import { getShopId, getUserId, auth } from "@/lib/auth";
 
+type ShortagePriority = {
+  courierPriorityScore: number;
+  courierPriorityLabel: "ACIL" | "YUKSEK" | "NORMAL";
+  courierPriorityReasons: string[];
+};
+
+const NOT_FOUND_MARKER = "[BULUNMADI]";
+
+function getLocalDayRange(dateStr: string) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return {
+    startOfDay: new Date(year, month - 1, day, 0, 0, 0, 0),
+    endOfDay: new Date(year, month - 1, day, 23, 59, 59, 999)
+  };
+}
+
+function isMarkedNotFound(item: any) {
+  return String(item.notes || "").includes(NOT_FOUND_MARKER);
+}
+
+function getShortagePriority(item: any): ShortagePriority {
+  const createdAt = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+  const ageHours = Math.max(0, Math.floor((Date.now() - createdAt) / (1000 * 60 * 60)));
+  const productStock = typeof item.product?.stock === "number" ? item.product.stock : null;
+  const criticalStock = typeof item.product?.criticalStock === "number" ? item.product.criticalStock : null;
+
+  let score = 0;
+  const reasons: string[] = [];
+  const manualPriority = String(item.notes || "").match(/\[ONCELIK:(ACIL|YUKSEK|NORMAL)\]/i)?.[1]?.toUpperCase();
+
+  if (isMarkedNotFound(item)) {
+    score += 70;
+    reasons.push("Bulunmadi");
+  }
+
+  if (manualPriority === "ACIL") {
+    score += 80;
+    reasons.push("Manuel acil");
+  } else if (manualPriority === "YUKSEK") {
+    score += 50;
+    reasons.push("Manuel yuksek");
+  } else if (manualPriority === "NORMAL") {
+    score += 5;
+    reasons.push("Manuel normal");
+  }
+
+  if (!item.isTaken) {
+    score += 18;
+    reasons.push("Alinmadi");
+  }
+
+  if (ageHours >= 24) {
+    score += 22;
+    reasons.push("24 saati asti");
+  } else if (ageHours >= 8) {
+    score += 12;
+    reasons.push("Bekliyor");
+  }
+
+  if (item.customerId || item.requesterName) {
+    score += 14;
+    reasons.push("Musteri talebi");
+  }
+
+  if (productStock !== null && criticalStock !== null) {
+    if (productStock <= 0) {
+      score += 28;
+      reasons.push("Stok sifir");
+    } else if (productStock <= criticalStock) {
+      score += 18;
+      reasons.push("Kritik stok");
+    }
+  } else if (item.isAlert) {
+    score += 16;
+    reasons.push("Stok uyarisi");
+  }
+
+  if ((item.quantity || 0) > 1) {
+    score += Math.min(10, item.quantity * 2);
+    reasons.push("Coklu adet");
+  }
+
+  const label = manualPriority === "ACIL" || manualPriority === "YUKSEK" || manualPriority === "NORMAL"
+    ? manualPriority as "ACIL" | "YUKSEK" | "NORMAL"
+    : score >= 55 ? "ACIL" : score >= 32 ? "YUKSEK" : "NORMAL";
+
+  return {
+    courierPriorityScore: score,
+    courierPriorityLabel: label,
+    courierPriorityReasons: reasons.slice(0, 3)
+  };
+}
+
+function withCourierPriority<T extends Record<string, any>>(items: T[]) {
+  return items
+    .map((item) => ({ ...item, isNotFound: isMarkedNotFound(item), ...getShortagePriority(item) }))
+    .sort((a, b) => {
+      if (b.courierPriorityScore !== a.courierPriorityScore) {
+        return b.courierPriorityScore - a.courierPriorityScore;
+      }
+      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
+}
+
 export async function getShortageItems() {
   const shopId = await getShopId(false);
   if (!shopId) return [];
 
   const items = await prisma.shortageItem.findMany({
-    where: { shopId, isResolved: false },
+    where: { shopId, isResolved: false, isTaken: false },
     include: {
       product: true,
       assignedTo: true,
@@ -19,10 +125,11 @@ export async function getShortageItems() {
     },
     orderBy: { createdAt: "desc" },
   });
-  return serializePrisma(items);
+  return serializePrisma(withCourierPriority(items));
 }
 
 export async function getGlobalShortageList(dateStr?: string) {
+  try {
   const session = await auth();
   const shopId = await getShopId(false);
   if (!shopId) return [];
@@ -31,11 +138,10 @@ export async function getGlobalShortageList(dateStr?: string) {
 
   let dateFilter = {};
   if (dateStr) {
-    const startOfDay = new Date(dateStr);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(dateStr);
-    endOfDay.setHours(23, 59, 59, 999);
-    dateFilter = { createdAt: { gte: startOfDay, lte: endOfDay } };
+    const range = getLocalDayRange(dateStr);
+    if (range) {
+      dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+    }
   }
 
   // Only SUPER_ADMIN without shopId sees everything across DB (though getShopId usually throws or returns a dummy for them)
@@ -79,7 +185,11 @@ export async function getGlobalShortageList(dateStr?: string) {
       product: p
     }));
 
-  return serializePrisma([...manualItems, ...missingProductAlerts]);
+  return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts]));
+  } catch (error) {
+    console.error("getGlobalShortageList error:", error);
+    return [];
+  }
 }
 
 export async function getCouriers() {
@@ -111,6 +221,7 @@ export async function assignShortageToCourier(id: string, courierId: string | nu
           quantity: customQuantity || 1,
           shopId: product.shopId,
           assignedToId: courierId,
+          requesterName: "Dükkan",
           notes: "STOK ANALİZİNDEN OTOMATİKE EKLENDİ"
         }
       });
@@ -147,10 +258,44 @@ export async function markShortageAsTaken(id: string, isTaken: boolean) {
         takenAt: isTaken ? new Date() : null
       }
     });
+    revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
     return { success: false, error: "İşlem başarısız." };
+  }
+}
+
+export async function markShortageAsNotFound(id: string, isNotFound: boolean) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    const item = await prisma.shortageItem.findUnique({
+      where: { id, shopId },
+      select: { notes: true }
+    });
+    if (!item) return { success: false, error: "Kayıt bulunamadı." };
+
+    const cleanNotes = String(item.notes || "")
+      .replace(NOT_FOUND_MARKER, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    const nextNotes = isNotFound ? `${NOT_FOUND_MARKER}${cleanNotes ? ` ${cleanNotes}` : ""}` : cleanNotes;
+
+    await prisma.shortageItem.update({
+      where: { id, shopId },
+      data: {
+        notes: nextNotes || null,
+        isTaken: false,
+        takenAt: null,
+      }
+    });
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Bulunmadı durumu güncellenemedi." };
   }
 }
 
@@ -167,16 +312,15 @@ export async function getCourierTasks(dateStr?: string) {
     // COURIER/Others: Visibility of tasks assigned to THEM WITHIN their shop.
     let dateFilter = {};
     if (dateStr) {
-      const startOfDay = new Date(dateStr);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(dateStr);
-      endOfDay.setHours(23, 59, 59, 999);
-      dateFilter = { createdAt: { gte: startOfDay, lte: endOfDay } };
+      const range = getLocalDayRange(dateStr);
+      if (range) {
+        dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+      }
     }
 
     const whereClause: any = isAdmin
-      ? { shopId, assignedToId: { not: null }, ...dateFilter }
-      : { shopId, assignedToId: userId, ...dateFilter };
+      ? { shopId, assignedToId: { not: null }, isResolved: false, ...dateFilter }
+      : { shopId, assignedToId: userId, isResolved: false, ...dateFilter };
 
     const items = await prisma.shortageItem.findMany({
       where: whereClause,
@@ -188,7 +332,7 @@ export async function getCourierTasks(dateStr?: string) {
       },
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, items: serializePrisma(items) };
+    return { success: true, items: serializePrisma(withCourierPriority(items)) };
   } catch (error) {
     console.error("getCourierTasks error:", error);
     return { success: false, items: [] };
@@ -499,7 +643,7 @@ export async function approveShortageItem(
   }
 }
 
-export async function deleteShortageItem(id: string) {
+export async function deleteShortageItem(id: string, force = false) {
   try {
     const session = await auth();
     if (session?.user?.role !== "ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
@@ -507,9 +651,22 @@ export async function deleteShortageItem(id: string) {
     }
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+    const item = await prisma.shortageItem.findUnique({
+      where: { id, shopId },
+      select: { id: true, name: true, isTaken: true, isResolved: true }
+    });
+    if (!item) return { success: false, error: "Kayıt bulunamadı." };
+    if (item.isTaken && !item.isResolved && !force) {
+      return {
+        success: false,
+        needsStockApproval: true,
+        error: `${item.name} alındı olarak işaretlenmiş ama stok kaydı yapılmamış.`
+      };
+    }
     await prisma.shortageItem.delete({
       where: { id, shopId }
     });
+    revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -518,7 +675,7 @@ export async function deleteShortageItem(id: string) {
   }
 }
 
-export async function deleteShortageItems(ids: string[]) {
+export async function deleteShortageItems(ids: string[], force = false) {
   try {
     if (!ids || ids.length === 0) return { success: true };
     const session = await auth();
@@ -528,12 +685,33 @@ export async function deleteShortageItems(ids: string[]) {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
 
+    if (!force) {
+      const takenWithoutStock = await prisma.shortageItem.findMany({
+        where: {
+          id: { in: ids },
+          shopId,
+          isTaken: true,
+          isResolved: false
+        },
+        select: { id: true, name: true }
+      });
+
+      if (takenWithoutStock.length > 0) {
+        return {
+          success: false,
+          needsStockApproval: true,
+          error: `${takenWithoutStock.length} alınan ürünün stok kaydı yapılmamış.`
+        };
+      }
+    }
+
     await prisma.shortageItem.deleteMany({
       where: {
         id: { in: ids },
         shopId
       }
     });
+    revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -626,18 +804,41 @@ export async function finishCourierDay(courierId: string) {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
 
-    // Sadece alınmayanları (isTaken = false) boşa düşür (assignedToId = null)
-    await prisma.shortageItem.updateMany({
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+
+    const notTakenItems = await prisma.shortageItem.findMany({
       where: {
         shopId,
         assignedToId: courierId,
         isResolved: false,
         isTaken: false
       },
-      data: {
-        assignedToId: null
-      }
+      select: { id: true, notes: true }
     });
+
+    // Alinmayan siparisleri bosa dusur ve ertesi gun havuzuna aktar.
+    if (notTakenItems.length > 0) {
+      await prisma.$transaction(
+        notTakenItems.map((item) => {
+          const currentNotes = String(item.notes || "").trim();
+          const carryNote = "ERTESI GUNE AKTARILDI";
+          const nextNotes = currentNotes.includes(carryNote)
+            ? currentNotes
+            : `${carryNote}${currentNotes ? ` - ${currentNotes}` : ""}`;
+
+          return prisma.shortageItem.update({
+            where: { id: item.id, shopId },
+            data: {
+              assignedToId: null,
+              createdAt: tomorrow,
+              updatedAt: new Date(),
+              notes: nextNotes
+            }
+          });
+        })
+      );
+    }
 
     // Mark the "END_DAY" notification from this courier as read/resolved
     await prisma.notification.updateMany({
@@ -659,11 +860,12 @@ export async function finishCourierDay(courierId: string) {
         type: "COURIER_TASKS_CLEARED",
         category: "SYSTEM",
         title: "Kurye İşlemleri Kapatıldı",
-        message: "Yönetici tarafından günlük işlemleriniz kapatıldı. Kalan siparişleriniz boş havuza aktarıldı.",
+        message: `Yönetici tarafından günlük işlemleriniz kapatıldı. Alınmayan ${notTakenItems.length} sipariş ertesi gün havuzuna aktarıldı.`,
         referenceId: courierId
       }
     });
 
+    revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {

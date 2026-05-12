@@ -132,7 +132,9 @@ export const searchProducts = cache(async function searchProducts(query: string)
         id: true,
         name: true,
         stock: true,
+        criticalStock: true,
         sku: true,
+        barcode: true,
         sellPrice: true,
         category: {
           select: { name: true }

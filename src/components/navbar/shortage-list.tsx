@@ -141,8 +141,29 @@ export function ShortageList() {
     return () => clearTimeout(delayDebounceFn);
   }, [newName]);
 
+  const resolveCriticalQuantity = (product: any, requestedQuantity: number) => {
+    if (requesterType !== "SHOP" || !product?.id) return requestedQuantity;
+
+    const stock = Number(product.stock ?? 0);
+    const criticalStock = Number(product.criticalStock ?? 0);
+    if (!criticalStock || stock > criticalStock || stock + requestedQuantity > criticalStock) {
+      return requestedQuantity;
+    }
+
+    const suggestedQuantity = Math.max(requestedQuantity, criticalStock + 1 - stock);
+    const nextStock = stock + requestedQuantity;
+    const suggestedStock = stock + suggestedQuantity;
+    const useSuggested = confirm(
+      `${product.name} için kritik stok seviyesi ${criticalStock}. ${requestedQuantity} adet eklerseniz güncel stok ${nextStock} olacak ve ürün eksik listesinde kalacak.\n\nStoğu ${suggestedStock} yapmak ister misiniz?\n\nTamam: Evet, miktarı ${suggestedQuantity} yap\nİptal: Hayır, yine de gönder`
+    );
+
+    return useSuggested ? suggestedQuantity : requestedQuantity;
+  };
+
   const handleApprove = async (id: string, qty: number) => {
-    const res = await approveShortageItem(id, qty);
+    const item = safeItems.find((entry: any) => entry.id === id);
+    const finalQty = item?.product ? resolveCriticalQuantity(item.product, qty) : qty;
+    const res = await approveShortageItem(id, finalQty);
     if (res.success) {
       await removeShortage(id);
       toast.success("Stok başarıyla güncellendi", { position: "bottom-right" });
@@ -175,12 +196,13 @@ export function ShortageList() {
   };
 
   const handleSelectProduct = async (product: any) => {
+    const finalQty = resolveCriticalQuantity(product, 1);
     setAdding(true);
     try {
       await addShortage({
         productId: product.id,
         name: product.name,
-        quantity: 1,
+        quantity: finalQty,
         requesterName: requesterType === "NEW" ? newRequesterName : (requesterType === "SHOP" ? "Dükkan" : selectedCustomer?.name),
         requesterPhone: requesterType === "NEW" ? newRequesterPhone : selectedCustomer?.phone,
         customerId: requesterType === "CUSTOMER" ? selectedCustomer?.id : undefined
