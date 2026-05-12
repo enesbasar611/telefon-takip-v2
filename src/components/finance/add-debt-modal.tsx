@@ -63,6 +63,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     const [debtItems, setDebtItems] = useState<DebtDraftItem[]>([]);
     const [itemTitle, setItemTitle] = useState("");
     const [itemAmount, setItemAmount] = useState("");
+    const [itemQuantity, setItemQuantity] = useState("1");
     const [itemCurrency, setItemCurrency] = useState<"TRY" | "USD">("TRY");
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
     const [selectedCustomerInfo, setSelectedCustomerInfo] = useState<any>(null);
@@ -220,22 +221,26 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
             return;
         }
 
+        const quantity = Math.max(1, Math.floor(Number(itemQuantity) || 1));
+        const unitAmount = Number(itemAmount);
+        const totalAmount = unitAmount * quantity;
         const usdRate = rates?.usd || 32.5;
-        const converted = itemCurrency === "USD" ? Number(itemAmount) * usdRate : Number(itemAmount);
+        const converted = itemCurrency === "USD" ? totalAmount * usdRate : totalAmount;
 
         const newItem: DebtDraftItem = {
             id: Math.random().toString(36).substr(2, 9),
             title: itemTitle,
-            amount: Number(itemAmount),
+            amount: totalAmount,
             currency: itemCurrency,
             convertedAmount: converted,
             productId: selectedProduct?.id,
-            quantity: 1
+            quantity
         };
 
         setDebtItems(prev => [...prev, newItem]);
         setItemTitle("");
         setItemAmount("");
+        setItemQuantity("1");
         setSelectedProduct(null);
     };
 
@@ -321,6 +326,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 setNameValue("");
                 setPhoneValue("");
                 setDebtItems([]);
+                setItemQuantity("1");
                 reset();
             }
         }}>
@@ -396,7 +402,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                 Yeni Kalem Ekle
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                                <div className="md:col-span-5 space-y-2 relative">
+                                <div className="md:col-span-4 space-y-2 relative">
                                     <Label className="text-[9px] text-muted-foreground uppercase">Ürün / Açıklama</Label>
                                     <div className="relative group overflow-hidden rounded-xl">
                                         <Input
@@ -442,8 +448,19 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                <div className="md:col-span-3 space-y-2">
-                                    <Label className="text-[9px] text-muted-foreground uppercase">Tutar</Label>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-[9px] text-muted-foreground uppercase">Adet</Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        value={itemQuantity}
+                                        onChange={(e) => setItemQuantity(e.target.value)}
+                                        className="h-11 bg-card rounded-xl font-mono"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-[9px] text-muted-foreground uppercase">Birim Tutar</Label>
                                     <PriceInput value={itemAmount} onChange={(v) => setItemAmount(String(v))} prefix={itemCurrency === 'TRY' ? '₺' : '$'} className="h-11 bg-card rounded-xl" />
                                 </div>
                                 <div className="md:col-span-2 space-y-2">
@@ -460,7 +477,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                             {itemCurrency === "USD" && rates && (
                                 <div className="text-[10px] text-muted-foreground italic flex justify-between items-center px-2">
                                     <span>Anlık Kur: 1$ = ₺{rates.usd}</span>
-                                    <span>Karşılığı: ₺{(Number(itemAmount) * rates.usd).toLocaleString('tr-TR')}</span>
+                                    <span>Karşılığı: ₺{(Number(itemAmount) * Math.max(1, Math.floor(Number(itemQuantity) || 1)) * rates.usd).toLocaleString('tr-TR')}</span>
                                 </div>
                             )}
                         </div>
@@ -479,6 +496,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                             <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex justify-between items-center p-4 bg-card rounded-2xl border border-border/50 group hover:border-indigo-500/30 transition-all">
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-medium">{item.title}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{item.quantity || 1} adet</span>
                                                     {item.currency === "USD" && <span className="text-[10px] text-muted-foreground italic">Kur ile hesaplandı: ₺{item.convertedAmount.toLocaleString('tr-TR')}</span>}
                                                 </div>
                                                 <div className="flex items-center gap-4">

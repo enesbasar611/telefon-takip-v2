@@ -57,3 +57,5 @@
 - [x] 2026-05-12: Kurye action temizligi yapildi. Dosya: `src/lib/actions/shortage-actions.ts`. Neden: Tekrarlanan revalidate cagrisini temizleyip TypeScript kontrolunu tekrar basarili calistirmak.
 - [x] 2026-05-12: Kritik stok uyarili kurye/eksik atama akisi guncellendi. Dosyalar: `src/lib/actions/product-actions.ts`, `src/lib/actions/shortage-actions.ts`, `src/components/shortage/add-shortage-form.tsx`, `src/components/courier/courier-dashboard-client.tsx`, `src/components/navbar/shortage-list.tsx`. Neden: Kritik stok altindaki urunlerde yetersiz miktar girilirse stok kritik seviyenin ustune cikacak miktar kullaniciya sorulsun; atanmamis eksikler varsayilan kuryeye dukkan siparisi olarak gitsin.
 - [x] 2026-05-12: Kritik stok atama duzeltmeleri dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-12: Veresiye kalem ekleme modalina adet girisi eklendi. Dosya: `src/components/finance/add-debt-modal.tsx`. Neden: Veresiye modalinda urun/aciklama seciminden sonra adet girilsin ve toplam borc birim tutar x adet olarak hesaplansin.
+- [x] 2026-05-12: Veresiye adet girisi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
