@@ -15,6 +15,9 @@ export async function findCustomerByPhone(phone: string) {
     include: {
       tickets: { orderBy: { createdAt: "desc" }, take: 3 },
       sales: { orderBy: { createdAt: "desc" }, take: 3 },
+      _count: {
+        select: { tickets: true }
+      },
     }
   });
   return serializePrisma(customer);
@@ -28,6 +31,9 @@ export async function findCustomerByName(name: string) {
     include: {
       tickets: { orderBy: { createdAt: "desc" }, take: 3 },
       sales: { orderBy: { createdAt: "desc" }, take: 3 },
+      _count: {
+        select: { tickets: true }
+      },
     },
     take: 5,
     orderBy: { createdAt: "desc" },

@@ -4,7 +4,7 @@ import * as z from "zod";
 const phoneSchema = z.string()
     .min(1, "Telefon numarası gereklidir")
     .transform(val => val.replace(/\D/g, "").slice(-10))
-    .refine((val) => val.length === 10 && val.startsWith("5"), "Geçerli bir numara girin (5xx xxx xxxx)");
+    .refine((val) => val.length === 10, "Geçerli bir telefon numarası girin");
 
 const priceSchema = z.coerce.number().min(0, "Geçerli bir tutar giriniz");
 

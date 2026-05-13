@@ -59,3 +59,29 @@
 - [x] 2026-05-12: Kritik stok atama duzeltmeleri dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
 - [x] 2026-05-12: Veresiye kalem ekleme modalina adet girisi eklendi. Dosya: `src/components/finance/add-debt-modal.tsx`. Neden: Veresiye modalinda urun/aciklama seciminden sonra adet girilsin ve toplam borc birim tutar x adet olarak hesaplansin.
 - [x] 2026-05-12: Veresiye adet girisi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: SaaS auth akisi yeniden uygulandi. Dosyalar: `src/lib/auth.ts`, `src/types/next-auth.d.ts`. Neden: Yanlislikla silinen Google onboarding, staff credentials kontrolu, super admin tam yetki ve session/JWT yetki alanlari geri getirildi.
+- [x] 2026-05-13: Yeniden uygulanan SaaS auth degisikligi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis yeni kayit formu guncellendi. Dosyalar: `src/app/(dashboard)/servis/yeni/page.tsx`, `src/components/common/form-factory.tsx`, `src/lib/validations/schemas.ts`. Neden: Telefon numarasinda 5 ile baslama zorunlulugu kaldirildi, e-posta alani formdan cikarildi, model alani yazilabilir onerili dropdown oldu ve teknisyen yoksa yonetici varsayilan ataniyor.
+- [x] 2026-05-13: Servis telefon validasyonu netlestirildi. Dosya: `src/app/(dashboard)/servis/yeni/page.tsx`. Neden: Form submit oncesinde de `+90`, parantezli veya basinda `0` bulunan telefonlar 10 haneli yerel numaraya normalize edilerek kontrol edilsin.
+- [x] 2026-05-13: Servis yeni kayit formu dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis telefon validasyonu sonrasi tekrar dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis kayit basari modulu eklendi. Dosya: `src/app/(dashboard)/servis/yeni/page.tsx`. Neden: `Kaydi tamamla` sonrasi tamir animasyonlu onay modulu 2 saniye gorunsun ve kullanici `/servis` sayfasina yonlendirilsin.
+- [x] 2026-05-13: Servis kayit basari modulu dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis kayit zorunlu alan kontrolu guncellendi. Dosya: `src/app/(dashboard)/servis/yeni/page.tsx`. Neden: Isim soyisim, telefon, fiyat ve ariza aciklamasi dolmadan kayit butonu gonderim yapmasin; tiklaninca eksik alanlar isaretlensin ve basari modulu animasyon bitene kadar ekranda kalsin.
+- [x] 2026-05-13: Servis zorunlu alan ve basari animasyonu dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis yeni kayit musteri gecmis sayaci duzeltildi. Dosyalar: `src/lib/actions/customer-lookup-actions.ts`, `src/app/(dashboard)/servis/yeni/page.tsx`. Neden: Secilen musterinin onceki servis kayitlari `tickets` iliskisinden sayilsin; ekrandaki `Toplam Servis` 0 yerine gercek kayit adedini gostersin.
+- [x] 2026-05-13: Musteri gecmis sayaci dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Servis kayit butonu zorunlu alan mantigi ayrildi. Dosya: `src/app/(dashboard)/servis/yeni/page.tsx`. Neden: Form control hatalari ile custom zorunlu alan kontrolu cakismasin; ad soyad, telefon, marka, model, ariza aciklamasi ve fiyat dolunca buton `Kaydi Tamamla` durumuna gecsin.
+- [x] 2026-05-13: Servis kayit butonu zorunlu alan mantigi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Stok urun fiyat girisi ve POS fiyat gorunumu guncellendi. Dosyalar: `src/components/product/create-product-modal.tsx`, `src/components/pos/pos-interface.tsx`. Neden: Yeni urun modalinda finansal alanlar sadece alis/satis fiyatina indirildi; secilen para birimine gore fiyat giriliyor, TL karsiligi gosteriliyor ve POS sepetinde kaynak para birimiyle duzenlenebilir fiyat belirginlestiriliyor.
+- [x] 2026-05-13: Stok/POS fiyat duzenlemesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: POS sepet yerlesimi sadelestirildi. Dosya: `src/components/pos/pos-interface.tsx`. Neden: Sepet fiyat inputundaki `Duzenle` ve `Mevcut` metinleri kaldirildi; toplam ve satis butonu urun listesinin hemen altina gelecek sekilde checkout alani yukariya alindi.
+- [x] 2026-05-13: POS sepet yerlesimi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Navbar hizli servis modalinda musteri arama ve basari animasyonu eklendi. Dosya: `src/components/service/create-service-modal.tsx`. Neden: Ad soyad alaninda `Enes Basar` placeholder'i kullanilsin, yazarken musteriler bulunsun, gecmis servis sayisi gosterilsin, telefon/ad soyad hizasi duzelsin ve kayit bitince animasyonlu onay gorunsun.
+- [x] 2026-05-13: Navbar hizli servis modal degisiklikleri dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Navbar hizli satis drawer tasarimi sadelestirildi. Dosya: `src/components/pos/pos-compact.tsx`. Neden: Urun arama ikon/yazi cakismasi giderildi, kategori sekmeleri ve urun kartlari daha kompakt hale getirildi, musteri arama inputu ayni minimal hizaya cekildi.
+- [x] 2026-05-13: Navbar hizli satis drawer duzenlemesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Navbar hizli servis kayit zorunlu alan ve yonlendirme akisi guncellendi. Dosya: `src/components/service/create-service-modal.tsx`. Neden: Ad soyad, telefon, marka, model, ariza aciklamasi ve tutar dolmadan submit yapilmasin; eksikler kullaniciya listelensin; basari animasyonu sonrasi `/servis` sayfasina gecilsin veya ayni sayfadaysa dinamik yenilensin.
+- [x] 2026-05-13: Navbar hizli servis zorunlu alan ve yonlendirme duzeltmesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
+- [x] 2026-05-13: Navbar hizli servis basari animasyonu Dialog disina tasindi. Dosya: `src/components/service/create-service-modal.tsx`. Neden: Kayit basarili oldugunda modal kapanip animasyon katmani bagimsiz ust katmanda gorunsun; `/servis/yeni` sayfasindaki davranisla ayni aksin.
+- [x] 2026-05-13: Navbar hizli servis basari animasyonu duzeltmesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.

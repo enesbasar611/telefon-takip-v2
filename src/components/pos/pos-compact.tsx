@@ -341,13 +341,13 @@ export function POSCompact({ products, customers, categories }: { products: any[
     return (
         <div className="flex flex-col h-full bg-background text-foreground font-sans overflow-hidden">
             {/* Search Bar for Products - Enhanced Spacing & Glassmorphism */}
-            <div className="p-6 pb-4">
-                <div className="flex items-center gap-4 relative group">
+            <div className="px-4 pt-4 pb-3">
+                <div className="flex items-center gap-2 relative group">
                     <div className="relative flex-1">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-all duration-300" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-blue-500 transition-all duration-300" />
                         <Input
                             placeholder="Ürün adı, barkod veya kategori..."
-                            className="pl-13 h-14 bg-muted/30 border-border/40 rounded-2xl text-sm focus:bg-background focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm border-2"
+                            className="h-11 rounded-xl border border-border/50 bg-muted/30 pl-10 pr-3 text-xs font-medium shadow-sm transition-all focus:bg-background focus:ring-4 focus:ring-blue-500/5"
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
                             onKeyDown={(e) => {
@@ -360,7 +360,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     <Button
                         size="icon"
                         variant="secondary"
-                        className="h-14 w-14 rounded-2xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-md active:scale-95"
+                        className="h-11 w-11 shrink-0 rounded-xl bg-blue-500/10 text-blue-600 shadow-sm transition-all hover:bg-blue-500 hover:text-white active:scale-95"
                         onClick={() => {
                             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                             if (isMobile) {
@@ -370,18 +370,18 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             }
                         }}
                     >
-                        <Camera className="h-6 w-6" />
+                        <Camera className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
             {/* Category Pills - Modern Minimalist */}
-            <div className="px-6 pb-6 overflow-x-auto scrollbar-hide no-scrollbar">
-                <div className="flex gap-3 min-w-max">
+            <div className="px-4 pb-3 overflow-x-auto scrollbar-hide no-scrollbar">
+                <div className="flex gap-2 min-w-max">
                     <button
                         onClick={() => setSelectedCategory("ALL")}
                         className={cn(
-                            "flex items-center gap-2 h-10 px-5 rounded-2xl border-2 text-[11px] font-black tracking-tight transition-all",
+                            "flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-black tracking-tight transition-all",
                             selectedCategory === "ALL"
                                 ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
                                 : "bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted hover:border-border"
@@ -397,7 +397,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
                                 className={cn(
-                                    "flex items-center gap-2 h-10 px-5 rounded-2xl border-2 text-[11px] font-black tracking-tight transition-all",
+                                    "flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-black tracking-tight transition-all",
                                     selectedCategory === cat.id
                                         ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
                                         : "bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted hover:border-border"
@@ -412,12 +412,12 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* View Tabs - Glass Style */}
-            <div className="px-6 mb-6">
-                <div className="flex p-1.5 bg-muted/40 rounded-2xl border-2 border-border/40 backdrop-blur-md">
+            <div className="px-4 mb-3">
+                <div className="flex rounded-xl border border-border/40 bg-muted/40 p-1 backdrop-blur-md">
                     <button
                         onClick={() => setView('products')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-[11px] font-black transition-all",
+                            "flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-[10px] font-black transition-all",
                             view === 'products' ? "bg-background text-blue-600 shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -427,7 +427,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     <button
                         onClick={() => setView('cart')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-[11px] font-black transition-all relative",
+                            "flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-[10px] font-black transition-all relative",
                             view === 'cart' ? "bg-background text-blue-600 shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -439,7 +439,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Content Area - Premium Cards */}
-            <div className="flex-1 overflow-y-auto px-6 space-y-4 custom-scrollbar pb-6 no-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-4 no-scrollbar">
                 <AnimatePresence mode="wait">
                     {view === 'products' ? (
                         <motion.div
@@ -447,37 +447,37 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="space-y-4"
+                            className="space-y-2"
                         >
                             {filteredProducts.map((product) => (
                                 <div
                                     key={product.id}
-                                    className="flex items-center justify-between p-4 bg-card border-2 border-border/40 rounded-2xl hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 group cursor-pointer active:scale-[0.98]"
+                                    className="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/70 px-3 py-2.5 transition-all duration-200 hover:border-blue-500/30 hover:bg-blue-500/5 active:scale-[0.99]"
                                     onClick={() => addToCart(product)}
                                 >
-                                    <div className="flex items-center gap-4 overflow-hidden">
-                                        <div className="h-14 w-14 shrink-0 rounded-[1.25rem] bg-muted/40 flex items-center justify-center border border-border/40 group-hover:bg-blue-500/5 group-hover:border-blue-500/10 transition-colors">
-                                            <Package className="h-7 w-7 text-muted-foreground/30 group-hover:text-blue-500/40 transition-colors" />
+                                    <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/40 transition-colors group-hover:border-blue-500/10 group-hover:bg-blue-500/5">
+                                            <Package className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-blue-500/50" />
                                         </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <h4 className="font-bold text-sm text-foreground truncate group-hover:text-blue-600 transition-colors uppercase tracking-tight">{product.name}</h4>
-                                            <div className="flex items-center gap-3 mt-1.5">
-                                                <Badge variant="outline" className="text-[9px] bg-muted/50 border-none px-3 py-1 rounded-lg text-muted-foreground">
+                                        <div className="flex min-w-0 flex-col">
+                                            <h4 className="truncate text-xs font-black uppercase tracking-tight text-foreground transition-colors group-hover:text-blue-600">{product.name}</h4>
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <Badge variant="outline" className="rounded-md border-none bg-muted/50 px-2 py-0.5 text-[8px] text-muted-foreground">
                                                     {product.category.name.toUpperCase()}
                                                 </Badge>
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className={cn("h-1.5 w-1.5 rounded-full", product.stock <= 5 ? "bg-rose-500 animate-pulse" : "bg-emerald-500")} />
-                                                    <span className={cn("text-[10px] font-black", product.stock <= 5 ? "text-rose-500" : "text-emerald-500")}>STOK: {product.stock}</span>
+                                                <div className="flex items-center gap-1">
+                                                    <div className={cn("h-1.5 w-1.5 rounded-full", product.stock <= 5 ? "bg-rose-500" : "bg-emerald-500")} />
+                                                    <span className={cn("text-[9px] font-black", product.stock <= 5 ? "text-rose-500" : "text-emerald-500")}>{product.stock}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 shrink-0 ml-4">
+                                    <div className="flex shrink-0 items-center gap-2">
                                         <div className="text-right">
-                                            <span className="text-lg font-black text-foreground tabular-nums">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                            <span className="text-sm font-black text-foreground tabular-nums">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
                                         </div>
-                                        <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                                            <Plus className="h-5 w-5" />
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 shadow-sm transition-all group-hover:bg-blue-600 group-hover:text-white">
+                                            <Plus className="h-4 w-4" />
                                         </div>
                                     </div>
                                 </div>
@@ -554,8 +554,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
             </div>
 
             {/* Cart Summary Section - Fixed at bottom with modern look */}
-            <div className="p-6 bg-card border-t-4 border-border/40 space-y-6 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] dark:shadow-none backdrop-blur-xl">
-                <div className="space-y-4">
+            <div className="space-y-4 border-t border-border/40 bg-card p-4 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl dark:shadow-none">
+                <div className="space-y-3">
                     <div className="flex items-center justify-between px-2">
                         <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] leading-none">MÜŞTERİ SEÇİMİ</Label>
                         {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
@@ -585,7 +585,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     </div>
 
                     <div className="relative group">
-                        <UserCircle className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-blue-500 transition-all duration-300" />
+                        <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-blue-500 transition-all duration-300" />
                         <Input
                             placeholder="Müşteri ara veya yeni isim gir..."
                             value={activeCustomer ? activeCustomer.name : customerSearch}
@@ -593,7 +593,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
                                 setCustomerSearch(e.target.value);
                                 if (selectedCustomerId) setSelectedCustomerId(undefined);
                             }}
-                            className="pl-13 h-14 bg-muted/40 border-2 border-border/40 rounded-[1.25rem] text-sm focus:bg-background focus:ring-4 focus:ring-blue-500/5 transition-all text-foreground font-medium"
+                            className="h-11 rounded-xl border border-border/50 bg-muted/40 pl-10 pr-3 text-xs font-medium text-foreground transition-all focus:bg-background focus:ring-4 focus:ring-blue-500/5"
                         />
 
                         {(customerSearch.length > 0 && !selectedCustomerId) && (

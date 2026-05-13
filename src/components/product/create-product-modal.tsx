@@ -24,12 +24,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   PlusCircle, Loader2, Package, Barcode, TrendingUp, AlertTriangle,
-  DollarSign, ArrowRightLeft, MapPin, ChevronRight, Sparkles,
+  DollarSign, MapPin, ChevronRight, Sparkles,
   ChevronDown, CheckCircle2, XCircle, Wand2
 } from "lucide-react";
 import { createProduct } from "@/lib/actions/product-actions";
 import { parseProductWithAI } from "@/lib/actions/gemini-actions";
-import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
@@ -120,30 +119,23 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
     defaultValues: { stock: "0", criticalStock: "5", buyPrice: "0", buyPriceUsd: "", sellPrice: "0", sellPriceUsd: "" }
   });
 
-  const watchBuyPriceUsd = watch("buyPriceUsd");
-  const watchSellPriceUsd = watch("sellPriceUsd");
-
-  const handleBuyUsdChange = (usdVal: number) => {
-    setValue("buyPriceUsd", String(usdVal));
-    if (usdVal > 0 && exchangeRates?.usd) {
-      const tlVal = Math.ceil(usdVal * exchangeRates.usd);
-      setValue("buyPrice", String(tlVal));
-    }
-  };
-
-  const handleSellUsdChange = (usdVal: number) => {
-    setValue("sellPriceUsd", String(usdVal));
-    if (usdVal > 0 && exchangeRates?.usd) {
-      const tlVal = Math.ceil(usdVal * exchangeRates.usd);
-      setValue("sellPrice", String(tlVal));
-    }
-  };
-
   const calculateTryPrice = (val: string) => {
     const num = parseFloat(val) || 0;
     if (currency === "USD") return (num * (exchangeRates?.usd || 34)).toFixed(2);
     if (currency === "EUR") return (num * (exchangeRates?.eur || 37)).toFixed(2);
     return num.toFixed(2);
+  };
+
+  const getCurrencySymbol = (selectedCurrency = currency) => {
+    if (selectedCurrency === "USD") return "$";
+    if (selectedCurrency === "EUR") return "€";
+    return "₺";
+  };
+
+  const getCurrencyRate = (selectedCurrency = currency) => {
+    if (selectedCurrency === "USD") return exchangeRates?.usd || 34;
+    if (selectedCurrency === "EUR") return exchangeRates?.eur || 37;
+    return 1;
   };
 
   const handleAIAnalyze = () => {
@@ -191,19 +183,27 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
       // No longer need manual conversion in onSubmit since inputs are synced
 
       const { name, barcode, location, attributes } = extractCoreAndAttributes(industryFields, data);
+      const buyInput = Number(data.buyPrice) || 0;
+      const sellInput = Number(data.sellPrice) || 0;
+      const rate = getCurrencyRate(currency);
+      const buyPriceTry = currency === "TRY" ? buyInput : Math.ceil(buyInput * rate);
+      const sellPriceTry = currency === "TRY" ? sellInput : Math.ceil(sellInput * rate);
 
       const result = await createProduct({
         name: name || data.name,
         categoryId: data.categoryId,
-        buyPrice: Number(data.buyPrice),
-        buyPriceUsd: data.buyPriceUsd ? Number(data.buyPriceUsd) : null,
-        sellPrice: Number(data.sellPrice),
-        sellPriceUsd: data.sellPriceUsd ? Number(data.sellPriceUsd) : null,
+        buyPrice: buyPriceTry,
+        buyPriceUsd: currency === "TRY" ? null : buyInput,
+        sellPrice: sellPriceTry,
+        sellPriceUsd: currency === "TRY" ? null : sellInput,
         stock: Number(data.stock),
         criticalStock: Number(data.criticalStock),
         barcode: barcode || data.barcode,
         location: location || data.location,
-        attributes,
+        attributes: {
+          ...attributes,
+          priceCurrency: currency
+        },
       });
 
       if (result.success) {
@@ -463,64 +463,46 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                 </div>
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                          <div className="p-1.5 rounded-md bg-muted border border-border">
-                            <DollarSign className="h-3.5 w-3.5 text-amber-400" />
-                          </div>
-                          Alış (TL)
-                        </Label>
-                        <PriceInput
-                          id="buyPrice"
-                          value={watch("buyPrice")}
-                          onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
-                          prefix="₺"
-                          className="bg-muted/30 border-border rounded-xl h-14 text-[14px] font-semibold"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="buyPriceUsd" className="font-medium text-[12px] font-semibold text-blue-500/70 flex items-center gap-1.5">
-                          Dollar ($)
-                        </Label>
-                        <PriceInput
-                          id="buyPriceUsd"
-                          value={watch("buyPriceUsd")}
-                          onChange={(v) => handleBuyUsdChange(Number(v))}
-                          prefix="$"
-                          className="bg-blue-500/5 border-blue-500/20 rounded-xl h-14 text-[14px] font-bold text-blue-500"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="buyPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                        <div className="p-1.5 rounded-md bg-muted border border-border">
+                          <DollarSign className="h-3.5 w-3.5 text-amber-400" />
+                        </div>
+                        Alış Fiyatı ({currency})
+                      </Label>
+                      <PriceInput
+                        id="buyPrice"
+                        value={watch("buyPrice")}
+                        onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
+                        prefix={getCurrencySymbol()}
+                        className="bg-muted/30 border-border rounded-xl h-14 text-[14px] font-semibold"
+                      />
+                      {currency !== "TRY" && (
+                        <p className="text-[10px] font-medium text-muted-foreground px-1">
+                          TL karşılığı: ₺{Number(calculateTryPrice(watch("buyPrice"))).toLocaleString("tr-TR")}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="sellPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                          <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                          </div>
-                          Satış (TL)
-                        </Label>
-                        <PriceInput
-                          id="sellPrice"
-                          value={watch("sellPrice")}
-                          onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                          prefix="₺"
-                          className="bg-muted/30 border-border rounded-xl h-14 text-[14px] font-semibold"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="sellPriceUsd" className="font-medium text-[12px] font-semibold text-emerald-500/70 flex items-center gap-1.5">
-                          Dollar ($)
-                        </Label>
-                        <PriceInput
-                          id="sellPriceUsd"
-                          value={watch("sellPriceUsd")}
-                          onChange={(v) => handleSellUsdChange(Number(v))}
-                          prefix="$"
-                          className="bg-emerald-500/5 border-emerald-500/20 rounded-xl h-14 text-[14px] font-bold text-emerald-500"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sellPrice" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                        <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                          <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                        </div>
+                        Satış Fiyatı ({currency})
+                      </Label>
+                      <PriceInput
+                        id="sellPrice"
+                        value={watch("sellPrice")}
+                        onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
+                        prefix={getCurrencySymbol()}
+                        className="bg-emerald-500/5 border-emerald-500/20 rounded-xl h-14 text-[14px] font-bold text-emerald-500"
+                      />
+                      {currency !== "TRY" && (
+                        <p className="text-[10px] font-medium text-muted-foreground px-1">
+                          TL karşılığı: ₺{Number(calculateTryPrice(watch("sellPrice"))).toLocaleString("tr-TR")}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Control, Controller, FieldErrors, UseFormRegister } from "react-hook-form";
 import { FieldDef } from "@/config/industries";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ interface FormFactoryProps {
     twoCol?: boolean;
     /** Optional callback for pattern lock fields */
     onPatternClick?: (fieldKey: string) => void;
+    customRenderers?: Record<string, (field: FieldDef, validationRules: any) => ReactNode>;
 }
 
 /**
@@ -45,6 +47,7 @@ export function FormFactory({
     labelClassName,
     twoCol = false,
     onPatternClick,
+    customRenderers,
 }: FormFactoryProps) {
     const baseInput = cn(
         "h-14 bg-muted/20 border-border/60 rounded-2xl px-5 text-sm transition-all text-foreground focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/10",
@@ -84,7 +87,9 @@ export function FormFactory({
                             {field.required && <span className="text-red-500 ml-1">*</span>}
                         </Label>
 
-                        {field.type === "select" ? (
+                        {customRenderers?.[field.key] ? (
+                            customRenderers[field.key](field, validationRules)
+                        ) : field.type === "select" ? (
                             <Controller
                                 name={field.key}
                                 control={control}

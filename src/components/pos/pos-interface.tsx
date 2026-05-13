@@ -54,6 +54,7 @@ import { Sparkles, ScanLine } from "lucide-react";
 import { getSettings } from "@/lib/actions/setting-actions";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
   products: any[];
@@ -64,6 +65,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [products, setProducts] = useState(initialProducts);
+  const { rates: exchangeRates } = useDashboardData();
 
   // Show receipt if arrived via sale confirmation URL
   useEffect(() => {
@@ -195,6 +197,25 @@ export function POSInterface({ products: initialProducts, customers, categories,
     }
   };
 
+  function getCartItemCurrency(item: any): "TRY" | "USD" | "EUR" {
+    const storedCurrency = item?.attributes?.priceCurrency;
+    if (storedCurrency === "USD" || storedCurrency === "EUR") return storedCurrency;
+    return item?.sellPriceUsd ? "USD" : "TRY";
+  }
+
+  function getCartCurrencySymbol(item: any) {
+    const itemCurrency = getCartItemCurrency(item);
+    if (itemCurrency === "USD") return "$";
+    if (itemCurrency === "EUR") return "€";
+    return "₺";
+  }
+
+  function getCartDisplayPrice(item: any) {
+    return getCartItemCurrency(item) === "TRY"
+      ? Number(item.sellPrice || 0)
+      : Number(item.sellPriceUsd || item.sellPrice || 0);
+  }
+
   const addToCart = useCallback((product: any) => {
     if (!product) return;
 
@@ -262,11 +283,20 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const updatePrice = useCallback((id: string, newPrice: number) => {
     setCart((prev) => prev.map((item) => {
       if (item.id === id) {
-        return { ...item, sellPrice: newPrice };
+        const priceCurrency = getCartItemCurrency(item);
+        if (priceCurrency === "TRY") {
+          return { ...item, sellPrice: newPrice };
+        }
+        const rate = priceCurrency === "EUR" ? exchangeRates?.eur || 37 : exchangeRates?.usd || 34;
+        return {
+          ...item,
+          sellPriceUsd: newPrice,
+          sellPrice: Math.ceil(newPrice * rate),
+        };
       }
       return item;
     }));
-  }, []);
+  }, [exchangeRates]);
 
   const removeFromCart = useCallback((id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
@@ -506,8 +536,9 @@ export function POSInterface({ products: initialProducts, customers, categories,
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/5 relative">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {filteredProducts.map((product) => {
-                const sellPrice = product.sellPrice;
-                const priceStr = formatCurrency(sellPrice);
+                const productCurrency = getCartItemCurrency(product);
+                const displayPrice = getCartDisplayPrice(product);
+                const priceStr = formatCurrency(displayPrice);
                 // Standardized font size for price to avoid truncation
                 const priceSizeClass = "text-lg sm:text-xl font-black";
 
@@ -535,8 +566,13 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     {/* Bottom Row: Price & Title */}
                     <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
                       <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
-                        ₺{priceStr}
+                        {getCartCurrencySymbol(product)}{priceStr}
                       </div>
+                      {productCurrency !== "TRY" && (
+                        <div className="text-[10px] font-semibold text-muted-foreground">
+                          ₺{formatCurrency(product.sellPrice)}
+                        </div>
+                      )}
                       <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">
                         {product.name}
                       </div>
@@ -643,7 +679,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
 
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">
+          <div className="flex-none overflow-y-auto p-0 custom-scrollbar relative max-h-[48vh]">
             <div className="divide-y divide-white/5">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground/80 p-10 text-center">
@@ -659,17 +695,21 @@ export function POSInterface({ products: initialProducts, customers, categories,
                     <div className="flex-1 min-w-0">
                       <span className="text-[15px]  text-foreground block leading-tight mb-1 truncate">{item.name}</span>
                       <div className="flex items-center gap-3">
-                        <div className="relative flex items-center">
-                          <span className="text-[13px] text-primary absolute left-0">₺</span>
+                        <div className="relative flex items-center rounded-xl border border-primary/35 bg-primary/10 px-2 py-1.5 shadow-sm transition-all group-hover:border-primary/60 group-hover:bg-primary/15">
+                          <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol(item)}</span>
                           <input
                             type="number"
-                            value={item.sellPrice}
+                            value={getCartDisplayPrice(item)}
                             onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
-                            className="bg-transparent border-none text-[13px] text-primary font-bold focus:ring-0 w-24 pl-3 py-0 h-auto"
+                            className="bg-transparent border-none text-[14px] text-primary font-black focus:ring-0 w-24 pl-5 py-0 h-auto"
+                            title="Sepet fiyatı değiştirilebilir"
                           />
                         </div>
-                        <div className="h-1 w-1 rounded-full bg-border" />
-                        <span className="text-[10px] text-muted-foreground ">MEVCUT: {item.stock}</span>
+                        {getCartItemCurrency(item) !== "TRY" && (
+                          <span className="text-[10px] font-semibold text-muted-foreground">
+                            ₺{formatCurrency(item.sellPrice)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-6 flex-shrink-0">
@@ -702,8 +742,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
           </div>
 
           {/* Checkout Section */}
-          <div className="p-8 bg-muted/5 border-t border-border/40 mt-auto">
-            <div className="grid grid-cols-4 gap-3 mb-8">
+          <div className="p-6 bg-muted/5 border-t border-border/40">
+            <div className="grid grid-cols-4 gap-3 mb-5">
               {[
                 { id: "CASH", label: "NAKİT", icon: Banknote },
                 { id: "CREDIT_CARD", label: "KART", icon: CreditCard },
@@ -714,7 +754,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                   key={method.id}
                   variant="ghost"
                   className={cn(
-                    "h-20 flex flex-col gap-2 rounded-2xl border transition-all p-0 group",
+                    "h-16 flex flex-col gap-1.5 rounded-2xl border transition-all p-0 group",
                     paymentMethod === method.id
                       ? "bg-primary text-primary-foreground border-primary shadow-xl shadow-primary/20 scale-105"
                       : "bg-muted/10 text-muted-foreground border-border/20 hover:bg-muted hover:border-border/50"
@@ -728,7 +768,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
             </div>
 
             {loyaltyEnabled && totalPoints > 0 && (
-              <div className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+              <div className="mb-5 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Sparkles className="h-5 w-5 text-primary" />
@@ -755,20 +795,20 @@ export function POSInterface({ products: initialProducts, customers, categories,
               </div>
             )}
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] sm:text-[11px] text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
                 <div className="flex flex-col items-end">
                   {loyaltyDiscountAmount > 0 && (
                     <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
                   )}
-                  <span className="text-3xl sm:text-5xl text-foreground drop-shadow-sm font-bold">₺{formatCurrency(finalTotal)}</span>
+                  <span className="text-2xl sm:text-4xl text-foreground drop-shadow-sm font-bold">₺{formatCurrency(finalTotal)}</span>
                 </div>
               </div>
 
               <Button
                 className={cn(
-                  "h-16 sm:h-20 w-full text-[13px] sm:text-[14px] font-bold gap-3 sm:gap-4 rounded-2xl sm:rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98] whitespace-normal text-center leading-tight",
+                  "h-14 sm:h-16 w-full text-[13px] sm:text-[14px] font-bold gap-3 sm:gap-4 rounded-2xl sm:rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98] whitespace-normal text-center leading-tight",
                   paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
                     ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
@@ -821,8 +861,3 @@ export function POSInterface({ products: initialProducts, customers, categories,
     </div>
   );
 }
-
-
-
-
-

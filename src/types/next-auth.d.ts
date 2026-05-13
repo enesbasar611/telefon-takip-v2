@@ -12,6 +12,8 @@ declare module "next-auth" {
             canService?: boolean;
             canStock?: boolean;
             canFinance?: boolean;
+            canEdit?: boolean;
+            canDelete?: boolean;
             isShopActive?: boolean;
         } & DefaultSession["user"];
     }
@@ -26,6 +28,8 @@ declare module "next-auth" {
         canService?: boolean;
         canStock?: boolean;
         canFinance?: boolean;
+        canEdit?: boolean;
+        canDelete?: boolean;
     }
 }
 
@@ -40,6 +44,8 @@ declare module "next-auth/jwt" {
         canService?: boolean;
         canStock?: boolean;
         canFinance?: boolean;
+        canEdit?: boolean;
+        canDelete?: boolean;
         isShopActive?: boolean;
     }
 }

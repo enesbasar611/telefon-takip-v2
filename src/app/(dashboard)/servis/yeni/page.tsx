@@ -56,19 +56,31 @@ import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Wrench } from "lucide-react";
-import { ServiceReceiptModal } from "@/components/service/service-receipt-modal";
 
 const MAX_PHOTOS = 6;
 const MAX_SIZE_MB = 3;
+
+const normalizePhoneNumber = (value?: string | null) => {
+  let digits = (value || "").replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("90")) digits = digits.slice(2);
+  if (digits.length > 10 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits.slice(-10);
+};
 
 const serviceSchema = z.object({
   customerName: z.string()
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
     .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.]+$/, "Müşteri adı geçersiz karakterler içeriyor"),
   customerPhone: z.string()
-    .min(1, "Telefon no giriniz"),
+    .min(1, "Telefon no giriniz")
+    .refine((val) => normalizePhoneNumber(val).length === 10, "Numara 10 haneli olmalıdır"),
   customerEmail: z.string().email("Geçerli bir e-posta giriniz").or(z.literal("")).optional(),
-  estimatedCost: z.string().min(1, "Tutar giriniz").optional(),
+  deviceBrand: z.string().min(1, "Marka gereklidir"),
+  deviceModel: z.string().min(1, "Model gereklidir"),
+  estimatedCost: z.string()
+    .min(1, "Tutar giriniz")
+    .refine((val) => Number(val) > 0, "Fiyat giriniz"),
+  problemDesc: z.string().min(3, "Arıza açıklaması gereklidir"),
   downPayment: z.string().optional(),
   estimatedDeliveryDate: z.string().or(z.literal("")).optional(),
   technicianId: z.string().or(z.literal("")).optional(),
@@ -310,8 +322,7 @@ export default function NewServicePage() {
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
-  const [createdTicket, setCreatedTicket] = useState<any>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -359,12 +370,24 @@ export default function NewServicePage() {
         ]);
         setShop(s);
 
-        const techList = staffList.filter((s: any) =>
-          s.role === "SUPER_ADMIN" || s.role === "SHOP_MANAGER" || s.role === "ADMIN" || s.role === "TECHNICIAN" || s.role === "STAFF"
+        const assignableStaff = staffList.filter((member: any) =>
+          member.role === "SUPER_ADMIN" || member.role === "SHOP_MANAGER" || member.role === "ADMIN" || member.role === "TECHNICIAN" || member.role === "STAFF"
         );
+        const techniciansOnly = assignableStaff.filter((member: any) => member.role === "TECHNICIAN");
+        const managerFallback = assignableStaff.find((member: any) =>
+          member.role === "SHOP_MANAGER" || member.role === "ADMIN" || member.role === "SUPER_ADMIN"
+        );
+        const defaultAssignee = techniciansOnly[0] || managerFallback || assignableStaff[0];
+
+        const techList = techniciansOnly.length > 0
+          ? assignableStaff
+          : defaultAssignee
+            ? [defaultAssignee]
+            : [];
+
         setTechnicians(techList);
-        if (techList.length > 0 && !form.getValues("technicianId")) {
-          form.setValue("technicianId", techList[0].id);
+        if (defaultAssignee && !form.getValues("technicianId")) {
+          form.setValue("technicianId", defaultAssignee.id);
         }
       } catch (e) {
         console.error("Initial data load error:", e);
@@ -435,7 +458,7 @@ export default function NewServicePage() {
   const watchPhone = form.watch("customerPhone");
   useEffect(() => {
     const lookup = async () => {
-      const purePhone = watchPhone?.replace(/\D/g, "") || "";
+      const purePhone = normalizePhoneNumber(watchPhone);
       if (purePhone.length >= 7) {
         setIsLookingUp(true);
         const customer = await findCustomerByPhone(purePhone);
@@ -461,12 +484,11 @@ export default function NewServicePage() {
     if (!isValid) return;
 
     const name = form.getValues("customerName");
-    const phone = form.getValues("customerPhone");
-    const email = form.getValues("customerEmail");
+    const phone = normalizePhoneNumber(form.getValues("customerPhone"));
 
     setIsCreatingCustomer(true);
     try {
-      const res = await createCustomerMuted({ name, phone, email });
+      const res = await createCustomerMuted({ name, phone, email: "" });
       if (res.success) {
         setFoundCustomer(res.customer);
         setIsCustomerCreated(true);
@@ -492,8 +514,8 @@ export default function NewServicePage() {
 
       const result = await createServiceTicket({
         customerName: values.customerName,
-        customerPhone: values.customerPhone.replace(/\D/g, ""),
-        customerEmail: values.customerEmail,
+        customerPhone: normalizePhoneNumber(values.customerPhone),
+        customerEmail: "",
         deviceBrand,
         deviceModel,
         imei,
@@ -509,9 +531,7 @@ export default function NewServicePage() {
       });
 
       if (result.success) {
-        toast({ title: "Başarılı", description: "Yeni servis kaydı oluşturuldu." });
-        setCreatedTicket(result.data);
-        setShowReceipt(true);
+        setShowSuccessModal(true);
       } else {
         toast({ title: "Hata", description: result.error, variant: "destructive" });
       }
@@ -520,6 +540,55 @@ export default function NewServicePage() {
 
   const currentEstimatedCost = form.watch("estimatedCost") || "0";
   const errors = form.formState.errors;
+  const foundCustomerServiceCount = foundCustomer?._count?.tickets ?? foundCustomer?.tickets?.length ?? 0;
+  const watchedCustomerName = form.watch("customerName");
+  const watchedCustomerPhone = form.watch("customerPhone");
+  const watchedDeviceBrand = form.watch("deviceBrand");
+  const watchedDeviceModel = form.watch("deviceModel");
+  const watchedProblemDesc = form.watch("problemDesc");
+  const watchedEstimatedCost = form.watch("estimatedCost");
+  const requiredFieldsComplete =
+    (watchedCustomerName || "").trim().length >= 2 &&
+    normalizePhoneNumber(watchedCustomerPhone).length === 10 &&
+    (watchedDeviceBrand || "").trim().length > 0 &&
+    (watchedDeviceModel || "").trim().length > 0 &&
+    (watchedProblemDesc || "").trim().length >= 3 &&
+    Number(watchedEstimatedCost || 0) > 0;
+  const hasBlockingErrors = [
+    "customerName",
+    "customerPhone",
+    "deviceBrand",
+    "deviceModel",
+    "problemDesc",
+    "estimatedCost"
+  ].some((fieldName) => Boolean((errors as any)[fieldName]));
+  const canSubmitService = requiredFieldsComplete && !hasBlockingErrors;
+
+  const markRequiredFields = () => {
+    if ((form.getValues("customerName") || "").trim().length < 2) {
+      form.setError("customerName", { message: "İsim soyisim gereklidir" });
+    }
+    if (normalizePhoneNumber(form.getValues("customerPhone")).length !== 10) {
+      form.setError("customerPhone", { message: "Telefon numarası 10 haneli olmalıdır" });
+    }
+    if (Number(form.getValues("estimatedCost") || 0) <= 0) {
+      form.setError("estimatedCost", { message: "Fiyat giriniz" });
+    }
+    if (!(form.getValues("deviceBrand") || "").trim()) {
+      form.setError("deviceBrand", { message: "Marka gereklidir" });
+    }
+    if (!(form.getValues("deviceModel") || "").trim()) {
+      form.setError("deviceModel", { message: "Model gereklidir" });
+    }
+    if ((form.getValues("problemDesc") || "").trim().length < 3) {
+      form.setError("problemDesc", { message: "Arıza açıklaması gereklidir" });
+    }
+    toast({
+      title: "Zorunlu alanlar eksik",
+      description: "Ad soyad, telefon, marka, model, arıza açıklaması ve fiyatı doldurun.",
+      variant: "destructive"
+    });
+  };
 
   const cardClass = "bg-card p-6 md:p-8 rounded-2xl border border-border/50 transition-all";
   const labelClass = "text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block";
@@ -633,10 +702,8 @@ export default function NewServicePage() {
                     isLookingUp={isLookingUp}
                     onChange={(val) => {
                       form.setValue("customerPhone", val);
-                      const raw = val.replace(/\D/g, "");
-                      if (raw.length > 0 && raw[0] !== "5") {
-                        form.setError("customerPhone", { message: "Numara 5 ile başlamalıdır" });
-                      } else if (raw.length > 0 && raw.length !== 10) {
+                      const raw = normalizePhoneNumber(val);
+                      if (raw.length > 0 && raw.length !== 10) {
                         form.setError("customerPhone", { message: "Numara 10 haneli olmalıdır" });
                       } else {
                         form.clearErrors("customerPhone");
@@ -645,17 +712,6 @@ export default function NewServicePage() {
                   />
                 </div>
 
-                {/* E-posta */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <Label className={labelClass}>E-Posta Adresi <span className="text-muted-foreground/50 normal-case tracking-normal font-normal">(opsiyonel)</span></Label>
-                  <Input
-                    {...form.register("customerEmail")}
-                    placeholder="ornek@mail.com"
-                    type="email"
-                    className={getInputClass("customerEmail")}
-                  />
-                  {errors.customerEmail && <p className="text-xs text-destructive mt-1.5 px-1">{errors.customerEmail.message as string}</p>}
-                </div>
               </div>
             </section>
 
@@ -670,6 +726,46 @@ export default function NewServicePage() {
                 errors={errors}
                 twoCol={true}
                 onPatternClick={() => setIsPatternModalOpen(true)}
+                customRenderers={{
+                  deviceModel: (field, validationRules) => {
+                    const modelField = form.register(field.key, validationRules);
+                    return (
+                      <div className="relative">
+                        <Input
+                          id={field.key}
+                          type="text"
+                          placeholder={field.placeholder}
+                          maxLength={field.maxLength}
+                          {...modelField}
+                          onFocus={() => setShowSuggestions(modelSuggestions.length > 0)}
+                          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                          onChange={(event) => {
+                            modelField.onChange(event);
+                            setShowSuggestions(event.target.value.trim().length >= 2);
+                          }}
+                          className="h-14 bg-muted/20 border-border/60 rounded-2xl px-5 text-sm transition-all text-foreground focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/10"
+                        />
+                        {showSuggestions && modelSuggestions.length > 0 && (
+                          <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-[80] bg-card border border-border rounded-2xl shadow-xl overflow-hidden py-1">
+                            {modelSuggestions.map((model) => (
+                              <button
+                                key={model}
+                                type="button"
+                                onMouseDown={() => {
+                                  form.setValue(field.key, model, { shouldValidate: true, shouldDirty: true });
+                                  setShowSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                              >
+                                {model}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                }}
               />
             </section>
 
@@ -816,7 +912,7 @@ export default function NewServicePage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">Toplam Servis</span>
-                    <span className="font-bold text-blue-600">{foundCustomer._count?.services || 0} Adet</span>
+                    <span className="font-bold text-blue-600">{foundCustomerServiceCount} Adet</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">Sadakat Puanı</span>
@@ -844,6 +940,7 @@ export default function NewServicePage() {
                       placeholder="0.00"
                     />
                   </div>
+                  {errors.estimatedCost && <p className="text-xs text-destructive mt-1.5 px-1">{errors.estimatedCost.message as string}</p>}
                 </div>
 
                 <div className="space-y-1.5">
@@ -968,24 +1065,27 @@ export default function NewServicePage() {
                 <div className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                   <Button
-                    type="submit"
+                    type={canSubmitService ? "submit" : "button"}
                     form="new-service-form"
-                    disabled={isPending}
+                    onClick={() => {
+                      if (!canSubmitService) markRequiredFields();
+                    }}
+                    disabled={isPending || showSuccessModal}
                     className={cn(
                       "relative h-14 px-12 font-black rounded-2xl gap-3 transition-all shadow-xl text-lg",
-                      Object.keys(errors).length > 0
+                      !canSubmitService
                         ? "bg-rose-600 hover:bg-rose-700 text-white"
                         : "bg-primary hover:bg-primary/90 text-primary-foreground"
                     )}
                   >
                     {isPending ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : Object.keys(errors).length > 0 ? (
+                    ) : !canSubmitService ? (
                       <AlertCircle className="h-6 w-6" strokeWidth={2.5} />
                     ) : (
                       <Save className="h-6 w-6" strokeWidth={2.5} />
                     )}
-                    {Object.keys(errors).length > 0 ? "Hataları Düzeltin" : "KAYDI TAMAMLA"}
+                    {!canSubmitService ? "Zorunlu Alanları Doldurun" : "KAYDI TAMAMLA"}
                   </Button>
                 </div>
               </div>
@@ -1023,6 +1123,49 @@ export default function NewServicePage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="relative w-[min(92vw,420px)] overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-slate-950/95 p-8 text-center shadow-[0_30px_90px_rgba(16,185,129,0.28)]">
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
+              <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+              <div className="absolute -left-16 bottom-0 h-44 w-44 rounded-full bg-blue-500/10 blur-3xl" />
+
+              <div className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-400/25">
+                <div className="absolute inset-2 rounded-full border border-dashed border-emerald-300/40 animate-spin [animation-duration:2s]" />
+                <div className="absolute -right-1 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 animate-bounce">
+                  <Wrench className="h-4 w-4" strokeWidth={2.4} />
+                </div>
+                <CheckCircle2 className="h-12 w-12 text-emerald-300 animate-in zoom-in duration-500" strokeWidth={2.4} />
+              </div>
+
+              <div className="relative space-y-3">
+                <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-200">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Servis Kaydı Hazır
+                </div>
+                <h2 className="text-2xl font-black tracking-tight text-white">Kayıt tamamlandı</h2>
+                <p className="text-sm font-medium text-slate-300">Servis merkezi açılıyor...</p>
+              </div>
+
+              <div className="relative mt-7 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-blue-400 to-emerald-300 animate-[progress_2s_ease-out_forwards]"
+                  onAnimationEnd={() => {
+                    setShowSuccessModal(false);
+                    router.push("/servis");
+                  }}
+                />
+              </div>
+            </div>
+            <style jsx>{`
+              @keyframes progress {
+                from { width: 0%; }
+                to { width: 100%; }
+              }
+            `}</style>
+          </div>
+        )}
 
       </div>
     </div>
