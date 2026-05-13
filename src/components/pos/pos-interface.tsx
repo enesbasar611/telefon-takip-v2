@@ -434,15 +434,9 @@ export function POSInterface({ products: initialProducts, customers, categories,
   };
 
   const closeReceiptAndReload = () => {
-    const hasDevice = lastSale?.items?.some((item: any) => item.product?.deviceInfo !== null);
     setShowReceipt(false);
-
-    if (hasDevice && lastSale?.items?.[0]?.productId) {
-      router.push(`/cihaz-listesi?deviceId=${lastSale.items[0].productId}`);
-    } else {
-      setLastSale(null);
-      router.replace("/satis");
-    }
+    setLastSale(null);
+    router.refresh();
   };
 
   return (

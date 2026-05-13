@@ -135,13 +135,17 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
 
       const activeSession = await tx.dailySession.findFirst({ where: { status: "OPEN", shopId } });
       const finalAmount = Number(data.totalAmount);
+      const soldProductNames = newSale.items.map(item => item.product?.name).filter(Boolean);
+      const saleDescription = soldProductNames.length > 0
+        ? `${soldProductNames[0]}${soldProductNames.length > 1 ? ` + ${soldProductNames.length - 1} ürün` : ""}`
+        : `Satış ${newSale.saleNumber}`;
 
       // 5. Create Financial Transaction
       await tx.transaction.create({
         data: {
           amount: finalAmount,
           type: TransactionType.INCOME,
-          description: `SATIŞ - ${newSale.saleNumber}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
+          description: `${saleDescription}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
           paymentMethod: isDebt ? PaymentMethod.DEBT : newSale.paymentMethod,
           userId,
           shopId,

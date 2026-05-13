@@ -123,6 +123,13 @@ interface VeresiyeClientProps {
     receiptSettings?: any;
 }
 
+const normalizeSearchText = (value: string) =>
+    value
+        .toLocaleLowerCase("tr-TR")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/ı/g, "i");
+
 export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings, shop, receiptSettings }: VeresiyeClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'tracking'>('all');
@@ -388,10 +395,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
         // Arama Filtresi
         if (searchTerm) {
-            const lowSearch = searchTerm.toLowerCase();
+            const lowSearch = normalizeSearchText(searchTerm);
             filtered = filtered.filter(item =>
-                item.name.toLowerCase().includes(lowSearch) ||
-                (item.phone && item.phone.includes(lowSearch))
+                normalizeSearchText(item.name).includes(lowSearch) ||
+                (item.phone && normalizeSearchText(item.phone).includes(lowSearch))
             );
         }
 

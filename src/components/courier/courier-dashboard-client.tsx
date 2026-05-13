@@ -315,14 +315,14 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [approveModalOpen, setApproveModalOpen] = useState(false);
     const [approvingItem, setApprovingItem] = useState<any>(null);
 
-    const handleApprove = async (id: string, quantity: number, mode: "STOCK" | "SALE" | "DEBT" = "STOCK", paymentMethod?: any, customPrice?: number, currency?: "TL" | "USD") => {
+    const handleApprove = async (id: string, quantity: number, mode: "STOCK" | "SALE" | "DEBT" = "STOCK", paymentMethod?: any, customPrice?: number, currency?: "TL" | "USD" | "EUR", stockPayload?: any) => {
         setLoadingId(id);
 
         // Optimistic update
         setItems(prev => prev.filter(item => item.id !== id));
 
         try {
-            const res = await approveShortageItem(id, quantity, mode, paymentMethod, customPrice, currency);
+            const res = await approveShortageItem(id, quantity, mode, paymentMethod, customPrice, currency, stockPayload);
             if (res.success) {
                 toast.success(mode === "STOCK" ? "Ürün stoğa eklendi." : "Ürün stoğa eklendi ve işlem gerçekleştirildi.");
                 router.refresh();
@@ -1008,14 +1008,10 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                                     )}
                                                                     {item.isTaken && (
                                                                         <Button
-                                                                            onClick={() => {
-                                                                                if (item.customerId) {
-                                                                                    setApprovingItem(item);
-                                                                                    setApproveModalOpen(true);
-                                                                                } else {
-                                                                                    handleApprove(item.id, item.quantity);
-                                                                                }
-                                                                            }}
+                                    onClick={() => {
+                                        setApprovingItem(item);
+                                        setApproveModalOpen(true);
+                                    }}
                                                                             disabled={loadingId === item.id}
                                                                             className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] tracking-widest rounded-lg h-8 px-4 shadow-lg shadow-emerald-500/20 gap-2 uppercase group"
                                                                         >
@@ -1262,9 +1258,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 requesterName={approvingItem?.customer?.name || approvingItem?.requesterName || ""}
                 isCustomer={!!approvingItem?.customerId}
                 productId={approvingItem?.productId}
-                onApprove={(mode, paymentMethod, customPrice, currency) => {
+                product={approvingItem?.product}
+                categories={categories}
+                onApprove={(mode, paymentMethod, customPrice, currency, stockPayload, approvedQuantity) => {
                     if (approvingItem) {
-                        handleApprove(approvingItem.id, approvingItem.quantity, mode, paymentMethod, customPrice, currency);
+                        handleApprove(approvingItem.id, approvedQuantity || approvingItem.quantity, mode, paymentMethod, customPrice, currency, stockPayload);
                     }
                 }}
             />

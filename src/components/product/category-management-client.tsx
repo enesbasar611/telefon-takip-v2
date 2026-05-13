@@ -16,6 +16,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { createCategory, updateCategory, deleteCategory, clearCategoryProducts, reorderCategories } from "@/lib/actions/category-actions";
 import { addInventoryStock, deleteProduct, updateProduct, createProduct } from "@/lib/actions/product-actions";
 import {
@@ -52,7 +53,10 @@ interface Product {
     categoryId: string;
     stock: number;
     buyPrice: number;
+    buyPriceUsd?: number | null;
     sellPrice: number;
+    sellPriceUsd?: number | null;
+    attributes?: Record<string, any> | null;
 }
 
 interface CategoryNode extends Category {
@@ -206,6 +210,8 @@ export function CategoryManagementClient({
     initialCategories: Category[],
     products: Product[]
 }) {
+    type PriceCurrency = "TRY" | "USD" | "EUR";
+    const { rates: exchangeRates, defaultCurrency } = useDashboardData();
     const [categories, setCategories] = useState<Category[]>(initialCategories);
     const [allProducts, setAllProducts] = useState<Product[]>(products);
     const [editingProducts, setEditingProducts] = useState<Record<string, { name: string, buyPrice: number, sellPrice: number }>>({});
@@ -215,6 +221,11 @@ export function CategoryManagementClient({
     const [isCreatingProduct, setIsCreatingProduct] = useState(false);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [stockMode, setStockMode] = useState<"plus" | "minus">("plus");
+    const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>(() => {
+        if (typeof window === "undefined") return defaultCurrency || "TRY";
+        const saved = localStorage.getItem("category_price_currency");
+        return saved === "USD" || saved === "EUR" || saved === "TRY" ? saved : (defaultCurrency || "TRY");
+    });
 
     // Persist selected category and expanded state to local storage
     const [selectedCatId, setSelectedCatId] = useState<string | null>(() => {
@@ -246,6 +257,10 @@ export function CategoryManagementClient({
     useEffect(() => {
         localStorage.setItem('category_expanded_state', JSON.stringify(expandedNodes));
     }, [expandedNodes]);
+
+    useEffect(() => {
+        localStorage.setItem("category_price_currency", priceCurrency);
+    }, [priceCurrency]);
 
     // Sync state when props change (after server action revalidation)
     useEffect(() => {
@@ -351,6 +366,31 @@ export function CategoryManagementClient({
 
     const selectedStats = selectedNode ? getCumulativeStats(selectedNode.id) : null;
     const directChildren = categories.filter(c => c.parentId === selectedCatId);
+
+    const getCurrencySymbol = (currency: PriceCurrency = priceCurrency) => {
+        if (currency === "USD") return "$";
+        if (currency === "EUR") return "€";
+        return "₺";
+    };
+
+    const getCurrencyRate = (currency: PriceCurrency = priceCurrency) => {
+        if (currency === "USD") return exchangeRates?.usd || 34;
+        if (currency === "EUR") return exchangeRates?.eur || 37;
+        return 1;
+    };
+
+    const toTryPrice = (value: number, currency: PriceCurrency = priceCurrency) => {
+        const safeValue = Number(value) || 0;
+        return currency === "TRY" ? safeValue : Math.ceil(safeValue * getCurrencyRate(currency));
+    };
+
+    const getProductDisplayPrice = (product: Product, field: "buyPrice" | "sellPrice") => {
+        if (priceCurrency === "TRY") return Number(product[field]) || 0;
+        const storedCurrency = product.attributes?.priceCurrency;
+        const usdValue = field === "buyPrice" ? product.buyPriceUsd : product.sellPriceUsd;
+        if (storedCurrency === priceCurrency && usdValue) return Number(usdValue);
+        return Number(((Number(product[field]) || 0) / getCurrencyRate(priceCurrency)).toFixed(2));
+    };
 
     const toggleNode = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -588,18 +628,38 @@ export function CategoryManagementClient({
     const handleQuickProductUpdate = async (productId: string) => {
         const data = editingProducts[productId];
         if (!data) return;
+        const currentProduct = allProducts.find(p => p.id === productId);
+        const buyPriceTry = toTryPrice(data.buyPrice);
+        const sellPriceTry = toTryPrice(data.sellPrice);
 
         setSavingId(productId);
         startTransition(async () => {
             const res = await updateProduct(productId, {
                 name: data.name,
-                buyPrice: data.buyPrice,
-                sellPrice: data.sellPrice
+                buyPrice: buyPriceTry,
+                buyPriceUsd: priceCurrency === "TRY" ? null : data.buyPrice,
+                sellPrice: sellPriceTry,
+                sellPriceUsd: priceCurrency === "TRY" ? null : data.sellPrice,
+                attributes: {
+                    ...(currentProduct?.attributes || {}),
+                    priceCurrency
+                }
             });
 
             if (res.success) {
                 setAllProducts(prev => prev.map(p =>
-                    p.id === productId ? { ...p, name: data.name, buyPrice: data.buyPrice, sellPrice: data.sellPrice } : p
+                    p.id === productId ? {
+                        ...p,
+                        name: data.name,
+                        buyPrice: buyPriceTry,
+                        buyPriceUsd: priceCurrency === "TRY" ? null : data.buyPrice,
+                        sellPrice: sellPriceTry,
+                        sellPriceUsd: priceCurrency === "TRY" ? null : data.sellPrice,
+                        attributes: {
+                            ...(p.attributes || {}),
+                            priceCurrency
+                        }
+                    } : p
                 ));
                 toast.success("Ürün anlık güncellendi");
                 // Remove from editing state to show it's saved
@@ -623,13 +683,20 @@ export function CategoryManagementClient({
 
         setIsCreatingProduct(true);
         startTransition(async () => {
+            const buyPriceTry = toTryPrice(newProductData.buyPrice);
+            const sellPriceTry = toTryPrice(newProductData.sellPrice);
             const res = await createProduct({
                 name: newProductData.name,
                 categoryId: selectedCatId,
-                buyPrice: newProductData.buyPrice,
-                sellPrice: newProductData.sellPrice,
+                buyPrice: buyPriceTry,
+                buyPriceUsd: priceCurrency === "TRY" ? null : newProductData.buyPrice,
+                sellPrice: sellPriceTry,
+                sellPriceUsd: priceCurrency === "TRY" ? null : newProductData.sellPrice,
                 stock: newProductData.stock, // Use value from UI
                 criticalStock: 5, // Default critical stock
+                attributes: {
+                    priceCurrency
+                }
             });
 
             if (res.success && res.product) {
@@ -772,6 +839,27 @@ export function CategoryManagementClient({
                                         <Plus className="h-4 w-4" />
                                         Ürün Ekle
                                     </Button>
+                                    <div className="flex h-9 items-center rounded-xl border border-zinc-200 bg-zinc-50 p-1 shadow-sm dark:border-border/50 dark:bg-white/[0.03]">
+                                        {(["TRY", "USD", "EUR"] as const).map((currency) => (
+                                            <button
+                                                key={currency}
+                                                type="button"
+                                                onClick={() => setPriceCurrency(currency)}
+                                                className={cn(
+                                                    "h-7 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider transition-all",
+                                                    priceCurrency === currency
+                                                        ? currency === "TRY"
+                                                            ? "bg-amber-500 text-black shadow-sm"
+                                                            : currency === "USD"
+                                                                ? "bg-emerald-500 text-black shadow-sm"
+                                                                : "bg-blue-500 text-black shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground dark:hover:text-white"
+                                                )}
+                                            >
+                                                {currency === "TRY" ? "₺ TL" : currency === "USD" ? "$ USD" : "€ EUR"}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <div className="w-[1px] h-9 bg-zinc-200 dark:bg-white/10 mx-1" />
                                     <Button
                                         variant="outline"
@@ -891,9 +979,9 @@ export function CategoryManagementClient({
 
                                                         <div className="grid grid-cols-3 gap-4">
                                                             <div className="space-y-1.5">
-                                                                <Label className="font-bold text-[9px]  text-muted-foreground uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
+                                                                <Label className="font-bold text-[9px]  text-muted-foreground uppercase tracking-widest pl-1">Alış Fiyatı ({priceCurrency})</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ml-1">₺</span>
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ml-1">{getCurrencySymbol()}</span>
                                                                     <input
                                                                         type="number"
                                                                         value={newProductData.buyPrice}
@@ -903,9 +991,9 @@ export function CategoryManagementClient({
                                                                 </div>
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                <Label className="font-bold text-[9px]  text-indigo-600 dark:text-indigo-400 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
+                                                                <Label className="font-bold text-[9px]  text-indigo-600 dark:text-indigo-400 uppercase tracking-widest pl-1">Satış Fiyatı ({priceCurrency})</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500  ml-1">₺</span>
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500  ml-1">{getCurrencySymbol()}</span>
                                                                     <input
                                                                         type="number"
                                                                         value={newProductData.sellPrice}
@@ -933,8 +1021,8 @@ export function CategoryManagementClient({
                                                 const hasChanges = editingProducts[product.id] !== undefined;
                                                 const editData = editingProducts[product.id] || {
                                                     name: product.name,
-                                                    buyPrice: product.buyPrice,
-                                                    sellPrice: product.sellPrice
+                                                    buyPrice: getProductDisplayPrice(product, "buyPrice"),
+                                                    sellPrice: getProductDisplayPrice(product, "sellPrice")
                                                 };
 
                                                 const toggleSelection = (e?: React.MouseEvent) => {
@@ -1028,9 +1116,9 @@ export function CategoryManagementClient({
                                                             {/* Fiyatlar Edit */}
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="space-y-1.5">
-                                                                    <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Alış Fiyatı (₺)</Label>
+                                                                    <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Alış Fiyatı ({priceCurrency})</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80  ml-1">₺</span>
+                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80  ml-1">{getCurrencySymbol()}</span>
                                                                         <Input
                                                                             type="number"
                                                                             value={editData.buyPrice}
@@ -1043,9 +1131,9 @@ export function CategoryManagementClient({
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-1.5">
-                                                                    <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Satış Fiyatı (₺)</Label>
+                                                                    <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Satış Fiyatı ({priceCurrency})</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400  ml-1">₺</span>
+                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400  ml-1">{getCurrencySymbol()}</span>
                                                                         <Input
                                                                             type="number"
                                                                             value={editData.sellPrice}

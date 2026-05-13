@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingDown, Users, ChevronRight, ArrowLeft, Wallet, Calendar, Search, X as CloseIcon, MessageCircle, Receipt } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -43,10 +43,12 @@ interface ReceivablesClientProps {
 }
 
 export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesClientProps) {
+    const cardRef = useRef<HTMLDivElement>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [showSearch, setShowSearch] = useState(false);
     const [receiptOpen, setReceiptOpen] = useState(false);
+    const [visibleCustomerLimit, setVisibleCustomerLimit] = useState(5);
 
     // WhatsApp Modal States
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
@@ -82,11 +84,32 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
         Array.isArray(debts) ? debts.filter(d => !d.remainingAmount || Number(d.remainingAmount) > 0) : []
         , [debts]);
 
+    useEffect(() => {
+        const el = cardRef.current;
+        if (!el) return;
+
+        const calculateLimit = () => {
+            const height = el.getBoundingClientRect().height;
+            if (!height || height < 520) {
+                setVisibleCustomerLimit(5);
+                return;
+            }
+            const usableHeight = Math.max(0, height - (showSearch ? 250 : 180));
+            setVisibleCustomerLimit(Math.max(5, Math.floor(usableHeight / 88)));
+        };
+
+        calculateLimit();
+        const observer = new ResizeObserver(calculateLimit);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [showSearch]);
+
     const allAggregates = useMemo(() => {
-        const aggregates: Record<string, { id: string; name: string; phone?: string; totalTRY: number; totalUSD: number; count: number }> = {};
+        const aggregates: Record<string, { id: string; name: string; phone?: string; totalTRY: number; totalUSD: number; count: number; lastActivity: number }> = {};
 
         unpaidDebts.forEach(d => {
             const cId = d.customerId;
+            const activityTime = new Date(d.createdAt).getTime();
             if (!aggregates[cId]) {
                 aggregates[cId] = {
                     id: cId,
@@ -94,9 +117,11 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
                     phone: d.customer?.phone,
                     totalTRY: 0,
                     totalUSD: 0,
-                    count: 0
+                    count: 0,
+                    lastActivity: activityTime
                 };
             }
+            aggregates[cId].lastActivity = Math.max(aggregates[cId].lastActivity, activityTime);
             if (d.currency === "USD") {
                 aggregates[cId].totalUSD += Number(d.remainingAmount);
             } else {
@@ -105,7 +130,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
             aggregates[cId].count += 1;
         });
 
-        return Object.values(aggregates).sort((a, b) => (b.totalTRY + b.totalUSD * 30) - (a.totalTRY + a.totalUSD * 30));
+        return Object.values(aggregates).sort((a, b) => b.lastActivity - a.lastActivity);
     }, [unpaidDebts]);
 
     const customerAggregates = useMemo(() => {
@@ -122,9 +147,15 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
         unpaidDebts.filter(d => d.customerId === selectedCustomerId)
         , [unpaidDebts, selectedCustomerId]);
 
+    const visibleCustomerAggregates = useMemo(
+        () => customerAggregates.slice(0, visibleCustomerLimit),
+        [customerAggregates, visibleCustomerLimit]
+    );
+    const hiddenCustomerCount = Math.max(0, customerAggregates.length - visibleCustomerAggregates.length);
+
     return (
         <>
-            <Card className="h-full flex flex-col border border-border/40 bg-card/60 backdrop-blur-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] rounded-[2.5rem] overflow-hidden font-sans group/card transition-all duration-500 hover:shadow-[0_30px_70px_-12px_rgba(0,0,0,0.2)] hover:bg-card/80">
+            <Card ref={cardRef} className="h-full flex flex-col border border-border/40 bg-card/60 backdrop-blur-3xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] rounded-[2.5rem] overflow-hidden font-sans group/card transition-all duration-500 hover:shadow-[0_30px_70px_-12px_rgba(0,0,0,0.2)] hover:bg-card/80">
                 <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 p-8 pb-6">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-inner group-hover/card:scale-110 transition-transform duration-500">
@@ -198,7 +229,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
                     {!selectedCustomerId ? (
                         <div className="flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
                             {customerAggregates.length > 0 ? (
-                                customerAggregates.map((agg) => (
+                                <>
+                                    {visibleCustomerAggregates.map((agg) => (
                                     <div key={agg.id} className="relative group/item">
                                         <button
                                             onClick={() => setSelectedCustomerId(agg.id)}
@@ -237,7 +269,19 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
                                             </div>
                                         </button>
                                     </div>
-                                ))
+                                    ))}
+                                    {hiddenCustomerCount > 0 && (
+                                        <Link
+                                            href="/veresiye"
+                                            className="flex flex-col items-center justify-center py-4 rounded-[1.5rem] bg-muted/10 border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-colors group"
+                                        >
+                                            <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-[0.25em] group-hover:text-primary">
+                                                {hiddenCustomerCount} kayit daha var
+                                            </span>
+                                            <ChevronRight className="h-3 w-3 text-muted-foreground/40 rotate-90 mt-1 group-hover:text-primary" />
+                                        </Link>
+                                    )}
+                                </>
                             ) : (
                                 <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-40">
                                     <Users className="h-16 w-16 mb-4 stroke-[1.5]" />

@@ -17,7 +17,7 @@ export async function RecentTransactionsStream() {
     const recentTransactions = serializePrisma(recentTransactionsRaw);
 
     return (
-        <Card className="h-full flex flex-col border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in">
+        <Card className="h-auto flex flex-col border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in">
             <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 p-8 pb-6">
                 <div className="flex items-center gap-4">
                     <div className="h-11 w-11 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-inner">
@@ -76,12 +76,12 @@ export async function RecentTransactionsStream() {
                     </table>
                 </div>
                 {recentTransactions.length > 6 && (
-                    <div className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
+                    <Link href="/satis/kasa" className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
                         <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.25em] group-hover:text-primary transition-colors">
                             {recentTransactions.length - 6} KAYIT DAHA VAR
                         </span>
                         <ChevronRight className="h-3 w-3 text-muted-foreground/30 rotate-90 mt-1 animate-bounce" />
-                    </div>
+                    </Link>
                 )}
             </CardContent>
         </Card>

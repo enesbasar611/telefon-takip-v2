@@ -234,7 +234,7 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {} }: D
                 .dashboard-list-view .pt-2 .text-\\[8px\\] { display: none !important; }
                 .dashboard-list-view .text-right .text-xs { font-size: 12px !important; font-weight: 700 !important; color: hsl(var(--muted-foreground)) !important; background: hsl(var(--muted)/0.3) !important; padding: 4px 10px !important; border-radius: 8px !important; }
 
-                .widget-container { align-self: stretch !important; height: auto !important; position: relative !important; }
+                .widget-container { align-self: start !important; height: auto !important; position: relative !important; }
                 .widget-stat { height: auto !important; min-height: 140px !important; align-self: stretch !important; position: relative !important; }
                 
                 .resize-handle {
@@ -438,7 +438,7 @@ function SortableItem({ id, children, cols, rows, isEditMode, onRemove, onResize
                     </div>
                 </div>
             )}
-            <div className={cn("h-full transition-all", isEditMode && "pointer-events-none opacity-80 scale-[0.98] ring-1 ring-primary/20 bg-primary/5 rounded-3xl overflow-hidden shadow-inner", widgetSettings?.viewMode === 'list' && "dashboard-list-view")}>
+            <div className={cn("h-auto transition-all", isEditMode && "h-full pointer-events-none opacity-80 scale-[0.98] ring-1 ring-primary/20 bg-primary/5 rounded-3xl overflow-hidden shadow-inner", widgetSettings?.viewMode === 'list' && "dashboard-list-view")}>
                 {children}
             </div>
             {isEditMode && <div className="absolute inset-0 z-10 bg-transparent cursor-default" />}

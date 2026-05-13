@@ -337,6 +337,11 @@ export function POSCompact({ products, customers, categories }: { products: any[
     };
 
     const isDebtBlocked = paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null");
+    const closeReceiptAndRefresh = () => {
+        setShowReceipt(false);
+        setLastSale(null);
+        router.refresh();
+    };
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground font-sans overflow-hidden">
@@ -778,7 +783,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
             {lastSale && (
                 <ReceiptModal
                     isOpen={showReceipt}
-                    onClose={() => setShowReceipt(false)}
+                    onClose={closeReceiptAndRefresh}
                     sale={lastSale}
                 />
             )}

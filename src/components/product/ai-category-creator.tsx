@@ -31,7 +31,9 @@ interface Product {
     categoryId: string;
     stock: number;
     buyPrice: number;
+    buyPriceUsd?: number | null;
     sellPrice: number;
+    sellPriceUsd?: number | null;
 }
 
 interface AICategoryCreatorProps {
@@ -53,6 +55,13 @@ const EXAMPLES = [
     "Ekranlar > Samsung > Galaxy S24 hayalet cam, 5 adet, alış 55 satış 120",
     "Piller > iPhone Batarya > iPhone 11, 12, 13, 14 her biri 8 adet alış 180 satış 350",
 ];
+
+const getAIPriceDisplay = (price: number, usdPrice?: number | null) => {
+    if (usdPrice && Number(usdPrice) > 0) {
+        return `$${Number(usdPrice).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+    }
+    return `₺${Number(price || 0).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+};
 
 export function AICategoryCreator({
     categories,
@@ -156,11 +165,16 @@ export function AICategoryCreator({
                         name: p.name,
                         categoryId: catId,
                         buyPrice: p.buyPrice,
+                        buyPriceUsd: p.buyPriceUsd ?? null,
                         sellPrice: p.sellPrice,
+                        sellPriceUsd: p.sellPriceUsd ?? null,
                         stock: p.stock,
                         criticalStock: p.criticalStock,
                         barcode: p.barcode,
                         location: p.location,
+                        attributes: {
+                            priceCurrency: p.buyPriceUsd || p.sellPriceUsd ? "USD" : "TRY"
+                        }
                     });
 
                     let pStatus: "saved" | "error" = pRes.success ? "saved" : "error";
@@ -326,8 +340,8 @@ export function AICategoryCreator({
                                                         <Package className="h-3.5 w-3.5 text-muted-foreground/80 shrink-0" />
                                                         <span className="text-[11px] text-foreground font-medium flex-1 min-w-[120px]">{p.name}</span>
                                                         <div className="flex items-center gap-3 flex-wrap">
-                                                            <span className="text-[11px] text-amber-600 dark:text-amber-300 font-bold">Alış: <b className="text-amber-700 dark:text-amber-200">{p.buyPrice}₺</b></span>
-                                                            <span className="text-[11px] text-emerald-600 dark:text-emerald-300 font-bold">Satış: <b className="text-emerald-700 dark:text-emerald-200">{p.sellPrice}₺</b></span>
+                                                            <span className="text-[11px] text-amber-600 dark:text-amber-300 font-bold">Alış: <b className="text-amber-700 dark:text-amber-200">{getAIPriceDisplay(p.buyPrice, p.buyPriceUsd)}</b></span>
+                                                            <span className="text-[11px] text-emerald-600 dark:text-emerald-300 font-bold">Satış: <b className="text-emerald-700 dark:text-emerald-200">{getAIPriceDisplay(p.sellPrice, p.sellPriceUsd)}</b></span>
                                                             <span className="text-[11px] text-indigo-600 dark:text-blue-300 font-bold">{p.stock} adet</span>
                                                             {p.location && <span className="text-[11px] text-zinc-500 dark:text-muted-foreground/80 font-medium">📍 {p.location}</span>}
                                                         </div>

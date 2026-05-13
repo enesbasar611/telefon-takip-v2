@@ -4,6 +4,9 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
 import { getShopId, getUserId, auth } from "@/lib/auth";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { generateProductBarcode } from "@/lib/barcode-utils";
+import { formatTitleCase } from "@/lib/formatters";
 
 type ShortagePriority = {
   courierPriorityScore: number;
@@ -12,6 +15,21 @@ type ShortagePriority = {
 };
 
 const NOT_FOUND_MARKER = "[BULUNMADI]";
+
+type StockApprovalCurrency = "TRY" | "TL" | "USD" | "EUR";
+
+type ShortageStockPayload = {
+  productName?: string;
+  categoryId?: string | null;
+  buyPrice?: number;
+  sellPrice?: number;
+  priceCurrency?: StockApprovalCurrency;
+};
+
+function normalizeStockCurrency(currency?: StockApprovalCurrency): "TRY" | "USD" | "EUR" {
+  if (currency === "USD" || currency === "EUR") return currency;
+  return "TRY";
+}
 
 function getLocalDayRange(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -447,15 +465,14 @@ export async function updateShortageQuantity(id: string, quantity: number) {
   }
 }
 
-import { getExchangeRates } from "@/lib/actions/currency-actions";
-
 export async function approveShortageItem(
   id: string,
   quantity: number,
   mode: "STOCK" | "SALE" | "DEBT" = "STOCK",
   paymentMethod: "CASH" | "CARD" | "TRANSFER" | "DEBT" = "CASH",
   customPrice?: number,
-  currency: "TL" | "USD" = "TL"
+  currency: "TL" | "USD" | "EUR" = "TL",
+  stockPayload?: ShortageStockPayload
 ) {
   try {
     const shopId = await getShopId();
@@ -471,8 +488,21 @@ export async function approveShortageItem(
     // Dükkan içinse direkt STOCK moduna zorla (bayi/müşteri atanmamışsa veya dükkan siparişi ise)
     const isShopInventory = !shortageItem.customerId && !shortageItem.requesterName;
     const finalMode = isShopInventory ? "STOCK" : mode;
+    const safeQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
+    const rates = await getExchangeRates(shopId);
+    const stockCurrency = normalizeStockCurrency(stockPayload?.priceCurrency);
+    const getCurrencyRate = (selectedCurrency: "TRY" | "USD" | "EUR") => {
+      if (selectedCurrency === "USD") return rates.usd || 34;
+      if (selectedCurrency === "EUR") return rates.eur || 37;
+      return 1;
+    };
+    const toTryPrice = (value?: number) => {
+      const safeValue = Number(value) || 0;
+      return stockCurrency === "TRY" ? safeValue : Math.ceil(safeValue * getCurrencyRate(stockCurrency));
+    };
 
     await prisma.$transaction(async (tx) => {
+      if (!shortageItem) throw new Error("Kayit bulunamadi.");
       // 1. Kuryeye Puan Yaz (Siparişi bugün teslim aldığı/onaylandığı için)
       if (shortageItem.assignedToId) {
         /* Points feature is disabled as column does not exist in DB
@@ -485,36 +515,120 @@ export async function approveShortageItem(
         */
       }
 
-      // 2. STOK HAREKETİ: Ürün her şekilde depoya girer
-      if (shortageItem.productId) {
-        await tx.product.update({
-          where: { id: shortageItem.productId!, shopId },
+      // 2. Stok kaydi modal verisine gore yapilir.
+      const requestedProductName = (stockPayload?.productName || shortageItem.name || "").trim();
+      let activeProduct: any = shortageItem.product;
+      let activeProductId: string | null = shortageItem.productId;
+
+      if (!activeProductId && requestedProductName) {
+        activeProduct = await tx.product.findFirst({
+          where: { shopId, name: { equals: requestedProductName, mode: "insensitive" } }
+        });
+        activeProductId = activeProduct?.id || null;
+      }
+
+      const hasStockForm = Boolean(stockPayload);
+      const buyPriceTry = hasStockForm && stockPayload?.buyPrice !== undefined
+        ? toTryPrice(stockPayload.buyPrice)
+        : undefined;
+      const sellPriceTry = hasStockForm && stockPayload?.sellPrice !== undefined
+        ? toTryPrice(stockPayload.sellPrice)
+        : undefined;
+      const stockAttributes = hasStockForm
+        ? {
+          ...((activeProduct?.attributes && typeof activeProduct.attributes === "object") ? activeProduct.attributes : {}),
+          priceCurrency: stockCurrency
+        }
+        : undefined;
+
+      if (activeProductId) {
+        activeProduct = await tx.product.update({
+          where: { id: activeProductId, shopId },
           data: {
-            stock: { increment: quantity },
+            name: requestedProductName ? formatTitleCase(requestedProductName) : undefined,
+            categoryId: stockPayload?.categoryId || undefined,
+            buyPrice: buyPriceTry !== undefined ? buyPriceTry : undefined,
+            buyPriceUsd: hasStockForm ? (stockCurrency === "TRY" ? null : Number(stockPayload?.buyPrice || 0)) : undefined,
+            sellPrice: sellPriceTry !== undefined ? sellPriceTry : undefined,
+            sellPriceUsd: hasStockForm ? (stockCurrency === "TRY" ? null : Number(stockPayload?.sellPrice || 0)) : undefined,
+            attributes: stockAttributes as any,
+            stock: { increment: safeQuantity },
             movements: {
               create: {
-                quantity: quantity,
+                quantity: safeQuantity,
                 type: "PURCHASE",
-                notes: `${shortageItem.name} (Kurye Teslimatı)`,
+                notes: `${shortageItem.name} (Kurye Teslimati)`,
                 shopId
               }
             }
           }
         });
+      } else {
+        if (!stockPayload?.categoryId) {
+          throw new Error("Stokta olmayan urun icin kategori secmelisiniz.");
+        }
+        if (buyPriceTry === undefined || sellPriceTry === undefined) {
+          throw new Error("Stokta olmayan urun icin alis ve satis fiyati girmelisiniz.");
+        }
+
+        activeProduct = await tx.product.create({
+          data: {
+            name: formatTitleCase(requestedProductName || shortageItem.name),
+            categoryId: stockPayload.categoryId,
+            buyPrice: buyPriceTry,
+            buyPriceUsd: stockCurrency === "TRY" ? null : Number(stockPayload.buyPrice || 0),
+            sellPrice: sellPriceTry,
+            sellPriceUsd: stockCurrency === "TRY" ? null : Number(stockPayload.sellPrice || 0),
+            stock: safeQuantity,
+            criticalStock: 5,
+            shopId,
+            attributes: { priceCurrency: stockCurrency } as any,
+            movements: {
+              create: {
+                quantity: safeQuantity,
+                type: "PURCHASE",
+                notes: `${shortageItem.name} (Kurye Teslimati)`,
+                shopId
+              }
+            },
+            inventoryLogs: {
+              create: {
+                userId,
+                quantity: safeQuantity,
+                type: "PURCHASE",
+                notes: `${shortageItem.name} (Kurye Teslimati)`,
+                shopId
+              }
+            }
+          }
+        });
+
+        activeProduct = await tx.product.update({
+          where: { id: activeProduct.id, shopId },
+          data: {
+            barcode: generateProductBarcode({
+              shopId,
+              productId: activeProduct.id,
+              productName: activeProduct.name,
+              createdAtMs: activeProduct.createdAt.getTime(),
+            })
+          }
+        });
+        activeProductId = activeProduct.id;
       }
 
-      // 3. SATIŞ VE FİNANSAL İŞLEMLER (Dükkan stoğu değilse)
-      if ((finalMode === "SALE" || finalMode === "DEBT") && shortageItem.customerId && shortageItem.productId) {
-        const product = shortageItem.product!;
+      if ((finalMode === "SALE" || finalMode === "DEBT") && shortageItem.customerId && activeProductId) {
+        const product = activeProduct!;
 
         // Fiyat hesaplama (USD/TL dönüşümü)
         let unitPriceTL = customPrice || Number(product.sellPrice);
         if (currency === "USD") {
-          const rates = await getExchangeRates(shopId);
           unitPriceTL = Math.ceil(unitPriceTL * rates.usd);
+        } else if (currency === "EUR") {
+          unitPriceTL = Math.ceil(unitPriceTL * rates.eur);
         }
 
-        const totalAmount = unitPriceTL * quantity;
+        const totalAmount = unitPriceTL * safeQuantity;
         const saleCount = await tx.sale.count({ where: { shopId } });
         const saleNumber = `SALE-KURYE-${1000 + saleCount + 1}`;
 
@@ -530,8 +644,8 @@ export async function approveShortageItem(
             paymentMethod: finalMode === "DEBT" ? "DEBT" : paymentMethod,
             items: {
               create: {
-                productId: shortageItem.productId!,
-                quantity: quantity,
+                productId: activeProductId,
+                quantity: safeQuantity,
                 unitPrice: unitPriceTL,
                 totalPrice: totalAmount,
                 shopId
@@ -542,14 +656,14 @@ export async function approveShortageItem(
 
         // Satış yapıldığı için stoğu tekrar düş (Giriş yapıldı, hemen bayi için çıkış yapılıyor)
         await tx.product.update({
-          where: { id: shortageItem.productId!, shopId },
-          data: { stock: { decrement: quantity } }
+          where: { id: activeProductId, shopId },
+          data: { stock: { decrement: safeQuantity } }
         });
 
         await tx.inventoryMovement.create({
           data: {
-            productId: shortageItem.productId!,
-            quantity: -quantity,
+            productId: activeProductId,
+            quantity: -safeQuantity,
             type: "SALE",
             notes: `Kurye teslimatından otomatik satış: ${saleNumber}`,
             shopId,
@@ -627,7 +741,7 @@ export async function approveShortageItem(
       // 4. EKSİK KAYDINI KAPAT
       await tx.shortageItem.update({
         where: { id, shopId },
-        data: { isResolved: true }
+        data: { isResolved: true, productId: activeProductId || undefined }
       });
     });
 

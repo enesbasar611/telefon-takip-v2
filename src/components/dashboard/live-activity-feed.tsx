@@ -22,10 +22,12 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export function LiveActivityFeed({ activity }: { activity: any[] }) {
   return (
-    <Card className="bg-card border border-border/5 shadow-2xl h-full flex flex-col overflow-hidden rounded-[2rem] transition-all duration-500">
+    <Card className="bg-card border border-border/5 shadow-2xl h-auto flex flex-col overflow-hidden rounded-[2rem] transition-all duration-500">
       <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-slate-100 dark:border-border/50 p-8 pb-6 bg-muted/30">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm shadow-primary/5">
@@ -36,9 +38,11 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
             <p className="text-xs text-muted-foreground mt-1">Gerçek zamanlı etkinlik trafiği</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] font-extrabold border-primary/20 text-primary bg-primary/5 px-3 py-1 rounded-full animate-pulse">
-          LIVE
-        </Badge>
+        <Link href="/raporlar">
+          <Button variant="outline" className="text-[10px] uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-4 transition-all">
+            Hepsini gör <ChevronRight className="h-3 w-3 ml-2" />
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">
         <div className="divide-y divide-slate-100 dark:divide-white/5">
@@ -63,12 +67,12 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
             </div>
           ))}
           {activity.length > 5 && (
-            <div className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
+            <Link href="/raporlar" className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
               <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.25em] group-hover:text-primary transition-colors">
                 {activity.length - 5} KAYIT DAHA VAR
               </span>
               <ChevronRight className="h-3 w-3 text-muted-foreground/30 rotate-90 mt-1 animate-bounce" />
-            </div>
+            </Link>
           )}
           {activity.length === 0 && (
             <div className="p-10 text-center text-gray-600 text-[10px]">

@@ -33,6 +33,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
 
   const handlePrint = () => {
     window.print();
+    window.setTimeout(onClose, 300);
   };
 
   return (
@@ -135,7 +136,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
         </div>
 
         <DialogFooter className="p-6 bg-card/50 border-t border-border/50 gap-3">
-          <Button variant="ghost" onClick={onClose} className="h-14 rounded-2xl  text-muted-foreground/80 hover:text-white hover:bg-white/5">Vazgeç</Button>
+          <Button variant="ghost" onClick={onClose} className="h-14 rounded-2xl  text-muted-foreground/80 hover:text-white hover:bg-white/5">Tamam</Button>
           <Button onClick={handlePrint} className="flex-1 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black  gap-3 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">
             <Printer className="h-5 w-5" />
             FİŞİ YAZDIR
