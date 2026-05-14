@@ -49,12 +49,12 @@ export const productSchema = z.object({
 export const serviceTicketSchema = z.object({
     customerName: z.string()
         .min(2, "Müşteri adı en az 2 karakter olmalıdır")
-        .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.]+$/, "Müşteri adı geçersiz karakterler içeriyor"), // Added more special char support
+        .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.)(&]+$/, "Müşteri adı geçersiz karakterler içeriyor"), // Added more special char support
     customerPhone: phoneSchema,
     customerEmail: z.string().email("Geçerli bir e-posta giriniz").optional().or(z.literal("")),
     deviceBrand: z.string().min(1, "Marka gereklidir"),
     deviceModel: z.string().min(1, "Model gereklidir"),
-    imei: z.string().max(11, "IMEI numarası en fazla 11 hane olmalıdır").optional().or(z.literal("")),
+    imei: z.string().max(15, "IMEI numarası en fazla 15 hane olmalıdır").optional().or(z.literal("")),
     serialNumber: z.string().optional().or(z.literal("")),
     problemDesc: z.string().min(3, "Sorun açıklaması gereklidir"),
     cosmeticCondition: z.string().optional(),

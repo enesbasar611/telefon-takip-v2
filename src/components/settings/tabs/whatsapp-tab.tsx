@@ -77,9 +77,20 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
         try {
             const res = await fetch('/api/whatsapp/config');
             const data = await res.json();
-            setStatusData(data);
+            if (!res.ok) {
+                setStatusData({
+                    status: 'DISCONNECTED',
+                    error: data.error || `Sunucu hatası (${res.status})`
+                });
+            } else {
+                setStatusData(data);
+            }
         } catch (err) {
             console.error('Fetch status error', err);
+            setStatusData({
+                status: 'DISCONNECTED',
+                error: 'Sunucuya bağlanılamadı.'
+            });
         }
     };
 

@@ -72,7 +72,7 @@ const normalizePhoneNumber = (value?: string | null) => {
 const serviceSchema = z.object({
   customerName: z.string()
     .min(2, "Müşteri adı en az 2 karakter olmalıdır")
-    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.]+$/, "Müşteri adı geçersiz karakterler içeriyor"),
+    .regex(/^[a-zA-ZğüşıöçĞÜŞİÖÇ\s0-9\-_.)(&]+$/, "Müşteri adı geçersiz karakterler içeriyor"),
   customerPhone: z.string()
     .min(1, "Telefon no giriniz")
     .refine((val) => normalizePhoneNumber(val).length === 10, "Numara 10 haneli olmalıdır"),
@@ -521,35 +521,48 @@ export default function NewServicePage() {
 
   const onSubmit = async (values: ServiceFormValues) => {
     startTransition(async () => {
-      const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
+      try {
+        const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
 
-      const notesStr = [
-        values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
-        values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
-      ].filter(Boolean).join(" | ");
+        const notesStr = [
+          values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
+          values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
+        ].filter(Boolean).join(" | ");
 
-      const result = await createServiceTicket({
-        customerName: values.customerName,
-        customerPhone: normalizePhoneNumber(values.customerPhone),
-        customerEmail: "",
-        deviceBrand,
-        deviceModel,
-        imei,
-        problemDesc: values.problemDesc,
-        estimatedCost: Number(values.estimatedCost),
-        downPayment: Number(values.downPayment),
-        notes: notesStr,
-        technicianId: values.technicianId,
-        estimatedDeliveryDate: values.estimatedDeliveryDate,
-        photos: photos.map(p => p.dataUrl),
-        priority: values.priority ?? 1,
-        attributes,
-      });
+        const result = await createServiceTicket({
+          customerName: values.customerName,
+          customerPhone: normalizePhoneNumber(values.customerPhone),
+          customerEmail: "",
+          deviceBrand,
+          deviceModel,
+          imei,
+          problemDesc: values.problemDesc,
+          estimatedCost: Number(values.estimatedCost),
+          downPayment: Number(values.downPayment),
+          notes: notesStr,
+          technicianId: values.technicianId,
+          estimatedDeliveryDate: values.estimatedDeliveryDate,
+          photos: photos.map(p => p.dataUrl),
+          priority: values.priority ?? 1,
+          attributes,
+        });
 
-      if (result.success) {
-        setShowSuccessModal(true);
-      } else {
-        toast({ title: "Hata", description: result.error, variant: "destructive" });
+        if (result?.success) {
+          setShowSuccessModal(true);
+        } else {
+          toast({
+            title: "Hata",
+            description: result?.error || "Servis kaydı oluşturulamadı.",
+            variant: "destructive"
+          });
+        }
+      } catch (error: any) {
+        console.error("Submit error:", error);
+        toast({
+          title: "Hata",
+          description: "Bağlantı hatası veya yetki sorunu oluştu.",
+          variant: "destructive"
+        });
       }
     });
   };
