@@ -73,6 +73,12 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    getDefaultStaffPermissions,
+    STAFF_PERMISSION_FIELDS,
+    STAFF_ROLE_LABELS,
+    STAFF_ROLE_TEMPLATE_ROLES,
+} from "@/lib/staff-permissions";
 
 interface StaffMember {
     id: string;
@@ -103,6 +109,7 @@ interface StaffManagementClientProps {
 function RoleBadge({ role }: { role: string }) {
     const configs: Record<string, { label: string, className: string }> = {
         SUPER_ADMIN: { label: "SÜPER EDN", className: "bg-rose-500/10 text-rose-500" },
+        SHOP_MANAGER: { label: "Dukkan Sahibi", className: "bg-violet-500/10 text-violet-500" },
         ADMIN: { label: "YÖNETİCİ", className: "bg-indigo-500/10 text-indigo-500" },
         MANAGER: { label: "MÜDÜR", className: "bg-purple-500/10 text-purple-500" },
         CASHIER: { label: "KASİYER", className: "bg-emerald-500/10 text-emerald-500" },
@@ -167,6 +174,14 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
         setLoading(false);
     };
 
+    const handleRoleChange = (role: Role) => {
+        setFormData({
+            ...formData,
+            role,
+            ...getDefaultStaffPermissions(role)
+        });
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-md bg-white dark:bg-card border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
@@ -190,7 +205,7 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                         <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest pl-1">ROL</Label>
                         <Select
                             value={formData.role}
-                            onValueChange={(v: any) => setFormData({ ...formData, role: v })}
+                            onValueChange={(v: any) => handleRoleChange(v as Role)}
                         >
                             <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl ">
                                 <SelectValue placeholder="Rol seçin" />
@@ -209,28 +224,21 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                     <div className="space-y-3">
                         <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest pl-1">YETKİLER</Label>
                         <div className="grid grid-cols-2 gap-3">
-                            {[
-                                { id: 'canSell', label: 'Satış' },
-                                { id: 'canService', label: 'Servis' },
-                                { id: 'canStock', label: 'Stok' },
-                                { id: 'canFinance', label: 'Finans' },
-                                { id: 'canEdit', label: 'Düzenle' },
-                                { id: 'canDelete', label: 'Sil' },
-                            ].map((perm) => (
+                            {STAFF_PERMISSION_FIELDS.map((perm) => (
                                 <div
-                                    key={perm.id}
-                                    onClick={() => setFormData({ ...formData, [perm.id]: !formData[perm.id as keyof typeof formData] })}
+                                    key={perm.key}
+                                    onClick={() => setFormData({ ...formData, [perm.key]: !formData[perm.key] })}
                                     className={cn(
                                         "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-3",
-                                        formData[perm.id as keyof typeof formData]
+                                        formData[perm.key]
                                             ? "bg-blue-500/5 border-blue-500/20"
                                             : "bg-slate-50 dark:bg-white/5 border-transparent hover:border-slate-100 dark:hover:border-border/50"
                                     )}
                                 >
                                     <Checkbox
-                                        checked={!!formData[perm.id as keyof typeof formData]}
+                                        checked={!!formData[perm.key]}
                                         onCheckedChange={(c) => {
-                                            setFormData({ ...formData, [perm.id]: !!c });
+                                            setFormData({ ...formData, [perm.key]: !!c });
                                         }}
                                         onClick={(e) => e.stopPropagation()}
                                     />
@@ -271,13 +279,7 @@ function RoleTemplateModal({
     }, [isOpen]);
 
     const handleToggle = async (role: Role, field: string) => {
-        const roleStr = role as string;
-        const current = templates.find(t => t.role === role) || {
-            canSell: roleStr === 'ADMIN' || roleStr === 'MANAGER' || roleStr === 'CASHIER' || roleStr === 'STAFF',
-            canService: roleStr === 'ADMIN' || roleStr === 'MANAGER' || roleStr === 'TECHNICIAN',
-            canStock: roleStr === 'ADMIN' || roleStr === 'MANAGER' || roleStr === 'TECHNICIAN',
-            canFinance: roleStr === 'ADMIN' || roleStr === 'MANAGER',
-        };
+        const current = templates.find(t => t.role === role) || getDefaultStaffPermissions(role);
 
         const updated = {
             ...current,
@@ -313,21 +315,12 @@ function RoleTemplateModal({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF", "COURIER"].map((role) => {
-                                const t = templates.find(temp => temp.role === role) || {
-                                    canSell: true,
-                                    canService: true,
-                                    canStock: true,
-                                    canFinance: true,
-                                };
+                            {STAFF_ROLE_TEMPLATE_ROLES.map((role) => {
+                                const t = templates.find(temp => temp.role === role) || getDefaultStaffPermissions(role);
                                 return (
                                     <TableRow key={role} className="hover:bg-transparent border-b border-slate-50 dark:border-border/50 last:border-none">
                                         <TableCell className=" text-xs text-muted-foreground/80 uppercase tracking-widest py-6">
-                                            {role === 'ADMIN' ? 'YÖNETİCİ' :
-                                                role === 'MANAGER' ? 'MÜDÜR' :
-                                                    role === 'CASHIER' ? 'KASİYER' :
-                                                        role === 'TECHNICIAN' ? 'TEKNİSYEN' :
-                                                            role === 'COURIER' ? 'KURYE' : 'PERSONEL'}
+                                            {STAFF_ROLE_LABELS[role] || role}
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <Checkbox

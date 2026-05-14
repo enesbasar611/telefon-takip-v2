@@ -421,31 +421,46 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [finishingCourier, setFinishingCourier] = useState<any>(null);
     const [transferTargetId, setTransferTargetId] = useState<string>("pool");
+    const [finishPreview, setFinishPreview] = useState<{
+        notTakenItems: any[];
+        takenWithoutStockItems: any[];
+    }>({ notTakenItems: [], takenWithoutStockItems: [] });
 
     const handleFinishDayClick = (courier: any) => {
+        const today = new Date();
+        const targetDate = selectedDate || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const activeItems = items.filter((st: any) => {
+            const createdAt = st.createdAt ? new Date(st.createdAt) : null;
+            const itemDate = createdAt
+                ? `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}-${String(createdAt.getDate()).padStart(2, "0")}`
+                : targetDate;
+            return st.assignedToId === courier.id && !st.isResolved && itemDate === targetDate;
+        });
         setFinishingCourier(courier);
+        setFinishPreview({
+            notTakenItems: activeItems.filter((st: any) => !st.isTaken),
+            takenWithoutStockItems: activeItems.filter((st: any) => st.isTaken && !st.isResolved)
+        });
         setIsTransferModalOpen(true);
-        setTransferTargetId("pool");
+        setTransferTargetId(couriers.length === 1 ? couriers[0].id : "pool");
     };
 
     const handleConfirmFinishDay = async () => {
         if (!finishingCourier) return;
+        const today = new Date();
+        const targetDate = selectedDate || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
         try {
-            const res = await finishCourierDay(finishingCourier.id);
+            const res = await finishCourierDay(finishingCourier.id, {
+                transferTargetId,
+                clearTakenWithoutStock: true,
+                targetDate
+            });
             if (res.success) {
-                // If transfer target is another courier, we need to assign them
-                if (transferTargetId !== "pool") {
-                    const remainingItems = items.filter((st: any) => st.assignedToId === finishingCourier.id && !st.isResolved);
-                    if (remainingItems.length > 0) {
-                        const ids = remainingItems.map((i: any) => i.id);
-                        const { assignShortageBulkToCourier } = await import("@/lib/actions/shortage-actions");
-                        await assignShortageBulkToCourier(ids, transferTargetId);
-                        toast.success(`${remainingItems.length} ürün ${couriers.find(c => c.id === transferTargetId)?.name} kuryesine aktarıldı.`);
-                    }
-                }
-
+                const closedIds = new Set([...finishPreview.notTakenItems, ...finishPreview.takenWithoutStockItems].map((item: any) => item.id));
+                setItems(prev => prev.filter((item: any) => !closedIds.has(item.id)));
                 toast.success(`${finishingCourier.name} kuryesinin günü bitirildi.`);
                 setIsTransferModalOpen(false);
+                setFinishPreview({ notTakenItems: [], takenWithoutStockItems: [] });
                 router.refresh();
             } else {
                 toast.error(res.error || "İşlem başarısız.");
@@ -717,10 +732,10 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 {isCourierOnly && (
                     <Button
                         onClick={handleFinishMyDay}
-                        disabled={stats.remaining === 0}
+                        disabled={stats.total === 0}
                         className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20"
                     >
-                        {stats.remaining > 0 ? "GÜNÜ BİTİR VE BİLDİR" : "SİPARİŞ YOK"}
+                        {stats.total > 0 ? "GÜNÜ BİTİR VE BİLDİR" : "SİPARİŞ YOK"}
                     </Button>
                 )}
 
@@ -1273,37 +1288,58 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                     <DialogHeader>
                         <DialogTitle className="text-xl font-black uppercase tracking-tight">Siparişi Bitir</DialogTitle>
                         <DialogDescription className="text-zinc-500 dark:text-zinc-400 font-medium">
-                            {finishingCourier?.name} {finishingCourier?.surname} kuryesinin gününü bitirmek istiyorsunuz.
-                            Alınmayan ürünleri ne yapmak istersiniz?
+                            {finishingCourier?.name} {finishingCourier?.surname} kuryesinin bugünkü listesini kapatıyorsunuz.
+                            Stok kaydı eksik ürünleri kontrol edip alınmayan siparişleri ertesi güne aktarın.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">İşlem Yapılacak Yer</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Alınmayan Siparişler Nereye Aktarılsın?</Label>
                             <Select value={transferTargetId} onValueChange={setTransferTargetId}>
                                 <SelectTrigger className="h-12 rounded-2xl border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 shadow-sm font-black text-xs uppercase">
                                     <SelectValue placeholder="Seçiniz..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-2xl border-zinc-200 dark:border-white/10">
-                                    <SelectItem value="pool" className="rounded-xl font-black text-xs uppercase cursor-pointer">Yarına Aktar (Boş Havuz)</SelectItem>
-                                    {couriers
-                                        .filter(c => c.id !== finishingCourier?.id)
-                                        .map(c => (
-                                            <SelectItem key={c.id} value={c.id} className="rounded-xl font-black text-xs uppercase cursor-pointer">
-                                                {c.name} {c.surname} (Hemen Aktar)
-                                            </SelectItem>
-                                        ))
-                                    }
+                                    <SelectItem value="pool" className="rounded-xl font-black text-xs uppercase cursor-pointer">Yarın - Atanmamış Havuz</SelectItem>
+                                    {couriers.map(c => (
+                                        <SelectItem key={c.id} value={c.id} className="rounded-xl font-black text-xs uppercase cursor-pointer">
+                                            Yarın - {c.name} {c.surname}{c.id === finishingCourier?.id ? " (Aynı Kurye)" : ""}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
+                        {finishPreview.takenWithoutStockItems.length > 0 && (
+                            <div className="p-4 bg-red-500/5 border border-red-500/15 rounded-2xl space-y-3">
+                                <div className="flex gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-widest">
+                                            Stoğa Eklenmemiş Alınan Ürünler
+                                        </p>
+                                        <p className="text-xs font-medium text-red-600/80 dark:text-red-400/80 leading-relaxed mt-1">
+                                            Bu ürünler alınmış görünüyor ama stok kaydı yapılmamış. Devam ederseniz bugünkü sipariş listesinden kaldırılacak.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                                    {finishPreview.takenWithoutStockItems.map((item: any) => (
+                                        <div key={item.id} className="flex items-center justify-between rounded-xl bg-background/70 px-3 py-2 text-xs">
+                                            <span className="font-black uppercase truncate">{item.name}</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground">{item.quantity || 1} adet</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex gap-3">
                             <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
                             <p className="text-xs font-medium text-orange-600 dark:text-orange-400 leading-relaxed">
-                                {items.filter((st: any) => st.assignedToId === finishingCourier?.id && !st.isResolved).length} adet
-                                ürün seçilen kuryeye veya boş havuza aktarılacaktır.
+                                {finishPreview.notTakenItems.length} alınmamış sipariş seçilen hedefe yarın tarihli aktarılacak.
+                                {finishPreview.takenWithoutStockItems.length > 0 && ` ${finishPreview.takenWithoutStockItems.length} alınmış ama stoksuz sipariş bugünkü listeden kaldırılacak.`}
                             </p>
                         </div>
                     </div>
@@ -1320,7 +1356,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                             onClick={handleConfirmFinishDay}
                             className="flex-1 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-orange-500/20"
                         >
-                            İşlemi Bitir
+                            {finishPreview.takenWithoutStockItems.length > 0 ? "Devam Et ve Bitir" : "İşlemi Bitir"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

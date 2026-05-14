@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useEffect, useState, useTransition, useRef } from "react";
 import { Role } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,10 +24,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus, Image as ImageIcon } from "lucide-react";
-import { createStaff } from "@/lib/actions/staff-actions";
+import { createStaff, getRoleTemplates } from "@/lib/actions/staff-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { getDefaultStaffPermissions, STAFF_PERMISSION_FIELDS } from "@/lib/staff-permissions";
 
 const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
@@ -53,6 +54,7 @@ export function CreateStaffModal() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [roleTemplates, setRoleTemplates] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -74,18 +76,31 @@ export function CreateStaffModal() {
       gender: "MALE",
       phone: "",
       customImage: "",
-      canSell: true,
-      canService: false,
-      canStock: false,
-      canFinance: false,
-      canEdit: true,
-      canDelete: false,
+      ...getDefaultStaffPermissions("STAFF"),
     }
   });
 
   const name = watch("name") || "";
   const surname = watch("surname") || "";
+  const selectedRole = watch("role");
   const initials = (name.charAt(0) + surname.charAt(0)).toUpperCase() || "?";
+
+  useEffect(() => {
+    if (!open) return;
+    getRoleTemplates().then(setRoleTemplates);
+  }, [open]);
+
+  const resolveRolePermissions = (role: StaffFormValues["role"]) => {
+    return roleTemplates.find((template) => template.role === role) || getDefaultStaffPermissions(role);
+  };
+
+  const applyRolePermissions = (role: StaffFormValues["role"]) => {
+    const permissions = resolveRolePermissions(role);
+    setValue("role", role);
+    STAFF_PERMISSION_FIELDS.forEach(({ key }) => {
+      setValue(key, permissions[key]);
+    });
+  };
 
   const onSubmit = async (data: StaffFormValues) => {
     startTransition(async () => {
@@ -256,7 +271,7 @@ export function CreateStaffModal() {
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
-              <Select onValueChange={(v) => setValue("role", v as any)} defaultValue="STAFF">
+              <Select onValueChange={(v) => applyRolePermissions(v as StaffFormValues["role"])} value={selectedRole}>
                 <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs">
                   <SelectValue placeholder="Bir rol seçin..." />
                 </SelectTrigger>

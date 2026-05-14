@@ -15,6 +15,7 @@ import { getCustomers, createCustomerMuted } from "@/lib/actions/customer-action
 import { createSale } from "@/lib/actions/sale-actions";
 import { sendWhatsAppAction } from "@/lib/actions/data-management-actions";
 import { Input } from "@/components/ui/input";
+import { PriceInput } from "@/components/ui/price-input";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScannerHelpModal } from "@/components/scanner/scanner-help-modal";
@@ -991,12 +992,10 @@ export default function MobileScannerPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="text-[16px] font-black text-neutral-100 truncate tracking-tight uppercase leading-tight">{item.name}</h4>
                                                     <div className="text-xs text-blue-500 font-black mt-2 flex items-center gap-1">
-                                                        <span className="opacity-60 text-[10px]">₺</span>
-                                                        <input
-                                                            type="number"
+                                                        <PriceInput
                                                             value={item.sellPrice}
-                                                            onChange={(e) => updateCartPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="bg-neutral-800/40 border border-white/5 text-blue-500 font-extrabold px-3 py-1 rounded-lg h-9 focus:ring-1 focus:ring-blue-500/50 w-24 outline-none"
+                                                            onChange={(value) => updateCartPrice(item.id, value)}
+                                                            className="bg-neutral-800/40 border-white/5 text-blue-500 font-extrabold rounded-lg h-9 focus:ring-1 focus:ring-blue-500/50 w-24 outline-none"
                                                         />
                                                         <span className="text-neutral-500 text-[10px] ml-2 block">ADET</span>
                                                     </div>

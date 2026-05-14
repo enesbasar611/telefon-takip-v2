@@ -6,6 +6,7 @@ import { serializePrisma, formatName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId, getUserId, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { getDefaultStaffPermissions } from "@/lib/staff-permissions";
 
 export const getStaff = async (shopId?: string) => {
     const finalShopId = shopId || await getShopId();
@@ -150,17 +151,7 @@ export async function createStaff(data: {
             where: { role: data.role }
         });
 
-        const roleDefaults: Record<string, { canSell: boolean, canService: boolean, canStock: boolean, canFinance: boolean, canDelete: boolean, canEdit: boolean }> = {
-            SUPER_ADMIN: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
-            SHOP_MANAGER: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
-            ADMIN: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
-            MANAGER: { canSell: true, canService: true, canStock: true, canFinance: true, canDelete: true, canEdit: true },
-            CASHIER: { canSell: true, canService: false, canStock: false, canFinance: false, canDelete: false, canEdit: false },
-            TECHNICIAN: { canSell: false, canService: true, canStock: false, canFinance: false, canDelete: false, canEdit: false },
-            STAFF: { canSell: true, canService: false, canStock: false, canFinance: false, canDelete: false, canEdit: false },
-        };
-
-        const defaults = template || roleDefaults[data.role] || roleDefaults.STAFF;
+        const defaults = template || getDefaultStaffPermissions(data.role);
 
         const user = await prisma.user.create({
             data: {

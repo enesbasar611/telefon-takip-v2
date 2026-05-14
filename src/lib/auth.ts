@@ -42,9 +42,17 @@ function getSuperAdminPermissions() {
     };
 }
 
+const SHOP_OWNER_ROLES = new Set<Role>(["ADMIN", "SHOP_MANAGER", "MANAGER"]);
+
+function isShopOwnerRole(role?: Role | string | null): role is Role {
+    return !!role && SHOP_OWNER_ROLES.has(role as Role);
+}
+
 function getShopManagerPermissions() {
     return {
         role: "SHOP_MANAGER" as Role,
+        isApproved: true,
+        verificationCode: null,
         canSell: true,
         canService: true,
         canStock: true,
@@ -59,6 +67,28 @@ async function ensureSuperAdminUser(userId: string) {
         where: { id: userId },
         data: getSuperAdminPermissions()
     });
+}
+
+async function ensureShopOwnerUser(userId: string, role?: Role | string | null) {
+    return prisma.user.update({
+        where: { id: userId },
+        data: {
+            ...getShopManagerPermissions(),
+            role: isShopOwnerRole(role) ? role : "SHOP_MANAGER"
+        }
+    });
+}
+
+function needsFullAccessSync(user: {
+    isApproved?: boolean | null;
+    canSell?: boolean | null;
+    canService?: boolean | null;
+    canStock?: boolean | null;
+    canFinance?: boolean | null;
+    canDelete?: boolean | null;
+    canEdit?: boolean | null;
+}) {
+    return !user.isApproved || !user.canSell || !user.canService || !user.canStock || !user.canFinance || !user.canDelete || !user.canEdit;
 }
 
 async function createShopForGoogleUser(user: { id: string; email?: string | null; name?: string | null }) {
@@ -85,8 +115,7 @@ async function createShopForGoogleUser(user: { id: string; email?: string | null
         where: { id: user.id },
         data: {
             ...getShopManagerPermissions(),
-            shopId: shop.id,
-            isApproved: false
+            shopId: shop.id
         }
     });
 
@@ -136,31 +165,34 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 const isSuperAdmin = isSuperAdminEmail(user.email);
+                let effectiveUser = user;
                 if (isSuperAdmin && (user.role !== "SUPER_ADMIN" || !user.isApproved || !user.canFinance || !user.canDelete || !user.canEdit)) {
-                    await ensureSuperAdminUser(user.id);
+                    effectiveUser = await ensureSuperAdminUser(user.id);
+                } else if (!isSuperAdmin && isShopOwnerRole(user.role) && needsFullAccessSync(user)) {
+                    effectiveUser = await ensureShopOwnerUser(user.id, user.role);
                 }
 
-                if (!isSuperAdmin && !user.isApproved) {
+                if (!isSuperAdmin && !effectiveUser.isApproved) {
                     throw new Error("AccountNotApproved");
                 }
 
-                if (!isSuperAdmin && !user.shopId) {
+                if (!isSuperAdmin && !effectiveUser.shopId) {
                     throw new Error("ShopNotLinked");
                 }
 
                 return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: isSuperAdmin ? "SUPER_ADMIN" : user.role,
-                    shopId: user.shopId,
-                    isApproved: isSuperAdmin ? true : user.isApproved,
-                    canSell: user.canSell,
-                    canService: user.canService,
-                    canStock: user.canStock,
-                    canFinance: isSuperAdmin ? true : user.canFinance,
-                    canEdit: isSuperAdmin ? true : user.canEdit,
-                    canDelete: isSuperAdmin ? true : user.canDelete,
+                    id: effectiveUser.id,
+                    email: effectiveUser.email,
+                    name: effectiveUser.name,
+                    role: isSuperAdmin ? "SUPER_ADMIN" : effectiveUser.role,
+                    shopId: effectiveUser.shopId,
+                    isApproved: isSuperAdmin ? true : effectiveUser.isApproved,
+                    canSell: effectiveUser.canSell,
+                    canService: effectiveUser.canService,
+                    canStock: effectiveUser.canStock,
+                    canFinance: isSuperAdmin ? true : effectiveUser.canFinance,
+                    canEdit: isSuperAdmin ? true : effectiveUser.canEdit,
+                    canDelete: isSuperAdmin ? true : effectiveUser.canDelete,
                 };
             }
         })
@@ -179,9 +211,32 @@ export const authOptions: NextAuthOptions = {
                 const dbUser = email
                     ? await prisma.user.findUnique({
                         where: { email },
-                        select: { isApproved: true }
+                        select: {
+                            id: true,
+                            role: true,
+                            shopId: true,
+                            isApproved: true,
+                            canSell: true,
+                            canService: true,
+                            canStock: true,
+                            canFinance: true,
+                            canEdit: true,
+                            canDelete: true
+                        }
                     })
                     : null;
+
+                if (dbUser && !dbUser.shopId && dbUser.role === "STAFF") {
+                    await createShopForGoogleUser({ id: dbUser.id, email: user.email, name: user.name });
+                    return true;
+                }
+
+                if (dbUser && isShopOwnerRole(dbUser.role)) {
+                    if (needsFullAccessSync(dbUser)) {
+                        await ensureShopOwnerUser(dbUser.id, dbUser.role);
+                    }
+                    return true;
+                }
 
                 if (dbUser && !dbUser.isApproved) {
                     return "/login?error=AccountNotApproved";
@@ -241,6 +296,7 @@ export const authOptions: NextAuthOptions = {
                         where: { id: token.id },
                         select: {
                             id: true,
+                            email: true,
                             shopId: true,
                             role: true,
                             isApproved: true,
@@ -261,15 +317,20 @@ export const authOptions: NextAuthOptions = {
                         return null as any;
                     }
 
-                    token.shopId = dbUser.shopId;
-                    token.role = dbUser.role;
-                    token.isApproved = dbUser.isApproved;
-                    token.canSell = dbUser.canSell;
-                    token.canService = dbUser.canService;
-                    token.canStock = dbUser.canStock;
-                    token.canFinance = dbUser.canFinance;
-                    token.canEdit = dbUser.canEdit;
-                    token.canDelete = dbUser.canDelete;
+                    const isSuperAdmin = isSuperAdminEmail(dbUser.email) || dbUser.role === "SUPER_ADMIN";
+                    const effectiveUser = isSuperAdmin
+                        ? (needsFullAccessSync(dbUser) || dbUser.role !== "SUPER_ADMIN" ? await ensureSuperAdminUser(dbUser.id) : dbUser)
+                        : (isShopOwnerRole(dbUser.role) && needsFullAccessSync(dbUser) ? await ensureShopOwnerUser(dbUser.id, dbUser.role) : dbUser);
+
+                    token.shopId = effectiveUser.shopId;
+                    token.role = isSuperAdmin ? "SUPER_ADMIN" : effectiveUser.role;
+                    token.isApproved = isSuperAdmin ? true : effectiveUser.isApproved;
+                    token.canSell = effectiveUser.canSell;
+                    token.canService = effectiveUser.canService;
+                    token.canStock = effectiveUser.canStock;
+                    token.canFinance = isSuperAdmin ? true : effectiveUser.canFinance;
+                    token.canEdit = isSuperAdmin ? true : effectiveUser.canEdit;
+                    token.canDelete = isSuperAdmin ? true : effectiveUser.canDelete;
                     token.isShopActive = (dbUser as any).shop?.isActive ?? true;
                 } catch (error) {
                     console.error("NextAuth token DB sync failed:", error);
@@ -303,6 +364,10 @@ export const authOptions: NextAuthOptions = {
                 await ensureSuperAdminUser(user.id);
             } else {
                 const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+                if (dbUser && isShopOwnerRole(dbUser.role)) {
+                    await ensureShopOwnerUser(dbUser.id, dbUser.role);
+                    return;
+                }
                 if (dbUser && !dbUser.isApproved && !dbUser.verificationCode) {
                     const code = generateVerificationCode();
                     await prisma.user.update({
@@ -319,13 +384,7 @@ export const authOptions: NextAuthOptions = {
                 return;
             }
 
-            const code = generateVerificationCode();
             await createShopForGoogleUser(user);
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { verificationCode: code }
-            });
-            await sendApprovalCodeToAdmin(user.email!, code);
         }
     },
     pages: {

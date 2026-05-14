@@ -34,7 +34,8 @@ import {
     DollarSign,
     RotateCcw,
     Printer,
-    ArrowLeftRight
+    ArrowLeftRight,
+    Eye
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -539,6 +540,28 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             setPaymentAmount(String(parseFloat(converted.toFixed(2))));
         } else {
             setPaymentAmount("");
+        }
+    };
+
+    const openCustomerStatement = async (item: any) => {
+        setHistoryCustomer(item);
+        setHistoryPage(1);
+        setSelectedDebtIds([]);
+        setStatementData(null);
+        try {
+            const res = await getCustomerStatement(item.customerId);
+            if (res.success) {
+                setStatementData({
+                    debts: res.debts || [],
+                    transactions: res.transactions || [],
+                    activeReturns: res.activeReturns || []
+                });
+            } else {
+                toast.error(res.error || "Geçmiş verileri alınamadı.");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Bağlantı hatası: Geçmiş verileri yüklenemedi.");
         }
     };
 
@@ -1169,31 +1192,11 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         <AnimatePresence mode="popLayout">
                                             {aggregatedData.map((item, idx) => (
                                                 <React.Fragment key={item.customerId}>
+                                                    <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
                                                     <motion.div
                                                         initial={{ opacity: 0, y: 10 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         transition={{ delay: idx * 0.03 }}
-                                                        onClick={async () => {
-                                                            setHistoryCustomer(item);
-                                                            setHistoryPage(1);
-                                                            setSelectedDebtIds([]);
-                                                            setStatementData(null);
-                                                            try {
-                                                                const res = await getCustomerStatement(item.customerId);
-                                                                if (res.success) {
-                   setStatementData({
-                       debts: res.debts || [],
-                       transactions: res.transactions || [],
-                       activeReturns: res.activeReturns || []
-                   });
-                                                                } else {
-                                                                    toast.error(res.error || "Geçmiş verileri alınamadı.");
-                                                                }
-                                                            } catch (err) {
-                                                                console.error(err);
-                                                                toast.error("Bağlantı hatası: Geçmiş verileri yüklenemedi.");
-                                                            }
-                                                        }}
                                                         className={cn(
                                                             "group relative transition-all overflow-hidden cursor-pointer",
                                                             viewMode === 'list'
@@ -1358,16 +1361,17 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                                 >
                                                                     <Receipt className={viewMode === 'grid' ? "w-3.5 h-3.5" : "w-4 h-4"} />
                                                                 </Button>
-                                                                <div onClick={(e) => e.stopPropagation()}>
-                                                                    <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            className={cn("rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                        >
-                                                                            <PlusCircle className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
-                                                                        </Button>
-                                                                    </AddDebtModal>
-                                                                </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openCustomerStatement(item);
+                                                                    }}
+                                                                    title="Detayları Gör"
+                                                                    className={cn("rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
+                                                                >
+                                                                    <Eye className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
+                                                                </Button>
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={(e) => {
@@ -1387,6 +1391,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                             <ChevronDown className="w-5 h-5 text-muted-foreground/30 -rotate-90" />
                                                         </div>
                                                     </motion.div>
+                                                    </AddDebtModal>
                                                 </React.Fragment>
                                             ))}
                                         </AnimatePresence>

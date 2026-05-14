@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "./input";
 import { formatCurrency, parseCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -9,33 +9,44 @@ interface PriceInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
     prefix?: string;
 }
 
+const isEmptyPrice = (value: number | string | null | undefined) => {
+    return value === "" || value === null || value === undefined || Number(value) === 0;
+};
+
+const getDisplayValue = (value: number | string) => {
+    return isEmptyPrice(value) ? "" : formatCurrency(value);
+};
+
 export const PriceInput = ({ value, onChange, prefix = "₺", className, ...props }: PriceInputProps) => {
-    const [displayValue, setDisplayValue] = useState(formatCurrency(value));
+    const [displayValue, setDisplayValue] = useState(getDisplayValue(value));
     const [isFocused, setIsFocused] = useState(false);
 
     useEffect(() => {
         if (!isFocused) {
-            setDisplayValue(formatCurrency(value));
+            setDisplayValue(getDisplayValue(value));
         }
     }, [value, isFocused]);
 
     const handleBlur = () => {
         setIsFocused(false);
+        if (!displayValue.trim()) {
+            onChange(0);
+            setDisplayValue("");
+            return;
+        }
+
         const numericValue = parseCurrency(displayValue);
         onChange(numericValue);
-        setDisplayValue(formatCurrency(numericValue));
+        setDisplayValue(getDisplayValue(numericValue));
     };
 
     const handleFocus = () => {
         setIsFocused(true);
-        // When focusing, show raw numeric string but with dot replaced by comma just in case
-        setDisplayValue(String(value).replace(".", ","));
+        setDisplayValue(isEmptyPrice(value) ? "" : String(value).replace(".", ","));
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        // Only allow digits, commas, and dots while typing
-        const cleaned = val.replace(/[^0-9,.]/g, "");
+        const cleaned = e.target.value.replace(/[^0-9,.]/g, "");
         setDisplayValue(cleaned);
     };
 
@@ -48,15 +59,13 @@ export const PriceInput = ({ value, onChange, prefix = "₺", className, ...prop
             )}
             <Input
                 {...props}
-                className={cn(prefix ? "pl-8" : "", className)}
+                className={cn(className, prefix ? "pl-10" : "")}
                 value={displayValue}
                 onChange={handleChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
+                inputMode="decimal"
             />
         </div>
     );
 };
-
-
-

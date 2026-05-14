@@ -29,7 +29,7 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
 
     // Fetch recent notifications for admins
     let adminNotifications: any[] = [];
-    if (session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN") {
+    if (["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session.user.role || "")) {
         const prisma = (await import("@/lib/prisma")).default;
         const shopIdString = session.user.shopId;
         if (shopIdString) {

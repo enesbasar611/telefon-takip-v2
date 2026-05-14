@@ -260,6 +260,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
             if (item.label === "Ayarlar" &&
               session?.user?.role !== "SUPER_ADMIN" &&
               session?.user?.role !== "ADMIN" &&
+              session?.user?.role !== "MANAGER" &&
               session?.user?.role !== "SHOP_MANAGER") return false;
 
             // Granular module check

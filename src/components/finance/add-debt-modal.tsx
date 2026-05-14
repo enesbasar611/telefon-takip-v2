@@ -78,21 +78,44 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     const router = useRouter();
 
     const { defaultCurrency } = useDashboardData();
+    const usdRate = rates?.usd || 32.5;
+    const normalizedDefaultCurrency: "TRY" | "USD" = defaultCurrency === "USD" ? "USD" : "TRY";
 
-    // Restore last-used currency preference on mount
+    // Ayarlardaki varsayilan para birimi veresiye kalem para birimini belirler.
     useEffect(() => {
-        const saved = localStorage.getItem("preferred_currency");
-        if (saved === "USD" || saved === "TRY") {
-            setItemCurrency(saved);
-        } else if (defaultCurrency) {
-            setItemCurrency(defaultCurrency as "TRY" | "USD");
+        if (open) {
+            setItemCurrency(normalizedDefaultCurrency);
         }
-    }, [defaultCurrency]);
+    }, [open, normalizedDefaultCurrency]);
 
-    // Persist currency preference whenever it changes
     const handleSetItemCurrency = (currency: "TRY" | "USD") => {
         setItemCurrency(currency);
-        localStorage.setItem("preferred_currency", currency);
+        if (selectedProduct) {
+            setItemAmount(String(getProductPriceForCurrency(selectedProduct, currency)));
+        }
+    };
+
+    const getProductPriceForCurrency = (product: any, currency: "TRY" | "USD") => {
+        const sellPriceTry = Number(product?.sellPrice) || 0;
+        const storedCurrency = product?.attributes?.priceCurrency;
+        const storedForeignPrice = Number(product?.sellPriceUsd) || 0;
+
+        if (currency === "USD") {
+            if (storedCurrency === "USD" && storedForeignPrice > 0) {
+                return Number(storedForeignPrice.toFixed(2));
+            }
+            return Number((sellPriceTry / usdRate).toFixed(2));
+        }
+
+        return sellPriceTry;
+    };
+
+    const formatProductPrice = (product: any, currency: "TRY" | "USD" = itemCurrency) => {
+        const value = getProductPriceForCurrency(product, currency);
+        return `${currency === "USD" ? "$" : "₺"}${value.toLocaleString("tr-TR", {
+            minimumFractionDigits: currency === "USD" ? 2 : 0,
+            maximumFractionDigits: 2
+        })}`;
     };
 
     const {
@@ -185,8 +208,10 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     }, [itemTitle, selectedProduct]);
 
     const handleSelectProduct = (product: any) => {
+        const targetCurrency = normalizedDefaultCurrency;
         setItemTitle(product.name);
-        setItemAmount(product.sellPrice.toString());
+        setItemCurrency(targetCurrency);
+        setItemAmount(String(getProductPriceForCurrency(product, targetCurrency)));
         setSelectedProduct(product);
         setProductSuggestions([]);
     };
@@ -224,7 +249,6 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
         const quantity = Math.max(1, Math.floor(Number(itemQuantity) || 1));
         const unitAmount = Number(itemAmount);
         const totalAmount = unitAmount * quantity;
-        const usdRate = rates?.usd || 32.5;
         const converted = itemCurrency === "USD" ? totalAmount * usdRate : totalAmount;
 
         const newItem: DebtDraftItem = {
@@ -441,7 +465,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                                             <span>{p.name}</span>
                                                             <span className="text-[9px] opacity-60">Stok: {p.stock}</span>
                                                         </div>
-                                                        <span className="font-bold">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
+                                                        <span className="font-bold">{formatProductPrice(p)}</span>
                                                     </button>
                                                 ))}
                                             </motion.div>

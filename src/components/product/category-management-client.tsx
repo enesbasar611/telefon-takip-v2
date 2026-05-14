@@ -5,6 +5,7 @@ import { Folder, FolderOpen, Plus, ChevronRight, ChevronDown, Trash2, Edit2, Inf
 import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PriceInput } from "@/components/ui/price-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
@@ -981,24 +982,22 @@ export function CategoryManagementClient({
                                                             <div className="space-y-1.5">
                                                                 <Label className="font-bold text-[9px]  text-muted-foreground uppercase tracking-widest pl-1">Alış Fiyatı ({priceCurrency})</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground ml-1">{getCurrencySymbol()}</span>
-                                                                    <input
-                                                                        type="number"
+                                                                    <PriceInput
                                                                         value={newProductData.buyPrice}
-                                                                        onChange={e => setNewProductData(prev => ({ ...prev, buyPrice: Number(e.target.value) }))}
-                                                                        className="flex h-10 w-full rounded-xl border border-zinc-200 dark:border-border/50 bg-white/50 dark:bg-black/20 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9 text-[13px] font-bold text-foreground dark:text-white"
+                                                                        onChange={value => setNewProductData(prev => ({ ...prev, buyPrice: value }))}
+                                                                        prefix={getCurrencySymbol()}
+                                                                        className="h-10 rounded-xl border-zinc-200 dark:border-border/50 bg-white/50 dark:bg-black/20 text-[13px] font-bold text-foreground dark:text-white"
                                                                     />
                                                                 </div>
                                                             </div>
                                                             <div className="space-y-1.5">
                                                                 <Label className="font-bold text-[9px]  text-indigo-600 dark:text-indigo-400 uppercase tracking-widest pl-1">Satış Fiyatı ({priceCurrency})</Label>
                                                                 <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500  ml-1">{getCurrencySymbol()}</span>
-                                                                    <input
-                                                                        type="number"
+                                                                    <PriceInput
                                                                         value={newProductData.sellPrice}
-                                                                        onChange={e => setNewProductData(prev => ({ ...prev, sellPrice: Number(e.target.value) }))}
-                                                                        className="flex h-10 w-full rounded-xl border border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9 text-[13px] font-bold text-indigo-600 dark:text-indigo-400"
+                                                                        onChange={value => setNewProductData(prev => ({ ...prev, sellPrice: value }))}
+                                                                        prefix={getCurrencySymbol()}
+                                                                        className="h-10 rounded-xl border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 text-[13px] font-bold text-indigo-600 dark:text-indigo-400"
                                                                     />
                                                                 </div>
                                                             </div>
@@ -1118,30 +1117,28 @@ export function CategoryManagementClient({
                                                                 <div className="space-y-1.5">
                                                                     <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Alış Fiyatı ({priceCurrency})</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80  ml-1">{getCurrencySymbol()}</span>
-                                                                        <Input
-                                                                            type="number"
+                                                                        <PriceInput
                                                                             value={editData.buyPrice}
-                                                                            onChange={e => setEditingProducts(prev => ({
+                                                                            onChange={value => setEditingProducts(prev => ({
                                                                                 ...prev,
-                                                                                [product.id]: { ...editData, buyPrice: Number(e.target.value) }
+                                                                                [product.id]: { ...editData, buyPrice: value }
                                                                             }))}
-                                                                            className="bg-white/50 dark:bg-black/20 border-zinc-200 dark:border-border/50 h-10 pl-9 text-[13px] font-bold text-foreground dark:text-white shadow-sm"
+                                                                            prefix={getCurrencySymbol()}
+                                                                            className="bg-white/50 dark:bg-black/20 border-zinc-200 dark:border-border/50 h-10 text-[13px] font-bold text-foreground dark:text-white shadow-sm"
                                                                         />
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-1.5">
                                                                     <Label className="font-medium text-[9px]  text-muted-foreground/80 uppercase tracking-widest pl-1">Satış Fiyatı ({priceCurrency})</Label>
                                                                     <div className="relative">
-                                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400  ml-1">{getCurrencySymbol()}</span>
-                                                                        <Input
-                                                                            type="number"
+                                                                        <PriceInput
                                                                             value={editData.sellPrice}
-                                                                            onChange={e => setEditingProducts(prev => ({
+                                                                            onChange={value => setEditingProducts(prev => ({
                                                                                 ...prev,
-                                                                                [product.id]: { ...editData, sellPrice: Number(e.target.value) }
+                                                                                [product.id]: { ...editData, sellPrice: value }
                                                                             }))}
-                                                                            className="bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/20 dark:border-indigo-500/10 h-10 pl-9 text-[13px] font-bold text-indigo-600 dark:text-indigo-300 shadow-sm"
+                                                                            prefix={getCurrencySymbol()}
+                                                                            className="bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/20 dark:border-indigo-500/10 h-10 text-[13px] font-bold text-indigo-600 dark:text-indigo-300 shadow-sm"
                                                                         />
                                                                     </div>
                                                                 </div>

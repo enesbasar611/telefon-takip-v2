@@ -108,7 +108,7 @@ const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: s
 export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose, isQuickDeliver }: ServiceManagementModalProps) {
     const { data: session } = useSession();
     const router = useRouter();
-    const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
     const [ticket, setTicket] = useState<any>(initialTicket);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");

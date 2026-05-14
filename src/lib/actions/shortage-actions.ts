@@ -760,7 +760,7 @@ export async function approveShortageItem(
 export async function deleteShortageItem(id: string, force = false) {
   try {
     const session = await auth();
-    if (session?.user?.role !== "ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+    if (!["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "")) {
       return { success: false, error: "Bu işlem için yetkiniz yok." };
     }
     const shopId = await getShopId();
@@ -793,7 +793,7 @@ export async function deleteShortageItems(ids: string[], force = false) {
   try {
     if (!ids || ids.length === 0) return { success: true };
     const session = await auth();
-    if (session?.user?.role !== "ADMIN" && session?.user?.role !== "SUPER_ADMIN") {
+    if (!["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "")) {
       return { success: false, error: "Bu işlem için yetkiniz yok." };
     }
     const shopId = await getShopId();
@@ -908,7 +908,14 @@ export async function getCourierNotifications() {
   }
 }
 
-export async function finishCourierDay(courierId: string) {
+export async function finishCourierDay(
+  courierId: string,
+  options?: {
+    transferTargetId?: string | null;
+    clearTakenWithoutStock?: boolean;
+    targetDate?: string;
+  }
+) {
   try {
     const session = await auth();
     const allowedRoles = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"];
@@ -920,18 +927,64 @@ export async function finishCourierDay(courierId: string) {
 
     const now = new Date();
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+    const transferTargetId = options?.transferTargetId === "pool" ? null : options?.transferTargetId ?? null;
+    const range = options?.targetDate ? getLocalDayRange(options.targetDate) : getLocalDayRange(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
+    const dateFilter = range ? { createdAt: { gte: range.startOfDay, lte: range.endOfDay } } : {};
 
     const notTakenItems = await prisma.shortageItem.findMany({
       where: {
         shopId,
         assignedToId: courierId,
         isResolved: false,
-        isTaken: false
+        isTaken: false,
+        ...dateFilter
       },
       select: { id: true, notes: true }
     });
 
-    // Alinmayan siparisleri bosa dusur ve ertesi gun havuzuna aktar.
+    const takenWithoutStock = await prisma.shortageItem.findMany({
+      where: {
+        shopId,
+        assignedToId: courierId,
+        isResolved: false,
+        isTaken: true,
+        ...dateFilter
+      },
+      select: { id: true, name: true, notes: true }
+    });
+
+    if (takenWithoutStock.length > 0 && !options?.clearTakenWithoutStock) {
+      return {
+        success: false,
+        needsStockApproval: true,
+        takenWithoutStock: serializePrisma(takenWithoutStock),
+        notTakenCount: notTakenItems.length,
+        error: `${takenWithoutStock.length} alınmış siparişin stok kaydı yapılmamış.`
+      };
+    }
+
+    if (takenWithoutStock.length > 0 && options?.clearTakenWithoutStock) {
+      const clearNote = "GUN SONU STOKSUZ KAPATILDI";
+      await prisma.$transaction(
+        takenWithoutStock.map((item) => {
+          const currentNotes = String(item.notes || "").trim();
+          const nextNotes = currentNotes.includes(clearNote)
+            ? currentNotes
+            : `${clearNote}${currentNotes ? ` - ${currentNotes}` : ""}`;
+
+          return prisma.shortageItem.update({
+            where: { id: item.id, shopId },
+            data: {
+              isResolved: true,
+              updatedAt: new Date(),
+              notes: nextNotes
+            }
+          });
+        })
+      );
+    }
+
+    // Alinmayan siparisleri ertesi gun secilen hedefe aktar.
     if (notTakenItems.length > 0) {
       await prisma.$transaction(
         notTakenItems.map((item) => {
@@ -944,7 +997,7 @@ export async function finishCourierDay(courierId: string) {
           return prisma.shortageItem.update({
             where: { id: item.id, shopId },
             data: {
-              assignedToId: null,
+              assignedToId: transferTargetId,
               createdAt: tomorrow,
               updatedAt: new Date(),
               notes: nextNotes
@@ -974,15 +1027,20 @@ export async function finishCourierDay(courierId: string) {
         type: "COURIER_TASKS_CLEARED",
         category: "SYSTEM",
         title: "Kurye İşlemleri Kapatıldı",
-        message: `Yönetici tarafından günlük işlemleriniz kapatıldı. Alınmayan ${notTakenItems.length} sipariş ertesi gün havuzuna aktarıldı.`,
+        message: `Yönetici tarafından günlük işlemleriniz kapatıldı. Alınmayan ${notTakenItems.length} sipariş ertesi güne aktarıldı; stok kaydı yapılmayan ${takenWithoutStock.length} alınmış sipariş listeden kaldırıldı.`,
         referenceId: courierId
       }
     });
 
     revalidatePath("/");
     revalidatePath("/kurye");
-    return { success: true };
+    return {
+      success: true,
+      transferredCount: notTakenItems.length,
+      clearedTakenWithoutStockCount: takenWithoutStock.length
+    };
   } catch (error) {
+    console.error("finishCourierDay error:", error);
     return { success: false, error: "İşlem başarısız." };
   }
 }

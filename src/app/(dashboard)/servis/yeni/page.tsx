@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -33,6 +34,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PriceInput } from "@/components/ui/price-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,6 +91,18 @@ const serviceSchema = z.object({
 }).passthrough();
 
 type ServiceFormValues = any; // We use 'any' since fields are dynamic
+
+const REQUIRED_SERVICE_FIELD_NAMES = [
+  "customerName",
+  "customerPhone",
+  "deviceBrand",
+  "deviceModel",
+  "problemDesc",
+  "estimatedCost",
+] as const;
+
+const SERVICE_OWNER_ROLES = ["SUPER_ADMIN", "SHOP_MANAGER", "ADMIN", "MANAGER"];
+const ASSIGNABLE_SERVICE_ROLES = [...SERVICE_OWNER_ROLES, "TECHNICIAN", "STAFF"];
 
 const SectionBadge = ({ icon: Icon, title }: { icon: any, title: string }) => (
   <div className="flex items-center gap-3 mb-6">
@@ -326,6 +340,7 @@ export default function NewServicePage() {
 
   const { toast } = useToast();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
@@ -370,20 +385,21 @@ export default function NewServicePage() {
         ]);
         setShop(s);
 
-        const assignableStaff = staffList.filter((member: any) =>
-          member.role === "SUPER_ADMIN" || member.role === "SHOP_MANAGER" || member.role === "ADMIN" || member.role === "TECHNICIAN" || member.role === "STAFF"
-        );
-        const techniciansOnly = assignableStaff.filter((member: any) => member.role === "TECHNICIAN");
-        const managerFallback = assignableStaff.find((member: any) =>
-          member.role === "SHOP_MANAGER" || member.role === "ADMIN" || member.role === "SUPER_ADMIN"
-        );
-        const defaultAssignee = techniciansOnly[0] || managerFallback || assignableStaff[0];
+        const assignableStaff = staffList.filter((member: any) => ASSIGNABLE_SERVICE_ROLES.includes(member.role));
+        const currentUser = assignableStaff.find((member: any) => member.id === session?.user?.id);
+        const currentUserCanOwnService = currentUser && SERVICE_OWNER_ROLES.includes(currentUser.role);
+        const managerFallback =
+          assignableStaff.find((member: any) => member.role === "SHOP_MANAGER") ||
+          assignableStaff.find((member: any) => member.role === "ADMIN") ||
+          assignableStaff.find((member: any) => member.role === "MANAGER") ||
+          assignableStaff.find((member: any) => member.role === "SUPER_ADMIN");
+        const technicianFallback = assignableStaff.find((member: any) => member.role === "TECHNICIAN");
+        const defaultAssignee = currentUserCanOwnService ? currentUser : managerFallback || technicianFallback || assignableStaff[0];
 
-        const techList = techniciansOnly.length > 0
-          ? assignableStaff
-          : defaultAssignee
-            ? [defaultAssignee]
-            : [];
+        const techList = [
+          ...(defaultAssignee ? [defaultAssignee] : []),
+          ...assignableStaff.filter((member: any) => member.id !== defaultAssignee?.id),
+        ];
 
         setTechnicians(techList);
         if (defaultAssignee && !form.getValues("technicianId")) {
@@ -394,7 +410,7 @@ export default function NewServicePage() {
       }
     }
     loadInitialData();
-  }, [form]);
+  }, [form, session?.user?.id]);
 
   const watchModel = form.watch("deviceModel");
   useEffect(() => {
@@ -554,15 +570,32 @@ export default function NewServicePage() {
     (watchedDeviceModel || "").trim().length > 0 &&
     (watchedProblemDesc || "").trim().length >= 3 &&
     Number(watchedEstimatedCost || 0) > 0;
-  const hasBlockingErrors = [
-    "customerName",
-    "customerPhone",
-    "deviceBrand",
-    "deviceModel",
-    "problemDesc",
-    "estimatedCost"
-  ].some((fieldName) => Boolean((errors as any)[fieldName]));
+  const hasBlockingErrors = REQUIRED_SERVICE_FIELD_NAMES.some((fieldName) => Boolean((errors as any)[fieldName]));
   const canSubmitService = requiredFieldsComplete && !hasBlockingErrors;
+
+  useEffect(() => {
+    const fieldsToClear: Array<typeof REQUIRED_SERVICE_FIELD_NAMES[number]> = [];
+
+    if ((watchedCustomerName || "").trim().length >= 2) fieldsToClear.push("customerName");
+    if (normalizePhoneNumber(watchedCustomerPhone).length === 10) fieldsToClear.push("customerPhone");
+    if ((watchedDeviceBrand || "").trim()) fieldsToClear.push("deviceBrand");
+    if ((watchedDeviceModel || "").trim()) fieldsToClear.push("deviceModel");
+    if ((watchedProblemDesc || "").trim().length >= 3) fieldsToClear.push("problemDesc");
+    if (Number(watchedEstimatedCost || 0) > 0) fieldsToClear.push("estimatedCost");
+
+    if (fieldsToClear.some((fieldName) => Boolean((errors as any)[fieldName]))) {
+      form.clearErrors(fieldsToClear);
+    }
+  }, [
+    watchedCustomerName,
+    watchedCustomerPhone,
+    watchedDeviceBrand,
+    watchedDeviceModel,
+    watchedProblemDesc,
+    watchedEstimatedCost,
+    errors,
+    form,
+  ]);
 
   const markRequiredFields = () => {
     if ((form.getValues("customerName") || "").trim().length < 2) {
@@ -932,11 +965,10 @@ export default function NewServicePage() {
                 <div className="space-y-1.5 flex flex-col">
                   <Label className={labelClass}>Tahmini Tutar</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-emerald-600">₺</span>
-                    <Input
-                      {...form.register("estimatedCost")}
-                      type="number"
-                      className={cn(getInputClass("estimatedCost"), "pl-9 text-2xl font-black text-emerald-500 bg-emerald-500/5 border-emerald-500/20 focus-visible:border-emerald-500")}
+                    <PriceInput
+                      value={form.watch("estimatedCost")}
+                      onChange={(value) => form.setValue("estimatedCost", String(value), { shouldValidate: true })}
+                      className={cn(getInputClass("estimatedCost"), "h-12 text-2xl font-black text-emerald-500 bg-emerald-500/5 border-emerald-500/20 focus-visible:border-emerald-500")}
                       placeholder="0.00"
                     />
                   </div>
@@ -946,11 +978,10 @@ export default function NewServicePage() {
                 <div className="space-y-1.5">
                   <Label className={labelClass}>Alınan Kapora</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-primary/60">₺</span>
-                    <Input
-                      {...form.register("downPayment")}
-                      type="number"
-                      className={cn(getInputClass("downPayment"), "pl-9 text-lg font-semibold")}
+                    <PriceInput
+                      value={form.watch("downPayment")}
+                      onChange={(value) => form.setValue("downPayment", String(value), { shouldValidate: true })}
+                      className={cn(getInputClass("downPayment"), "text-lg font-semibold")}
                       placeholder="0.00"
                     />
                   </div>
@@ -1002,7 +1033,7 @@ export default function NewServicePage() {
                           <div className="flex items-center gap-2">
                             <span>{tech.name}</span>
                             <span className="text-[10px] opacity-40 uppercase">
-                              ({tech.role === "ADMIN" ? "Admin" : tech.role === "TECHNICIAN" ? "Teknisyen" : "Personel"})
+                              ({tech.role === "SUPER_ADMIN" ? "Süper Admin" : tech.role === "SHOP_MANAGER" ? "Yönetici" : tech.role === "ADMIN" ? "Admin" : tech.role === "MANAGER" ? "Mağaza Müdürü" : tech.role === "TECHNICIAN" ? "Teknisyen" : "Personel"})
                             </span>
                           </div>
                         </SelectItem>
