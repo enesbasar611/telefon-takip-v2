@@ -322,12 +322,36 @@ export const authOptions: NextAuthOptions = {
                         ? (needsFullAccessSync(dbUser) || dbUser.role !== "SUPER_ADMIN" ? await ensureSuperAdminUser(dbUser.id) : dbUser)
                         : (isShopOwnerRole(dbUser.role) && needsFullAccessSync(dbUser) ? await ensureShopOwnerUser(dbUser.id, dbUser.role) : dbUser);
 
-                    token.shopId = effectiveUser.shopId;
-                    token.role = isSuperAdmin ? "SUPER_ADMIN" : effectiveUser.role;
+                    // Sync the core profile bits
+                    token.id = effectiveUser.id;
+                    token.role = effectiveUser.role;
+                    token.email = effectiveUser.email;
+                    token.name = effectiveUser.name;
+
+                    // Critical: Ensure shopId is synced from the most up-to-date user record
+                    // and apply a default fallback for Super Admin to prevent socket disconnects
+                    token.shopId = effectiveUser.shopId || dbUser.shopId;
+
+                    if (isSuperAdmin && !token.shopId) {
+                        // Fallback for Super Admin: find their primary shop or use the first one available
+                        const homeShop = await prisma.shop.findFirst({
+                            where: { users: { some: { id: dbUser.id } } },
+                            orderBy: { createdAt: 'asc' }
+                        });
+                        if (homeShop) {
+                            token.shopId = homeShop.id;
+                        } else {
+                            // If they have no shop at all, fallback to a global constant to allow socket connection
+                            // but usually Super Admins have at least one 'BASAR' shop
+                            const defaultShop = await prisma.shop.findFirst({ orderBy: { createdAt: 'asc' } });
+                            token.shopId = defaultShop?.id || "SUPER_ADMIN";
+                        }
+                    }
+
                     token.isApproved = isSuperAdmin ? true : effectiveUser.isApproved;
-                    token.canSell = effectiveUser.canSell;
-                    token.canService = effectiveUser.canService;
-                    token.canStock = effectiveUser.canStock;
+                    token.canSell = isSuperAdmin ? true : effectiveUser.canSell;
+                    token.canService = isSuperAdmin ? true : effectiveUser.canService;
+                    token.canStock = isSuperAdmin ? true : effectiveUser.canStock;
                     token.canFinance = isSuperAdmin ? true : effectiveUser.canFinance;
                     token.canEdit = isSuperAdmin ? true : effectiveUser.canEdit;
                     token.canDelete = isSuperAdmin ? true : effectiveUser.canDelete;

@@ -25,10 +25,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
+        if (status === "loading") return;
+
         // Sadece giriş yapılmışsa ve shopId varsa bağlan
         if (status !== "authenticated" || !session?.user?.shopId) {
             if (socket) {
-                console.log("[SOCKET] Oturum kapalı, bağlantı kesiliyor");
+                console.log("[SOCKET] Oturum kapalı veya shopId eksik, bağlantı kesiliyor");
                 socket.disconnect();
                 setSocket(null);
                 setIsConnected(false);

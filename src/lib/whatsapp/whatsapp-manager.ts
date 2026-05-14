@@ -160,16 +160,16 @@ class WhatsAppManager {
             }
 
             let attempts = 0;
-            while ((session.status as any) !== 'CONNECTED' && attempts < 20) {
+            while ((session.status as any) !== 'CONNECTED' && attempts < 5) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 attempts++;
                 if ((session.status as any) === 'QR') {
-                    throw new Error('WhatsApp bağlantısı kesilmiş. Lütfen bağlayın.');
+                    throw new Error('WhatsApp bağlantısı kurulmamış. Lütfen ayarlardan QR kodu taratın.');
                 }
             }
 
             if ((session.status as any) !== 'CONNECTED') {
-                throw new Error('Bağlantı kurulamadı.');
+                throw new Error('WhatsApp henüz hazır değil veya bağlı değil.');
             }
         }
 

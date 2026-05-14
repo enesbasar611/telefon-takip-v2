@@ -109,14 +109,29 @@
 - [x] 2026-05-14: Fiyat input davranisi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
 - [x] 2026-05-14: Veresiye urun kalemi para birimi duzeltildi. Dosya: `src/components/finance/add-debt-modal.tsx`. Neden: Ayarlarda varsayilan para birimi USD ise TL kaydedilmis urunler veresiye kalemine USD karsiligiyla gelsin; USD kaydedilmis urunlerde kayitli USD satis fiyati kullanilsin ve TL/USD secici otomatik varsayilana gecsin.
 - [x] 2026-05-14: Veresiye urun kalemi para birimi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
-- [x] 2026-05-14: Servis yeni kayit zorunlu alan state'i ve varsayilan teknisyen secimi duzeltildi. Dosyalar: `src/app/(dashboard)/servis/yeni/page.tsx`, `src/components/ui/price-input.tsx`. Neden: `Zorunlu Alanlari Doldurun` tiklandiktan sonra manuel hatalar alanlar dolunca temizlensin, buton stabil sekilde `Kaydi Tamamla` durumuna gecsin; super admin/shop manager kendi kaydina varsayilan teknisyen olarak atansin ve fiyat inputunda para simgesi tutarla cakismasin.
-- [x] 2026-05-14: Servis yeni kayit zorunlu alan ve fiyat input duzeltmesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
-- [x] 2026-05-14: Veresiye musteri karti aksiyonlari tersine cevrildi. Dosya: `src/components/finance/veresiye-client.tsx`. Neden: Musteri kartina tiklayinca kalem ekleme modalı acilsin; sagdaki eski artı butonu goz ikonlu detay butonu olarak hesap ekstresi/detay modalini acsin.
+
+## [2024-05-12] - Teknik Servis Kaydı ve WhatsApp Stabilizasyonu
+
+### Yapılan Düzeltmeler
+
+#### 1. Teknik Servis Kaydı Yetki ve Oturum Sorunları (Düzeltildi)
+*   **JWT Senkronizasyonu:** `src/lib/auth.ts` dosyasında, Super Admin 'Kimliğe Bürünme' (Impersonate) yaparken `shopId`'nin kaybolması veya Dealer'ların oturumlarının bazı API çağrılarında eksik yetkiyle dönmesi sorunu giderildi. `token.shopId` artık her durumda veritabanıyla senkronize ediliyor.
+*   **Super Admin Fallback:** Super Admin'in hiçbir dükkana bürünmediği durumlarda socket bağlantısının kopmasını önlemek için bir 'Varsayılan Dükkan' fallback mekanizması eklendi.
+*   **Hata Yakalama:** Server action'larda oluşan hataların (Unauthorized vb.) UI'da "Dönüp durma" yerine kullanıcıya direkt mesaj olarak gösterilmesi sağlandı.
+
+#### 2. WhatsApp ve Socket.io Stabilizasyonu (Düzeltildi)
+*   **Socket.io Yüklenme Hatası:** `SocketProvider.tsx` dosyasında, oturum henüz yüklenme aşamasındayken (status: loading) bağlantının "Oturum kapalı" denilerek kesilmesi hatası düzeltildi. Artık oturumun tam yüklenmesi bekleniyor.
+*   **WhatsApp Zaman Aşımı:** WhatsApp bağlı olmadığında mesaj gönderme isteğinin 20 saniye boyunca sistemi kilitlemesi sorunu, bekleme süresi 5 saniyeye indirilerek çözüldü. Bağlantı yoksa sistem hızlıca hata döndürüyor.
+*   **Altyapı (Docker):** Production ortamında Puppeteer/Chromium'un çalışması için gereken `openssl` ve diğer sistem kütüphaneleri `Dockerfile`'da doğrulandı.
+
+### Gelecek Adımlar
+- Canlı sunucuda build ve deploy sonrası "Ayarlar > WhatsApp" sekmesinden bağlantının en baştan (Oturumu Kapat -> Başlat) kurulması önerilir.
+- Bayilerin kendi dükkan ID'leri ile doğru odaya (join_room) katıldıkları takip edilmelidir.
+
 - [x] 2026-05-14: Veresiye musteri karti aksiyon degisikligi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
 - [x] 2026-05-14: Kurye admin gun bitirme akisi guncellendi. Dosyalar: `src/lib/actions/shortage-actions.ts`, `src/components/courier/courier-dashboard-client.tsx`. Neden: Admin `Bitir` isleminde alinmis ama stoga eklenmemis siparisler modalda listelensin; devam edilirse bugunku listeden kaldirilsin, alinmayan siparisler ise yarin tarihli olarak havuza veya secilen kuryeye aktarilsin.
 - [x] 2026-05-14: Kurye gun bitirme ayrimi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili. Not: Kurye kendi panelinden gunu bitirdiginde yalnizca admin bildirimi gider; ertesi gune aktarma sadece admin modalindan yapilir.
 - [x] 2026-05-14: Ayarlar/WhatsApp baglantisi production'da calismiyor sorunu duzeltildi. Dosyalar: `src/lib/whatsapp/whatsapp-manager.ts`, `Dockerfile`, `src/components/settings/tabs/whatsapp-tab.tsx`. Neden: Production (Docker) ortaminda `PUPPETEER_EXECUTABLE_PATH` env var'i kullanilmiyordu; `whatsapp-manager.ts`'e `executablePath` ve production-compatible Chromium argumanlari (`--disable-dev-shm-usage`, `--no-zygote`, `--disable-gpu` vb.) eklendi. Dockerfile'daki runner asamasina eksik Chromium sistem kutuphaneleri (libnss3, libatk, libcups2, libdrm2, libgbm1 vb.) eklendi. WhatsApp tab UI'si artik HTTP 500 hatalarini da kullaniciya gosteriyor.
 - [x] 2026-05-14: WhatsApp production duzeltmesi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
-
 - [x] 2026-05-14: Bayi servis kaydı "dönüp durma" ve yetki sorunu düzeltildi. Dosyalar: `src/lib/validations/schemas.ts`, `src/app/(dashboard)/servis/yeni/page.tsx`, `src/components/service/create-service-modal.tsx`. Neden: IMEI sınırı `max(11)` olduğu için gerçek kayıtlar sessizce Zod hatasına takılıyordu; limit `15`'e çıkarıldı. Müşteri adı regex'ine `()&` desteği eklendi. `onSubmit` fonksiyonları `try-catch` blokları ile sarmalanarak server-side crash veya validation hatalarının UI'da "spin" yapması engellendi, kullanıcıya bilgilendirici toast eklendi.
 - [x] 2026-05-14: Servis kayıt hata yönetimi ve şema genişletme doğrulandı. Komut: `npx tsc --noEmit`. Sonuç: Başarılı.

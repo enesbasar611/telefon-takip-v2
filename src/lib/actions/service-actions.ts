@@ -145,7 +145,10 @@ export async function createServiceTicket(rawData: any) {
       return { success: false, error: error.errors[0].message };
     }
     console.error("Error creating service ticket:", error);
-    return { success: false, error: "Servis kaydı oluşturulurken bir hata oluştu." };
+    return {
+      success: false,
+      error: (error as any)?.message || "Servis kaydı oluşturulurken bir hata oluştu."
+    };
   }
 }
 
