@@ -131,6 +131,8 @@ model Customer {
   tickets        ServiceTicket[]
   shortageItems  ShortageItem[]
   transactions   Transaction[]
+  balance        Decimal         @default(0) @db.Decimal(12, 2)
+  balanceUsd     Decimal         @default(0) @db.Decimal(12, 2)
 
   @@unique([shopId, phone])
 }
@@ -459,10 +461,12 @@ model SaleItem {
   shop       Shop    @relation(fields: [shopId], references: [id])
 }
 
+
 model Transaction {
   id               String          @id @default(cuid())
   type             TransactionType
   amount           Decimal         @db.Decimal(10, 2)
+  currency         String          @default("TRY")
   description      String
   paymentMethod    PaymentMethod   @default(CASH)
   userId           String

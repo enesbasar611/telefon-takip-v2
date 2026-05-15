@@ -328,14 +328,24 @@ export const authOptions: NextAuthOptions = {
                     token.role = dbUser.role;
                     token.email = dbUser.email;
 
-                    // İşlem: İsim "..." ise veya boşsa fallback kullan
+                    // Fix "..." or empty name issue in DB and Token
                     const currentName = dbUser.name?.trim();
-                    token.name = (currentName && currentName !== "...")
-                        ? currentName
-                        : (dbUser.email?.split('@')[0] || "Kullanıcı");
+                    if (!currentName || currentName === "...") {
+                        const newName = dbUser.email?.split('@')[0] || "Kullanıcı";
+                        try {
+                            await prisma.user.update({
+                                where: { id: dbUser.id },
+                                data: { name: newName }
+                            });
+                        } catch (e) {
+                            console.error("Failed to fix user name in DB:", e);
+                        }
+                        token.name = newName;
+                    } else {
+                        token.name = currentName;
+                    }
 
                     // Critical: Ensure shopId is synced from the most up-to-date user record
-                    // and apply a default fallback for Super Admin to prevent socket disconnects
                     token.shopId = effectiveUser.shopId || dbUser.shopId;
 
                     if (isSuperAdmin && !token.shopId) {

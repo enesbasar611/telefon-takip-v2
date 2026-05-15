@@ -52,27 +52,32 @@ export async function createServiceTicket(rawData: any) {
     let ticket;
     let ticketNumber = "";
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5;
 
     while (attempts < maxAttempts) {
       try {
-        // En son oluşturulan bilet numarasını bul (shop bazlı)
-        const lastTicket = await prisma.serviceTicket.findFirst({
+        // En son biletleri çekip içlerinden en yüksek numarayı bulalım (concurrency için daha güvenli)
+        const recentTickets = await prisma.serviceTicket.findMany({
           where: { shopId },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { id: 'desc' },
+          take: 50,
           select: { ticketNumber: true }
         });
 
-        let nextNumber = 1001;
-        if (lastTicket) {
-          const match = lastTicket.ticketNumber.match(/\d+/);
-          if (match) {
-            nextNumber = parseInt(match[0]) + 1;
-          }
+        let maxNum = 1000;
+        if (recentTickets.length > 0) {
+          recentTickets.forEach(t => {
+            const match = t.ticketNumber.match(/\d+/);
+            if (match) {
+              const num = parseInt(match[0]);
+              if (num > maxNum) maxNum = num;
+            }
+          });
         }
 
+        const nextNumber = maxNum + 1;
         ticketNumber = `SRV-${nextNumber}`;
-        console.log(`[SERVICE_ACTION] Generating ticket number: ${ticketNumber} (Attempt ${attempts + 1})`);
+        console.log(`[SERVICE_ACTION] Generating ticket number: ${ticketNumber} (Attempt ${attempts + 1}) for shop: ${shopId}`);
 
         // Get default technician (first admin found or the creator)
         const defaultAdmin = await prisma.user.findFirst({
@@ -116,7 +121,9 @@ export async function createServiceTicket(rawData: any) {
       } catch (error: any) {
         attempts++;
         if (error.code === 'P2002' && attempts < maxAttempts) {
-          console.warn(`[SERVICE_ACTION] Ticket number collision, retrying... (${attempts}/${maxAttempts})`);
+          console.warn(`[SERVICE_ACTION] Ticket number collision, retrying after delay... (${attempts}/${maxAttempts})`);
+          // Çakışma durumunda küçük bir rastgele gecikme ekleyerek yarış durumlarını azaltalım
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
           continue;
         }
         throw error;

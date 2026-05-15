@@ -148,6 +148,9 @@ class WhatsAppManager {
 
     private async doInitialize(shopId: string, session: WhatsAppSession): Promise<void> {
         try {
+            // Her başlatma öncesi kilit dosyalarını temizleyelim (stale lock sorunu için)
+            this.clearSingletonLock(shopId);
+
             console.log(`[WHATSAPP] Initializing client for ${shopId}...`);
             session.status = 'CONNECTING';
             session.error = undefined;
@@ -168,15 +171,30 @@ class WhatsAppManager {
     private clearSingletonLock(shopId: string) {
         try {
             const sessionPath = path.join(process.cwd(), '.whatsapp-auth', `session-shop-${shopId}`);
+            if (!fs.existsSync(sessionPath)) return;
+
             const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
 
+            // Ana dizindeki kilitler
             lockFiles.forEach(file => {
                 const filePath = path.join(sessionPath, file);
                 if (fs.existsSync(filePath)) {
                     console.log(`[WHATSAPP] Removing stale lock file: ${filePath}`);
-                    fs.unlinkSync(filePath);
+                    try { fs.unlinkSync(filePath); } catch (e) { }
                 }
             });
+
+            // Default dizini altındaki kilitler (Chromium bazen buraya koyar)
+            const defaultPath = path.join(sessionPath, 'Default');
+            if (fs.existsSync(defaultPath)) {
+                lockFiles.forEach(file => {
+                    const filePath = path.join(defaultPath, file);
+                    if (fs.existsSync(filePath)) {
+                        console.log(`[WHATSAPP] Removing stale lock file in Default: ${filePath}`);
+                        try { fs.unlinkSync(filePath); } catch (e) { }
+                    }
+                });
+            }
         } catch (e) {
             console.error(`[WHATSAPP] Error clearing locks for ${shopId}:`, e);
         }

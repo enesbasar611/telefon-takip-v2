@@ -371,6 +371,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     customerId,
                     name: debt.customer.name,
                     phone: debt.customer.phone,
+                    balance: Number(debt.customer.balance || 0),
+                    balanceUsd: Number(debt.customer.balanceUsd || 0),
                     lastActivity: new Date(debt.createdAt),
                     totalRemainingTRY: 0,
                     totalRemainingUSD: 0,
@@ -1193,204 +1195,223 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                             {aggregatedData.map((item, idx) => (
                                                 <React.Fragment key={item.customerId}>
                                                     <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: idx * 0.03 }}
-                                                        className={cn(
-                                                            "group relative transition-all overflow-hidden cursor-pointer",
-                                                            viewMode === 'list'
-                                                                ? "p-4 md:px-8 py-4 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/5 border-b border-border/5"
-                                                                : "p-3 md:p-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-md shadow-md hover:shadow-xl hover:border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3",
-                                                            selectedCustomerIds.includes(item.customerId) && (viewMode === 'list' ? "bg-indigo-500/[0.04] dark:bg-indigo-500/10" : "ring-1 ring-indigo-500/50 bg-indigo-500/[0.02]"),
-                                                            (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? (viewMode === 'list' ? "bg-emerald-500/[0.04]" : "border-emerald-500/20") : (viewMode === 'list' ? "bg-rose-500/[0.04]" : "border-rose-500/20"),
-                                                            viewMode === 'list' && idx === aggregatedData.length - 1 && "border-b-0"
-                                                        )}
-                                                    >
-                                                        {/* Status Color Strip */}
-                                                        <div className={cn(
-                                                            "absolute left-0 top-0 bottom-0 w-[4px] transition-all group-hover:w-[6px]",
-                                                            (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500" : "bg-rose-500"
-                                                        )} />
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: idx * 0.03 }}
+                                                            className={cn(
+                                                                "group relative transition-all overflow-hidden cursor-pointer",
+                                                                viewMode === 'list'
+                                                                    ? "p-4 md:px-8 py-4 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/5 border-b border-border/5"
+                                                                    : "p-3 md:p-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-md shadow-md hover:shadow-xl hover:border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3",
+                                                                selectedCustomerIds.includes(item.customerId) && (viewMode === 'list' ? "bg-indigo-500/[0.04] dark:bg-indigo-500/10" : "ring-1 ring-indigo-500/50 bg-indigo-500/[0.02]"),
+                                                                (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? (viewMode === 'list' ? "bg-emerald-500/[0.04]" : "border-emerald-500/20") : (viewMode === 'list' ? "bg-rose-500/[0.04]" : "border-rose-500/20"),
+                                                                viewMode === 'list' && idx === aggregatedData.length - 1 && "border-b-0"
+                                                            )}
+                                                        >
+                                                            {/* Status Color Strip */}
+                                                            <div className={cn(
+                                                                "absolute left-0 top-0 bottom-0 w-[4px] transition-all group-hover:w-[6px]",
+                                                                (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500" : "bg-rose-500"
+                                                            )} />
 
-                                                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                                                            <div className="shrink-0 relative flex items-center gap-3">
-                                                                <div
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedCustomerIds(prev =>
-                                                                            prev.includes(item.customerId)
-                                                                                ? prev.filter(id => id !== item.customerId)
-                                                                                : [...prev, item.customerId]
-                                                                        );
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
-                                                                        selectedCustomerIds.includes(item.customerId)
-                                                                            ? "bg-indigo-500 border-indigo-500 shadow-md"
-                                                                            : "border-border bg-card group-hover:border-indigo-500/50"
-                                                                    )}
-                                                                >
-                                                                    {selectedCustomerIds.includes(item.customerId) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                                <div className="shrink-0 relative flex items-center gap-3">
+                                                                    <div
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedCustomerIds(prev =>
+                                                                                prev.includes(item.customerId)
+                                                                                    ? prev.filter(id => id !== item.customerId)
+                                                                                    : [...prev, item.customerId]
+                                                                            );
+                                                                        }}
+                                                                        className={cn(
+                                                                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
+                                                                            selectedCustomerIds.includes(item.customerId)
+                                                                                ? "bg-indigo-500 border-indigo-500 shadow-md"
+                                                                                : "border-border bg-card group-hover:border-indigo-500/50"
+                                                                        )}
+                                                                    >
+                                                                        {selectedCustomerIds.includes(item.customerId) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                                                    </div>
+                                                                    <div
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setPortfolioCustomer(item);
+                                                                            handleFetchPortfolio(item.customerId);
+                                                                        }}
+                                                                        className={cn(
+                                                                            "w-8 h-8 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border",
+                                                                            (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0)
+                                                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/10"
+                                                                                : "bg-rose-500/10 text-rose-600 border-rose-500/10"
+                                                                        )}
+                                                                    >
+                                                                        <User className="w-4 h-4" />
+                                                                    </div>
                                                                 </div>
-                                                                <div
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setPortfolioCustomer(item);
-                                                                        handleFetchPortfolio(item.customerId);
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-8 h-8 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border",
-                                                                        (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0)
-                                                                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/10"
-                                                                            : "bg-rose-500/10 text-rose-600 border-rose-500/10"
-                                                                    )}
-                                                                >
-                                                                    <User className="w-4 h-4" />
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h3 className={cn("font-bold text-foreground tracking-tight truncate", viewMode === 'grid' ? "text-sm" : "text-sm md:text-base")}>{item.name}</h3>
+                                                                        {viewMode === 'list' && (
+                                                                            <div className="flex flex-wrap gap-1.5 shrink-0">
+                                                                                {item.totalRemainingTRY > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">TL BORCU</span>}
+                                                                                {item.totalRemainingUSD > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">USD BORCU</span>}
+                                                                                {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && !item.balance && !item.balanceUsd && (
+                                                                                    <span className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-[0.1em] border-none shadow-lg shadow-emerald-500/20 flex items-center gap-1">
+                                                                                        <CheckCircle2 className="w-2.5 h-2.5" /> BORCU YOKTUR
+                                                                                    </span>
+                                                                                )}
+                                                                                {(item.balance > 0 || item.balanceUsd > 0) && (
+                                                                                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-emerald-500/10">EMANET BAKİYE</span>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 opacity-80">
+                                                                        <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                            <Phone className="w-3 h-3 text-muted-foreground/70" /> {item.phone || 'Sayı Yok'}
+                                                                        </span>
+                                                                        <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                                                            <Calendar className="w-3 h-3 text-muted-foreground/70" /> {new Date(item.lastActivity).toLocaleDateString('tr-TR')} <span className="opacity-40 text-[10px]">{new Date(item.lastActivity).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                        </span>
+                                                                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+                                                                            {item.debtCount} KALEM
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex flex-col min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <h3 className={cn("font-bold text-foreground tracking-tight truncate", viewMode === 'grid' ? "text-sm" : "text-sm md:text-base")}>{item.name}</h3>
-                                                                    {viewMode === 'list' && (
-                                                                        <div className="flex flex-wrap gap-1.5 shrink-0">
-                                                                            {item.totalRemainingTRY > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">TL BORCU</span>}
-                                                                            {item.totalRemainingUSD > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">USD BORCU</span>}
-                                                                            {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && (
-                                                                                <span className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-[0.1em] border-none shadow-lg shadow-emerald-500/20 flex items-center gap-1">
-                                                                                    <CheckCircle2 className="w-2.5 h-2.5" /> BORCU YOKTUR
-                                                                                </span>
-                                                                            )}
+
+                                                            <div className={cn("flex flex-row items-center gap-4", viewMode === 'list' && "md:min-w-[150px]")}>
+                                                                <div className="flex flex-row items-center gap-3">
+                                                                    {item.totalRemainingTRY > 0 && (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                                ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
+                                                                            </span>
+                                                                            <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
+                                                                                ${(item.totalRemainingTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.totalRemainingUSD > 0 && (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                                ${item.totalRemainingUSD.toLocaleString('tr-TR')}
+                                                                            </span>
+                                                                            <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
+                                                                                ₺{Math.round(item.totalRemainingUSD * usdRate).toLocaleString('tr-TR')}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && !item.balance && !item.balanceUsd && (
+                                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">ÖDENDİ</span>
+                                                                    )}
+                                                                    {item.balance > 0 && (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                                - ₺{item.balance.toLocaleString('tr-TR')}
+                                                                            </span>
+                                                                            <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">TL Emanet</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.balanceUsd > 0 && (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                                                                - ${item.balanceUsd.toLocaleString('tr-TR')}
+                                                                            </span>
+                                                                            <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">USD Emanet</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && viewMode === 'list' && (
+                                                                        <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
+                                                                            <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
+                                                                            <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                                                                ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
+                                                                            </span>
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 opacity-80">
-                                                                    <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                        <Phone className="w-3 h-3 text-muted-foreground/70" /> {item.phone || 'Sayı Yok'}
-                                                                    </span>
-                                                                    <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                        <Calendar className="w-3 h-3 text-muted-foreground/70" /> {new Date(item.lastActivity).toLocaleDateString('tr-TR')} <span className="opacity-40 text-[10px]">{new Date(item.lastActivity).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                    </span>
-                                                                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 uppercase tracking-widest">
-                                                                        {item.debtCount} KALEM
-                                                                    </span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (!item.phone) {
+                                                                                toast.error("Bu müşteriye ait bir telefon numarası bulunmuyor. Lütfen düzenleyerek ekleyin.");
+                                                                                return;
+                                                                            }
+                                                                            handleWhatsAppMessage(item);
+                                                                        }}
+                                                                        title="WhatsApp'tan Ekstre Gönder"
+                                                                        className={cn("rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
+                                                                    >
+                                                                        <MessageCircle className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
+                                                                            try {
+                                                                                const res = await getCustomerStatement(item.customerId);
+                                                                                if (res.success) {
+                                                                                    const combined = [
+                                                                                        ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                                                        ...(res.transactions || []).map((t: any) => ({
+                                                                                            ...t,
+                                                                                            type: 'PAYMENT',
+                                                                                            notes: t.notes || 'Tahsilat / Ödeme',
+                                                                                            amount: t.amount,
+                                                                                            remainingAmount: t.amount // Use amount as value
+                                                                                        }))
+                                                                                    ];
+                                                                                    setReceiptCustomer(item);
+                                                                                    setReceiptDebts(combined);
+                                                                                    toast.success("Hesap dökümü yüklendi.", { id: toastId });
+                                                                                } else {
+                                                                                    toast.error("Hata: " + res.error, { id: toastId });
+                                                                                }
+                                                                            } catch (err) {
+                                                                                toast.error("Bağlantı hatası.", { id: toastId });
+                                                                            }
+                                                                        }}
+                                                                        title="Borç Fişi Yazdır / WhatsApp"
+                                                                        className={cn("rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
+                                                                    >
+                                                                        <Receipt className={viewMode === 'grid' ? "w-3.5 h-3.5" : "w-4 h-4"} />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openCustomerStatement(item);
+                                                                        }}
+                                                                        title="Detayları Gör"
+                                                                        className={cn("rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
+                                                                    >
+                                                                        <Eye className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setPaymentCustomer(item);
+                                                                            setPaymentCurrency("TRY");
+                                                                            setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
+                                                                        }}
+                                                                        className={cn("rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 uppercase font-bold tracking-widest transition-all shadow-lg shadow-emerald-500/10", viewMode === 'grid' ? "h-8 px-2 text-[8px]" : "h-9 px-4 text-[9px]")}
+                                                                    >
+                                                                        Ödeme
+                                                                    </Button>
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        <div className={cn("flex flex-row items-center gap-4", viewMode === 'list' && "md:min-w-[150px]")}>
-                                                            <div className="flex flex-row items-center gap-3">
-                                                                {item.totalRemainingTRY > 0 && (
-                                                                    <div className="flex flex-col items-end">
-                                                                        <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                            ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
-                                                                        </span>
-                                                                        <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                                                            ${(item.totalRemainingTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                {item.totalRemainingUSD > 0 && (
-                                                                    <div className="flex flex-col items-end">
-                                                                        <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                            ${item.totalRemainingUSD.toLocaleString('tr-TR')}
-                                                                        </span>
-                                                                        <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                                                            ₺{Math.round(item.totalRemainingUSD * usdRate).toLocaleString('tr-TR')}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && (
-                                                                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">ÖDENDİ</span>
-                                                                )}
-                                                                {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && viewMode === 'list' && (
-                                                                    <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
-                                                                        <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
-                                                                        <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">
-                                                                            ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
+                                                            <div className={cn("absolute right-4 top-1/2 -translate-y-1/2 transition-all duration-300", viewMode === 'grid' ? "opacity-0" : "opacity-0 group-hover:opacity-100")}>
+                                                                <ChevronDown className="w-5 h-5 text-muted-foreground/30 -rotate-90" />
                                                             </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!item.phone) {
-                                                                            toast.error("Bu müşteriye ait bir telefon numarası bulunmuyor. Lütfen düzenleyerek ekleyin.");
-                                                                            return;
-                                                                        }
-                                                                        handleWhatsAppMessage(item);
-                                                                    }}
-                                                                    title="WhatsApp'tan Ekstre Gönder"
-                                                                    className={cn("rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                >
-                                                                    <MessageCircle className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={async (e) => {
-                                                                        e.stopPropagation();
-                                                                        const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
-                                                                        try {
-                                                                            const res = await getCustomerStatement(item.customerId);
-                                                                            if (res.success) {
-                                                                                const combined = [
-                                                                                    ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                                                                    ...(res.transactions || []).map((t: any) => ({
-                                                                                        ...t,
-                                                                                        type: 'PAYMENT',
-                                                                                        notes: t.notes || 'Tahsilat / Ödeme',
-                                                                                        amount: t.amount,
-                                                                                        remainingAmount: t.amount // Use amount as value
-                                                                                    }))
-                                                                                ];
-                                                                                setReceiptCustomer(item);
-                                                                                setReceiptDebts(combined);
-                                                                                toast.success("Hesap dökümü yüklendi.", { id: toastId });
-                                                                            } else {
-                                                                                toast.error("Hata: " + res.error, { id: toastId });
-                                                                            }
-                                                                        } catch (err) {
-                                                                            toast.error("Bağlantı hatası.", { id: toastId });
-                                                                        }
-                                                                    }}
-                                                                    title="Borç Fişi Yazdır / WhatsApp"
-                                                                    className={cn("rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                >
-                                                                    <Receipt className={viewMode === 'grid' ? "w-3.5 h-3.5" : "w-4 h-4"} />
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openCustomerStatement(item);
-                                                                    }}
-                                                                    title="Detayları Gör"
-                                                                    className={cn("rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                >
-                                                                    <Eye className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setPaymentCustomer(item);
-                                                                        setPaymentCurrency("TRY");
-                                                                        setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
-                                                                    }}
-                                                                    className={cn("rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 uppercase font-bold tracking-widest transition-all shadow-lg shadow-emerald-500/10", viewMode === 'grid' ? "h-8 px-2 text-[8px]" : "h-9 px-4 text-[9px]")}
-                                                                >
-                                                                    Ödeme
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className={cn("absolute right-4 top-1/2 -translate-y-1/2 transition-all duration-300", viewMode === 'grid' ? "opacity-0" : "opacity-0 group-hover:opacity-100")}>
-                                                            <ChevronDown className="w-5 h-5 text-muted-foreground/30 -rotate-90" />
-                                                        </div>
-                                                    </motion.div>
+                                                        </motion.div>
                                                     </AddDebtModal>
                                                 </React.Fragment>
                                             ))}
@@ -1433,6 +1454,16 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 {paymentCustomer?.totalRemainingUSD > 0 && (
                                     <span className="px-2.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold">
                                         ${paymentCustomer?.totalRemainingUSD?.toLocaleString('tr-TR')}
+                                    </span>
+                                )}
+                                {paymentCustomer?.balance > 0 && (
+                                    <span className="px-2.5 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-[10px] font-bold">
+                                        Emanet: ₺{paymentCustomer.balance.toLocaleString('tr-TR')}
+                                    </span>
+                                )}
+                                {paymentCustomer?.balanceUsd > 0 && (
+                                    <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-bold">
+                                        Emanet: ${paymentCustomer.balanceUsd.toLocaleString('tr-TR')}
                                     </span>
                                 )}
                             </AlertDialogDescription>
@@ -1652,7 +1683,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const data = [
                                         ...statementData.debts.map(d => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
-                                        ...statementData.transactions.map(t => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: "TRY", Durum: "-" }))
+                                        ...statementData.transactions.map(t => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
                                     ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
 
                                     const ws = XLSX.utils.json_to_sheet(data);
@@ -1677,7 +1708,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         })),
                                         ...(statementData.transactions || []).map((t: any) => ({
                                             date: new Date(t.createdAt),
-                                            text: `🟢 Ödeme: ${Number(t.amount).toLocaleString('tr-TR')} TL`
+                                            text: `🟢 Ödeme: ${t.currency === 'USD' ? '$' : '₺'}${Number(t.amount).toLocaleString('tr-TR')}`
                                         }))
                                     ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
@@ -1690,6 +1721,9 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     message += `*TOPLAM GÜNCEL BORÇ:*\n`;
                                     if (historyCustomer?.totalRemainingTRY > 0) message += `💰 TL: ₺${historyCustomer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
                                     if (historyCustomer?.totalRemainingUSD > 0) message += `💰 Dolar: $${historyCustomer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+
+                                    if (Number(historyCustomer?.balance || 0) > 0) message += `🎁 TL Emanet: ₺${Number(historyCustomer.balance).toLocaleString('tr-TR')}\n`;
+                                    if (Number(historyCustomer?.balanceUsd || 0) > 0) message += `🎁 USD Emanet: $${Number(historyCustomer.balanceUsd).toLocaleString('tr-TR')}\n`;
 
                                     if (historyCustomer?.totalRemainingTRY <= 0 && historyCustomer?.totalRemainingUSD <= 0) {
                                         message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
@@ -1798,48 +1832,49 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                                     const itemCurrency = item.currency || "TRY";
                                                                     const returnAlreadyActive = hasActiveReturn(item.id, item.saleId || item.sale?.id, si.productId);
                                                                     return (
-                                                                    <div key={sidx} className="text-[10px] text-muted-foreground flex items-center justify-between gap-2 group/item pr-1">
-                                                                        <div className="flex items-center gap-2 min-w-0">
-                                                                            <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
-                                                                            <span className="font-bold text-foreground/80">{si.quantity}x</span>
-                                                                            <span className="truncate max-w-[160px]">{si.product?.name}</span>
-                                                                            <span className="opacity-60 shrink-0">(@ {itemCurrency === "USD" ? "$" : "₺"}{formatCurrency(si.unitPrice)})</span>
+                                                                        <div key={sidx} className="text-[10px] text-muted-foreground flex items-center justify-between gap-2 group/item pr-1">
+                                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                                <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
+                                                                                <span className="font-bold text-foreground/80">{si.quantity}x</span>
+                                                                                <span className="truncate max-w-[160px]">{si.product?.name}</span>
+                                                                                <span className="opacity-60 shrink-0">(@ {itemCurrency === "USD" ? "$" : "₺"}{formatCurrency(si.unitPrice)})</span>
+                                                                            </div>
+                                                                            {si.product && (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    disabled={returnAlreadyActive}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        if (returnAlreadyActive) {
+                                                                                            toast.error("Bu ürün için tamamlanmamış bir iade kaydı var.");
+                                                                                            return;
+                                                                                        }
+                                                                                        const params = new URLSearchParams({
+                                                                                            customerId: historyCustomer.customerId,
+                                                                                            customerName: historyCustomer.name,
+                                                                                            productId: si.productId,
+                                                                                            productName: si.product.name,
+                                                                                            quantity: String(si.quantity),
+                                                                                            refundAmount: String(Number(si.unitPrice) * si.quantity),
+                                                                                            refundCurrency: itemCurrency,
+                                                                                            unitPrice: String(Number(si.unitPrice)),
+                                                                                            saleNumber: item.sale?.saleNumber || "",
+                                                                                            soldAt: item.sale?.createdAt || item.createdAt || "",
+                                                                                            saleId: item.saleId || item.sale?.id || "",
+                                                                                            debtId: item.id,
+                                                                                        });
+                                                                                        router.push(`/stok/iade?${params.toString()}`);
+                                                                                    }}
+                                                                                    className="h-5 px-2 text-[9px] font-bold rounded-lg bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white opacity-0 group-hover/item:opacity-100 transition-all shrink-0 uppercase tracking-widest disabled:opacity-60 disabled:hover:bg-muted disabled:hover:text-muted-foreground"
+                                                                                >
+                                                                                    {returnAlreadyActive ? <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> : <ArrowLeftRight className="w-2.5 h-2.5 mr-1" />}
+                                                                                    {returnAlreadyActive ? "İadede" : "İadeye"}
+                                                                                </Button>
+                                                                            )}
                                                                         </div>
-                                                                        {si.product && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="sm"
-                                                                                disabled={returnAlreadyActive}
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    if (returnAlreadyActive) {
-                                                                                        toast.error("Bu ürün için tamamlanmamış bir iade kaydı var.");
-                                                                                        return;
-                                                                                    }
-                                                                                    const params = new URLSearchParams({
-                                                                                        customerId: historyCustomer.customerId,
-                                                                                        customerName: historyCustomer.name,
-                                                                                        productId: si.productId,
-                                                                                        productName: si.product.name,
-                                                                                        quantity: String(si.quantity),
-                                                                                        refundAmount: String(Number(si.unitPrice) * si.quantity),
-                                                                                        refundCurrency: itemCurrency,
-                                                                                        unitPrice: String(Number(si.unitPrice)),
-                                                                                        saleNumber: item.sale?.saleNumber || "",
-                                                                                        soldAt: item.sale?.createdAt || item.createdAt || "",
-                                                                                        saleId: item.saleId || item.sale?.id || "",
-                                                                                        debtId: item.id,
-                                                                                    });
-                                                                                    router.push(`/stok/iade?${params.toString()}`);
-                                                                                }}
-                                                                                className="h-5 px-2 text-[9px] font-bold rounded-lg bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white opacity-0 group-hover/item:opacity-100 transition-all shrink-0 uppercase tracking-widest disabled:opacity-60 disabled:hover:bg-muted disabled:hover:text-muted-foreground"
-                                                                            >
-                                                                                {returnAlreadyActive ? <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> : <ArrowLeftRight className="w-2.5 h-2.5 mr-1" />}
-                                                                                {returnAlreadyActive ? "İadede" : "İadeye"}
-                                                                            </Button>
-                                                                        )}
-                                                                    </div>
-                                                                )})}
+                                                                    )
+                                                                })}
                                                             </div>
                                                         )}
 
@@ -1859,32 +1894,32 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                             {(() => {
                                                                 const returnAlreadyActive = hasActiveReturn(item.id);
                                                                 return (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                disabled={returnAlreadyActive}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (returnAlreadyActive) {
-                                                                        toast.error("Bu borç için tamamlanmamış bir iade kaydı var.");
-                                                                        return;
-                                                                    }
-                                                                    const params = new URLSearchParams({
-                                                                        customerId: historyCustomer.customerId,
-                                                                        customerName: historyCustomer.name,
-                                                                        debtId: item.id,
-                                                                        productName: item.notes || 'Borç/Ürün İadesi',
-                                                                        refundAmount: String(item.amount),
-                                                                        refundCurrency: item.currency || "TRY",
-                                                                        quantity: "1"
-                                                                    });
-                                                                    router.push(`/stok/iade?${params.toString()}`);
-                                                                }}
-                                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-orange-600 bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-60"
-                                                                title={returnAlreadyActive ? "İade işlemi tamamlanmadan tekrar gönderilemez" : "İadeye Gönder"}
-                                                            >
-                                                                {returnAlreadyActive ? <CheckCircle2 className="w-3 h-3" /> : <ArrowLeftRight className="w-3 h-3" />}
-                                                            </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        disabled={returnAlreadyActive}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (returnAlreadyActive) {
+                                                                                toast.error("Bu borç için tamamlanmamış bir iade kaydı var.");
+                                                                                return;
+                                                                            }
+                                                                            const params = new URLSearchParams({
+                                                                                customerId: historyCustomer.customerId,
+                                                                                customerName: historyCustomer.name,
+                                                                                debtId: item.id,
+                                                                                productName: item.notes || 'Borç/Ürün İadesi',
+                                                                                refundAmount: String(item.amount),
+                                                                                refundCurrency: item.currency || "TRY",
+                                                                                quantity: "1"
+                                                                            });
+                                                                            router.push(`/stok/iade?${params.toString()}`);
+                                                                        }}
+                                                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-orange-600 bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-60"
+                                                                        title={returnAlreadyActive ? "İade işlemi tamamlanmadan tekrar gönderilemez" : "İadeye Gönder"}
+                                                                    >
+                                                                        {returnAlreadyActive ? <CheckCircle2 className="w-3 h-3" /> : <ArrowLeftRight className="w-3 h-3" />}
+                                                                    </Button>
                                                                 );
                                                             })()}
                                                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingDebt(item); setEditAmount(String(item.amount)); setEditNotes(item.notes || ""); setEditCurrency(item.currency || "TRY"); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-indigo-600 bg-muted hover:bg-muted/80 rounded-lg"><Pencil className="w-3 h-3" /></Button>
@@ -1906,7 +1941,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                                 </div>
                                                 <div className="text-right flex items-center gap-3">
                                                     <span className="text-sm font-black text-emerald-600 tabular-nums">
-                                                        + ₺{Number(item.amount).toLocaleString('tr-TR')}
+                                                        + {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
                                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button variant="ghost" size="sm" onClick={(e) => {

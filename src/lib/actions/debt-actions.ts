@@ -74,13 +74,53 @@ export async function createDebt(data: {
     const userId = await getUserId();
 
     const debt = await prisma.$transaction(async (tx) => {
-      // 1. Create the debt record
+      // 1. Check if customer has balance (prepayment) to apply
+      const customer = await tx.customer.findUnique({
+        where: { id: data.customerId },
+        select: { balance: true, balanceUsd: true, name: true }
+      });
+
+      let initialRemaining = data.amount;
+      const currency = data.currency || "TRY";
+      const balanceField = currency === "USD" ? "balanceUsd" : "balance";
+      const currentBalance = Number(customer?.[balanceField] || 0);
+
+      if (currentBalance > 0) {
+        const amountFromBalance = Math.min(currentBalance, initialRemaining);
+        initialRemaining -= amountFromBalance;
+
+        // Update customer balance
+        await tx.customer.update({
+          where: { id: data.customerId },
+          data: { [balanceField]: { decrement: amountFromBalance } }
+        });
+
+        // Create a transaction for internal payment from balance
+        if (amountFromBalance > 0.01) {
+          await tx.transaction.create({
+            data: {
+              type: "INCOME",
+              amount: amountFromBalance,
+              currency: currency,
+              description: `Bakiye/Emanet ile Ödeme (Borç: ${data.notes || 'Yeni Borç'})`,
+              paymentMethod: "CASH", // Internal
+              userId,
+              shopId,
+              customerId: data.customerId,
+              category: "Tahsilat"
+            }
+          });
+        }
+      }
+
+      // 2. Create the debt record
       const newDebt = await tx.debt.create({
         data: {
           customerId: data.customerId,
           amount: data.amount,
-          remainingAmount: data.amount,
-          currency: data.currency || "TRY",
+          remainingAmount: initialRemaining,
+          currency: currency,
+          isPaid: initialRemaining <= 0.01,
           exchangeRate: data.exchangeRate,
           dueDate: data.dueDate,
           notes: data.notes,
@@ -368,6 +408,15 @@ export async function collectGlobalCustomerPayment(
         }
       }
 
+      // 1.5 Handle excess payment (Emanet/Bakiye)
+      if (remainingPayment > 0.01) {
+        const balanceField = paymentCurrency === "USD" ? "balanceUsd" : "balance";
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { [balanceField]: { increment: remainingPayment } }
+        });
+      }
+
       // Record the transaction
       let targetAccountId = accountId;
       if (!targetAccountId) {
@@ -383,6 +432,7 @@ export async function collectGlobalCustomerPayment(
         data: {
           type: "INCOME",
           amount: paymentAmount,
+          currency: paymentCurrency,
           description: notes || `Toplu Borç Tahsilatı: ${customerName}`,
           paymentMethod,
           financeAccountId: targetAccountId,
@@ -603,6 +653,15 @@ export async function deleteCustomerPayment(transactionId: string) {
         amountToRestore -= restoreForThisDebt;
       }
 
+      // 1.5 Handle Excess Balance Restoration (Remove credit that was added by this payment)
+      if (amountToRestore > 0.01) {
+        const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { [balanceField]: { decrement: amountToRestore } }
+        });
+      }
+
       // 2. Decrement Account Balance
       if (financeAccountId) {
         await tx.financeAccount.update({
@@ -663,6 +722,15 @@ export async function updateCustomerPayment(transactionId: string, newAmount: nu
           });
           remainingDiff -= toPay;
         }
+
+        // If even after paying all debts there is still money left from the increase
+        if (remainingDiff > 0.01) {
+          const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+          await tx.customer.update({
+            where: { id: transaction.customerId! },
+            data: { [balanceField]: { increment: remainingDiff } }
+          });
+        }
       } else if (diff < 0) {
         // Less money paid: restore some debt (using absolute diff)
         let remainingRestore = Math.abs(diff);
@@ -685,6 +753,15 @@ export async function updateCustomerPayment(transactionId: string, newAmount: nu
             }
           });
           remainingRestore -= restore;
+        }
+
+        // If we still need to restore amount but no paid debts left, it must have come from balance
+        if (remainingRestore > 0.01) {
+          const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+          await tx.customer.update({
+            where: { id: transaction.customerId! },
+            data: { [balanceField]: { decrement: remainingRestore } }
+          });
         }
       }
 
