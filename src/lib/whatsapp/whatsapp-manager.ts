@@ -1,5 +1,7 @@
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
 
 interface WhatsAppSession {
     client: Client;
@@ -62,11 +64,11 @@ class WhatsAppManager {
     private setupEventListeners(shopId: string, session: WhatsAppSession) {
         const { client } = session;
 
-        client.on('qr', async (qr) => {
-            console.log(`[WHATSAPP] QR Received for ${shopId}`);
+        client.on('qr', async (qr: string) => {
+            console.log(`[WHATSAPP] QR received for ${shopId}`);
+            session.qr = await qrcode.toDataURL(qr);
             session.status = 'QR';
             session.error = undefined;
-            session.qr = await qrcode.toDataURL(qr);
         });
 
         client.on('ready', () => {
@@ -89,21 +91,21 @@ class WhatsAppManager {
             session.error = undefined;
         });
 
-        client.on('auth_failure', (msg) => {
+        client.on('auth_failure', (msg: any) => {
             console.error(`[WHATSAPP] Auth failure ${shopId}`, msg);
             session.status = 'DISCONNECTED';
             session.error = "Kimlik doğrulama hatası. Lütfen tekrar bağlanın.";
         });
 
-        client.on('disconnected', (reason) => {
+        client.on('disconnected', (reason: any) => {
             console.log(`[WHATSAPP] Disconnected ${shopId}`, reason);
             session.status = 'DISCONNECTED';
             session.qr = undefined;
             session.me = undefined;
 
-            if ((reason as any) === 'NAVIGATION') {
+            if (reason === 'NAVIGATION') {
                 session.error = "Tarayıcı navigasyon hatası.";
-            } else if ((reason as any) === 'LOGOUT') {
+            } else if (reason === 'LOGOUT') {
                 session.error = "Oturum kapatıldı.";
             } else {
                 session.error = "Bağlantı koptu. Telefonunuzun internete bağlı olduğundan emin olun.";
@@ -134,6 +136,7 @@ class WhatsAppManager {
             console.log(`[WHATSAPP] Force re-initializing ${shopId}`);
             try {
                 await session.client.destroy().catch(() => { });
+                this.clearSingletonLock(shopId);
             } catch (e) { }
             delete globalThis.whatsappSessions[shopId];
             const newSession = this.getSession(shopId);
@@ -158,65 +161,69 @@ class WhatsAppManager {
         } catch (err) {
             console.error(`[WHATSAPP] Init error ${shopId}:`, err);
             session.status = 'DISCONNECTED';
-            session.error = (err as Error).message;
+            session.error = `Bağlantı hatası: ${err instanceof Error ? err.message : String(err)}`;
         }
     }
 
-    public async getStatus(shopId: string) {
-        const session = this.getSession(shopId);
-
-        let actualStatus = session.status;
+    private clearSingletonLock(shopId: string) {
         try {
-            const state = await session.client.getState().catch(() => null);
-            if (state === 'CONNECTED') {
-                actualStatus = 'CONNECTED';
-                session.status = 'CONNECTED';
-            } else if (!state || state === 'CONFLICT' || state === 'UNPAIRED' || state === 'UNLAUNCHED') {
-                if (actualStatus !== 'QR' && actualStatus !== 'CONNECTING') {
-                    actualStatus = 'DISCONNECTED';
-                    session.status = 'DISCONNECTED';
-                }
-            }
-        } catch (e) { }
+            const sessionPath = path.join(process.cwd(), '.whatsapp-auth', `session-shop-${shopId}`);
+            const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
 
+            lockFiles.forEach(file => {
+                const filePath = path.join(sessionPath, file);
+                if (fs.existsSync(filePath)) {
+                    console.log(`[WHATSAPP] Removing stale lock file: ${filePath}`);
+                    fs.unlinkSync(filePath);
+                }
+            });
+        } catch (e) {
+            console.error(`[WHATSAPP] Error clearing locks for ${shopId}:`, e);
+        }
+    }
+
+    public getSessions() {
+        return Object.entries(globalThis.whatsappSessions).map(([shopId, session]) => ({
+            shopId,
+            status: session?.status,
+            qr: !!session?.qr,
+            me: session?.me,
+            error: session?.error
+        }));
+    }
+
+    public getStatus(shopId: string) {
+        const session = globalThis.whatsappSessions[shopId];
         return {
-            status: actualStatus,
-            qr: session.qr,
-            error: session.error,
-            me: session.me
+            status: session?.status || 'DISCONNECTED',
+            qr: session?.qr,
+            me: session?.me,
+            error: session?.error
         };
     }
 
     public async sendMessage(shopId: string, to: string, message: string) {
-        console.log(`[WHATSAPP] Sending message for shop ${shopId} to ${to}`);
-        const session = this.getSession(shopId);
-
-        // Ensure connected
-        if (session.status !== 'CONNECTED') {
-            await this.initialize(shopId).catch(() => { });
-
-            let attempts = 0;
-            // Status might change via event emitters
-            while (attempts < 5) {
-                const updatedSession = globalThis.whatsappSessions[shopId];
-                if (updatedSession?.status === 'CONNECTED') break;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                attempts++;
-            }
-
-            const currentStatus = (globalThis.whatsappSessions[shopId] as WhatsAppSession)?.status;
-            if (currentStatus !== 'CONNECTED') {
-                throw new Error('WhatsApp henüz hazır değil veya bağlı değil.');
-            }
-        }
-
-        const formattedTo = to.includes('@c.us') ? to : `${to.replace(/\D/g, '')}@c.us`;
         try {
-            const currentSession = globalThis.whatsappSessions[shopId];
-            if (!currentSession) throw new Error("Oturum bulunamadı");
-            return await currentSession.client.sendMessage(formattedTo, message);
-        } catch (error) {
-            console.error(`[WHATSAPP] Send error ${shopId}`, error);
+            const session = this.getSession(shopId);
+
+            // Eğer bağlı değilse veya kuyruktaysa beklemeyelim, hata fırlatalım
+            if (session.status !== 'CONNECTED') {
+                // Initialize but don't await, let it connect for next time
+                this.initialize(shopId);
+                throw new Error('WhatsApp bağlı değil.');
+            }
+
+            // Numara formatla (+ sil, @c.us ekle)
+            let formattedTo = to.replace(/\D/g, '');
+            if (!formattedTo.endsWith('@c.us')) {
+                formattedTo += '@c.us';
+            }
+
+            console.log(`[WHATSAPP] Sending message to ${formattedTo} for shop ${shopId}`);
+            await session.client.sendMessage(formattedTo, message);
+            return { success: true };
+        } catch (error: any) {
+            console.error(`[WHATSAPP] Send message error for ${shopId}:`, error);
             throw error;
         }
     }

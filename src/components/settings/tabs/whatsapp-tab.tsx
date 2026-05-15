@@ -105,7 +105,11 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
         try {
             await fetch('/api/whatsapp/config', {
                 method: 'POST',
-                body: JSON.stringify({ action }),
+                body: JSON.stringify({
+                    action,
+                    // Eğer hata varsa veya yeniden başlatılıyorsa force kullan
+                    force: action === 'initialize'
+                }),
                 headers: { 'Content-Type': 'application/json' }
             });
             setTimeout(fetchStatus, 2000);
