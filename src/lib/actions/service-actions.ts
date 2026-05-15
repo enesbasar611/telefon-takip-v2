@@ -49,46 +49,81 @@ export async function createServiceTicket(rawData: any) {
       },
     });
 
-    const ticketCount = await prisma.serviceTicket.count({ where: { shopId } });
-    const ticketNumber = `SRV-${1000 + ticketCount + 1}`;
+    let ticket;
+    let ticketNumber = "";
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    // Get default technician (first admin found or the creator)
-    const defaultAdmin = await prisma.user.findFirst({
-      where: { shopId, role: "ADMIN" },
-      orderBy: { createdAt: "asc" }
-    });
+    while (attempts < maxAttempts) {
+      try {
+        // En son oluşturulan bilet numarasını bul (shop bazlı)
+        const lastTicket = await prisma.serviceTicket.findFirst({
+          where: { shopId },
+          orderBy: { createdAt: 'desc' },
+          select: { ticketNumber: true }
+        });
 
-    const ticket = await prisma.serviceTicket.create({
-      data: {
-        ticketNumber,
-        customerId: customer.id,
-        deviceBrand: toTitleCase(validatedData.deviceBrand),
-        deviceModel: toTitleCase(validatedData.deviceModel),
-        imei: validatedData.imei || null,
-        serialNumber: validatedData.serialNumber || null,
-        problemDesc: toTitleCase(validatedData.problemDesc),
-        cosmeticCondition: validatedData.cosmeticCondition ? toTitleCase(validatedData.cosmeticCondition) : null,
-        notes: validatedData.notes || null,
-        estimatedCost: Math.round(Number(validatedData.estimatedCost || 0) * 100) / 100,
-        technicianId: validatedData.technicianId || defaultAdmin?.id || userId,
-        photos: validatedData.photos || [],
-        devicePassword: validatedData.devicePassword || null,
-        serviceType: validatedData.serviceType ? toTitleCase(validatedData.serviceType) : null,
-        priority: validatedData.priority ?? 1,
-        estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
-        createdById: userId,
-        shopId,
-        attributes: validatedData.attributes || null,
-        status: ServiceStatus.PENDING,
-        logs: {
-          create: {
-            message: "Yeni servis kaydı oluşturuldu.",
-            status: ServiceStatus.PENDING,
-            shopId
+        let nextNumber = 1001;
+        if (lastTicket) {
+          const match = lastTicket.ticketNumber.match(/\d+/);
+          if (match) {
+            nextNumber = parseInt(match[0]) + 1;
           }
         }
-      } as any,
-    });
+
+        ticketNumber = `SRV-${nextNumber}`;
+        console.log(`[SERVICE_ACTION] Generating ticket number: ${ticketNumber} (Attempt ${attempts + 1})`);
+
+        // Get default technician (first admin found or the creator)
+        const defaultAdmin = await prisma.user.findFirst({
+          where: { shopId, role: "ADMIN" },
+          orderBy: { createdAt: "asc" }
+        });
+
+        ticket = await prisma.serviceTicket.create({
+          data: {
+            ticketNumber,
+            customerId: customer.id,
+            deviceBrand: toTitleCase(validatedData.deviceBrand),
+            deviceModel: toTitleCase(validatedData.deviceModel),
+            imei: validatedData.imei || null,
+            serialNumber: validatedData.serialNumber || null,
+            problemDesc: toTitleCase(validatedData.problemDesc),
+            cosmeticCondition: validatedData.cosmeticCondition ? toTitleCase(validatedData.cosmeticCondition) : null,
+            notes: validatedData.notes || null,
+            estimatedCost: Math.round(Number(validatedData.estimatedCost || 0) * 100) / 100,
+            technicianId: validatedData.technicianId || defaultAdmin?.id || userId,
+            photos: validatedData.photos || [],
+            devicePassword: validatedData.devicePassword || null,
+            serviceType: validatedData.serviceType ? toTitleCase(validatedData.serviceType) : null,
+            priority: validatedData.priority ?? 1,
+            estimatedDeliveryDate: validatedData.estimatedDeliveryDate ? new Date(validatedData.estimatedDeliveryDate) : null,
+            createdById: userId,
+            shopId,
+            attributes: validatedData.attributes || null,
+            status: ServiceStatus.PENDING,
+            logs: {
+              create: {
+                message: "Yeni servis kaydı oluşturuldu.",
+                status: ServiceStatus.PENDING,
+                shopId
+              }
+            }
+          } as any,
+        });
+
+        break; // Successfully created
+      } catch (error: any) {
+        attempts++;
+        if (error.code === 'P2002' && attempts < maxAttempts) {
+          console.warn(`[SERVICE_ACTION] Ticket number collision, retrying... (${attempts}/${maxAttempts})`);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!ticket) throw new Error("Servis kaydı oluşturulamadı (Benzersiz numara üretilemedi).");
 
     console.log(`[SERVICE_ACTION] Ticket created: ${ticket.ticketNumber}`);
 
