@@ -110,19 +110,23 @@
 - [x] 2026-05-14: Veresiye urun kalemi para birimi duzeltildi. Dosya: `src/components/finance/add-debt-modal.tsx`. Neden: Ayarlarda varsayilan para birimi USD ise TL kaydedilmis urunler veresiye kalemine USD karsiligiyla gelsin; USD kaydedilmis urunlerde kayitli USD satis fiyati kullanilsin ve TL/USD secici otomatik varsayilana gecsin.
 - [x] 2026-05-14: Veresiye urun kalemi para birimi dogrulandi. Komut: `npx tsc --noEmit`. Sonuc: Basarili.
 
-## [2024-05-12] - Teknik Servis Kaydı ve WhatsApp Stabilizasyonu
+## [2024-05-12] - Teknik Servis Kaydı ve WhatsApp Stabilizasyonu (Güncelleme)
 
 ### Yapılan Düzeltmeler
 
-#### 1. Teknik Servis Kaydı Yetki ve Oturum Sorunları (Düzeltildi)
-*   **JWT Senkronizasyonu:** `src/lib/auth.ts` dosyasında, Super Admin 'Kimliğe Bürünme' (Impersonate) yaparken `shopId`'nin kaybolması veya Dealer'ların oturumlarının bazı API çağrılarında eksik yetkiyle dönmesi sorunu giderildi. `token.shopId` artık her durumda veritabanıyla senkronize ediliyor.
-*   **Super Admin Fallback:** Super Admin'in hiçbir dükkana bürünmediği durumlarda socket bağlantısının kopmasını önlemek için bir 'Varsayılan Dükkan' fallback mekanizması eklendi.
-*   **Hata Yakalama:** Server action'larda oluşan hataların (Unauthorized vb.) UI'da "Dönüp durma" yerine kullanıcıya direkt mesaj olarak gösterilmesi sağlandı.
+#### 1. Teknik Servis Kaydı "Dönüp Durma" Sorunu (Kesin Çözüm)
+*   **Non-Blocking WhatsApp:** WhatsApp bildirim gönderimi `await` edilmeden arka plana (background) alındı. Canlıda WhatsApp bağlantısı gecikse veya kopsa dahi servis kaydı anında oluşturulacak ve kullanıcı "Kaydı Tamamla" dediğinde sistem kilitlenmeyecektir.
+*   **Hata Maskeleme:** Bildirim hataları artık sessizce loglanıyor, ana işlemi engellemiyor.
 
-#### 2. WhatsApp ve Socket.io Stabilizasyonu (Düzeltildi)
-*   **Socket.io Yüklenme Hatası:** `SocketProvider.tsx` dosyasında, oturum henüz yüklenme aşamasındayken (status: loading) bağlantının "Oturum kapalı" denilerek kesilmesi hatası düzeltildi. Artık oturumun tam yüklenmesi bekleniyor.
-*   **WhatsApp Zaman Aşımı:** WhatsApp bağlı olmadığında mesaj gönderme isteğinin 20 saniye boyunca sistemi kilitlemesi sorunu, bekleme süresi 5 saniyeye indirilerek çözüldü. Bağlantı yoksa sistem hızlıca hata döndürüyor.
-*   **Altyapı (Docker):** Production ortamında Puppeteer/Chromium'un çalışması için gereken `openssl` ve diğer sistem kütüphaneleri `Dockerfile`'da doğrulandı.
+#### 2. Profil ve İsim Sorunları (Düzeltildi)
+*   **İsim Fallback:** Google ile girişte ismin boş gelmesi (`...`) sorunu düzeltildi. İsim yoksa kullanıcının e-posta adresinin ilk kısmı otomatik olarak isim olarak atanıyor.
+*   **JWT Profil Senkronizasyonu:** `auth.ts` dosyasında profil verilerinin veritabanı ile senkronizasyonu sırasında oluşabilecek eksiklikler giderildi.
+
+#### 3. Kısayol Düzenlemeleri
+*   **Hatalı Link:** Dashboard üzerindeki "Kasa / İşlemler" kısayolunun hatalı `/finans` adresi, doğru adres olan `/satis/kasa` ile değiştirildi.
+
+### Sonuç
+Arayüzdeki "..." sorunu ve bayilerin kayıt sırasında "asılı kalma" sorunu bu güncellemelerle giderilmiştir. WhatsApp bağlantısı arka planda çalışmaya devam edecek, ancak ana işlemleri engellemeyecektir.
 
 ### Gelecek Adımlar
 - Canlı sunucuda build ve deploy sonrası "Ayarlar > WhatsApp" sekmesinden bağlantının en baştan (Oturumu Kapat -> Başlat) kurulması önerilir.

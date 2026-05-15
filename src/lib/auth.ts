@@ -297,6 +297,7 @@ export const authOptions: NextAuthOptions = {
                         select: {
                             id: true,
                             email: true,
+                            name: true,
                             shopId: true,
                             role: true,
                             isApproved: true,
@@ -323,10 +324,10 @@ export const authOptions: NextAuthOptions = {
                         : (isShopOwnerRole(dbUser.role) && needsFullAccessSync(dbUser) ? await ensureShopOwnerUser(dbUser.id, dbUser.role) : dbUser);
 
                     // Sync the core profile bits
-                    token.id = effectiveUser.id;
-                    token.role = effectiveUser.role;
-                    token.email = effectiveUser.email;
-                    token.name = effectiveUser.name;
+                    token.id = dbUser.id;
+                    token.role = dbUser.role;
+                    token.email = dbUser.email;
+                    token.name = dbUser.name || token.name || dbUser.email?.split('@')[0] || "...";
 
                     // Critical: Ensure shopId is synced from the most up-to-date user record
                     // and apply a default fallback for Super Admin to prevent socket disconnects

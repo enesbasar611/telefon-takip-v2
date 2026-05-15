@@ -128,7 +128,10 @@ export async function createServiceTicket(rawData: any) {
         if (config.whatsappConfirmBeforeSend === "true") {
           whatsappPending = { phone: validatedData.customerPhone, message };
         } else {
-          await sendWhatsAppAction(validatedData.customerPhone, message);
+          // Non-blocking: Bildirim gönderimi ana akışı bekletmesin
+          sendWhatsAppAction(validatedData.customerPhone, message).catch(err => {
+            console.error("WhatsApp async send error:", err);
+          });
         }
       }
     } catch (e) {

@@ -20,7 +20,7 @@ const SHORTCUT_GROUPS = [
         name: "Satış & Finans",
         items: [
             { label: "POS (Tam Ekran)", path: "/satis?fullscreen=true", icon: ShoppingCart, iconName: "ShoppingCart", isFullscreen: true },
-            { label: "Kasa / İşlemler", path: "/finans", icon: Banknote, iconName: "Banknote" },
+            { label: "Kasa / İşlemler", path: "/satis/kasa", icon: Banknote, iconName: "Banknote" },
         ]
     },
     {
