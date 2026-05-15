@@ -327,7 +327,12 @@ export const authOptions: NextAuthOptions = {
                     token.id = dbUser.id;
                     token.role = dbUser.role;
                     token.email = dbUser.email;
-                    token.name = dbUser.name || token.name || dbUser.email?.split('@')[0] || "...";
+
+                    // İşlem: İsim "..." ise veya boşsa fallback kullan
+                    const currentName = dbUser.name?.trim();
+                    token.name = (currentName && currentName !== "...")
+                        ? currentName
+                        : (dbUser.email?.split('@')[0] || "Kullanıcı");
 
                     // Critical: Ensure shopId is synced from the most up-to-date user record
                     // and apply a default fallback for Super Admin to prevent socket disconnects

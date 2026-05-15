@@ -90,6 +90,8 @@ export async function createServiceTicket(rawData: any) {
       } as any,
     });
 
+    console.log(`[SERVICE_ACTION] Ticket created: ${ticket.ticketNumber}`);
+
     // Handle Down Payment (Kapora) as an INCOME transaction
     if (validatedData.downPayment > 0) {
       const kasaAccount = await getOrCreateKasaAccount();

@@ -19,10 +19,11 @@ export async function POST(req: Request) {
         const shopId = await getShopId().catch(() => null);
         if (!shopId) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-        const { action } = await req.json();
+        const body = await req.json().catch(() => ({}));
+        const { action, force } = body;
 
         if (action === 'initialize') {
-            whatsappManager.initialize(shopId);
+            whatsappManager.initialize(shopId, !!force);
             return NextResponse.json({ message: 'Initializing...' });
         }
 
