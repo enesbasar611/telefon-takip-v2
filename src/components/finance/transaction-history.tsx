@@ -47,7 +47,12 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
     });
 
     const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filtered, "createdAt", "desc");
-    const paymentLabels: Record<string, string> = { CASH: "NAKİT", CARD: "KART", TRANSFER: "HAVALE" };
+    const paymentLabels: Record<string, string> = {
+        CASH: "NAKİT",
+        CARD: "KART",
+        TRANSFER: "HAVALE",
+        DEBT: "VERESİYE"
+    };
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {

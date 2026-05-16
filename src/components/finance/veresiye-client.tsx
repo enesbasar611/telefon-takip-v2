@@ -585,7 +585,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 paymentCurrency,
                 paymentMethod,
                 selectedAccountId || undefined,
-                rates?.usd || 32.5,
+                rates?.usd || 45.5,
                 paymentNotes,
                 selectedDebtIds
             );
@@ -600,7 +600,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                     setWhatsappCustomer(paymentCustomer);
                     const paidText = paymentCurrency === "USD" ? `$${amount.toLocaleString('tr-TR')}` : `₺${amount.toLocaleString('tr-TR')}`;
                     let msg = `*${paymentCustomer.name} - Tahsilat Makbuzu*\n\n`;
-                    msg += `✅ Toplam Ödeme: ${paidText} alındı.\n\n`;
+                    msg += `✅ *Ödeme Alındı:* ${paidText}\n\n`;
 
                     const paidItems = selectedDebtIds.length > 0
                         ? paymentCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id))
@@ -608,13 +608,32 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
                     if (paidItems.length > 0) {
                         msg += `*Ödeme Detayı:*\n`;
-                        paidItems.forEach((d: any) => {
+                        const sortedPaidItems = [...paidItems].sort((a, b) =>
+                            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                        );
+                        sortedPaidItems.forEach((d: any) => {
                             msg += `• ${d.notes || 'Borç'}: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')}\n`;
                         });
                         msg += `\n`;
                     }
 
-                    msg += `_İyi çalışmalar._`;
+                    msg += `*🔴 Toplam Güncel Borç:*\n`;
+                    if ((res.remainingTRY || 0) > 0) {
+                        msg += `₺${res.remainingTRY.toLocaleString('tr-TR')} (~$${(res.remainingTRY / (rates?.usd || 32.5)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                    }
+                    if ((res.remainingUSD || 0) > 0) {
+                        msg += `$${res.remainingUSD.toLocaleString('tr-TR')} (~₺${Math.round(res.remainingUSD * (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
+                    }
+
+                    if ((res.remainingTRY || 0) <= 0 && (res.remainingUSD || 0) <= 0) {
+                        msg += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
+                    } else {
+                        const total = (res.remainingTRY || 0) + ((res.remainingUSD || 0) * (rates?.usd || 32.5));
+                        msg += `--------------------\n`;
+                        msg += `*Genel Toplam:* ₺${Math.ceil(total).toLocaleString('tr-TR')}\n`;
+                    }
+
+                    msg += `\n_İyi çalışmalar._`;
 
                     setWhatsappMessageContent(msg);
                     setWhatsappModalOpen(true);
@@ -735,35 +754,75 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             let message = `*${customer.name} - Hesap Özeti*\n\n`;
 
             const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
-            if (unpaid.length > 0) {
-                // Group items by date synchronously
-                const groups: Record<string, any[]> = {};
-                for (const d of unpaid) {
-                    const dateStr = format(new Date(d.createdAt), "dd MMM yyyy", { locale: tr }).toUpperCase();
-                    if (!groups[dateStr]) groups[dateStr] = [];
-                    groups[dateStr].push(d);
+            const earliestDate = unpaid.length > 0
+                ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
+                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+            const relevantTransactions = (res.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
+
+            const combined = [
+                ...unpaid.map((d: any) => ({
+                    date: new Date(d.createdAt),
+                    type: 'DEBT',
+                    currency: d.currency || 'TRY',
+                    amount: Number(d.amount),
+                    notes: d.notes || 'Hizmet/Ürün'
+                })),
+                ...relevantTransactions.map((t: any) => ({
+                    date: new Date(t.createdAt),
+                    type: 'PAYMENT',
+                    currency: t.currency || 'TRY',
+                    amount: Number(t.amount),
+                    notes: t.description || 'Tahsilat'
+                }))
+            ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            // Group by date
+            const dateGroups: { [key: string]: any[] } = {};
+            const orderedUniqueDates: string[] = [];
+
+            combined.forEach(item => {
+                const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                if (!dateGroups[dateKey]) {
+                    dateGroups[dateKey] = [];
+                    orderedUniqueDates.push(dateKey);
                 }
+                dateGroups[dateKey].push(item);
+            });
 
-                Object.keys(groups).forEach(date => {
-                    message += `*${date}*\n`;
-                    groups[date].forEach(d => {
-                        let amountStr = d.currency === 'USD' ? `$${Number(d.remainingAmount).toLocaleString('tr-TR')}` : `₺${Number(d.remainingAmount).toLocaleString('tr-TR')}`;
-                        if (d.currency === 'USD') {
-                            amountStr += ` (~₺${(Number(d.remainingAmount) * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})`;
-                        }
-                        message += `• ${d.notes || 'Borç'}: ${amountStr}\n`;
-                    });
-                    message += `\n`;
+            orderedUniqueDates.forEach(dateKey => {
+                message += `*${dateKey}*\n`;
+                dateGroups[dateKey].forEach(item => {
+                    const isUSD = item.currency === 'USD';
+                    const symbol = isUSD ? '$' : '₺';
+                    const equivSymbol = isUSD ? '₺' : '$';
+
+                    const originalAmt = item.amount;
+                    const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
+                    const equivFormatted = equivSymbol === '$'
+                        ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : Math.round(equivalentAmt).toLocaleString('tr-TR');
+
+                    if (item.type === 'DEBT') {
+                        message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                    } else {
+                        message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                    }
                 });
+                message += `\n`;
+            });
+
+            message += `*🔴 Toplam Güncel Borç:*\n`;
+            const totalTRY = customer.totalRemainingTRY || 0;
+            const totalUSD = customer.totalRemainingUSD || 0;
+
+            if (totalTRY > 0) {
+                const equivUSD = totalTRY / usdRate;
+                message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
             }
-
-            message += `*Toplam Güncel Borç:*\n`;
-            let totalTRY = customer.totalRemainingTRY || 0;
-            let totalUSD = customer.totalRemainingUSD || 0;
-
-            if (totalTRY > 0) message += `₺${totalTRY.toLocaleString('tr-TR')}\n`;
             if (totalUSD > 0) {
-                message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${(totalUSD * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})\n`;
+                const equivTRY = totalUSD * usdRate;
+                message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
             }
 
             if (totalTRY <= 0 && totalUSD <= 0) {
@@ -813,34 +872,75 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 let message = `*${customer.name} - Hesap Özeti*\n\n`;
 
                 const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
-                if (unpaid.length > 0) {
-                    const groups: Record<string, any[]> = {};
-                    for (const d of unpaid) {
-                        const dateStr = format(new Date(d.createdAt), "dd MMM yyyy", { locale: tr }).toUpperCase();
-                        if (!groups[dateStr]) groups[dateStr] = [];
-                        groups[dateStr].push(d);
+                const earliestDate = unpaid.length > 0
+                    ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
+                    : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+                const relevantTransactions = (res.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
+
+                const combined = [
+                    ...unpaid.map((d: any) => ({
+                        date: new Date(d.createdAt),
+                        type: 'DEBT',
+                        currency: d.currency || 'TRY',
+                        amount: Number(d.amount),
+                        notes: d.notes || 'Hizmet/Ürün'
+                    })),
+                    ...relevantTransactions.map((t: any) => ({
+                        date: new Date(t.createdAt),
+                        type: 'PAYMENT',
+                        currency: t.currency || 'TRY',
+                        amount: Number(t.amount),
+                        notes: t.description || 'Tahsilat'
+                    }))
+                ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                // Group by date
+                const dateGroups: { [key: string]: any[] } = {};
+                const orderedUniqueDates: string[] = [];
+
+                combined.forEach(item => {
+                    const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                    if (!dateGroups[dateKey]) {
+                        dateGroups[dateKey] = [];
+                        orderedUniqueDates.push(dateKey);
                     }
+                    dateGroups[dateKey].push(item);
+                });
 
-                    Object.keys(groups).forEach(date => {
-                        message += `*${date}*\n`;
-                        groups[date].forEach(d => {
-                            let amountStr = d.currency === 'USD' ? `$${Number(d.remainingAmount).toLocaleString('tr-TR')}` : `₺${Number(d.remainingAmount).toLocaleString('tr-TR')}`;
-                            if (d.currency === 'USD') {
-                                amountStr += ` (~₺${(Number(d.remainingAmount) * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})`;
-                            }
-                            message += `• ${d.notes || 'Borç'}: ${amountStr}\n`;
-                        });
-                        message += `\n`;
+                orderedUniqueDates.forEach(dateKey => {
+                    message += `*${dateKey}*\n`;
+                    dateGroups[dateKey].forEach(item => {
+                        const isUSD = item.currency === 'USD';
+                        const symbol = isUSD ? '$' : '₺';
+                        const equivSymbol = isUSD ? '₺' : '$';
+
+                        const originalAmt = item.amount;
+                        const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
+                        const equivFormatted = equivSymbol === '$'
+                            ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : Math.round(equivalentAmt).toLocaleString('tr-TR');
+
+                        if (item.type === 'DEBT') {
+                            message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                        } else {
+                            message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                        }
                     });
+                    message += `\n`;
+                });
+
+                message += `*🔴 Toplam Güncel Borç:*\n`;
+                const totalTRY = customer.totalRemainingTRY || 0;
+                const totalUSD = customer.totalRemainingUSD || 0;
+
+                if (totalTRY > 0) {
+                    const equivUSD = totalTRY / usdRate;
+                    message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
                 }
-
-                message += `*Toplam Güncel Borç:*\n`;
-                let totalTRY = customer.totalRemainingTRY || 0;
-                let totalUSD = customer.totalRemainingUSD || 0;
-
-                if (totalTRY > 0) message += `₺${totalTRY.toLocaleString('tr-TR')}\n`;
                 if (totalUSD > 0) {
-                    message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${(totalUSD * usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})\n`;
+                    const equivTRY = totalUSD * usdRate;
+                    message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
                 }
 
                 if (totalTRY <= 0 && totalUSD <= 0) {
@@ -1702,37 +1802,91 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             <Button
                                 onClick={() => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    let message = `*${historyCustomer?.name} - GÜNCEL HESAP EKSTRESİ*\n\n`;
-                                    message += `_Aşağıda dükkanımıza olan borçlarınız ve yaptığınız ödemelerin detaylı dökümü bulunmaktadır:_\n\n`;
+                                    let message = `*${historyCustomer?.name} - Hesap Özeti*\n\n`;
+
+                                    const unpaidDebts = (statementData.debts || []).filter((d: any) => !d.isPaid);
+
+                                    const earliestDate = unpaidDebts.length > 0
+                                        ? new Date(unpaidDebts.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
+                                        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+                                    const relevantTransactions = (statementData.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
 
                                     const combined = [
-                                        ...(statementData.debts || []).map((d: any) => ({
+                                        ...unpaidDebts.map((d: any) => ({
                                             date: new Date(d.createdAt),
-                                            text: `🔴 Borç: ${d.notes || 'Hizmet/Ürün'} - ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')} ${d.isPaid ? '(Ödendi)' : `(Kalan: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.remainingAmount).toLocaleString('tr-TR')})`}`
+                                            type: 'DEBT',
+                                            currency: d.currency || 'TRY',
+                                            amount: Number(d.amount),
+                                            notes: d.notes || 'Hizmet/Ürün'
                                         })),
-                                        ...(statementData.transactions || []).map((t: any) => ({
+                                        ...relevantTransactions.map((t: any) => ({
                                             date: new Date(t.createdAt),
-                                            text: `🟢 Ödeme: ${t.currency === 'USD' ? '$' : '₺'}${Number(t.amount).toLocaleString('tr-TR')}`
+                                            type: 'PAYMENT',
+                                            currency: t.currency || 'TRY',
+                                            amount: Number(t.amount),
+                                            notes: t.description || 'Tahsilat'
                                         }))
                                     ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-                                    combined.forEach((item, index) => {
-                                        const dateStr = item.date.toLocaleDateString('tr-TR');
-                                        message += `${index + 1}. ${dateStr}\n   ${item.text}\n\n`;
+                                    // Group by date
+                                    const dateGroups: { [key: string]: any[] } = {};
+                                    const orderedUniqueDates: string[] = [];
+                                    combined.forEach(item => {
+                                        const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                                        if (!dateGroups[dateKey]) {
+                                            dateGroups[dateKey] = [];
+                                            orderedUniqueDates.push(dateKey);
+                                        }
+                                        dateGroups[dateKey].push(item);
                                     });
 
-                                    message += `*--------------------------*\n`;
-                                    message += `*TOPLAM GÜNCEL BORÇ:*\n`;
-                                    if (historyCustomer?.totalRemainingTRY > 0) message += `💰 TL: ₺${historyCustomer.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
-                                    if (historyCustomer?.totalRemainingUSD > 0) message += `💰 Dolar: $${historyCustomer.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+                                    orderedUniqueDates.forEach(dateKey => {
+                                        message += `*${dateKey}*\n`;
+                                        dateGroups[dateKey].forEach(item => {
+                                            const isUSD = item.currency === 'USD';
+                                            const symbol = isUSD ? '$' : '₺';
+                                            const equivSymbol = isUSD ? '₺' : '$';
+
+                                            const originalAmt = item.amount;
+                                            const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
+                                            const equivFormatted = equivSymbol === '$'
+                                                ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                : Math.round(equivalentAmt).toLocaleString('tr-TR');
+
+                                            if (item.type === 'DEBT') {
+                                                message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                                            } else {
+                                                message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                                            }
+                                        });
+                                        message += `\n`;
+                                    });
+
+                                    message += `*Toplam Güncel Borç:*\n`;
+
+                                    const totalTRY = historyCustomer?.totalRemainingTRY || 0;
+                                    const totalUSD = historyCustomer?.totalRemainingUSD || 0;
+
+                                    if (totalTRY > 0) {
+                                        const equivUSD = totalTRY / usdRate;
+                                        message += `🔴 ₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                                    }
+                                    if (totalUSD > 0) {
+                                        const equivTRY = totalUSD * usdRate;
+                                        message += `🔴 $${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
+                                    }
 
                                     if (Number(historyCustomer?.balance || 0) > 0) message += `🎁 TL Emanet: ₺${Number(historyCustomer.balance).toLocaleString('tr-TR')}\n`;
                                     if (Number(historyCustomer?.balanceUsd || 0) > 0) message += `🎁 USD Emanet: $${Number(historyCustomer.balanceUsd).toLocaleString('tr-TR')}\n`;
 
-                                    if (historyCustomer?.totalRemainingTRY <= 0 && historyCustomer?.totalRemainingUSD <= 0) {
+                                    if (totalTRY <= 0 && totalUSD <= 0) {
                                         message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
                                     } else {
-                                        message += `\n_En kısa sürede ödeme yapmanızı rica ederiz. İyi çalışmalar._`;
+                                        const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
+                                        message += `--------------------\n`;
+                                        message += `*Genel Toplam:* ₺${Math.ceil(combinedTotalTRY).toLocaleString('tr-TR')}\n`;
+                                        message += `\n_İyi çalışmalar._`;
                                     }
 
                                     setWhatsappMessageContent(message);
@@ -1744,14 +1898,24 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP EKSTRE
                             </Button>
                             <Button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                    const combined = [
+                                        ...(statementData.debts || []).map(d => ({ ...d, type: 'DEBT' })),
+                                        ...(statementData.transactions || []).map(t => ({
+                                            ...t,
+                                            type: 'PAYMENT',
+                                            notes: t.description || 'Tahsilat / Ödeme',
+                                            amount: t.amount,
+                                            remainingAmount: t.amount
+                                        }))
+                                    ];
                                     setReceiptCustomer({
                                         id: historyCustomer.customerId,
                                         name: historyCustomer.name,
                                         phone: historyCustomer.phone
                                     });
-                                    setReceiptDebts(statementData.debts);
+                                    setReceiptDebts(combined);
                                 }}
                                 variant="outline"
                                 className="rounded-xl h-10 px-4 text-[10px] font-bold border-indigo-500/20 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all gap-2"
@@ -2094,9 +2258,34 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                         </div>
                         <div className="absolute top-10 right-10 z-20 flex gap-4">
                             <Button
-                                onClick={() => {
-                                    setReceiptCustomer(portfolioCustomer);
-                                    setReceiptDebts(debts.filter((d: any) => d.customerId === portfolioCustomer.id));
+                                onClick={async () => {
+                                    const toastId = toast.loading("Fiş hazırlanıyor...");
+                                    try {
+                                        const res = await getCustomerStatement(portfolioCustomer.customerId || portfolioCustomer.id);
+                                        if (res.success) {
+                                            const combined = [
+                                                ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                ...(res.transactions || []).map((t: any) => ({
+                                                    ...t,
+                                                    type: 'PAYMENT',
+                                                    notes: t.description || 'Tahsilat / Ödeme',
+                                                    amount: t.amount,
+                                                    remainingAmount: t.amount
+                                                }))
+                                            ];
+                                            setReceiptCustomer({
+                                                id: portfolioCustomer.customerId || portfolioCustomer.id,
+                                                name: portfolioCustomer.name,
+                                                phone: portfolioCustomer.phone
+                                            });
+                                            setReceiptDebts(combined);
+                                            toast.success("Fiş dökümü hazır.", { id: toastId });
+                                        } else {
+                                            toast.error("Hata: " + res.error, { id: toastId });
+                                        }
+                                    } catch (err) {
+                                        toast.error("Bağlantı hatası.", { id: toastId });
+                                    }
                                 }}
                                 className="h-14 px-8 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-3 transition-all active:scale-95 shadow-2xl"
                             >

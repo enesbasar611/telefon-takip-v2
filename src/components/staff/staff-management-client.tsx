@@ -110,6 +110,7 @@ interface StaffMember {
 interface StaffManagementClientProps {
     staff: StaffMember[];
     logs: any[];
+    userRole?: string;
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -133,11 +134,12 @@ function RoleBadge({ role }: { role: string }) {
     );
 }
 
-function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
+function StaffEditModal({ isOpen, onClose, member, onUpdate, userRole }: {
     isOpen: boolean,
     onClose: () => void,
     member: StaffMember | null,
-    onUpdate: () => void
+    onUpdate: () => void,
+    userRole?: string
 }) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -268,30 +270,32 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-1">
-                                <Mail className="w-3 h-3" /> E-POSTA
-                            </Label>
-                            <Input
-                                value={formData.email}
-                                disabled
-                                className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4 opacity-60 italic"
-                            />
+                    {(userRole === "SUPER_ADMIN" || userRole === "SHOP_MANAGER" || userRole === "ADMIN") && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-1">
+                                    <Mail className="w-3 h-3" /> E-POSTA
+                                </Label>
+                                <Input
+                                    value={formData.email}
+                                    disabled
+                                    className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4 opacity-60 italic"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="font-black text-[10px] text-rose-500 uppercase tracking-widest pl-1 flex items-center gap-1">
+                                    <Lock className="w-3 h-3" /> YENİ ŞİFRE (ADMIN)
+                                </Label>
+                                <Input
+                                    type="password"
+                                    placeholder="Şifreyi sıfırla..."
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    className="h-12 bg-rose-500/5 dark:bg-rose-500/10 border-none rounded-2xl font-bold px-4 ring-1 ring-rose-500/20"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label className="font-black text-[10px] text-rose-500 uppercase tracking-widest pl-1 flex items-center gap-1">
-                                <Lock className="w-3 h-3" /> YENİ ŞİFRE (ADMIN)
-                            </Label>
-                            <Input
-                                type="password"
-                                placeholder="Şifreyi sıfırla..."
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="h-12 bg-rose-500/5 dark:bg-rose-500/10 border-none rounded-2xl font-bold px-4 ring-1 ring-rose-500/20"
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -414,38 +418,40 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                         )}
                     </div>
 
-                    <div className="space-y-3 pt-6 border-t border-border/10">
-                        <div className="flex items-center justify-between px-1">
-                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest">MODÜL YETKİLERİ (HASSAS)</Label>
-                            <Badge className="bg-blue-600/10 text-blue-600 border-none text-[8px] font-black tracking-widest">KRİTİK</Badge>
+                    {(userRole === "SUPER_ADMIN" || userRole === "SHOP_MANAGER" || userRole === "ADMIN") && (
+                        <div className="space-y-3 pt-6 border-t border-border/10">
+                            <div className="flex items-center justify-between px-1">
+                                <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest">MODÜL YETKİLERİ (HASSAS)</Label>
+                                <Badge className="bg-blue-600/10 text-blue-600 border-none text-[8px] font-black tracking-widest">KRİTİK</Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                {STAFF_PERMISSION_FIELDS.map((perm) => (
+                                    <motion.div
+                                        key={perm.key}
+                                        whileHover={{ scale: 1.01 }}
+                                        whileTap={{ scale: 0.99 }}
+                                        onClick={() => setFormData({ ...formData, [perm.key]: !formData[perm.key] })}
+                                        className={cn(
+                                            "p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-2 items-center text-center",
+                                            formData[perm.key]
+                                                ? "bg-blue-600/10 border-blue-600/30 text-blue-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-white/5 border-transparent opacity-60"
+                                        )}
+                                    >
+                                        <Checkbox
+                                            checked={!!formData[perm.key]}
+                                            onCheckedChange={(c) => {
+                                                setFormData({ ...formData, [perm.key]: !!c });
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-4 w-4 border-2 border-blue-600/30 data-[state=checked]:bg-blue-600"
+                                        />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">{perm.label}</span>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            {STAFF_PERMISSION_FIELDS.map((perm) => (
-                                <motion.div
-                                    key={perm.key}
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.99 }}
-                                    onClick={() => setFormData({ ...formData, [perm.key]: !formData[perm.key] })}
-                                    className={cn(
-                                        "p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-2 items-center text-center",
-                                        formData[perm.key]
-                                            ? "bg-blue-600/10 border-blue-600/30 text-blue-600 shadow-sm"
-                                            : "bg-slate-50 dark:bg-white/5 border-transparent opacity-60"
-                                    )}
-                                >
-                                    <Checkbox
-                                        checked={!!formData[perm.key]}
-                                        onCheckedChange={(c) => {
-                                            setFormData({ ...formData, [perm.key]: !!c });
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="h-4 w-4 border-2 border-blue-600/30 data-[state=checked]:bg-blue-600"
-                                    />
-                                    <span className="text-[10px] font-black uppercase tracking-tighter">{perm.label}</span>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 <DialogFooter className="p-8 bg-slate-50/50 dark:bg-white/5 gap-3 border-t border-border/10">
@@ -581,7 +587,7 @@ function RoleTemplateModal({
 
 import { PageHeader } from "@/components/ui/page-header";
 
-export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [] }: StaffManagementClientProps) {
+export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [], userRole }: StaffManagementClientProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<"all" | "SUPER_ADMIN" | "TECHNICIAN" | "MANAGER" | "CASHIER" | "COURIER">("all");
@@ -807,7 +813,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                                 <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] font-black tracking-widest px-1.5 py-0">İZİNLİ</Badge>
                                                             )}
                                                             {member.email && (
-                                                                <span className="text-[10px] font-bold text-muted-foreground/60 hidden group-hover:block transition-all italic">
+                                                                <span className="text-[10px] font-bold text-muted-foreground/60 transition-all italic block mt-0.5">
                                                                     {member.email}
                                                                 </span>
                                                             )}
@@ -935,6 +941,87 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div className="space-y-8 pt-8">
+                <Card className="rounded-[2.5rem] border-border/20 shadow-2xl overflow-hidden group">
+                    <CardHeader className="p-8 pb-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                    <Calendar className="w-5 h-5" />
+                                </div>
+                                <h2 className="font-black text-xl uppercase tracking-tight">Aylık İzin & Tatil Raporu</h2>
+                            </div>
+                            <div className="text-[10px] font-black text-muted-foreground uppercase bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-xl">
+                                {new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-8 pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {initialStaff.map((member) => {
+                                const currentMonthLeaves = member.leaves?.filter((l: any) => {
+                                    const start = new Date(l.startDate);
+                                    const now = new Date();
+                                    return start.getMonth() === now.getMonth() && start.getFullYear() === now.getFullYear();
+                                }) || [];
+
+                                const totalDays = currentMonthLeaves.reduce((acc: number, l: any) => {
+                                    const start = new Date(l.startDate);
+                                    const end = new Date(l.endDate);
+                                    const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                    return acc + diff;
+                                }, 0);
+
+                                if (totalDays === 0) return null;
+
+                                return (
+                                    <div key={member.id} className="p-6 rounded-3xl bg-slate-50 dark:bg-white/5 border border-border/10 flex flex-col gap-4 group hover:bg-white dark:hover:bg-white/10 transition-all hover:shadow-xl">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-10 w-10 border-2 border-white dark:border-white/10 shadow-lg">
+                                                    <AvatarImage src={member.image || ""} />
+                                                    <AvatarFallback className="bg-blue-600 text-white font-black text-xs uppercase italic tracking-tighter">
+                                                        {member.name?.[0]}{member.surname?.[0]}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="text-xs font-black text-foreground">{member.name} {member.surname}</p>
+                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase">{member.role}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xl font-black text-amber-500">{totalDays}</p>
+                                                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">TOPLAM GÜN</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {currentMonthLeaves.map((l: any, idx: number) => (
+                                                <div key={idx} className="flex items-center justify-between text-[9px] font-bold text-muted-foreground border-t border-border/5 pt-2">
+                                                    <span>{new Date(l.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })} - {new Date(l.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}</span>
+                                                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-tighter px-2 py-0 border-amber-500/20 text-amber-600">{l.type === 'TATIL' ? 'TATİL' : 'İZİN'}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {initialStaff.every((m: any) => !m.leaves?.some((l: any) => {
+                                const start = new Date(l.startDate);
+                                const now = new Date();
+                                return start.getMonth() === now.getMonth() && start.getFullYear() === now.getFullYear();
+                            })) && (
+                                    <div className="col-span-full py-12 text-center space-y-4">
+                                        <div className="h-16 w-16 bg-slate-100 dark:bg-white/5 rounded-3xl flex items-center justify-center mx-auto opacity-40">
+                                            <Calendar className="w-8 h-8 text-muted-foreground" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Bu ay herhangi bir izin kaydı bulunmuyor</p>
+                                    </div>
+                                )}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             <div className="space-y-6 pt-12">
@@ -1066,6 +1153,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                     router.refresh();
                     router.refresh(); // Double refresh to ensure revalidation
                 }}
+                userRole={userRole}
             />
             <StaffDeleteModal
                 isOpen={deleteModalOpen}

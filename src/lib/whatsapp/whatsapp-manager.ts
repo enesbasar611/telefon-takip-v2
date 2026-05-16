@@ -237,6 +237,14 @@ class WhatsAppManager {
 
             // Numara formatla (+ sil, @c.us ekle)
             let formattedTo = to.replace(/\D/g, '');
+
+            // Türkiye numaraları için prefix kontrolü (5xx... -> 905xx...)
+            if (formattedTo.length === 10 && formattedTo.startsWith('5')) {
+                formattedTo = '90' + formattedTo;
+            } else if (formattedTo.length === 11 && formattedTo.startsWith('05')) {
+                formattedTo = '90' + formattedTo.substring(1);
+            }
+
             if (!formattedTo.endsWith('@c.us')) {
                 formattedTo += '@c.us';
             }

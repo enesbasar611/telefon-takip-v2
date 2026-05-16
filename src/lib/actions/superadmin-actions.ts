@@ -125,14 +125,28 @@ export async function stopImpersonating() {
         const user = await checkSuperAdmin();
         console.log(`[StopImpersonate] Super Admin verified: ${user.email} (${user.id})`);
 
-        // Clear the shopId — getShopId() has a Super Admin fallback that finds the
-        // home shop automatically, so setting null here is safe.
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { shopId: null }
+        // Find the "home" shop (Başar Teknik) to return to
+        const homeShop = await prisma.shop.findFirst({
+            where: {
+                OR: [
+                    { name: { contains: "BAŞAR", mode: "insensitive" } },
+                    { name: { contains: "TEKNİK", mode: "insensitive" } }
+                ]
+            },
+            select: { id: true },
+            orderBy: { createdAt: 'asc' }
+        }) || await prisma.shop.findFirst({
+            orderBy: { createdAt: 'asc' },
+            select: { id: true }
         });
 
-        console.log(`[StopImpersonate] Successfully cleared shopId in DB`);
+        // Update the user's shopId back to their home shop
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { shopId: homeShop?.id || null }
+        });
+
+        console.log(`[StopImpersonate] Successfully returned to home shop: ${homeShop?.id}`);
         return { success: true };
     } catch (error: any) {
         console.error(`[StopImpersonate] Failed: ${error.message}`);

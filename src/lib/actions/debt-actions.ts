@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 export async function getDebts() {
   try {
@@ -41,8 +43,8 @@ export async function getThisMonthCollected() {
         shopId,
         type: "INCOME",
         OR: [
-          { description: { startsWith: "Borç Tahsilatı:" } },
-          { description: { startsWith: "Toplu Borç Tahsilatı:" } },
+          { description: { contains: "Borç Tahsilatı" } },
+          { description: { startsWith: "Yapılan Ödeme" } },
           { category: "Tahsilat" }
         ],
         createdAt: { gte: startOfMonth }
@@ -128,7 +130,26 @@ export async function createDebt(data: {
         }
       });
 
-      // 2. Handle product stock deduction for items
+      // 3. Create a Transaction record for this debt entry
+      // This makes it visible in financial records/logs (kasa defteri) 
+      // but DOES NOT affect finance account balances since financeAccountId is undefined.
+      await tx.transaction.create({
+        data: {
+          type: "INCOME", // It's an asset increase (receivable)
+          amount: data.amount,
+          currency: currency,
+          description: `VERESİYE BORÇ: ${data.notes || (data.items ? data.items[0]?.title : 'Yeni Borç')}${initialRemaining < data.amount ? ' (Kısmi Ödeme Yapıldı)' : ''}`,
+          paymentMethod: "DEBT",
+          userId,
+          shopId,
+          customerId: data.customerId,
+          debtId: newDebt.id,
+          category: "Veresiye",
+          // Note: financeAccountId is left undefined so it doesn't affect any kasa balance
+        }
+      });
+
+      // 4. Handle product stock deduction for items
       if (data.items) {
         for (const item of data.items) {
           if (item.productId && item.quantity) {
@@ -433,7 +454,7 @@ export async function collectGlobalCustomerPayment(
           type: "INCOME",
           amount: paymentAmount,
           currency: paymentCurrency,
-          description: notes || `Toplu Borç Tahsilatı: ${customerName}`,
+          description: notes || `Yapılan Ödeme (${format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })})`,
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,
@@ -571,7 +592,8 @@ export async function getDebtStatsDetails(filter: {
           type: 'INCOME',
           OR: [
             { description: { startsWith: "Borç Tahsilatı:" } },
-            { description: { startsWith: "Toplu Borç Tahsilatı:" } },
+            { description: { contains: "Borç Tahsilatı" } },
+            { description: { startsWith: "Yapılan Ödeme" } },
             { category: "Tahsilat" }
           ],
           ...dateFilter

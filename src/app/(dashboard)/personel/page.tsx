@@ -1,7 +1,7 @@
 import { getStaff } from "@/lib/actions/staff-actions";
 import { StaffManagementClient } from "@/components/staff/staff-management-client";
 import prisma from "@/lib/prisma";
-import { getShopId } from "@/lib/auth";
+import { getShopId, getSession } from "@/lib/auth";
 import { serializePrisma } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +43,14 @@ export default async function PersonelPage() {
     }))
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10);
 
+  const session = await getSession();
+  const userRole = session?.user?.role;
+
   return (
     <StaffManagementClient
       staff={serializePrisma(staff)}
       logs={serializePrisma(combinedLogs)}
+      userRole={userRole}
     />
   );
 }

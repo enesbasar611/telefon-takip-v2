@@ -26,6 +26,9 @@ import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 
 interface AddDebtModalProps {
     children?: React.ReactNode;
@@ -77,7 +80,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     const { toast } = useToast();
     const router = useRouter();
 
-    const { defaultCurrency } = useDashboardData();
+    const { defaultCurrency, settings } = useDashboardData();
+    const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+    const [whatsappData, setWhatsappData] = useState({ phone: "", message: "", customerName: "" });
     const usdRate = rates?.usd || 32.5;
     const normalizedDefaultCurrency: "TRY" | "USD" = defaultCurrency === "USD" ? "USD" : "TRY";
 
@@ -311,7 +316,6 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                         quantity: item.quantity
                     }]
                 });
-
                 if (!res.success) {
                     anyFailed = true;
                 }
@@ -319,6 +323,40 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
             if (!anyFailed) {
                 toast({ title: "Başarılı", description: `${debtItems.length} adet alacak kaydı ve ilgili stok hareketleri oluşturuldu.` });
+
+                // Construct WhatsApp Message
+                try {
+                    const now = new Date();
+                    const dateStr = format(now, "dd MMM yyyy HH:mm", { locale: tr }).toUpperCase();
+                    let message = `*${dateStr}*\n\n`;
+
+                    debtItems.forEach(item => {
+                        const isUSD = item.currency === "USD";
+                        const symbol = isUSD ? '$' : '₺';
+                        const equivSymbol = isUSD ? '₺' : '$';
+
+                        const originalAmt = item.amount;
+                        const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
+                        const equivFormatted = equivSymbol === '$'
+                            ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : Math.round(equivalentAmt).toLocaleString('tr-TR');
+
+                        message += `• ${item.title}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                    });
+
+                    const sanitizedPhone = data.customerPhone.replace(/\D/g, "");
+                    const finalPhone = sanitizedPhone.startsWith('90') ? sanitizedPhone : `90${sanitizedPhone}`;
+
+                    setWhatsappData({
+                        phone: finalPhone,
+                        message: message,
+                        customerName: data.customerName
+                    });
+                    setIsWhatsAppModalOpen(true);
+                } catch (waError) {
+                    console.error("WhatsApp Message Preparation Error:", waError);
+                }
+
                 setOpen(false);
                 reset();
                 setPhoneValue("");
@@ -343,241 +381,251 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
     const grandTotalTRY = debtItems.reduce((acc, i) => acc + i.convertedAmount, 0);
 
     return (
-        <Dialog open={open} onOpenChange={(val) => {
-            setOpen(val);
-            if (!val) {
-                setSelectedCustomerInfo(null);
-                setNameValue("");
-                setPhoneValue("");
-                setDebtItems([]);
-                setItemQuantity("1");
-                reset();
-            }
-        }}>
-            <DialogTrigger asChild>
-                {children || (
-                    <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-6 h-12 shadow-xl border border-white/10 transition-all active:scale-95 group">
-                        <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                        <span className="font-inter font-light tracking-wide">Alacak Kaydet</span>
-                    </Button>
-                )}
-            </DialogTrigger>
+        <>
+            <Dialog open={open} onOpenChange={(val) => {
+                setOpen(val);
+                if (!val) {
+                    setSelectedCustomerInfo(null);
+                    setNameValue("");
+                    setPhoneValue("");
+                    setDebtItems([]);
+                    setItemQuantity("1");
+                    reset();
+                }
+            }}>
+                <DialogTrigger asChild>
+                    {children || (
+                        <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-6 h-12 shadow-xl border border-white/10 transition-all active:scale-95 group">
+                            <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                            <span className="font-inter font-light tracking-wide">Alacak Kaydet</span>
+                        </Button>
+                    )}
+                </DialogTrigger>
 
-            <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[800px] h-[96vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] rounded-b-none sm:rounded-b-[2.5rem] shadow-2xl flex flex-col transition-all duration-300">
-                <div className="absolute inset-0 p-[2px] rounded-[inherit] overflow-hidden pointer-events-none z-0">
-                    <motion.div
-                        animate={{ rotate: [0, 360] }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,#6366f1,#a855f7,#ec4899,#6366f1)] opacity-40 blur-sm"
-                    />
-                    <div className="absolute inset-0 bg-background rounded-[inherit]" />
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden relative z-10">
-                    <div className="p-5 md:p-8 bg-card/50 border-b border-border/50 relative overflow-hidden">
-                        <div className="md:hidden w-12 h-1.5 bg-border rounded-full mx-auto mb-4" />
-                        <DialogHeader className="relative z-10">
-                            <DialogTitle className="font-medium text-xl md:text-2xl">Bakkal Defteri (Veresiye)</DialogTitle>
-                            <DialogDescription className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-widest mt-1">
-                                Kalem kalem borç girişi yapın, otomatik kura çevirin.
-                            </DialogDescription>
-                        </DialogHeader>
+                <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[800px] h-[96vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] rounded-b-none sm:rounded-b-[2.5rem] shadow-2xl flex flex-col transition-all duration-300">
+                    <div className="absolute inset-0 p-[2px] rounded-[inherit] overflow-hidden pointer-events-none z-0">
+                        <motion.div
+                            animate={{ rotate: [0, 360] }}
+                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,#6366f1,#a855f7,#ec4899,#6366f1)] opacity-40 blur-sm"
+                        />
+                        <div className="absolute inset-0 bg-background rounded-[inherit]" />
                     </div>
 
-                    <div className="p-5 md:p-8 space-y-8 overflow-y-auto flex-1 scrollbar-hide">
-                        {/* Customer Resolution */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2 relative">
-                                <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri / Bayi</Label>
-                                <div className="relative group overflow-hidden rounded-xl md:rounded-2xl">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                                    <Input
-                                        value={nameValue}
-                                        onChange={(e) => {
-                                            setNameValue(e.target.value);
-                                            setValue("customerName", e.target.value);
-                                        }}
-                                        placeholder="İsim ile ara veya yeni yaz"
-                                        className="h-12 bg-card border-border/50 rounded-[inherit] pl-12 text-sm focus-visible:ring-0"
-                                    />
-                                </div>
-                                <AnimatePresence>
-                                    {customerSuggestions?.length > 0 && (
-                                        <motion.div className="absolute top-full left-0 w-full bg-popover border border-border mt-2 rounded-2xl shadow-2xl z-[100] max-h-48 overflow-y-auto p-2">
-                                            {customerSuggestions.map((c) => (
-                                                <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)} className="w-full text-left p-3 hover:bg-indigo-500 hover:text-white rounded-xl transition-all flex justify-between items-center text-sm">
-                                                    <span>{c.name}</span>
-                                                    <span className="text-[10px] opacity-60">{c.phone}</span>
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                            <PhoneInput label="TELEFON" value={phoneValue} isLookingUp={isLookingUp} onChange={(val) => { setPhoneValue(val); setValue("customerPhone", val); }} />
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden relative z-10">
+                        <div className="p-5 md:p-8 bg-card/50 border-b border-border/50 relative overflow-hidden">
+                            <div className="md:hidden w-12 h-1.5 bg-border rounded-full mx-auto mb-4" />
+                            <DialogHeader className="relative z-10">
+                                <DialogTitle className="font-medium text-xl md:text-2xl">Bakkal Defteri (Veresiye)</DialogTitle>
+                                <DialogDescription className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-widest mt-1">
+                                    Kalem kalem borç girişi yapın, otomatik kura çevirin.
+                                </DialogDescription>
+                            </DialogHeader>
                         </div>
 
-                        {/* Existing debts section removed as requested by user */}
-
-                        {/* ADD ITEM SECTION */}
-                        <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">
-                            <div className="flex items-center gap-2 text-indigo-500 text-[10px] font-bold uppercase tracking-widest">
-                                <PlusCircle className="w-4 h-4" />
-                                Yeni Kalem Ekle
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                                <div className="md:col-span-4 space-y-2 relative">
-                                    <Label className="text-[9px] text-muted-foreground uppercase">Ürün / Açıklama</Label>
-                                    <div className="relative group overflow-hidden rounded-xl">
+                        <div className="p-5 md:p-8 space-y-8 overflow-y-auto flex-1 scrollbar-hide">
+                            {/* Customer Resolution */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2 relative">
+                                    <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri / Bayi</Label>
+                                    <div className="relative group overflow-hidden rounded-xl md:rounded-2xl">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                                         <Input
-                                            value={itemTitle}
+                                            value={nameValue}
                                             onChange={(e) => {
-                                                setItemTitle(e.target.value);
-                                                if (selectedProduct && e.target.value !== selectedProduct.name) {
-                                                    setSelectedProduct(null);
-                                                }
+                                                setNameValue(e.target.value);
+                                                setValue("customerName", e.target.value);
                                             }}
-                                            placeholder="Şarj aleti, Kılıf, İşçilik..."
-                                            className="h-11 bg-card rounded-xl pr-10"
+                                            placeholder="İsim ile ara veya yeni yaz"
+                                            className="h-12 bg-card border-border/50 rounded-[inherit] pl-12 text-sm focus-visible:ring-0"
                                         />
-                                        {isSearchingProducts && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                            </div>
-                                        )}
                                     </div>
                                     <AnimatePresence>
-                                        {productSuggestions.length > 0 && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className="absolute top-full left-0 w-full bg-popover border border-border mt-1 rounded-xl shadow-2xl z-[110] max-h-48 overflow-y-auto p-1"
-                                            >
-                                                {productSuggestions.map((p) => (
-                                                    <button
-                                                        key={p.id}
-                                                        type="button"
-                                                        onClick={() => handleSelectProduct(p)}
-                                                        className="w-full text-left p-2 hover:bg-indigo-500 hover:text-white rounded-lg transition-all flex justify-between items-center text-xs"
-                                                    >
-                                                        <div className="flex flex-col">
-                                                            <span>{p.name}</span>
-                                                            <span className="text-[9px] opacity-60">Stok: {p.stock}</span>
-                                                        </div>
-                                                        <span className="font-bold">{formatProductPrice(p)}</span>
+                                        {customerSuggestions?.length > 0 && (
+                                            <motion.div className="absolute top-full left-0 w-full bg-popover border border-border mt-2 rounded-2xl shadow-2xl z-[100] max-h-48 overflow-y-auto p-2">
+                                                {customerSuggestions.map((c) => (
+                                                    <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)} className="w-full text-left p-3 hover:bg-indigo-500 hover:text-white rounded-xl transition-all flex justify-between items-center text-sm">
+                                                        <span>{c.name}</span>
+                                                        <span className="text-[10px] opacity-60">{c.phone}</span>
                                                     </button>
                                                 ))}
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[9px] text-muted-foreground uppercase">Adet</Label>
-                                    <Input
-                                        type="number"
-                                        min={1}
-                                        step={1}
-                                        value={itemQuantity}
-                                        onChange={(e) => setItemQuantity(e.target.value)}
-                                        className="h-11 bg-card rounded-xl font-mono"
-                                    />
+                                <PhoneInput label="TELEFON" value={phoneValue} isLookingUp={isLookingUp} onChange={(val) => { setPhoneValue(val); setValue("customerPhone", val); }} />
+                            </div>
+
+                            {/* Existing debts section removed as requested by user */}
+
+                            {/* ADD ITEM SECTION */}
+                            <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                                <div className="flex items-center gap-2 text-indigo-500 text-[10px] font-bold uppercase tracking-widest">
+                                    <PlusCircle className="w-4 h-4" />
+                                    Yeni Kalem Ekle
                                 </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[9px] text-muted-foreground uppercase">Birim Tutar</Label>
-                                    <PriceInput value={itemAmount} onChange={(v) => setItemAmount(String(v))} prefix={itemCurrency === 'TRY' ? '₺' : '$'} className="h-11 bg-card rounded-xl" />
-                                </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[9px] text-muted-foreground uppercase">Birim</Label>
-                                    <div className="flex bg-muted p-1 rounded-xl h-11">
-                                        <button type="button" onClick={() => handleSetItemCurrency("TRY")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "TRY" ? "bg-white dark:bg-zinc-800 shadow-sm text-emerald-500" : "text-muted-foreground")}>TL</button>
-                                        <button type="button" onClick={() => handleSetItemCurrency("USD")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "USD" ? "bg-white dark:bg-zinc-800 shadow-sm text-blue-500" : "text-muted-foreground")}>USD</button>
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                    <div className="md:col-span-4 space-y-2 relative">
+                                        <Label className="text-[9px] text-muted-foreground uppercase">Ürün / Açıklama</Label>
+                                        <div className="relative group overflow-hidden rounded-xl">
+                                            <Input
+                                                value={itemTitle}
+                                                onChange={(e) => {
+                                                    setItemTitle(e.target.value);
+                                                    if (selectedProduct && e.target.value !== selectedProduct.name) {
+                                                        setSelectedProduct(null);
+                                                    }
+                                                }}
+                                                placeholder="Şarj aleti, Kılıf, İşçilik..."
+                                                className="h-11 bg-card rounded-xl pr-10"
+                                            />
+                                            {isSearchingProducts && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <AnimatePresence>
+                                            {productSuggestions.length > 0 && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="absolute top-full left-0 w-full bg-popover border border-border mt-1 rounded-xl shadow-2xl z-[110] max-h-48 overflow-y-auto p-1"
+                                                >
+                                                    {productSuggestions.map((p) => (
+                                                        <button
+                                                            key={p.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectProduct(p)}
+                                                            className="w-full text-left p-2 hover:bg-indigo-500 hover:text-white rounded-lg transition-all flex justify-between items-center text-xs"
+                                                        >
+                                                            <div className="flex flex-col">
+                                                                <span>{p.name}</span>
+                                                                <span className="text-[9px] opacity-60">Stok: {p.stock}</span>
+                                                            </div>
+                                                            <span className="font-bold">{formatProductPrice(p)}</span>
+                                                        </button>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                    <div className="md:col-span-2 space-y-2">
+                                        <Label className="text-[9px] text-muted-foreground uppercase">Adet</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            step={1}
+                                            value={itemQuantity}
+                                            onChange={(e) => setItemQuantity(e.target.value)}
+                                            className="h-11 bg-card rounded-xl font-mono"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-2">
+                                        <Label className="text-[9px] text-muted-foreground uppercase">Birim Tutar</Label>
+                                        <PriceInput value={itemAmount} onChange={(v) => setItemAmount(String(v))} prefix={itemCurrency === 'TRY' ? '₺' : '$'} className="h-11 bg-card rounded-xl" />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-2">
+                                        <Label className="text-[9px] text-muted-foreground uppercase">Birim</Label>
+                                        <div className="flex bg-muted p-1 rounded-xl h-11">
+                                            <button type="button" onClick={() => handleSetItemCurrency("TRY")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "TRY" ? "bg-white dark:bg-zinc-800 shadow-sm text-emerald-500" : "text-muted-foreground")}>TL</button>
+                                            <button type="button" onClick={() => handleSetItemCurrency("USD")} className={cn("flex-1 text-[10px] font-bold rounded-lg", itemCurrency === "USD" ? "bg-white dark:bg-zinc-800 shadow-sm text-blue-500" : "text-muted-foreground")}>USD</button>
+                                        </div>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <Button type="button" onClick={addItem} className="w-full h-11 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl">Ekle</Button>
                                     </div>
                                 </div>
-                                <div className="md:col-span-2">
-                                    <Button type="button" onClick={addItem} className="w-full h-11 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl">Ekle</Button>
+                                {itemCurrency === "USD" && rates && (
+                                    <div className="text-[10px] text-muted-foreground italic flex justify-between items-center px-2">
+                                        <span>Anlık Kur: 1$ = ₺{rates.usd}</span>
+                                        <span>Karşılığı: ₺{(Number(itemAmount) * Math.max(1, Math.floor(Number(itemQuantity) || 1)) * rates.usd).toLocaleString('tr-TR')}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* LIST OF ITEMS */}
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Eklenen Kalemler</Label>
+                                {debtItems.length === 0 ? (
+                                    <div className="h-24 rounded-[2rem] border border-dashed border-border/50 flex items-center justify-center text-xs text-muted-foreground italic bg-muted/20">
+                                        Henüz bir kalem eklenmedi...
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 overflow-y-auto max-h-[300px] scrollbar-hide">
+                                        <AnimatePresence>
+                                            {debtItems.map((item) => (
+                                                <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex justify-between items-center p-4 bg-card rounded-2xl border border-border/50 group hover:border-indigo-500/30 transition-all">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-medium">{item.title}</span>
+                                                        <span className="text-[10px] text-muted-foreground">{item.quantity || 1} adet</span>
+                                                        {item.currency === "USD" && <span className="text-[10px] text-muted-foreground italic">Kur ile hesaplandı: ₺{item.convertedAmount.toLocaleString('tr-TR')}</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className={cn("text-sm font-bold", item.currency === "USD" ? "text-blue-500" : "text-emerald-500")}>
+                                                            {item.currency === "TRY" ? '₺' : '$'}{item.amount.toLocaleString('tr-TR')}
+                                                        </span>
+                                                        <button type="button" onClick={() => removeItem(item.id)} className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <PlusCircle className="w-4 h-4 rotate-45" />
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* SUMMARY */}
+                            <div className="p-6 rounded-[2.5rem] bg-card dark:bg-zinc-900 border border-border/50 shadow-lg relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-10"><FileText className="w-24 h-24 rotate-12" /></div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
+                                    <div className="space-y-1">
+                                        <span className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Topl. TL</span>
+                                        <span className="text-xl font-mono text-foreground">₺{totalTRY.toLocaleString('tr-TR')}</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="block text-[10px] text-blue-500 font-bold uppercase tracking-widest">Topl. USD</span>
+                                        <span className="text-xl font-mono text-foreground">${totalUSD.toLocaleString('tr-TR')}</span>
+                                    </div>
+                                    <div className="col-span-2 md:col-span-1 space-y-1 md:text-right">
+                                        <span className="block text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Genel Toplam (TL)</span>
+                                        <span className="text-2xl font-black text-emerald-500">₺{grandTotalTRY.toLocaleString('tr-TR')}</span>
+                                    </div>
                                 </div>
                             </div>
-                            {itemCurrency === "USD" && rates && (
-                                <div className="text-[10px] text-muted-foreground italic flex justify-between items-center px-2">
-                                    <span>Anlık Kur: 1$ = ₺{rates.usd}</span>
-                                    <span>Karşılığı: ₺{(Number(itemAmount) * Math.max(1, Math.floor(Number(itemQuantity) || 1)) * rates.usd).toLocaleString('tr-TR')}</span>
-                                </div>
-                            )}
-                        </div>
 
-                        {/* LIST OF ITEMS */}
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Eklenen Kalemler</Label>
-                            {debtItems.length === 0 ? (
-                                <div className="h-24 rounded-[2rem] border border-dashed border-border/50 flex items-center justify-center text-xs text-muted-foreground italic bg-muted/20">
-                                    Henüz bir kalem eklenmedi...
-                                </div>
-                            ) : (
-                                <div className="space-y-2 overflow-y-auto max-h-[300px] scrollbar-hide">
-                                    <AnimatePresence>
-                                        {debtItems.map((item) => (
-                                            <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex justify-between items-center p-4 bg-card rounded-2xl border border-border/50 group hover:border-indigo-500/30 transition-all">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-medium">{item.title}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{item.quantity || 1} adet</span>
-                                                    {item.currency === "USD" && <span className="text-[10px] text-muted-foreground italic">Kur ile hesaplandı: ₺{item.convertedAmount.toLocaleString('tr-TR')}</span>}
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className={cn("text-sm font-bold", item.currency === "USD" ? "text-blue-500" : "text-emerald-500")}>
-                                                        {item.currency === "TRY" ? '₺' : '$'}{item.amount.toLocaleString('tr-TR')}
-                                                    </span>
-                                                    <button type="button" onClick={() => removeItem(item.id)} className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <PlusCircle className="w-4 h-4 rotate-45" />
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* SUMMARY */}
-                        <div className="p-6 rounded-[2.5rem] bg-card dark:bg-zinc-900 border border-border/50 shadow-lg relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-10"><FileText className="w-24 h-24 rotate-12" /></div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Topl. TL</span>
-                                    <span className="text-xl font-mono text-foreground">₺{totalTRY.toLocaleString('tr-TR')}</span>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] text-blue-500 font-bold uppercase tracking-widest">Topl. USD</span>
-                                    <span className="text-xl font-mono text-foreground">${totalUSD.toLocaleString('tr-TR')}</span>
-                                </div>
-                                <div className="col-span-2 md:col-span-1 space-y-1 md:text-right">
-                                    <span className="block text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Genel Toplam (TL)</span>
-                                    <span className="text-2xl font-black text-emerald-500">₺{grandTotalTRY.toLocaleString('tr-TR')}</span>
+                            {/* DUE DATE */}
+                            <div className="space-y-2">
+                                <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Ödeme Sözü Tarihi (Opsiyonel)</Label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input type="date" {...register("dueDate")} className="h-12 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* DUE DATE */}
-                        <div className="space-y-2">
-                            <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Ödeme Sözü Tarihi (Opsiyonel)</Label>
-                            <div className="relative">
-                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="date" {...register("dueDate")} className="h-12 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
-                            </div>
+                        <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
+                            <DialogFooter className="flex-row gap-3">
+                                <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
+                                <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl gap-3 shadow-xl border border-indigo-500/20 group">
+                                    {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />}
+                                    <span className="font-inter font-light uppercase text-xs">Hesaba Geçir</span>
+                                </Button>
+                            </DialogFooter>
                         </div>
-                    </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
-                    <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
-                        <DialogFooter className="flex-row gap-3">
-                            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
-                            <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl gap-3 shadow-xl border border-indigo-500/20 group">
-                                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />}
-                                <span className="font-inter font-light uppercase text-xs">Hesaba Geçir</span>
-                            </Button>
-                        </DialogFooter>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
+            <WhatsAppConfirmModal
+                isOpen={isWhatsAppModalOpen}
+                onClose={() => setIsWhatsAppModalOpen(false)}
+                phone={whatsappData.phone}
+                customerName={whatsappData.customerName}
+                initialMessage={whatsappData.message}
+            />
+        </>
     );
 }

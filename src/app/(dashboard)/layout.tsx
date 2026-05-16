@@ -124,7 +124,7 @@ export default async function DashboardLayout({
 
                                 {!isCourier && <GlobalSearch />}
 
-                                {isSuperAdmin && (session.user as any).shopId && !shop?.name?.toLowerCase().includes("başar") && (
+                                {isSuperAdmin && (session.user as any).isImpersonating && (
                                     <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
                                 )}
 

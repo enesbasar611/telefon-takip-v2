@@ -77,7 +77,11 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
                 toast({ title: "Başarılı", description: `${successCount} mesaj başarıyla gönderildi.` });
                 onClose();
             } else {
-                toast({ title: "Hata", description: "Mesajlar gönderilemedi.", variant: "destructive" });
+                toast({
+                    title: "Hata",
+                    description: "Mesaj gönderilemedi. WhatsApp bağlantınızı veya numara formatını kontrol edin.",
+                    variant: "destructive"
+                });
             }
         } else {
             // Fallback to Web/App WhatsApp (one by one)

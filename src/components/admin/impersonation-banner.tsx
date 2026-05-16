@@ -15,11 +15,12 @@ export function ImpersonationBanner({ shopName }: { shopName: string }) {
         startTransition(async () => {
             const result = await stopImpersonating();
             if (result.success) {
-                console.log("[StopImpersonate] Updating session cache...");
-                await update();
                 toast.success("Admin paneline dönüldü.");
-                // Hard redirect ensures a fresh HTTP request with the updated JWT cookie.
-                window.location.href = "/admin/shops";
+                await update();
+                // Short timeout to allow state propagation
+                setTimeout(() => {
+                    window.location.href = "/admin/shops";
+                }, 1000);
             } else {
                 toast.error(result.error || "Hata oluştu.");
             }
@@ -27,7 +28,7 @@ export function ImpersonationBanner({ shopName }: { shopName: string }) {
     };
 
     return (
-        <div className="bg-indigo-600 text-white py-2 px-4 flex items-center justify-between sticky top-0 z-[100] shadow-lg animate-in slide-in-from-top duration-500">
+        <div className="bg-amber-600 text-white py-3 px-4 flex items-center justify-between sticky top-0 z-[100] shadow-xl border-b border-white/20 animate-in slide-in-from-top duration-500">
             <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-1.5 rounded-lg">
                     <ShieldAlert className="w-4 h-4" />

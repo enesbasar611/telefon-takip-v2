@@ -51,19 +51,35 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
     const currentUsdRate = Number(rates?.usd) || 34.5;
     const portfolioTotal = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
 
-    // Filter items to display based on showPaid
-    // If showPaid is false, only show UNPAID DEBTS (exclude payments and paid debts)
-    const displayDebts = showPaid ? debts : debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
+    // Determine relevant timeframe for payments if showPaid is false
+    const unpaid = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
+    const earliestDate = unpaid.length > 0
+        ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Group items by date
-    const groupedItems = displayDebts.reduce((groups: any, item: any) => {
-        const date = format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr });
-        if (!groups[date]) {
-            groups[date] = [];
+    // Filter items to display
+    const displayDebts = debts.filter((d: any) => {
+        if (showPaid) return true;
+        if (d.type === 'PAYMENT') {
+            // Show recent payments (within 30 days or since oldest unpaid debt)
+            return new Date(d.createdAt) >= earliestDate;
         }
-        groups[date].push(item);
-        return groups;
-    }, {});
+        return !d.isPaid;
+    });
+
+    // Group items by date and sort within group
+    const groups = displayDebts
+        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .reduce((groups: any, item: any) => {
+            const date = format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr });
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(item);
+            return groups;
+        }, {});
+
+    const sortedDates = Object.keys(groups);
 
     return (
         <div className="bg-white p-6 w-[380px] font-sans text-slate-900 relative">
@@ -91,14 +107,14 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
             {/* Table based List */}
             <div className="space-y-4 mb-6 min-h-[50px]">
-                {Object.keys(groupedItems).map((date) => {
-                    const dailyTRY = groupedItems[date]
+                {sortedDates.map((date) => {
+                    const dailyTRY = groups[date]
                         .filter((item: any) => item.type !== 'PAYMENT' && item.currency !== 'USD')
                         .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
-                    const dailyUSD = groupedItems[date]
+                    const dailyUSD = groups[date]
                         .filter((item: any) => item.type !== 'PAYMENT' && item.currency === 'USD')
                         .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
-                    const dailyPayment = groupedItems[date]
+                    const dailyPayment = groups[date]
                         .filter((item: any) => item.type === 'PAYMENT')
                         .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
 
@@ -131,7 +147,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {groupedItems[date].map((item: any, idx: number) => {
+                                    {groups[date].map((item: any, idx: number) => {
                                         const isDebt = item.type !== 'PAYMENT';
                                         return (
                                             <tr key={idx} className={cn(
@@ -170,8 +186,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                             </span>
                                                         )}
                                                         <span>
-                                                            {!isDebt ? '-' : ''}
-                                                            {isDebt && (item.currency === 'USD' ? '$' : '₺')}
+                                                            {!isDebt && '-'}
+                                                            {item.currency === 'USD' ? '$' : '₺'}
                                                             {Number(item.amount).toLocaleString('tr-TR')}
                                                         </span>
                                                     </div>
@@ -208,7 +224,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                     <div className="pt-1.5 mt-1 border-t border-slate-400 border-dashed flex justify-between items-end">
                         <div className="flex flex-col gap-0">
                             <span className="text-[7px] font-medium opacity-70 uppercase tracking-tighter">KUR: $1 = ₺{currentUsdRate}</span>
-                            <span className="text-xs font-black uppercase">GENEL TOPLAM:</span>
+                            <span className="text-xs font-black uppercase">🔴 GENEL TOPLAM:</span>
                         </div>
                         <span className="text-lg font-black tabular-nums leading-none">₺{portfolioTotal.toLocaleString('tr-TR')}</span>
                     </div>

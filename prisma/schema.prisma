@@ -481,6 +481,7 @@ model Transaction {
   paymentMethod    PaymentMethod   @default(CASH)
   userId           String
   saleId           String?         @unique
+  debtId           String?
   financeAccountId String?
   dailySessionId   String?
   category         String?
@@ -490,6 +491,7 @@ model Transaction {
   runningBalance   Decimal?        @db.Decimal(12, 2)
   attachments      Attachment[]
   customer         Customer?       @relation(fields: [customerId], references: [id])
+  debt             Debt?           @relation(fields: [debtId], references: [id])
   dailySession     DailySession?   @relation(fields: [dailySessionId], references: [id])
   financeAccount   FinanceAccount? @relation(fields: [financeAccountId], references: [id])
   sale             Sale?           @relation(fields: [saleId], references: [id])
@@ -588,17 +590,18 @@ model Debt {
   remainingAmount Decimal   @db.Decimal(10, 2)
   dueDate         DateTime?
   isPaid          Boolean   @default(false)
-  isTracking      Boolean   @default(false)
+  isTracking      Boolean       @default(false)
   notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   shopId          String
-  currency        String    @default("TRY")
-  exchangeRate    Decimal?  @db.Decimal(10, 4)
-  saleId          String?   @unique
-  customer        Customer  @relation(fields: [customerId], references: [id])
-  sale            Sale?     @relation(fields: [saleId], references: [id])
-  shop            Shop      @relation(fields: [shopId], references: [id])
+  currency        String        @default("TRY")
+  exchangeRate    Decimal?      @db.Decimal(10, 4)
+  saleId          String?       @unique
+  transactions    Transaction[]
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  sale            Sale?         @relation(fields: [saleId], references: [id])
+  shop            Shop          @relation(fields: [shopId], references: [id])
 }
 
 model Supplier {

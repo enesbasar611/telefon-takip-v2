@@ -464,12 +464,18 @@ export async function getDailySummary() {
           shopId,
           type: 'INCOME',
           createdAt: { gte: today },
-          category: { not: "AÇILIŞ" } // Exclude opening balances from income
+          category: { not: "AÇILIŞ" },
+          paymentMethod: { not: "DEBT" } // Veresiye işlemleri nakit gelir sayılmasın
         },
         _sum: { amount: true }
       }),
       prisma.transaction.aggregate({
-        where: { shopId, type: 'EXPENSE', createdAt: { gte: today } },
+        where: {
+          shopId,
+          type: 'EXPENSE',
+          createdAt: { gte: today },
+          paymentMethod: { not: "DEBT" }
+        },
         _sum: { amount: true }
       }),
       prisma.debt.aggregate({
@@ -587,7 +593,7 @@ export async function closeDailySession(id: string, actualBalance: number, notes
         .map(t => t.id);
 
       const nonKasaTxs = session.transactions.filter(
-        t => !kasaLinkedTxIds.includes(t.id) && t.financeAccountId === null
+        t => !kasaLinkedTxIds.includes(t.id) && t.financeAccountId === null && t.paymentMethod !== "DEBT"
       );
 
       const unlinkedNet = nonKasaTxs.reduce((acc, t) => {

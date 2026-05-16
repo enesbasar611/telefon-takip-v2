@@ -40,9 +40,11 @@ import { isModuleEnabled, getIndustryConfig } from "@/lib/industry-utils";
 import { cn } from "@/lib/utils";
 import { Shop } from "@prisma/client";
 
-const getMenuItems = (shop: any, userRole?: string) => {
+const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) => {
   const config = getIndustryConfig(shop?.industry);
   const labels = config.labels;
+
+  const effectiveRole = isImpersonating ? "SHOP_MANAGER" : userRole;
 
   return [
     {
@@ -50,7 +52,7 @@ const getMenuItems = (shop: any, userRole?: string) => {
       label: "Anasayfa",
       href: "/dashboard",
     },
-    ...(userRole === "COURIER" || userRole === "ADMIN" || userRole === "SUPER_ADMIN" || userRole === "SHOP_MANAGER" ? [{
+    ...(effectiveRole === "COURIER" || effectiveRole === "ADMIN" || effectiveRole === "SUPER_ADMIN" || effectiveRole === "SHOP_MANAGER" ? [{
       icon: Truck,
       label: "Kurye Görevleri",
       href: "/kurye",
@@ -118,7 +120,7 @@ const getMenuItems = (shop: any, userRole?: string) => {
       href: "/ayarlar",
       subItems: [
         { label: "Sistem Ayarları", href: "/ayarlar" },
-        ...(userRole === "SUPER_ADMIN" ? [
+        ...(effectiveRole === "SUPER_ADMIN" ? [
           { label: "Sektör Yönetimi", href: "/ayarlar/sektorler" },
           { label: "Tüm Dükkanlar (Admin)", href: "/admin/shops" },
         ] : []),
@@ -175,7 +177,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   }, []);
 
   const userRole = session?.user?.role || user?.role;
-  const menuItems = getMenuItems(currentShop, userRole);
+  const isImpersonating = (session?.user as any)?.isImpersonating || false;
+  const menuItems = getMenuItems(currentShop, userRole, isImpersonating);
 
   useEffect(() => {
     setLocalActivePath(pathname);

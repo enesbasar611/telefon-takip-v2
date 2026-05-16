@@ -288,9 +288,10 @@ export const authOptions: NextAuthOptions = {
             }
 
             // Real-time DB sync on every request - OPTIMIZED WITH TTL
-            // We only hit the database if the token was synced more than 300 seconds ago
             const now = Math.floor(Date.now() / 1000);
-            if (token.id && (!token.lastSync || now - (token.lastSync as number) > 300)) {
+            const isSuperAdminQuickSync = (token.role === "SUPER_ADMIN");
+
+            if (token.id && (!token.lastSync || now - (token.lastSync as number) > 30 || isSuperAdminQuickSync)) {
                 try {
                     const dbUser = await (prisma.user as any).findUnique({
                         where: { id: token.id },
@@ -328,7 +329,6 @@ export const authOptions: NextAuthOptions = {
                     token.role = dbUser.role;
                     token.email = dbUser.email;
 
-                    // Fix "..." or empty name issue in DB and Token
                     const currentName = dbUser.name?.trim();
                     if (!currentName || currentName === "...") {
                         const newName = dbUser.email?.split('@')[0] || "Kullanıcı";
@@ -346,21 +346,23 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     // Critical: Ensure shopId is synced from the most up-to-date user record
+                    // If shopId changed in DB (e.g. impersonation), update token immediately
+                    if (token.shopId !== dbUser.shopId) {
+                        token.shopId = dbUser.shopId;
+                        token.lastSync = now; // Reset sync on change
+                    }
+
                     token.shopId = effectiveUser.shopId || dbUser.shopId;
 
                     if (isSuperAdmin && !token.shopId) {
                         // Fallback for Super Admin: find their primary shop or use the first one available
                         const homeShop = await prisma.shop.findFirst({
-                            where: { users: { some: { id: dbUser.id } } },
+                            where: { name: { contains: "BAŞAR", mode: "insensitive" } },
                             orderBy: { createdAt: 'asc' }
-                        });
+                        }) || await prisma.shop.findFirst({ orderBy: { createdAt: 'asc' } });
+
                         if (homeShop) {
                             token.shopId = homeShop.id;
-                        } else {
-                            // If they have no shop at all, fallback to a global constant to allow socket connection
-                            // but usually Super Admins have at least one 'BASAR' shop
-                            const defaultShop = await prisma.shop.findFirst({ orderBy: { createdAt: 'asc' } });
-                            token.shopId = defaultShop?.id || "SUPER_ADMIN";
                         }
                     }
 
@@ -372,6 +374,18 @@ export const authOptions: NextAuthOptions = {
                     token.canEdit = isSuperAdmin ? true : effectiveUser.canEdit;
                     token.canDelete = isSuperAdmin ? true : effectiveUser.canDelete;
                     token.isShopActive = (dbUser as any).shop?.isActive ?? true;
+
+                    // Impersonation detection: If Super Admin is NOT in their home shop (BAŞAR)
+                    if (isSuperAdmin && token.shopId) {
+                        const homeShop = await prisma.shop.findFirst({
+                            where: { name: { contains: "BAŞAR", mode: "insensitive" } },
+                            select: { id: true }
+                        });
+                        token.isImpersonating = homeShop && token.shopId !== homeShop.id;
+                    } else {
+                        token.isImpersonating = false;
+                    }
+
                     token.lastSync = now; // Update sync timestamp
                 } catch (error) {
                     console.error("NextAuth token DB sync failed:", error);
@@ -393,6 +407,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.canEdit = token.canEdit;
                 session.user.canDelete = token.canDelete;
                 session.user.isShopActive = token.isShopActive;
+                session.user.isImpersonating = token.isImpersonating;
                 if (token.picture) session.user.image = token.picture;
                 if (token.image) session.user.image = token.image;
             }
