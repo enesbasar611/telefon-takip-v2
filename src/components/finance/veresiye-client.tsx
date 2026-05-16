@@ -619,10 +619,10 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
                     msg += `*🔴 Toplam Güncel Borç:*\n`;
                     if ((res.remainingTRY || 0) > 0) {
-                        msg += `₺${res.remainingTRY.toLocaleString('tr-TR')} (~$${(res.remainingTRY / (rates?.usd || 32.5)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                        msg += `₺${(res.remainingTRY ?? 0).toLocaleString('tr-TR')} (~$${((res.remainingTRY ?? 0) / (rates?.usd || 32.5)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
                     }
                     if ((res.remainingUSD || 0) > 0) {
-                        msg += `$${res.remainingUSD.toLocaleString('tr-TR')} (~₺${Math.round(res.remainingUSD * (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
+                        msg += `$${(res.remainingUSD ?? 0).toLocaleString('tr-TR')} (~₺${Math.round((res.remainingUSD ?? 0) * (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
                     }
 
                     if ((res.remainingTRY || 0) <= 0 && (res.remainingUSD || 0) <= 0) {
