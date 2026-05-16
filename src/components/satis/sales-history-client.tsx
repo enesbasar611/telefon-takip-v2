@@ -19,7 +19,9 @@ import {
     Filter,
     History,
     Calendar,
-    ArrowRight
+    ArrowRight,
+    Printer,
+    Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -28,6 +30,8 @@ import {
     UnifiedOperation,
     OperationType
 } from "@/lib/actions/activity-actions";
+import { getSaleById } from "@/lib/actions/sale-actions";
+import { ReceiptModal } from "@/components/pos/receipt-modal";
 
 interface SalesHistoryClientProps {
     initialData: {
@@ -55,6 +59,10 @@ export function SalesHistoryClient({
     const [typeFilter, setTypeFilter] = useState(propType);
     const [isPending, setIsPending] = useState(false);
 
+    // Receipt modal state
+    const [receiptSale, setReceiptSale] = useState<any>(null);
+    const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
+
     const updateParams = (newParams: Record<string, string | number>) => {
         const params = new URLSearchParams(searchParams.toString());
 
@@ -73,6 +81,19 @@ export function SalesHistoryClient({
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= initialData.totalPages) {
             updateParams({ page: newPage });
+        }
+    };
+
+    const handlePrintReceipt = async (op: UnifiedOperation) => {
+        if (op.type !== 'SALE') return;
+        setReceiptLoading(op.id);
+        try {
+            const sale = await getSaleById(op.id);
+            if (sale) setReceiptSale(sale);
+        } catch (e) {
+            console.error("Failed to load sale for receipt", e);
+        } finally {
+            setReceiptLoading(null);
         }
     };
 
@@ -157,7 +178,7 @@ export function SalesHistoryClient({
                                     <th className="px-6 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Müşteri</th>
                                     <th className="px-6 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Açıklama / Ürünler</th>
                                     <th className="px-6 py-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tutar</th>
-                                    <th className="px-8 py-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-20">İşlem</th>
+                                    <th className="px-8 py-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-28">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
@@ -176,7 +197,7 @@ export function SalesHistoryClient({
                                     initialData.items.map((op) => (
                                         <tr
                                             key={op.id}
-                                            className="group hover:bg-muted/5 transition-colors duration-200 cursor-pointer"
+                                            className="group hover:bg-muted/5 transition-colors duration-200"
                                         >
                                             <td className="px-8 py-6">
                                                 <Badge variant="outline" className={cn("text-[8px] font-bold px-2 py-0.5 rounded-md border", getTypeColor(op.type))}>
@@ -227,9 +248,26 @@ export function SalesHistoryClient({
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <Button size="icon" variant="ghost" className="h-10 w-10 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
-                                                    <ArrowRight className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {op.type === 'SALE' && (
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            title="Fiş Yazdır"
+                                                            disabled={receiptLoading === op.id}
+                                                            className="h-10 w-10 rounded-xl hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 transition-all"
+                                                            onClick={() => handlePrintReceipt(op)}
+                                                        >
+                                                            {receiptLoading === op.id
+                                                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                                : <Printer className="h-4 w-4" />
+                                                            }
+                                                        </Button>
+                                                    )}
+                                                    <Button size="icon" variant="ghost" className="h-10 w-10 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -256,7 +294,6 @@ export function SalesHistoryClient({
                             </Button>
                             <div className="flex items-center gap-1 px-2">
                                 {[...Array(Math.min(5, initialData.totalPages))].map((_, i) => {
-                                    // Simple pagination logic
                                     let pageNum = i + 1;
                                     if (initialData.totalPages > 5) {
                                         if (currentPage > 3) pageNum = currentPage - 2 + i;
@@ -292,6 +329,13 @@ export function SalesHistoryClient({
                     </div>
                 )}
             </Card>
+
+            {/* Receipt Modal */}
+            <ReceiptModal
+                isOpen={!!receiptSale}
+                onClose={() => setReceiptSale(null)}
+                sale={receiptSale}
+            />
         </div>
     );
 }

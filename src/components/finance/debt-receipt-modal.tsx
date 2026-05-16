@@ -82,7 +82,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
     const sortedDates = Object.keys(groups);
 
     return (
-        <div className="bg-white p-6 w-[380px] font-sans text-slate-900 relative">
+        <div className="bg-white p-6 w-[380px] font-sans text-black relative">
             {/* Top Right Date */}
             <div className="absolute top-4 right-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                 {format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })}
@@ -95,8 +95,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                         <img src={logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-125" />
                     </div>
                 )}
-                <h1 className="text-lg font-black uppercase tracking-widest text-slate-950 mb-0.5">{shopName || "TELEFON DÜNYASI"}</h1>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-2">HESAP EKSTRESİ</p>
+                <h1 className="text-lg font-black uppercase tracking-widest text-black mb-0.5">{shopName || "TELEFON DÜNYASI"}</h1>
+                <p className="text-[9px] font-black text-black uppercase tracking-[0.3em] mb-2">HESAP EKSTRESİ</p>
 
                 <div className="mt-2">
                     <p className="text-base font-black text-slate-900 uppercase tracking-tight inline-block border-b-2 border-indigo-600 pb-0.5">
@@ -122,16 +122,16 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                         <div key={date}>
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">{date}</span>
+                                    <span className="text-[9px] font-black text-black uppercase tracking-[0.1em]">{date}</span>
                                     <div className="h-[1px] w-6 bg-slate-200" />
                                 </div>
-                                <div className="text-[9px] font-black text-slate-950 bg-slate-100/80 px-2 py-1 rounded-lg border border-slate-200 shadow-sm flex items-center gap-1.5">
-                                    <span className="text-slate-400 text-[7px] tracking-widest uppercase">GÜNLÜK:</span>
+                                <div className="text-[9px] font-black text-black bg-slate-100 px-2 py-1 rounded-lg border border-slate-300 shadow-sm flex items-center gap-1.5">
+                                    <span className="text-black text-[7px] tracking-widest uppercase">GÜNLÜK:</span>
                                     {dailyTRY > 0 && <span className="text-slate-900 font-black">₺{dailyTRY.toLocaleString('tr-TR')}</span>}
                                     {dailyTRY > 0 && dailyUSD > 0 && <span className="text-slate-400 font-normal">+</span>}
                                     {dailyUSD > 0 && (
-                                        <span className="text-blue-600 font-black flex items-center gap-1">
-                                            <span className="text-[6.5px] font-bold text-slate-400">(~₺{(dailyUSD * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})</span>
+                                        <span className="text-black font-black flex items-center gap-1">
+                                            <span className="text-[6.5px] font-bold text-black">(~₺{(dailyUSD * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})</span>
                                             ${dailyUSD.toLocaleString('tr-TR')}
                                         </span>
                                     )}
@@ -141,9 +141,9 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
                             <table className="w-full border-collapse border border-slate-200 rounded-md overflow-hidden shadow-sm">
                                 <thead>
-                                    <tr className="bg-slate-50 text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                        <th className="border border-slate-200 px-2 py-1.5 text-left">İŞLEM / DETAY</th>
-                                        <th className="border border-slate-200 px-2 py-1.5 text-right w-24">TUTAR</th>
+                                    <tr className="bg-slate-100 text-[8px] font-black text-black uppercase tracking-widest">
+                                        <th className="border border-slate-300 px-2 py-1.5 text-left">İŞLEM / DETAY</th>
+                                        <th className="border border-slate-300 px-2 py-1.5 text-right w-24">TUTAR</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -152,17 +152,17 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                         return (
                                             <tr key={idx} className={cn(
                                                 "transition-colors",
-                                                !isDebt ? "bg-emerald-50/20" : "bg-white hover:bg-slate-50/50"
+                                                !isDebt ? "bg-emerald-50" : "bg-white"
                                             )}>
-                                                <td className="border border-slate-200 px-2 py-1.5 text-[10px] font-bold leading-tight">
-                                                    <div className="flex items-center gap-1.5">
+                                                <td className="border border-slate-300 px-2 py-2 text-[10px] font-bold leading-tight">
+                                                    <div className="flex items-start gap-1.5">
                                                         {!isDebt ? (
-                                                            <TrendingDown className="w-3 h-3 text-emerald-500 shrink-0" />
+                                                            <TrendingDown className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
                                                         ) : (
-                                                            <TrendingUp className="w-3 h-3 text-rose-500 shrink-0" />
+                                                            <TrendingUp className="w-3 h-3 text-rose-600 shrink-0 mt-0.5" />
                                                         )}
-                                                        <div className={cn("flex flex-col gap-0.5", !isDebt ? "text-emerald-700 font-black italic" : "text-slate-700")}>
-                                                            <span className="text-slate-900 font-extrabold uppercase truncate max-w-[200px] text-[10px] leading-tight flex items-center gap-1.5">
+                                                        <div className={cn("flex flex-col gap-0.5", !isDebt ? "text-emerald-800 font-black italic" : "text-black")}>
+                                                            <span className="text-black font-extrabold uppercase text-[10px] leading-tight flex items-center gap-1.5 break-words whitespace-normal">
                                                                 {(() => {
                                                                     const desc = item.description || item.notes || (isDebt ? 'Ürün/Hizmet' : 'Tahsilat');
                                                                     if (desc.includes('(Kurye Teslimatı)')) {
@@ -170,18 +170,18 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                                     }
                                                                     return desc;
                                                                 })()}
-                                                                {item.isPaid && <span className="text-[6px] bg-emerald-100 text-emerald-600 px-1 rounded-sm">ÖDENDİ</span>}
+                                                                {item.isPaid && <span className="text-[6px] bg-emerald-100 text-emerald-700 px-1 rounded-sm">ÖDENDİ</span>}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className={cn(
-                                                    "border border-slate-200 px-2 py-1.5 text-xs font-black tabular-nums text-right align-middle",
-                                                    !isDebt ? "text-emerald-600" : (item.currency === 'USD' ? "text-blue-600" : "text-slate-950")
+                                                    "border border-slate-300 px-2 py-2 text-xs font-black tabular-nums text-right align-middle",
+                                                    !isDebt ? "text-emerald-700" : (item.currency === 'USD' ? "text-black" : "text-black")
                                                 )}>
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         {item.currency === 'USD' && (
-                                                            <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-tighter">
+                                                            <span className="text-[7.5px] font-black text-black uppercase tracking-tighter">
                                                                 (~₺{(Number(item.amount) * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })})
                                                             </span>
                                                         )}
@@ -203,27 +203,27 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             </div>
 
             {/* Totals Section */}
-            <div className="mt-4 pt-3 border-t border-slate-400 border-dashed">
-                <div className="space-y-0.5 text-[10px] font-bold">
+            <div className="mt-4 pt-3 border-t-2 border-black mb-2">
+                <div className="space-y-0.5 text-[10px] font-black">
                     <div className="flex justify-between">
-                        <span className="uppercase">TL BORCU:</span>
-                        <span className="tabular-nums">₺{totalTRY.toLocaleString('tr-TR')}</span>
+                        <span className="uppercase text-black">TL BORCU:</span>
+                        <span className="tabular-nums text-black">₺{totalTRY.toLocaleString('tr-TR')}</span>
                     </div>
                     {totalUSD > 0 && (
                         <div className="flex justify-between items-center">
-                            <span className="uppercase">USD BORCU:</span>
+                            <span className="uppercase text-black">USD BORCU:</span>
                             <div className="flex items-center gap-1.5">
-                                <span className="text-[8px] text-slate-400 font-bold tracking-tighter">
+                                <span className="text-[8px] text-black font-black tracking-tighter">
                                     (~₺{(totalUSD * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })})
                                 </span>
-                                <span className="tabular-nums">${totalUSD.toLocaleString('tr-TR')}</span>
+                                <span className="tabular-nums text-black">${totalUSD.toLocaleString('tr-TR')}</span>
                             </div>
                         </div>
                     )}
 
-                    <div className="pt-1.5 mt-1 border-t border-slate-400 border-dashed flex justify-between items-end">
+                    <div className="pt-1.5 mt-1 border-t-2 border-black flex justify-between items-end">
                         <div className="flex flex-col gap-0">
-                            <span className="text-[7px] font-medium opacity-70 uppercase tracking-tighter">KUR: $1 = ₺{currentUsdRate}</span>
+                            <span className="text-[7px] font-black text-black uppercase tracking-tighter">KUR: $1 = ₺{currentUsdRate}</span>
                             <span className="text-xs font-black uppercase">🔴 GENEL TOPLAM:</span>
                         </div>
                         <span className="text-lg font-black tabular-nums leading-none">₺{portfolioTotal.toLocaleString('tr-TR')}</span>
@@ -238,10 +238,10 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             </div>
 
             {/* Minimal Footer */}
-            <div className="mt-6 text-center">
-                <p className="text-[9px] font-black text-slate-950 uppercase tracking-[0.2em] mb-0.5">{shopName}</p>
-                {shopPhone && <p className="text-[8px] font-bold text-slate-500 italic">{shopPhone}</p>}
-                <div className="w-8 h-0.5 bg-indigo-600 mx-auto rounded-full mt-3" />
+            <div className="mt-4 text-center">
+                <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-0.5">{shopName}</p>
+                {shopPhone && <p className="text-[8px] font-black text-black">{shopPhone}</p>}
+                <div className="w-8 h-0.5 bg-black mx-auto rounded-full mt-3" />
             </div>
         </div>
     );
@@ -318,12 +318,19 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
         const w = window.open("", "_blank");
         if (!w) return;
         w.document.write(`<!DOCTYPE html><html><head><title>Borç Ekstresi</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;justify-content:center;padding:20px;background:#f0f0f0}
-img{max-width:420px;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,0.15)}
-@media print{body{background:white;padding:0}img{max-width:100%;box-shadow:none;border-radius:0}@page{margin:0;size:80mm auto}}</style>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: white; display: flex; justify-content: center; }
+  img { display: block; width: 80mm; height: auto; page-break-inside: avoid; }
+  @page { size: 80mm auto; margin: 5px 0; }
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    img { filter: grayscale(1) contrast(3) brightness(0.85); width: 80mm; }
+  }
+</style>
 </head><body><img src="${url}" /></body></html>`);
         w.document.close();
-        setTimeout(() => { w.print(); }, 500);
+        setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 600);
     }, [generateImage]);
 
     return (
