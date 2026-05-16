@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import html2canvas from "html2canvas";
+
 import { cn } from "@/lib/utils";
 
 interface DebtReceiptModalProps {
@@ -240,6 +240,8 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
         if (!receiptRef.current) return null;
         setIsGenerating(true);
         try {
+            const html2canvasModule = await import("html2canvas");
+            const html2canvas = html2canvasModule.default;
             const canvas = await html2canvas(receiptRef.current, {
                 scale: 3,
                 backgroundColor: "#ffffff",

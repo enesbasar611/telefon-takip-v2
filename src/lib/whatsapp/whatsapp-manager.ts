@@ -1,10 +1,10 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import type { Client as WhatsAppClient } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 
 interface WhatsAppSession {
-    client: Client;
+    client: WhatsAppClient;
     status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR';
     qr?: string;
     error?: string;
@@ -20,11 +20,15 @@ if (!globalThis.whatsappSessions) {
 }
 
 class WhatsAppManager {
-    private getSession(shopId: string): WhatsAppSession {
+    private async getSession(shopId: string): Promise<WhatsAppSession> {
         let session = globalThis.whatsappSessions[shopId];
 
         if (!session) {
             console.log(`[WHATSAPP] Creating new session for shop: ${shopId}`);
+
+            // Dynamic import for heavy packages
+            const { Client, LocalAuth } = await import('whatsapp-web.js');
+
             const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 
             const puppeteerArgs = [
@@ -125,7 +129,7 @@ class WhatsAppManager {
     }
 
     public async initialize(shopId: string, force = false): Promise<void> {
-        const session = this.getSession(shopId);
+        const session = await this.getSession(shopId);
 
         if (!force && (session.status === 'CONNECTED' || session.status === 'CONNECTING' || session.status === 'QR')) {
             console.log(`[WHATSAPP] Session ${shopId} already exists with status: ${session.status}`);
@@ -139,7 +143,7 @@ class WhatsAppManager {
                 this.clearSingletonLock(shopId);
             } catch (e) { }
             delete globalThis.whatsappSessions[shopId];
-            const newSession = this.getSession(shopId);
+            const newSession = await this.getSession(shopId);
             return this.doInitialize(shopId, newSession);
         }
 
@@ -222,7 +226,7 @@ class WhatsAppManager {
 
     public async sendMessage(shopId: string, to: string, message: string) {
         try {
-            const session = this.getSession(shopId);
+            const session = await this.getSession(shopId);
 
             // Eğer bağlı değilse veya kuyruktaysa beklemeyelim, hata fırlatalım
             if (session.status !== 'CONNECTED') {

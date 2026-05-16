@@ -7,6 +7,10 @@ import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Za
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { getSettings, getShop } from "@/lib/actions/setting-actions";
+import { getAllReceiptSettings } from "@/lib/actions/receipt-settings";
+import { Loader2 } from "lucide-react";
 
 // Tab Components
 import { AppearanceTab } from "./tabs/appearance-tab";
@@ -23,9 +27,9 @@ import { FloatingSaveBar } from "./floating-save-bar";
 import { PageHeader } from "@/components/ui/page-header";
 
 interface SettingsProps {
-  initialSettings: any[];
-  receiptSettings: any[];
-  shop: any;
+  initialSettings?: any[];
+  receiptSettings?: any[];
+  shop?: any;
   isSuperAdmin?: boolean;
 }
 
@@ -41,7 +45,31 @@ const defaultTabs = [
   { id: "automation", label: "Otomasyon", icon: Zap, desc: "Kurallar ve onaylar" },
 ];
 
-export function SettingsInterface({ initialSettings, receiptSettings, shop, isSuperAdmin = false }: SettingsProps) {
+export function SettingsInterface({ initialSettings, receiptSettings: initialReceiptSettings, shop: initialShop, isSuperAdmin = false }: SettingsProps) {
+  const queryClient = useQueryClient();
+  const { data: settings = initialSettings || [] } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSettings,
+    initialData: initialSettings,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 5 mins
+  });
+
+  const { data: receiptSettings = initialReceiptSettings || [] } = useQuery({
+    queryKey: ["receipt-settings"],
+    queryFn: getAllReceiptSettings,
+    initialData: initialReceiptSettings,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 5 mins
+  });
+
+  const { data: shop = initialShop } = useQuery({
+    queryKey: ["shop"],
+    queryFn: getShop,
+    initialData: initialShop,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 5 mins
+  });
   const tabs = useMemo(() => {
     if (isSuperAdmin) {
       return [
@@ -86,11 +114,11 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop, isSu
   // Build initial formData from settings array
   const initialFormData = useMemo(() => {
     const data: Record<string, string> = {};
-    initialSettings.forEach((s: any) => {
+    settings.forEach((s: any) => {
       data[s.key] = s.value;
     });
     return data;
-  }, [initialSettings]);
+  }, [settings]);
 
   const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
   const [savedData, setSavedData] = useState<Record<string, string>>(initialFormData);
@@ -136,6 +164,7 @@ export function SettingsInterface({ initialSettings, receiptSettings, shop, isSu
       if (result.success) {
         setSavedData({ ...formData });
         toast.success("Ayarlar başarıyla kaydedildi.");
+        queryClient.invalidateQueries({ queryKey: ["settings"] });
       } else {
         toast.error("Ayarlar kaydedilirken hata oluştu.");
       }

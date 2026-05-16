@@ -1,11 +1,7 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { Suspense } from "react";
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 export const dynamic = "force-dynamic";
-
-import {
-  StatsSkeleton,
-} from "@/components/dashboard/dashboard-skeletons";
 
 import { getShop } from "@/lib/actions/setting-actions";
 import { getIndustryConfig, isModuleEnabled, getIndustryLabel } from "@/lib/industry-utils";
@@ -24,17 +20,12 @@ import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-stat
 
 import { getProfile } from "@/lib/actions/staff-actions";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { getDashboardStats } from "@/lib/actions/dashboard-actions";
+import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 import { StatWidgetWrapper } from "@/components/dashboard/stat-widget-wrapper";
 import { getShopId } from "@/lib/auth";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
 
-import {
-  ChartSkeleton,
-  ListSkeleton,
-  ActivitySkeleton
-} from "@/components/dashboard/dashboard-skeletons";
 import { RevenueAnalysisStream } from "@/components/dashboard/streamed/revenue-analysis-stream";
 import { ServiceStatusStream } from "@/components/dashboard/streamed/service-status-stream";
 import { SmartInsightsStream } from "@/components/dashboard/streamed/smart-insights-stream";
@@ -45,16 +36,21 @@ import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queu
 import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
 
 async function DashboardContentData() {
-  const shopId = await getShopId(false);
-  const [shop, categories, profile, statsDataRaw, settings] = await Promise.all([
+  const queryClient = new QueryClient();
+
+  const [shopId, shop, categories, profile] = await Promise.all([
+    getShopId(false),
     getShop(),
     getCategories(),
     getProfile(),
-    getDashboardStats(shopId),
-    import("@/lib/actions/setting-actions").then(m => m.getSettings()),
   ]);
 
-  const statsData = serializePrisma(statsDataRaw);
+  const dashboardInit = await getDashboardInit(shopId);
+
+  queryClient.setQueryData(["dashboard-init", shopId || ""], dashboardInit);
+
+  const statsData = serializePrisma(dashboardInit.stats);
+  const settings = dashboardInit.settings || [];
   const industryConf = getIndustryConfig(shop?.industry);
   const showService = isModuleEnabled(shop, "SERVICE");
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
@@ -105,47 +101,31 @@ async function DashboardContentData() {
 
   const widgets: any = {
     revenue: (
-      <Suspense fallback={<ChartSkeleton />}>
-        <RevenueAnalysisStream />
-      </Suspense>
+      <RevenueAnalysisStream />
     ),
     service_status: (
-      <Suspense fallback={<ChartSkeleton />}>
-        <ServiceStatusStream title={serviceLabel} />
-      </Suspense>
+      <ServiceStatusStream title={serviceLabel} />
     ),
     ai_insights: (
-      <Suspense fallback={<StatsSkeleton />}>
-        <SmartInsightsStream />
-      </Suspense>
+      <SmartInsightsStream />
     ),
     shortage_status: (
       <ShortageStatusCard />
     ),
     receivables: (
-      <Suspense fallback={<ListSkeleton />}>
-        <ReceivablesStream />
-      </Suspense>
+      <ReceivablesStream />
     ),
     activity: (
-      <Suspense fallback={<ActivitySkeleton />}>
-        <LiveActivityStream />
-      </Suspense>
+      <LiveActivityStream />
     ),
     transactions: (
-      <Suspense fallback={<ListSkeleton />}>
-        <RecentTransactionsStream />
-      </Suspense>
+      <RecentTransactionsStream />
     ),
     service_queue: (
-      <Suspense fallback={<ListSkeleton />}>
-        <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
-      </Suspense>
+      <ServiceQueueStream title={`${serviceLabel} Kuyruğu`} />
     ),
     inventory: (
-      <Suspense fallback={<ListSkeleton />}>
-        <TopProductsStream />
-      </Suspense>
+      <TopProductsStream />
     )
   };
 
@@ -167,9 +147,9 @@ async function DashboardContentData() {
   statItems.forEach(s => { widgetLabels[s.id] = s.label; });
 
   return (
-    <>
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <DashboardOnboardingClient categories={categories} shop={shop} />
-      <div className="hidden md:flex flex-col space-y-12 selection:bg-primary/20 relative z-10">
+      <div className="hidden md:flex min-h-[1100px] flex-col space-y-12 selection:bg-primary/20 relative z-10 opacity-100 transition-opacity duration-200">
         <PageHeader
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
           description={
@@ -205,14 +185,15 @@ async function DashboardContentData() {
         <DashboardClient
           key={JSON.stringify(layout)}
           initialLayout={layout}
+          initialData={dashboardInit}
           widgets={widgets}
           widgetLabels={widgetLabels}
         />
       </div>
-      <div className="md:hidden flex flex-col space-y-6 pt-2 pb-10">
+      <div className="md:hidden flex min-h-screen flex-col space-y-6 pt-2 pb-10 transition-opacity duration-200">
         <MobileDashboard />
       </div>
-    </>
+    </HydrationBoundary>
   );
 }
 
@@ -224,9 +205,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardProvider>
-      <Suspense fallback={<StatsSkeleton />}>
-        <DashboardContentData />
-      </Suspense>
+      <DashboardContentData />
     </DashboardProvider>
   );
 }

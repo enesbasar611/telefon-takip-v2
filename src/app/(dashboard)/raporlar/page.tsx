@@ -42,14 +42,13 @@ function RaporlarSkeleton() {
 }
 
 async function RaporlarData() {
-  const [stats, salesData, serviceMetricsRaw, topProductsRaw, brandDistribution, cashflow, exportData] = await Promise.all([
+  const [stats, salesData, serviceMetricsRaw, topProductsRaw, brandDistribution, cashflow] = await Promise.all([
     getDashboardStats(),
     getSalesReport(),
     getServiceMetrics(),
     getTopProductsReport(6),
     getDeviceBrandDistribution(),
-    getCashflowReport(),
-    getDetailedExportData()
+    getCashflowReport()
   ]);
 
   const serviceMetrics = serviceMetricsRaw.map((m: any) => ({
@@ -73,7 +72,6 @@ async function RaporlarData() {
       cashflow={cashflow}
       topProducts={topProducts}
       brandDistribution={brandDistribution}
-      exportData={exportData}
     />
   );
 }

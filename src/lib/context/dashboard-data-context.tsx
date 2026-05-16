@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 
 interface DashboardSetting {
@@ -37,7 +37,8 @@ export function DashboardDataProvider({
         queryKey: ["dashboard-init", shopId],
         queryFn: () => getDashboardInit(shopId || ""),
         initialData: { rates: initialRates, stats: initialStats, settings: initialSettings },
-        staleTime: 60000, // 1 minute
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
         refetchOnWindowFocus: true,
     });
 

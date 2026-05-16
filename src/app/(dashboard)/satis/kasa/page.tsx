@@ -7,8 +7,8 @@ import { Wallet, PlusCircle } from "lucide-react";
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-
-export const dynamic = 'force-dynamic';
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { getDailySummary, getTransactions, getDailySession } from "@/lib/actions/finance-actions";
 
 function SummarySkeleton() {
     return (
@@ -39,43 +39,54 @@ function HistorySkeleton() {
 }
 
 export default async function KasaRaporuPage() {
+    const queryClient = new QueryClient();
+
+    // Parallel prefetching
+    await Promise.all([
+        queryClient.prefetchQuery({
+            queryKey: ["finance-summary"],
+            queryFn: getDailySummary
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["finance-transactions", 1, ""],
+            queryFn: () => getTransactions({ page: 1, pageSize: 50 })
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["daily-session"],
+            queryFn: getDailySession
+        })
+    ]);
+
     return (
-        <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
-            <PageHeader
-                title="Kasa & Finans"
-                description="Nakit akışını, günlük raporları ve finansal seansları tek bir merkezden yönetin."
-                icon={Wallet}
-                iconColor="text-indigo-500"
-                iconBgColor="bg-indigo-500/10"
-                badge={
-                    <div className="flex items-center gap-4">
-                        <Suspense fallback={<Skeleton className="h-10 w-48 rounded-full" />}>
-                            <DailySessionStream />
-                        </Suspense>
-                    </div>
-                }
-                actions={
-                    <CreateTransactionModal
-                        trigger={
-                            <Button className="h-12 rounded-xl px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-xs tracking-widest gap-2 group transition-all">
-                                <PlusCircle className="h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
-                                GELİR / GİDER EKLE
-                            </Button>
-                        }
-                    />
-                }
-            />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
+                <PageHeader
+                    title="Kasa & Finans"
+                    description="Nakit akışını, günlük raporları ve finansal seansları tek bir merkezden yönetin."
+                    icon={Wallet}
+                    iconColor="text-indigo-500"
+                    iconBgColor="bg-indigo-500/10"
+                    badge={
+                        <DailySessionStream />
+                    }
+                    actions={
+                        <CreateTransactionModal
+                            trigger={
+                                <Button className="h-12 rounded-xl px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-xs tracking-widest gap-2 group transition-all">
+                                    <PlusCircle className="h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
+                                    GELİR / GİDER EKLE
+                                </Button>
+                            }
+                        />
+                    }
+                />
 
-            <div className="grid grid-cols-1 gap-10">
-                <Suspense fallback={<SummarySkeleton />}>
+                <div className="grid grid-cols-1 gap-10">
                     <FinancialSummaryStream />
-                </Suspense>
-
-                <Suspense fallback={<HistorySkeleton />}>
                     <TransactionListStream />
-                </Suspense>
+                </div>
             </div>
-        </div>
+        </HydrationBoundary>
     );
 }
 

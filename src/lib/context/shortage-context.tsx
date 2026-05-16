@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { createContext, useContext } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getShortageItems, addShortageItem as addShortageItemAction, addShortageItems as addShortageBulkAction, deleteShortageItem as deleteShortageAction, updateShortageQuantity as updateShortageQtyAction, resolveShortageItems as resolveShortageItemsAction } from "@/lib/actions/shortage-actions";
 import { toast } from "sonner";
 
@@ -29,7 +29,8 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
     const { data: items = [], isLoading: loading, refetch: refresh } = useQuery({
         queryKey: ["shortages"],
         queryFn: () => getShortageItems(),
-        staleTime: 30000, // 30 seconds
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
         refetchOnWindowFocus: true,
     });
 

@@ -6,6 +6,7 @@ import {
     Dialog,
     DialogContent,
 } from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,6 +107,7 @@ const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: s
 };
 
 export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose, isQuickDeliver }: ServiceManagementModalProps) {
+    const queryClient = useQueryClient();
     const { data: session } = useSession();
     const router = useRouter();
     const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
@@ -263,6 +265,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             if (res.success) {
                 toast.success("Parça eklendi.");
                 setSearchQuery("");
+                queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+                queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
@@ -279,6 +283,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             const res = await removePartFromService(partId);
             if (res.success) {
                 toast.success("Parça çıkarıldı.");
+                queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+                queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
                 refreshTicket();
                 router.refresh();
             }
@@ -291,6 +297,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
         try {
             const res = await updateServiceUsedPart(partId, data);
             if (res.success) {
+                queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
@@ -341,28 +348,17 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
             if (res.success) {
                 toast.success("Tedarikçi borcu oluşturuldu ve parça eklendi.");
-                // setIsAddingManual(false); (User requested it stay open)
                 setSelectedProduct(null);
                 setSearchQuery("");
+                queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+                queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
+                queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
             }
         } catch (err) {
             toast.error("Beklenmedik bir hata oluştu.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSaveLabor = async () => {
-        try {
-            setLoading(true);
-            await updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(laborCost * 100) / 100);
-            toast.success("İşçilik ücreti güncellendi.");
-            refreshTicket();
-        } catch (err) {
-            toast.error("Hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -378,6 +374,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             toast.success("Kayıt güncellendi.");
             setTechNote("");
             setSelectedStatus("");
+            queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+            queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
             refreshTicket();
             router.refresh();
         } catch (err) {
@@ -393,6 +391,8 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             const label = statusConfig[newStatus]?.label || newStatus;
             await updateServiceStatus(ticket.id, newStatus, paymentMethod, `Durum güncellendi: ${label}`, discountAmount);
             toast.success(`Durum: ${label}`);
+            queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+            queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
             refreshTicket();
             router.refresh();
         } catch (err) {
@@ -407,6 +407,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
         try {
             await assignTechnician(ticket.id, techId);
             toast.success("Teknisyen atandı.");
+            queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
             refreshTicket();
         } catch (err) {
             toast.error("Atama başarısız.");

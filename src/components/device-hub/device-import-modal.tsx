@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, Table as TableIcon, X } from "lucide-react";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { bulkCreateProducts } from "@/lib/actions/product-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,8 +55,9 @@ export function DeviceImportModal() {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             const bstr = event.target?.result;
+            const XLSX = await import("xlsx");
             const wb = XLSX.read(bstr, { type: "binary" });
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];

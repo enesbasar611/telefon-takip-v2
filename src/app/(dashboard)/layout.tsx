@@ -7,7 +7,7 @@ import { SupplierOrderProvider } from "@/lib/context/supplier-order-context";
 import { ShortageProvider } from "@/lib/context/shortage-context";
 import { DashboardDataProvider } from "@/lib/context/dashboard-data-context";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
-import { QueryProvider } from "@/components/providers/query-provider";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
 import { getStaffShell } from "@/lib/actions/staff-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";

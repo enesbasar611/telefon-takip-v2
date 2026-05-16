@@ -1,7 +1,6 @@
-import { Suspense } from "react";
 import { getCustomersPaginated } from "@/lib/actions/customer-actions";
 import { CustomerListClient } from "@/components/customer/customer-list-client";
-import CustomersLoading from "./loading";
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,34 +8,28 @@ interface Props {
    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-async function CustomersData({ searchParams }: Props) {
+export default async function CustomersPage({ searchParams }: Props) {
    const params = await searchParams;
    const page = typeof params.page === 'string' ? parseInt(params.page) : 1;
    const search = typeof params.search === 'string' ? params.search : undefined;
 
-   const { data: customers, totalPages, total: totalCount } = await getCustomersPaginated({
-      page,
-      limit: 15,
-      search
+   const queryClient = new QueryClient();
+
+   await queryClient.prefetchQuery({
+      queryKey: ["customers-paginated", page, search],
+      queryFn: () => getCustomersPaginated({
+         page,
+         limit: 15,
+         search
+      }),
    });
 
    return (
-      <CustomerListClient
-         initialCustomers={customers}
-         totalPages={totalPages}
-         totalCount={totalCount}
-         currentPage={page}
-      />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+         <CustomerListClient
+            currentPage={page}
+            searchTerm={search}
+         />
+      </HydrationBoundary>
    );
 }
-
-export default function CustomersPage({ searchParams }: Props) {
-   return (
-      <Suspense fallback={<CustomersLoading />}>
-         <CustomersData searchParams={searchParams} />
-      </Suspense>
-   );
-}
-
-
-

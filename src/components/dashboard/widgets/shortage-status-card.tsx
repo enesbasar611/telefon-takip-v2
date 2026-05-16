@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getShortageItems } from "@/lib/actions/shortage-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ import {
     CircleDashed,
     Phone,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Loader2
 } from "lucide-react";
 import { cn, getInitials, getDeterministicColor } from "@/lib/utils";
 import {
@@ -44,34 +46,30 @@ interface GroupedShortage {
 }
 
 export function ShortageStatusCard() {
-    const [items, setItems] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [selectedGroup, setSelectedGroup] = useState<GroupedShortage | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const VISIBLE_LIMIT = 4;
+    const { data: items = [], isPending: isInitialLoading, isFetching: isBackgroundFetching, refetch } = useQuery<any[]>({
+        queryKey: ["shortages"],
+        queryFn: getShortageItems,
+        placeholderData: keepPreviousData,
+        refetchInterval: 30000,
+        staleTime: 1000 * 60, // 1 minute
+    });
 
-    const fetchData = useCallback(async (isManual = false) => {
-        setLoading(true);
+    const isLoading = isInitialLoading && items.length === 0;
+    const isUpdating = isBackgroundFetching && items.length > 0;
+    const refreshData = async (isManual = false) => {
         try {
-            const data = await getShortageItems();
-            setItems(data);
-            if (isManual) toast.success("Veriler güncellendi.");
+            await refetch();
+            if (isManual) toast.success("Veriler guncellendi.");
         } catch (error) {
             console.error("Error fetching shortage status:", error);
-            toast.error("Bağlantı hatası.");
-        } finally {
-            setLoading(false);
+            toast.error("Baglanti hatasi.");
         }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000); // Auto refresh every 30s
-        return () => clearInterval(interval);
-    }, [fetchData]);
-
+    };
     // Grouping logic
-    const grouped = items.reduce((acc: Record<string, GroupedShortage>, item) => {
+    const grouped = useMemo(() => items.reduce((acc: Record<string, GroupedShortage>, item) => {
         const key = item.customerId || item.requesterName || "DÜKKAN";
         if (!acc[key]) {
             acc[key] = {
@@ -96,7 +94,7 @@ export function ShortageStatusCard() {
             acc[key].courierData = item.assignedTo;
         }
         return acc;
-    }, {});
+    }, {}), [items]);
 
     const groupList = Object.values(grouped);
 
@@ -125,16 +123,27 @@ export function ShortageStatusCard() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => fetchData(true)}
-                        disabled={loading}
+                        onClick={() => refreshData(true)}
+                        disabled={isBackgroundFetching}
                         className="h-9 w-9 rounded-xl hover:bg-blue-500/10 hover:text-blue-500 transition-all active:scale-95"
                     >
-                        <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin")} />
+                        <RefreshCcw className={cn("w-4 h-4", isBackgroundFetching && "animate-spin")} />
                     </Button>
                 </CardHeader>
 
-                <CardContent className="space-y-3">
-                    {groupList.length === 0 ? (
+                <CardContent className="space-y-3 relative">
+                    {isUpdating && (
+                        <div className="absolute top-0 right-8 z-50">
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-500 opacity-50" />
+                        </div>
+                    )}
+
+                    {isLoading ? (
+                        <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                            <RefreshCcw className="w-8 h-8 text-blue-500/20 animate-spin" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Siparişler Getiriliyor...</p>
+                        </div>
+                    ) : groupList.length === 0 ? (
                         <div className="py-12 flex flex-col items-center justify-center space-y-3 opacity-30 grayscale">
                             <div className="h-16 w-16 rounded-full border-4 border-dashed border-muted-foreground/30 flex items-center justify-center animate-spin-slow">
                                 <CircleDashed className="w-8 h-8 text-muted-foreground" />
@@ -211,7 +220,7 @@ export function ShortageStatusCard() {
                             ))}
 
                             {groupList.length > VISIBLE_LIMIT && (
-                                <div className="flex flex-col items-center justify-center pt-2 pb-1 relative group/more cursor-pointer" onClick={() => fetchData(true)}>
+                                <div className="flex flex-col items-center justify-center pt-2 pb-1 relative group/more cursor-pointer" onClick={() => refreshData(true)}>
                                     <div className="absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-card/80 to-transparent pointer-events-none" />
                                     <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] group-hover/more:text-blue-500 transition-colors">
                                         +{groupList.length - VISIBLE_LIMIT} KAYIT DAHA VAR
@@ -266,11 +275,11 @@ export function ShortageStatusCard() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => fetchData(true)}
-                                    disabled={loading}
+                                    onClick={() => refreshData(true)}
+                                    disabled={isBackgroundFetching}
                                     className="h-12 w-12 rounded-2xl bg-zinc-100 dark:bg-white/5 hover:bg-blue-500/10 hover:text-blue-500 transition-all border border-transparent hover:border-blue-500/20"
                                 >
-                                    <RefreshCcw className={cn("w-5 h-5", loading && "animate-spin")} />
+                                    <RefreshCcw className={cn("w-5 h-5", isBackgroundFetching && "animate-spin")} />
                                 </Button>
                             </DialogHeader>
 

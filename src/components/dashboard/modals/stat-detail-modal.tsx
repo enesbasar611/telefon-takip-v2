@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,57 +44,81 @@ interface StatDetailModalProps {
 
 export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetailModalProps) {
     const { addShortage } = useShortage();
-    const [data, setData] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-    const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
     const [paymentAmount, setPaymentAmount] = useState<string>("");
     const [paymentDescription, setPaymentDescription] = useState<string>("");
-    const [paying, setPaying] = useState(false);
     const [addingToShortage, setAddingToShortage] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchData = useCallback(async () => {
-        if (!type) return;
-        setLoading(true);
-        try {
-            let result: any[] = [];
+    const detailQuery = useQuery<any[]>({
+        queryKey: ["dashboard-stat-detail", type],
+        queryFn: async () => {
             switch (type) {
-                case "TOTAL_DEBTS": result = await getDebtDetails(); break;
-                case "COLLECTIONS": result = await getCollectionDetails(); break;
-                case "DAILY_SALES": result = await getDailySalesDetails(); break;
-                case "REPAIR_INCOME": result = await getRepairIncomeDetails(); break;
-                case "PENDING_SERVICES": result = await getPendingServicesDetails(); break;
-                case "READY_DEVICES": result = await getReadyDevicesDetails(); break;
-                case "CRITICAL_STOCK": result = await getCriticalStockDetails(); break;
-                case "CASH_BALANCE": result = await getAccountBalanceDetails(); break;
+                case "TOTAL_DEBTS": return getDebtDetails();
+                case "COLLECTIONS": return getCollectionDetails();
+                case "DAILY_SALES": return getDailySalesDetails();
+                case "REPAIR_INCOME": return getRepairIncomeDetails();
+                case "PENDING_SERVICES": return getPendingServicesDetails();
+                case "READY_DEVICES": return getReadyDevicesDetails();
+                case "CRITICAL_STOCK": return getCriticalStockDetails();
+                case "CASH_BALANCE": return getAccountBalanceDetails();
+                default: return [];
             }
-            setData(result);
+        },
+        enabled: !!type && isOpen, // Removed shopId/user dependency wait, just keeping it simple
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
-            if (type === "TOTAL_DEBTS") {
-                const accs = await getAccountBalanceDetails();
-                setAccounts(accs);
-                if (accs.length > 0) setSelectedAccountId(accs[0].id);
+    const accountsQuery = useQuery<any[]>({
+        queryKey: ["finance-accounts", "dashboard-stat-detail"],
+        queryFn: getAccountBalanceDetails,
+        enabled: isOpen && type === "TOTAL_DEBTS",
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5,
+    });
+    const payDebtMutation = useMutation({
+        mutationFn: async () => {
+            if (!selectedSupplier || !activeAccountId || !paymentAmount) {
+                throw new Error("LÃ¼tfen tÃ¼m alanlarÄ± doldurun.");
             }
-        } catch (error) {
-            toast.error("Veri yüklenirken hata oluştu.");
-        } finally {
-            setLoading(false);
-        }
-    }, [type]);
-
-    useEffect(() => {
-        if (isOpen && type) {
-            console.log("İstek atıldı: StatDetailModal fetch", type);
-            fetchData();
-        } else {
-            setData([]);
+            const { paySupplierDebt } = await import("@/lib/actions/finance-actions");
+            return paySupplierDebt({
+                supplierId: selectedSupplier.id,
+                accountId: activeAccountId,
+                amount: Number(paymentAmount),
+                description: paymentDescription || "HÄ±zlÄ± Ã–deme (Dashboard)"
+            });
+        },
+        onSuccess: async (res) => {
+            if (!res.success) {
+                toast.error(res.error || "Ã–deme sÄ±rasÄ±nda hata oluÅŸtu.");
+                return;
+            }
+            toast.success("Ã–deme baÅŸarÄ±yla gerÃ§ekleÅŸtirildi.");
             setSelectedSupplier(null);
             setPaymentAmount("");
             setPaymentDescription("");
-            setAddingToShortage(null);
-        }
-    }, [isOpen, type, fetchData]);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+                queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
+                queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+                queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
+            ]);
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Ä°ÅŸlem baÅŸarÄ±sÄ±z oldu.");
+        },
+    });
+
+    const data = detailQuery.data || [];
+    const accounts = accountsQuery.data || [];
+    const activeAccountId = selectedAccountId || accounts[0]?.id || "";
+    const isInitialLoading = detailQuery.isPending && !detailQuery.data;
+    const isBackgroundFetching = detailQuery.isFetching && !!detailQuery.data;
+    const paying = payDebtMutation.isPending;
 
     const handleAddShortage = async (product: any) => {
         setAddingToShortage(product.id);
@@ -107,37 +132,8 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
             setAddingToShortage(null);
         }
     };
-
     const handlePayDebt = async () => {
-        if (!selectedSupplier || !selectedAccountId || !paymentAmount) {
-            toast.error("Lütfen tüm alanları doldurun.");
-            return;
-        }
-
-        setPaying(true);
-        try {
-            const { paySupplierDebt } = await import("@/lib/actions/finance-actions");
-            const res = await paySupplierDebt({
-                supplierId: selectedSupplier.id,
-                accountId: selectedAccountId,
-                amount: Number(paymentAmount),
-                description: paymentDescription || "Hızlı Ödeme (Dashboard)"
-            });
-
-            if (res.success) {
-                toast.success("Ödeme başarıyla gerçekleştirildi.");
-                setSelectedSupplier(null);
-                setPaymentAmount("");
-                setPaymentDescription("");
-                fetchData();
-            } else {
-                toast.error(res.error || "Ödeme sırasında hata oluştu.");
-            }
-        } catch (error) {
-            toast.error("İşlem başarısız oldu.");
-        } finally {
-            setPaying(false);
-        }
+        payDebtMutation.mutate();
     };
 
     const getModalConfig = () => {
@@ -226,14 +222,14 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                     onClick={() => setSelectedAccountId(acc.id)}
                                                     className={cn(
                                                         "p-3 rounded-xl border text-left transition-all relative overflow-hidden group",
-                                                        selectedAccountId === acc.id
+                                                        activeAccountId === acc.id
                                                             ? "bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-600/20"
                                                             : "bg-background border-border/40 hover:border-indigo-500/30"
                                                     )}
                                                 >
                                                     <div className={cn("text-[10px]  uppercase tracking-tighter mb-1", selectedAccountId === acc.id ? "text-white" : "text-foreground")}>{acc.name}</div>
                                                     <div className={cn("text-xs ", selectedAccountId === acc.id ? "text-indigo-100" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
-                                                    {selectedAccountId === acc.id && (
+                                                    {activeAccountId === acc.id && (
                                                         <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                                             <CheckCircle2 className="h-4 w-4 text-white" />
                                                         </div>
@@ -276,8 +272,14 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                             </Button>
                         </div>
                     ) : (
-                        <ScrollArea className="h-[400px] pr-4">
-                            {loading ? (
+                        <ScrollArea className="h-[400px] pr-4 relative">
+                            {isBackgroundFetching && (
+                                <div className="absolute top-0 right-0 z-50 p-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary opacity-50" />
+                                </div>
+                            )}
+
+                            {isInitialLoading ? (
                                 <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                     <p className="text-xs  uppercase tracking-[0.2em] animate-pulse">Veriler Getiriliyor...</p>

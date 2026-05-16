@@ -1,12 +1,16 @@
 "use client";
 
 import { useRef } from "react";
+import dynamic from "next/dynamic";
 import { ExportButtons } from "@/components/reports/export-buttons";
-import { SalesTrendChart } from "@/components/charts/sales-trend-chart";
-import { ServiceStatusChart } from "@/components/charts/service-status-chart";
-import { CashflowChart } from "@/components/charts/cashflow-chart";
-import { DeviceBrandChart } from "@/components/charts/device-brand-chart";
-import { TopProductsChart } from "@/components/charts/top-products-chart";
+
+// Dynamic imports for heavy chart components to save RAM
+const SalesTrendChart = dynamic(() => import("@/components/charts/sales-trend-chart").then(m => m.SalesTrendChart), { ssr: false });
+const ServiceStatusChart = dynamic(() => import("@/components/charts/service-status-chart").then(m => m.ServiceStatusChart), { ssr: false });
+const CashflowChart = dynamic(() => import("@/components/charts/cashflow-chart").then(m => m.CashflowChart), { ssr: false });
+const DeviceBrandChart = dynamic(() => import("@/components/charts/device-brand-chart").then(m => m.DeviceBrandChart), { ssr: false });
+const TopProductsChart = dynamic(() => import("@/components/charts/top-products-chart").then(m => m.TopProductsChart), { ssr: false });
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -23,7 +27,6 @@ interface RaporlarClientProps {
     cashflow: any[];
     topProducts: any[];
     brandDistribution: any[];
-    exportData: any;
 }
 
 const statCardConfigs = [
@@ -48,7 +51,7 @@ const statusLabels: Record<string, string> = {
 import { PageHeader } from "@/components/ui/page-header";
 
 export function RaporlarClient({
-    stats, salesData, serviceMetrics, cashflow, topProducts, brandDistribution, exportData
+    stats, salesData, serviceMetrics, cashflow, topProducts, brandDistribution
 }: RaporlarClientProps) {
     const dashboardRef = useRef<HTMLDivElement>(null!);
 
@@ -70,7 +73,7 @@ export function RaporlarClient({
                     </div>
                 }
                 actions={
-                    <ExportButtons exportData={exportData} dashboardRef={dashboardRef} />
+                    <ExportButtons dashboardRef={dashboardRef} />
                 }
             />
 

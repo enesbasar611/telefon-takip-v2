@@ -64,6 +64,11 @@ export const getDashboardStats = async (shopId: string | null) => {
           getDeadStockCount(shopId),
           getOrCreateKasaAccount(shopId),
           prisma.product.count({ where: { shopId, deviceInfo: { isNot: null } } }),
+          prisma.dailySession.findFirst({
+            where: { shopId, status: "OPEN" },
+            orderBy: { createdAt: "desc" }
+          }),
+          getExchangeRates(shopId),
         ]);
 
         const [
@@ -78,31 +83,21 @@ export const getDashboardStats = async (shopId: string | null) => {
           deadStockCountValue,
           kasaAccountObject,
           totalDevicesCountValue,
+          activeSession,
+          ratesData,
         ] = res;
 
         const lowStockCount = productsList.filter(p => p.stock <= p.criticalStock).length;
         const kasaBalance = Number(kasaAccountObject.balance) || 0;
         const todaySalesAmount = Number(todaySalesAggResult._sum.finalAmount) || 0;
         const collectedToday = Number(todayTransactionsResult._sum.amount) || 0;
-
-        let kasaOpeningBalance = 0;
-        try {
-          const activeSession = await prisma.dailySession.findFirst({
-            where: { shopId, status: "OPEN" },
-            orderBy: { createdAt: "desc" }
-          });
-          kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
-        } catch { /* ignore */ }
+        const kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
 
         const repairIncomeAmount = Number(todayRepairIncomeResult._sum.actualCost) || 0;
         const totalDebtsAmount = Number(totalDebtsResult._sum.balance) || 0;
 
         // Fetch exchange rate for USD conversions
-        let usdRate = 32.5;
-        try {
-          const ratesData = await getExchangeRates(shopId);
-          usdRate = ratesData?.usd || 32.5;
-        } catch { /* ignore */ }
+        const usdRate = ratesData?.usd || 32.5;
 
         return serializePrisma({
           todaySales: `₺${formatCurrency(todaySalesAmount)}`,

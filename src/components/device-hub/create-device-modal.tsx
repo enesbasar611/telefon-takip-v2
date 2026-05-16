@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import * as z from "zod";
 import {
   Dialog, DialogContent, DialogTitle, DialogTrigger,
@@ -113,13 +114,13 @@ interface DeviceFormValues {
 /* ─── Component ─── */
 export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [sellerIdFront, setSellerIdFront] = useState<File | null>(null);
   const [sellerIdBack, setSellerIdBack] = useState<File | null>(null);
   const [warrantyMode, setWarrantyMode] = useState<"date" | "months" | "intl">("months");
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const queryClient = useQueryClient();
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
@@ -151,17 +152,32 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     },
   });
 
-  // Fetch accounts on mount or when open
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["finance-accounts"],
+    queryFn: getAccounts,
+    enabled: open,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const createDeviceMutation = useMutation({
+    mutationFn: createDeviceEntry,
+    onSuccess: async (result) => {
+      if (!result.success) return;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["devices"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+        queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
+      ]);
+    },
+  });
+  const isPending = isUploading || createDeviceMutation.isPending;
+
+  // Cache finance accounts while the modal is open.
   useEffect(() => {
-    if (open) {
-      getAccounts().then((res) => {
-        setAccounts(res);
-        // Set default primary account if available
-        const primary = res.find((a: any) => a.isDefault) || res[0];
-        if (primary) setValue("financeAccountId", primary.id);
-      });
-    }
-  }, [open, setValue]);
+    const primary = accounts.find((a: any) => a.isDefault) || accounts[0];
+    if (open && primary) setValue("financeAccountId", primary.id);
+  }, [accounts, open, setValue]);
 
   const condition = watch("condition");
   const buyPrice = watch("buyPrice");
@@ -191,94 +207,95 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const removePhoto = (idx: number) => setPhotoFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const onSubmit = async (data: DeviceFormValues) => {
-    startTransition(async () => {
-      try {
-        const expertChecklist = data.replacedParts ? { notes: data.replacedParts } : {};
+    setIsUploading(true);
+    try {
+      const expertChecklist = data.replacedParts ? { notes: data.replacedParts } : {};
 
-        let sellerIdFrontUrl = "";
-        let sellerIdBackUrl = "";
-        let uploadedPhotoUrls: string[] = [];
+      let sellerIdFrontUrl = "";
+      let sellerIdBackUrl = "";
+      let uploadedPhotoUrls: string[] = [];
 
-        if (photoFiles.length > 0) {
-          const photoFormData = new FormData();
-          photoFiles.forEach(f => photoFormData.append("files", f));
-          const pRes = await fetch("/api/finance/upload", { method: "POST", body: photoFormData });
-          const pJson = await pRes.json();
-          if (pJson.success) {
-            uploadedPhotoUrls = pJson.attachments.map((a: any) => a.url);
-          }
+      if (photoFiles.length > 0) {
+        const photoFormData = new FormData();
+        photoFiles.forEach(f => photoFormData.append("files", f));
+        const pRes = await fetch("/api/finance/upload", { method: "POST", body: photoFormData });
+        const pJson = await pRes.json();
+        if (pJson.success) {
+          uploadedPhotoUrls = pJson.attachments.map((a: any) => a.url);
         }
-
-        if (sellerIdFront) {
-          const formData = new FormData();
-          formData.append("files", sellerIdFront);
-          const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
-          const json = await res.json();
-          sellerIdFrontUrl = json.attachments[0].url;
-        }
-
-        if (sellerIdBack) {
-          const formData = new FormData();
-          formData.append("files", sellerIdBack);
-          const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
-          const json = await res.json();
-          sellerIdBackUrl = json.attachments[0].url;
-        }
-
-        // Data Standardization (The Constitution)
-        const cleaned = cleanFormData(data, {
-          brand: "title",
-          model: "title",
-          color: "title",
-          imei: "upper",
-          sellerName: "proper",
-          replacedParts: "sentence"
-        });
-
-        const result = await createDeviceEntry({
-          brand: cleaned.brand,
-          model: cleaned.model,
-          imei: cleaned.imei,
-          color: cleaned.color || undefined,
-          ram: cleaned.ram || undefined,
-          storage: cleaned.storage || undefined,
-          condition: cleaned.condition,
-          warrantyEndDate: warrantyMode === "date" && !isNew ? cleaned.warrantyEndDate || undefined : undefined,
-          warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? cleaned.warrantyMonths || undefined : undefined),
-          sim1ExpirationDate: cleaned.sim1ExpirationDate || undefined,
-          sim1NotUsed: cleaned.sim1NotUsed,
-          sim2ExpirationDate: cleaned.sim2ExpirationDate || undefined,
-          sim2NotUsed: cleaned.sim2NotUsed,
-          batteryHealth: cleaned.batteryHealth ? parseInt(cleaned.batteryHealth) : undefined,
-          cosmeticScore: parseInt(cleaned.cosmeticScore || "10"),
-          expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
-          buyPrice: parseFloat(cleaned.buyPrice),
-          sellPrice: parseFloat(cleaned.sellPrice),
-          financeAccountId: cleaned.financeAccountId,
-          sellerName: cleaned.sellerName || undefined,
-          sellerTC: cleaned.sellerTC || undefined,
-          sellerPhone: cleaned.sellerPhone || undefined,
-          sellerIdPhotoUrl: sellerIdFrontUrl || undefined,
-          photoUrls: uploadedPhotoUrls,
-          invoiceUrl: null,
-        });
-
-        if (result.success) {
-          toast.success("Cihaz başarıyla envantere eklendi.");
-          setOpen(false);
-          reset();
-          setPhotoFiles([]);
-          setInvoiceFile(null);
-          setSellerIdFront(null);
-          setSellerIdBack(null);
-          setWarrantyMode("months");
-        } else {
-          toast.error(result.error ?? "İşlem başarısız.");
-        }
-      } catch (err) {
-        toast.error("Bir hata oluştu.");
       }
-    });
+
+      if (sellerIdFront) {
+        const formData = new FormData();
+        formData.append("files", sellerIdFront);
+        const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
+        const json = await res.json();
+        sellerIdFrontUrl = json.attachments[0].url;
+      }
+
+      if (sellerIdBack) {
+        const formData = new FormData();
+        formData.append("files", sellerIdBack);
+        const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
+        const json = await res.json();
+        sellerIdBackUrl = json.attachments[0].url;
+      }
+
+      // Data Standardization (The Constitution)
+      const cleaned = cleanFormData(data, {
+        brand: "title",
+        model: "title",
+        color: "title",
+        imei: "upper",
+        sellerName: "proper",
+        replacedParts: "sentence"
+      });
+
+      const result = await createDeviceMutation.mutateAsync({
+        brand: cleaned.brand,
+        model: cleaned.model,
+        imei: cleaned.imei,
+        color: cleaned.color || undefined,
+        ram: cleaned.ram || undefined,
+        storage: cleaned.storage || undefined,
+        condition: cleaned.condition,
+        warrantyEndDate: warrantyMode === "date" && !isNew ? cleaned.warrantyEndDate || undefined : undefined,
+        warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? cleaned.warrantyMonths || undefined : undefined),
+        sim1ExpirationDate: cleaned.sim1ExpirationDate || undefined,
+        sim1NotUsed: cleaned.sim1NotUsed,
+        sim2ExpirationDate: cleaned.sim2ExpirationDate || undefined,
+        sim2NotUsed: cleaned.sim2NotUsed,
+        batteryHealth: cleaned.batteryHealth ? parseInt(cleaned.batteryHealth) : undefined,
+        cosmeticScore: parseInt(cleaned.cosmeticScore || "10"),
+        expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
+        buyPrice: parseFloat(cleaned.buyPrice),
+        sellPrice: parseFloat(cleaned.sellPrice),
+        financeAccountId: cleaned.financeAccountId,
+        sellerName: cleaned.sellerName || undefined,
+        sellerTC: cleaned.sellerTC || undefined,
+        sellerPhone: cleaned.sellerPhone || undefined,
+        sellerIdPhotoUrl: sellerIdFrontUrl || undefined,
+        photoUrls: uploadedPhotoUrls,
+        invoiceUrl: null,
+      });
+
+      if (result.success) {
+        toast.success("Cihaz başarıyla envantere eklendi.");
+        setOpen(false);
+        reset();
+        setPhotoFiles([]);
+        setInvoiceFile(null);
+        setSellerIdFront(null);
+        setSellerIdBack(null);
+        setWarrantyMode("months");
+      } else {
+        toast.error(result.error ?? "İşlem başarısız.");
+      }
+    } catch (err) {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   /* ─── Subcomponent: Condition Card ─── */
@@ -646,7 +663,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <SelectValue placeholder="Ödeme Hesabı Seçin" />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
-                    {accounts.map((acc) => (
+                    {accounts.map((acc: any) => (
                       <SelectItem key={acc.id} value={acc.id} className="">
                         {acc.name} - <span className="text-blue-400">{acc.balance.toLocaleString("tr-TR")} ₺</span>
                       </SelectItem>

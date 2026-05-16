@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useTransition, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+
 import { Folder, FolderOpen, Plus, ChevronRight, ChevronDown, Trash2, Edit2, Info, Loader2, Package, AlertTriangle, GripVertical } from "lucide-react";
 import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { Button } from "@/components/ui/button";
@@ -18,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
-import { createCategory, updateCategory, deleteCategory, clearCategoryProducts, reorderCategories } from "@/lib/actions/category-actions";
-import { addInventoryStock, deleteProduct, updateProduct, createProduct } from "@/lib/actions/product-actions";
+import { createCategory, updateCategory, deleteCategory, clearCategoryProducts, reorderCategories, getAllCategories } from "@/lib/actions/category-actions";
+import { addInventoryStock, deleteProduct, updateProduct, createProduct, getAllProductsForCategoriesUI } from "@/lib/actions/product-actions";
 import {
     DndContext,
     DragOverlay,
@@ -204,17 +206,34 @@ function RootDropZone() {
     );
 }
 
-export function CategoryManagementClient({
-    initialCategories,
-    products
-}: {
-    initialCategories: Category[],
-    products: Product[]
-}) {
+export function CategoryManagementClient() {
+    const { data: queryCategories } = useQuery({
+        queryKey: ["all-categories"],
+        queryFn: async () => await getAllCategories(),
+    });
+
+    const { data: queryProducts } = useQuery({
+        queryKey: ["all-products-for-categories"],
+        queryFn: async () => await getAllProductsForCategoriesUI(),
+    });
+
     type PriceCurrency = "TRY" | "USD" | "EUR";
     const { rates: exchangeRates, defaultCurrency } = useDashboardData();
-    const [categories, setCategories] = useState<Category[]>(initialCategories);
-    const [allProducts, setAllProducts] = useState<Product[]>(products);
+
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+
+    useEffect(() => {
+        if (queryCategories) {
+            setCategories(queryCategories);
+        }
+    }, [queryCategories]);
+
+    useEffect(() => {
+        if (queryProducts) {
+            setAllProducts(queryProducts);
+        }
+    }, [queryProducts]);
     const [editingProducts, setEditingProducts] = useState<Record<string, { name: string, buyPrice: number, sellPrice: number }>>({});
     const [savingId, setSavingId] = useState<string | null>(null);
     const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -263,14 +282,6 @@ export function CategoryManagementClient({
         localStorage.setItem("category_price_currency", priceCurrency);
     }, [priceCurrency]);
 
-    // Sync state when props change (after server action revalidation)
-    useEffect(() => {
-        setCategories(initialCategories);
-    }, [initialCategories]);
-
-    useEffect(() => {
-        setAllProducts(products);
-    }, [products]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {

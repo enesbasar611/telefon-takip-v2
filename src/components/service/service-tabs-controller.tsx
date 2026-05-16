@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { getServiceTickets } from "@/lib/actions/service-actions";
+import { getWarrantyStats } from "@/lib/actions/warranty-actions";
+import { getShop } from "@/lib/actions/setting-actions";
+import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck, ShoppingBag, Activity, History, AlertCircle, Cpu, Archive } from "lucide-react";
 import { ServiceListTable } from "./service-list-table";
@@ -14,24 +19,62 @@ import { tr } from "date-fns/locale";
 import { getIndustryLabel } from "@/lib/industry-utils";
 
 interface ServiceTabsControllerProps {
-    tickets: any[];
-    warrantyStats: any;
+    tickets?: any[];
+    warrantyStats?: any;
     shop?: any;
 }
 
-export function ServiceTabsController({ tickets, warrantyStats, shop }: ServiceTabsControllerProps) {
+export function ServiceTabsController({ tickets: initialTickets, warrantyStats: initialWarrantyStats, shop: initialShop }: ServiceTabsControllerProps) {
+    const { data: tickets = initialTickets || [], isPending: isTicketsPending, isFetching: isTicketsFetching } = useQuery({
+        queryKey: ["service-tickets"],
+        queryFn: () => getServiceTickets(),
+        initialData: initialTickets,
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const { data: warrantyStats = initialWarrantyStats || { activeWarranties: 0, expiredWarranties: 0, returnRequests: 0, recentReturns: [] }, isPending: isStatsPending } = useQuery({
+        queryKey: ["warranty-stats"],
+        queryFn: () => getWarrantyStats(),
+        initialData: initialWarrantyStats,
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const { data: shop = initialShop } = useQuery({
+        queryKey: ["shop"],
+        queryFn: getShop,
+        initialData: initialShop,
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
     const [activeTab, setActiveTab] = useState("active");
 
     const serviceLabel = getIndustryLabel(shop, "serviceTicket");
     const assetLabel = getIndustryLabel(shop, "customerAsset");
 
-    const activeTickets = tickets.filter(t => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(t.status));
-    const readyTickets = tickets.filter(t => t.status === "READY");
-    const deliveredTickets = tickets.filter(t => t.status === "DELIVERED");
-    const cancelledTickets = tickets.filter(t => t.status === "CANCELLED");
+    const activeTickets = tickets.filter((t: any) => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(t.status));
+    const readyTickets = tickets.filter((t: any) => t.status === "READY");
+    const deliveredTickets = tickets.filter((t: any) => t.status === "DELIVERED");
+    const cancelledTickets = tickets.filter((t: any) => t.status === "CANCELLED");
+
+    if ((isTicketsPending && !initialTickets) || (isStatsPending && !initialWarrantyStats)) {
+        return (
+            <div className="h-96 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500/20" />
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col gap-8 w-full mt-6">
+        <div className="flex flex-col gap-8 w-full mt-6 relative">
+            {isTicketsFetching && (
+                <div className="absolute -top-12 right-0 flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full animate-in fade-in zoom-in duration-300">
+                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                    <span className="text-[10px] text-blue-500 font-medium uppercase tracking-widest">Güncelleniyor...</span>
+                </div>
+            )}
             <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="flex items-center w-full h-14 bg-white/[0.02] border border-border/50 rounded-2xl p-1 gap-1 shadow-2xl overflow-x-auto no-scrollbar">
                     <TabsTrigger value="active" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">

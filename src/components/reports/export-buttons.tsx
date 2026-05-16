@@ -4,27 +4,24 @@ import { useState } from "react";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getDetailedExportData } from "@/lib/actions/report-actions";
 
 interface ExportButtonsProps {
-    exportData: {
-        sales: any[];
-        tickets: any[];
-        inventory: any[];
-    } | null;
     dashboardRef: React.RefObject<HTMLDivElement>;
 }
 
-export function ExportButtons({ exportData, dashboardRef }: ExportButtonsProps) {
+export function ExportButtons({ dashboardRef }: ExportButtonsProps) {
     const [isExportingExcel, setIsExportingExcel] = useState(false);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
 
     const exportToExcel = async () => {
-        if (!exportData) {
-            toast.error("Dışa aktarılacak veri bulunamadı.");
-            return;
-        }
         setIsExportingExcel(true);
         try {
+            const exportData = await getDetailedExportData();
+            if (!exportData) {
+                toast.error("Dışa aktarılacak veri bulunamadı.");
+                return;
+            }
             const XLSX = await import("xlsx");
             const wb = XLSX.utils.book_new();
 
@@ -127,7 +124,7 @@ export function ExportButtons({ exportData, dashboardRef }: ExportButtonsProps) 
                 variant="outline"
                 size="sm"
                 onClick={exportToExcel}
-                disabled={isExportingExcel || !exportData}
+                disabled={isExportingExcel}
                 className="gap-2 rounded-xl border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/60 transition-all  text-xs uppercase tracking-wider h-10 px-4"
             >
                 {isExportingExcel ? (

@@ -25,6 +25,7 @@ import { updateDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Condition = "NEW" | "USED" | "INTERNATIONAL";
 
@@ -71,6 +72,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
   const [isPending, startTransition] = useTransition();
   const [warrantyMode, setWarrantyMode] = useState<"date" | "months">("months");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // File States
   const [existingPhotos, setExistingPhotos] = useState<string[]>(device.deviceInfo?.photoUrls || []);
@@ -197,6 +199,11 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
 
         if (result.success) {
           toast.success("Cihaz güncellendi.");
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["devices"] }),
+            queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+            queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+          ]);
           router.refresh();
           setOpen(false);
           setNewPhotos([]);

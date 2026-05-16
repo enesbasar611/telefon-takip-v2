@@ -3,10 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { getDeviceList, getExpiringDevices } from "@/lib/actions/device-hub-actions";
 import { getCategories } from "@/lib/actions/product-actions";
-import { CreateDeviceModal } from "@/components/device-hub/create-device-modal";
-import { ExpiringWarrantiesModal } from "@/components/device-hub/expiring-warranties-modal";
-import { DeviceMonthlySalesModal } from "@/components/device-hub/device-monthly-sales-modal";
-import { DeviceAiStockAdviceModal } from "@/components/device-hub/device-ai-stock-advice-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import nextDynamic from "next/dynamic";
+
+const CreateDeviceModal = nextDynamic(() => import("@/components/device-hub/create-device-modal").then(m => m.CreateDeviceModal), { ssr: false });
+const ExpiringWarrantiesModal = nextDynamic(() => import("@/components/device-hub/expiring-warranties-modal").then(m => m.ExpiringWarrantiesModal), { ssr: false });
+const DeviceMonthlySalesModal = nextDynamic(() => import("@/components/device-hub/device-monthly-sales-modal").then(m => m.DeviceMonthlySalesModal), { ssr: false });
+const DeviceAiStockAdviceModal = nextDynamic(() => import("@/components/device-hub/device-ai-stock-advice-modal").then(m => m.DeviceAiStockAdviceModal), { ssr: false });
+const DeviceImportModal = nextDynamic(() => import("@/components/device-hub/device-import-modal").then(m => m.DeviceImportModal), { ssr: false });
+
 import prisma from "@/lib/prisma";
 import { getShopId } from "@/lib/auth";
 import {
@@ -15,11 +20,9 @@ import {
 import { DeviceListClient } from "@/components/device-hub/device-list-client";
 import { getMonthlySalesComparisonHtml } from "@/lib/device-utils";
 import { DeviceExportButton } from "@/components/device-hub/device-export-button";
-import { DeviceImportModal } from "@/components/device-hub/device-import-modal";
 import { getIndustryLabel } from "@/lib/industry-utils";
 import { DeviceMonthSelector } from "@/components/device-hub/device-month-selector";
 import { DeviceDateRangeSelector } from "@/components/device-hub/device-date-range-selector";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
@@ -58,15 +61,6 @@ interface DeviceHubDataProps {
 
 async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: DeviceHubDataProps) {
   const shopId = await getShopId();
-  const [devices, categories, expiringDevices] = await Promise.all([
-    getDeviceList({ month, startDate: startDateParam, endDate: endDateParam }),
-    getCategories(),
-    getExpiringDevices(),
-  ]);
-
-  const shop = await prisma.shop.findUnique({ where: { id: shopId } });
-  const assetLabel = getIndustryLabel(shop, "customerAsset");
-  const assetLabelUpper = assetLabel.toLocaleUpperCase('tr-TR');
 
   let startBound: Date;
   let endBound: Date;
@@ -82,6 +76,51 @@ async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: 
     endBound = new Date(startBound);
     endBound.setMonth(endBound.getMonth() + 1);
   }
+
+  const lastMonthStart = new Date(startBound);
+  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+  const lastMonthEnd = new Date(startBound);
+
+  const [
+    devices,
+    categories,
+    expiringDevices,
+    shop,
+    periodSalesItems,
+    periodPurchases,
+    lastMonthSalesItems
+  ] = await Promise.all([
+    getDeviceList({ month, startDate: startDateParam, endDate: endDateParam }),
+    getCategories(),
+    getExpiringDevices(),
+    prisma.shop.findUnique({ where: { id: shopId } }),
+    prisma.saleItem.findMany({
+      where: {
+        shopId,
+        sale: { createdAt: { gte: startBound, lt: endBound } },
+        product: { deviceInfo: { isNot: null } }
+      },
+      include: { product: { include: { deviceInfo: true } }, sale: true },
+      orderBy: { sale: { createdAt: "desc" } }
+    }),
+    prisma.product.findMany({
+      where: {
+        shopId,
+        createdAt: { gte: startBound, lt: endBound },
+        deviceInfo: { isNot: null }
+      }
+    }),
+    prisma.saleItem.findMany({
+      where: {
+        shopId,
+        sale: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } },
+        product: { deviceInfo: { isNot: null } }
+      }
+    })
+  ]);
+
+  const assetLabel = getIndustryLabel(shop, "customerAsset");
+  const assetLabelUpper = assetLabel.toLocaleUpperCase('tr-TR');
 
   const stockDevices = devices.filter((d: any) => d.stock > 0);
   const soldDevices = devices.filter((d: any) => d.stock === 0 && d.sale);
@@ -102,37 +141,7 @@ async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: 
   const periodToplamKar = filteredSoldDevices.reduce((acc: number, d: any) => acc + (Number(d.sellPrice) - Number(d.buyPrice)), 0);
   const periodCount = filteredSoldDevices.length;
 
-  const [periodSalesItems, periodPurchases] = await Promise.all([
-    prisma.saleItem.findMany({
-      where: {
-        shopId,
-        sale: { createdAt: { gte: startBound, lt: endBound } },
-        product: { deviceInfo: { isNot: null } }
-      },
-      include: { product: { include: { deviceInfo: true } }, sale: true },
-      orderBy: { sale: { createdAt: "desc" } }
-    }),
-    prisma.product.findMany({
-      where: {
-        shopId,
-        createdAt: { gte: startBound, lt: endBound },
-        deviceInfo: { isNot: null }
-      }
-    })
-  ]);
-
   const periodTotal = periodSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
-
-  const lastMonthStart = new Date(startBound);
-  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
-  const lastMonthEnd = new Date(startBound);
-  const lastMonthSalesItems = await prisma.saleItem.findMany({
-    where: {
-      shopId,
-      sale: { createdAt: { gte: lastMonthStart, lt: lastMonthEnd } },
-      product: { deviceInfo: { isNot: null } }
-    }
-  });
   const lastMonthTotal = lastMonthSalesItems.reduce((acc, item) => acc + Number(item.totalPrice), 0);
   const comparisonHtml = getMonthlySalesComparisonHtml(periodTotal, lastMonthTotal);
 
@@ -252,6 +261,9 @@ async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: 
       <DeviceListClient
         initialDevices={devices}
         initialDeviceId={deviceId}
+        month={month}
+        startDate={startDateParam}
+        endDate={endDateParam}
       />
     </div>
   );
@@ -291,7 +303,7 @@ export default function DeviceHubPage({
 }) {
   return (
     <Suspense fallback={<DeviceHubSkeleton />}>
-      <DeviceHubData 
+      <DeviceHubData
         month={searchParams.month}
         startDateParam={searchParams.startDate}
         endDateParam={searchParams.endDate}

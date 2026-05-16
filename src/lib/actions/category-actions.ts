@@ -1,4 +1,5 @@
 "use server";
+import { cache } from "react";
 
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
@@ -267,7 +268,7 @@ export async function clearCategoryProducts(id: string) {
 /**
  * Tüm kategorileri flat (düz) yapıda çeker
  */
-export async function getAllCategories() {
+export const getAllCategories = cache(async function getAllCategories() {
     try {
         const shopId = await getShopId();
         const categories = await prisma.category.findMany({
@@ -282,4 +283,4 @@ export async function getAllCategories() {
         console.error("getAllCategories error:", error);
         return [];
     }
-}
+});

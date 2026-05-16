@@ -26,7 +26,33 @@ async function checkStockAndAddShortage(productId: string, productName: string) 
 
 import { cache } from "react";
 
-// ... existing code ...
+
+export const getAllProductsForCategoriesUI = cache(async function getAllProductsForCategoriesUI() {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return [];
+    const products = await prisma.product.findMany({
+      where: { shopId },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        stock: true,
+        buyPrice: true,
+        sellPrice: true,
+        buyPriceUsd: true,
+        sellPriceUsd: true,
+        attributes: true
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    return serializePrisma(products);
+  } catch (error) {
+    console.error("Kategori Ürünleri Getirme Hatası:", error);
+    return [];
+  }
+});
+
 
 export const getProducts = cache(async function getProducts(options: {
   search?: string,

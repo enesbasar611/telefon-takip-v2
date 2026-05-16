@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,21 +25,12 @@ interface Account {
 export function AccountDetailModal({ account }: { account: Account }) {
     const [open, setOpen] = useState(false);
     const [period, setPeriod] = useState<"DAY" | "WEEK" | "MONTH">("WEEK");
-    const [analytics, setAnalytics] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            loadAnalytics();
-        }
-    }, [open, period]);
-
-    const loadAnalytics = async () => {
-        setLoading(true);
-        const data = await getAccountAnalytics(account.id, period);
-        setAnalytics(data);
-        setLoading(false);
-    };
+    const { data: analytics, isFetching: loading, refetch } = useQuery<any>({
+        queryKey: ["account-analytics", account.id, period],
+        queryFn: () => getAccountAnalytics(account.id, period),
+        enabled: open,
+        placeholderData: keepPreviousData,
+    });
 
     const icons: any = {
         CASH: Wallet,
@@ -353,7 +345,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                     <Button variant="outline" onClick={() => setOpen(false)} className="h-11 text-xs  rounded-2xl px-6 border-border/40 hover:bg-muted/30 uppercase tracking-widest">
                         KAPAT
                     </Button>
-                    <Button disabled={loading} onClick={loadAnalytics} className="h-11 text-xs  rounded-2xl px-6 shadow-md uppercase tracking-widest">
+                    <Button disabled={loading} onClick={() => refetch()} className="h-11 text-xs  rounded-2xl px-6 shadow-md uppercase tracking-widest">
                         REFRESH
                     </Button>
                 </div>

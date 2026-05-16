@@ -27,18 +27,12 @@ import { CriticalStockDialog } from "./critical-stock-dialog";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { getInventoryStats, getCriticalProducts, getAllInventoryMovements } from "@/lib/actions/product-actions";
+import { useQuery } from "@tanstack/react-query";
+
 interface StockMovementsClientProps {
-    movements: any[];
-    criticalProducts: any[];
-    stats: {
-        totalMovements: number;
-        criticalCount: number;
-    };
-    pagination?: {
-        page: number;
-        totalPages: number;
-        search: string;
-    };
+    initialPage: number;
+    initialSearch: string;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; icon: any; colors: string; dot: string }> = {
@@ -93,17 +87,49 @@ const TYPE_CONFIG: Record<string, { label: string; icon: any; colors: string; do
 };
 
 export function StockMovementsClient({
-    movements,
-    criticalProducts,
-    stats,
-    pagination = { page: 1, totalPages: 1, search: "" },
+    initialPage = 1,
+    initialSearch = "",
 }: StockMovementsClientProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [searchTerm, setSearchTerm] = useState(pagination.search || "");
-    const [isPending, startTransition] = useTransition();
+    const [searchTerm, setSearchTerm] = useState(initialSearch);
+    const [isTransitioning, startTransition] = useTransition();
     const [isCriticalDialogOpen, setIsCriticalDialogOpen] = useState(false);
+
+    const currentPage = Number(searchParams.get("page")) || initialPage;
+    const currentSearch = searchParams.get("search") || initialSearch;
+
+    const { data: statsData } = useQuery({
+        queryKey: ["inventory-stats"],
+        queryFn: async () => await getInventoryStats(),
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const { data: criticalProducts, isLoading: isCriticalLoading } = useQuery({
+        queryKey: ["critical-products"],
+        queryFn: async () => await getCriticalProducts(),
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const { data: movementData, isPlaceholderData, isLoading: isMovementsLoading } = useQuery({
+        queryKey: ["inventory-movements", currentPage, currentSearch],
+        queryFn: async () => await getAllInventoryMovements({ page: currentPage, limit: 30, search: currentSearch }),
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const isPending = isTransitioning || isMovementsLoading || isPlaceholderData;
+
+    const movements = movementData?.success ? movementData.data : [];
+    const stats = {
+        totalMovements: movementData?.success ? movementData.total : 0,
+        criticalCount: statsData?.criticalCount || 0
+    };
+    const pagination = {
+        page: currentPage,
+        totalPages: movementData?.success ? movementData.totalPages : 1,
+        search: currentSearch
+    };
 
     const handleSearch = (value: string) => {
         setSearchTerm(value);
@@ -120,8 +146,8 @@ export function StockMovementsClient({
         startTransition(() => router.push(`${pathname}?${params.toString()}`));
     };
 
-    const inCount = movements.filter(m => ["STOCK_IN", "IN", "PURCHASE"].includes(m.type)).length;
-    const outCount = movements.filter(m => ["STOCK_OUT", "OUT", "SALE", "SERVICE_USE"].includes(m.type)).length;
+    const inCount = movements.filter((m: any) => ["STOCK_IN", "IN", "PURCHASE"].includes(m.type)).length;
+    const outCount = movements.filter((m: any) => ["STOCK_OUT", "OUT", "SALE", "SERVICE_USE"].includes(m.type)).length;
 
     return (
         <div className="space-y-6 pb-24">
@@ -216,7 +242,7 @@ export function StockMovementsClient({
                             </motion.div>
                         ) : (
                             <div key="list" className="divide-y divide-border/30">
-                                {movements.map((m, idx) => {
+                                {movements.map((m: any, idx: number) => {
                                     const cfg = TYPE_CONFIG[m.type] || TYPE_CONFIG.ADJUSTMENT;
                                     const Icon = cfg.icon;
                                     const isPositive = m.quantity > 0;
@@ -373,7 +399,7 @@ export function StockMovementsClient({
             <CriticalStockDialog
                 open={isCriticalDialogOpen}
                 onOpenChange={setIsCriticalDialogOpen}
-                products={criticalProducts}
+                products={criticalProducts || []}
             />
         </div>
     );

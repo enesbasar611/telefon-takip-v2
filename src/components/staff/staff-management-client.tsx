@@ -23,7 +23,11 @@ import {
     ChevronLeft,
     ChevronRight,
     Search as SearchIcon,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Lock,
+    Phone,
+    Mail,
+    UserPlus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +89,7 @@ interface StaffMember {
     name: string | null;
     surname: string | null;
     email: string;
+    phone: string | null;
     role: Role;
     image: string | null;
     createdAt: string;
@@ -99,6 +104,7 @@ interface StaffMember {
     canFinance: boolean;
     canDelete: boolean;
     canEdit: boolean;
+    leaves: any[];
 }
 
 interface StaffManagementClientProps {
@@ -121,7 +127,7 @@ function RoleBadge({ role }: { role: string }) {
     const config = configs[role] || configs.STAFF;
 
     return (
-        <Badge className={cn("w-fit text-[9px]  border-none px-2 py-0.5", config.className)}>
+        <Badge className={cn("w-fit text-[9px] border-none px-2 py-0.5", config.className)}>
             {config.label}
         </Badge>
     );
@@ -136,6 +142,10 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: member?.name || "",
+        surname: member?.surname || "",
+        email: member?.email || "",
+        phone: member?.phone || "",
+        password: "",
         role: member?.role || "STAFF",
         canSell: member?.canSell || false,
         canService: member?.canService || false,
@@ -145,10 +155,21 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
         canEdit: member?.canEdit || false,
     });
 
+    const [leaveData, setLeaveData] = useState({
+        startDate: "",
+        endDate: "",
+        type: "ANNUAL",
+        note: ""
+    });
+
     useEffect(() => {
         if (member) {
             setFormData({
                 name: member.name || "",
+                surname: member.surname || "",
+                email: member.email || "",
+                phone: member.phone || "",
+                password: "",
                 role: member.role,
                 canSell: member.canSell || false,
                 canService: member.canService || false,
@@ -174,6 +195,34 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
         setLoading(false);
     };
 
+    const handleAssignLeave = async () => {
+        if (!member || !leaveData.startDate || !leaveData.endDate) return;
+        setLoading(true);
+        const { assignStaffLeave } = await import("@/lib/actions/staff-actions");
+        const res = await assignStaffLeave({
+            userId: member.id,
+            startDate: new Date(leaveData.startDate),
+            endDate: new Date(leaveData.endDate),
+            type: leaveData.type,
+            note: leaveData.note
+        });
+
+        if (res.success) {
+            setLeaveData({ startDate: "", endDate: "", type: "ANNUAL", note: "" });
+            onUpdate();
+        }
+        setLoading(false);
+    };
+
+    const handleDeleteLeave = async (leaveId: string) => {
+        if (!confirm("Bu izni silmek istediğinize emin misiniz?")) return;
+        const { deleteStaffLeave } = await import("@/lib/actions/staff-actions");
+        const res = await deleteStaffLeave(leaveId);
+        if (res.success) {
+            onUpdate();
+        }
+    };
+
     const handleRoleChange = (role: Role) => {
         setFormData({
             ...formData,
@@ -184,55 +233,204 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-white dark:bg-card border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
-                <DialogHeader className="p-8 pb-4">
-                    <DialogTitle className="font-medium text-2xl ">Personel Yetkilerini Düzenle</DialogTitle>
-                    <DialogDescription className="text-muted-foreground/80 text-xs font-medium italic">
-                        {member?.name || "Personel"} için sistem erişim yetkilerini özelleştirin.
-                    </DialogDescription>
+            <DialogContent className="max-w-2xl bg-white dark:bg-card border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl p-0 overflow-hidden">
+                <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-white/5">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <Shield className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <DialogTitle className="font-bold text-xl">Profil ve Yetki Yönetimi</DialogTitle>
+                            <DialogDescription className="text-muted-foreground/80 text-xs font-semibold">
+                                {member?.name} {member?.surname} için sistem erişimini özelleştirin.
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
-                <div className="p-8 space-y-6">
-                    <div className="space-y-2">
-                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest pl-1">AD SOYAD</Label>
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl "
-                        />
+
+                <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1">AD</Label>
+                            <Input
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1">SOYAD</Label>
+                            <Input
+                                value={formData.surname}
+                                onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
+                                className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4"
+                            />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest pl-1">ROL</Label>
-                        <Select
-                            value={formData.role}
-                            onValueChange={(v: any) => handleRoleChange(v as Role)}
-                        >
-                            <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-xl ">
-                                <SelectValue placeholder="Rol seçin" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-card border-slate-200 dark:border-border/50 rounded-xl">
-                                <SelectItem value="ADMIN" className=" text-xs uppercase tracking-widest">Yönetici</SelectItem>
-                                <SelectItem value="MANAGER" className=" text-xs uppercase tracking-widest">Müdür</SelectItem>
-                                <SelectItem value="CASHIER" className=" text-xs uppercase tracking-widest">Kasiyer</SelectItem>
-                                <SelectItem value="TECHNICIAN" className=" text-xs uppercase tracking-widest">Teknisyen</SelectItem>
-                                <SelectItem value="STAFF" className=" text-xs uppercase tracking-widest">Personel</SelectItem>
-                                <SelectItem value="COURIER" className=" text-xs uppercase tracking-widest">Kurye</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-1">
+                                <Mail className="w-3 h-3" /> E-POSTA
+                            </Label>
+                            <Input
+                                value={formData.email}
+                                disabled
+                                className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4 opacity-60 italic"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-rose-500 uppercase tracking-widest pl-1 flex items-center gap-1">
+                                <Lock className="w-3 h-3" /> YENİ ŞİFRE (ADMIN)
+                            </Label>
+                            <Input
+                                type="password"
+                                placeholder="Şifreyi sıfırla..."
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                className="h-12 bg-rose-500/5 dark:bg-rose-500/10 border-none rounded-2xl font-bold px-4 ring-1 ring-rose-500/20"
+                            />
+                        </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest pl-1">YETKİLER</Label>
-                        <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> TELEFON
+                            </Label>
+                            <Input
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest pl-1">SİSTEM ROLÜ</Label>
+                            <Select
+                                value={formData.role}
+                                onValueChange={(v: any) => handleRoleChange(v as Role)}
+                            >
+                                <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-none rounded-2xl font-bold px-4">
+                                    <SelectValue placeholder="Rol seçin" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-card border-border/50 rounded-2xl shadow-2xl">
+                                    {Object.entries(STAFF_ROLE_LABELS).map(([val, label]) => (
+                                        <SelectItem key={val} value={val} className="text-xs font-bold uppercase tracking-widest py-3">
+                                            {label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-border/10">
+                        <div className="flex items-center justify-between px-1">
+                            <Label className="font-black text-[10px] text-rose-500 uppercase tracking-widest flex items-center gap-2">
+                                <Calendar className="w-3 h-3" /> İZİN / TATİL YÖNETİMİ
+                            </Label>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-[9px] font-black opacity-50 uppercase pl-1">BAŞLANGIÇ</Label>
+                                    <Input
+                                        type="date"
+                                        value={leaveData.startDate}
+                                        onChange={(e) => setLeaveData({ ...leaveData, startDate: e.target.value })}
+                                        className="h-10 bg-white dark:bg-white/5 border-none rounded-xl font-bold px-3 text-xs shadow-sm ring-1 ring-border/5"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-[9px] font-black opacity-50 uppercase pl-1">BİTİŞ</Label>
+                                    <Input
+                                        type="date"
+                                        value={leaveData.endDate}
+                                        onChange={(e) => setLeaveData({ ...leaveData, endDate: e.target.value })}
+                                        className="h-10 bg-white dark:bg-white/5 border-none rounded-xl font-bold px-3 text-xs shadow-sm ring-1 ring-border/5"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label className="text-[9px] font-black opacity-50 uppercase pl-1">İZİN TİPİ</Label>
+                                    <Select value={leaveData.type} onValueChange={(v) => setLeaveData({ ...leaveData, type: v })}>
+                                        <SelectTrigger className="h-10 bg-white dark:bg-white/5 border-none rounded-xl font-bold px-3 text-xs shadow-sm ring-1 ring-border/5">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ANNUAL">Yıllık İzin</SelectItem>
+                                            <SelectItem value="SICK">Raporlu / Hasta</SelectItem>
+                                            <SelectItem value="UNPAID">Ücretsiz İzin</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex items-end">
+                                    <Button
+                                        onClick={handleAssignLeave}
+                                        disabled={loading}
+                                        className="w-full h-10 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[10px] uppercase tracking-widest shadow-lg"
+                                    >
+                                        {loading ? "..." : "İzini Tanımla"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {member?.leaves && member.leaves.length > 0 && (
+                            <div className="space-y-2 overflow-y-visible pr-2">
+                                {member.leaves.sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map((leave: any) => {
+                                    const isCurrent = new Date() >= new Date(leave.startDate) && new Date() <= new Date(leave.endDate);
+                                    return (
+                                        <div key={leave.id} className={cn(
+                                            "p-4 rounded-2xl flex items-center justify-between border-2 transition-all",
+                                            isCurrent ? "bg-amber-500/10 border-amber-500/20 shadow-md" : "bg-slate-50 dark:bg-white/5 border-transparent opacity-80"
+                                        )}>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                                                        {new Date(leave.startDate).toLocaleDateString('tr-TR')} - {new Date(leave.endDate).toLocaleDateString('tr-TR')}
+                                                    </span>
+                                                    {isCurrent && <Badge className="bg-amber-500 text-white border-none text-[8px] font-black">ŞU AN İZİNLİ</Badge>}
+                                                </div>
+                                                <span className="text-[9px] font-bold opacity-50 uppercase">
+                                                    {leave.type === "ANNUAL" ? "Yıllık İzin" : leave.type === "SICK" ? "Raporlu" : "Ücretsiz İzin"}
+                                                </span>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleDeleteLeave(leave.id)}
+                                                className="h-8 w-8 rounded-lg text-rose-500 hover:bg-rose-500/10 shadow-none border-none ring-0 focus-visible:ring-0"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-3 pt-6 border-t border-border/10">
+                        <div className="flex items-center justify-between px-1">
+                            <Label className="font-black text-[10px] text-muted-foreground uppercase tracking-widest">MODÜL YETKİLERİ (HASSAS)</Label>
+                            <Badge className="bg-blue-600/10 text-blue-600 border-none text-[8px] font-black tracking-widest">KRİTİK</Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
                             {STAFF_PERMISSION_FIELDS.map((perm) => (
-                                <div
+                                <motion.div
                                     key={perm.key}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
                                     onClick={() => setFormData({ ...formData, [perm.key]: !formData[perm.key] })}
                                     className={cn(
-                                        "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-3",
+                                        "p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-2 items-center text-center",
                                         formData[perm.key]
-                                            ? "bg-blue-500/5 border-blue-500/20"
-                                            : "bg-slate-50 dark:bg-white/5 border-transparent hover:border-slate-100 dark:hover:border-border/50"
+                                            ? "bg-blue-600/10 border-blue-600/30 text-blue-600 shadow-sm"
+                                            : "bg-slate-50 dark:bg-white/5 border-transparent opacity-60"
                                     )}
                                 >
                                     <Checkbox
@@ -241,27 +439,36 @@ function StaffEditModal({ isOpen, onClose, member, onUpdate }: {
                                             setFormData({ ...formData, [perm.key]: !!c });
                                         }}
                                         onClick={(e) => e.stopPropagation()}
+                                        className="h-4 w-4 border-2 border-blue-600/30 data-[state=checked]:bg-blue-600"
                                     />
-                                    <span className="text-[10px]  uppercase tracking-tight">{perm.label}</span>
-                                </div>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">{perm.label}</span>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
                 </div>
-                <DialogFooter className="p-8 pt-0 gap-2">
-                    <Button variant="ghost" onClick={onClose} className="rounded-xl text-muted-foreground  uppercase text-[10px] tracking-widest">Vazgeç</Button>
+
+                <DialogFooter className="p-8 bg-slate-50/50 dark:bg-white/5 gap-3 border-t border-border/10">
+                    <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        className="rounded-2xl text-muted-foreground uppercase text-[10px] font-black tracking-widest px-8"
+                    >
+                        Vazgeç
+                    </Button>
                     <Button
                         onClick={handleSave}
                         disabled={loading}
-                        className="rounded-2xl bg-blue-600 hover:bg-blue-500  px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest"
+                        className="rounded-2xl bg-blue-600 hover:bg-blue-700 px-10 h-14 shadow-xl shadow-blue-500/25 text-xs font-black uppercase tracking-[0.15em] transition-all transform hover:-translate-y-0.5 active:translate-y-0"
                     >
-                        {loading ? "GÜNCELLENİYOR..." : "DEĞİŞİKLİKLERİ KAYDET"}
+                        {loading ? "İŞLENİYOR..." : "BİLGİLERİ GÜNCELLE"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
+
 
 function RoleTemplateModal({
     isOpen,
@@ -296,22 +503,22 @@ function RoleTemplateModal({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl bg-white dark:bg-card border-none text-slate-900 dark:text-white rounded-[2.5rem] shadow-2xl">
                 <DialogHeader className="p-8 pb-4">
-                    <DialogTitle className="font-medium text-2xl ">Yetki Şablonlarını Düzenle</DialogTitle>
-                    <DialogDescription className="text-muted-foreground/80 text-xs font-medium italic">
-                        * Bu değişiklikler sadece yeni oluşturulan personelleri etkiler.
+                    <DialogTitle className="font-extra-bold text-2xl">Yetki Şablonlarını Düzenle</DialogTitle>
+                    <DialogDescription className="text-muted-foreground/80 text-xs font-bold italic">
+                        * Bu değişiklikler sadece yeni oluşturulan personelleri etkiler. Mevcut personelleri tek tek düzenleyin.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="p-8 pt-0 overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="border-slate-50 dark:border-border/50 hover:bg-transparent">
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground">ROL</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">SATIŞ</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">SERVİS</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">STOK</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">FİNANS</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">DÜZENLE</TableHead>
-                                <TableHead className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground text-center">SİL</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">ROL</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">SATIŞ</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">SERVİS</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">STOK</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">FİNANS</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">DÜZENLE</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">SİL</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -319,7 +526,7 @@ function RoleTemplateModal({
                                 const t = templates.find(temp => temp.role === role) || getDefaultStaffPermissions(role);
                                 return (
                                     <TableRow key={role} className="hover:bg-transparent border-b border-slate-50 dark:border-border/50 last:border-none">
-                                        <TableCell className=" text-xs text-muted-foreground/80 uppercase tracking-widest py-6">
+                                        <TableCell className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest py-6">
                                             {STAFF_ROLE_LABELS[role] || role}
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -365,7 +572,7 @@ function RoleTemplateModal({
                     </Table>
                 </div>
                 <DialogFooter className="p-8 pt-4">
-                    <Button onClick={onClose} className="rounded-2xl bg-card dark:bg-blue-600 text-white  px-8 h-12 shadow-lg shadow-blue-500/20 text-xs uppercase tracking-widest">Kapat</Button>
+                    <Button onClick={onClose} className="rounded-2xl bg-card dark:bg-blue-600 text-white px-8 h-12 shadow-lg shadow-blue-500/20 text-xs font-black uppercase tracking-widest">Kapat</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -429,17 +636,44 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     const filteredStaff = useMemo(() => {
         return localStaff.filter(member => {
             const matchesSearch = (member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                member.email.toLowerCase().includes(searchTerm.toLowerCase()));
+                member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                member.surname?.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesTab = filter === "all" || (member.role as string) === filter;
             return matchesSearch && matchesTab;
         });
     }, [localStaff, searchTerm, filter]);
 
-    const stats = useMemo(() => ({
-        total: localStaff.length,
-        active: localStaff.filter(s => s.role !== 'STAFF').length,
-        onLeave: 0
-    }), [localStaff]);
+    const stats = useMemo(() => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        let monthlyTotalDays = 0;
+        localStaff.forEach(s => {
+            s.leaves?.forEach(l => {
+                const leaveStart = new Date(l.startDate);
+                const leaveEnd = new Date(l.endDate);
+
+                const overlapStart = leaveStart < startOfMonth ? startOfMonth : leaveStart;
+                const overlapEnd = leaveEnd > endOfMonth ? endOfMonth : leaveEnd;
+
+                if (overlapStart <= overlapEnd) {
+                    const diffTime = Math.abs(overlapEnd.getTime() - overlapStart.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    monthlyTotalDays += diffDays;
+                }
+            });
+        });
+
+        return {
+            total: localStaff.length,
+            active: localStaff.filter(s => s.role !== 'STAFF').length,
+            onLeave: localStaff.filter(s =>
+                s.leaves?.some(l => new Date(l.startDate) <= now && new Date(l.endDate) >= now)
+            ).length,
+            monthlyTotalDays
+        };
+    }, [localStaff]);
 
     const rolePermissions = useMemo(() => {
         const roles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN"];
@@ -452,7 +686,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     }, [localStaff]);
 
     return (
-        <div className="animate-in fade-in duration-700 space-y-12">
+        <div className="animate-in fade-in duration-700 space-y-12 pb-20">
             <PageHeader
                 title="Ekip Yönetimi"
                 description="Personel performansını, yetkilerini ve işlem loglarını buradan yönetin."
@@ -464,7 +698,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 }
                 actions={
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl bg-card border border-border/40 shadow-sm">
+                        <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-card border border-border/40 shadow-xl hover:bg-slate-50 transition-all">
                             <Filter className="w-5 h-5 text-muted-foreground" />
                         </Button>
                         <CreateStaffModal />
@@ -476,9 +710,9 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 {[
                     { label: "TOPLAM PERSONEL", val: stats.total, icon: Users, color: "blue", bg: "bg-blue-500/10", text: "text-blue-500" },
                     { label: "AKTİF GÖREVDE", val: stats.active, icon: UserCheck, color: "emerald", bg: "bg-emerald-500/10", text: "text-emerald-500" },
-                    { label: "İZİNLİ / TATİL", val: stats.onLeave, icon: Calendar, color: "rose", bg: "bg-rose-500/10", text: "text-rose-500" }
+                    { label: "İZİNLİ / TATİL", val: stats.onLeave, sub: `BU AY: ${stats.monthlyTotalDays} GÜN`, icon: Calendar, color: "rose", bg: "bg-rose-500/10", text: "text-rose-500" }
                 ].map((s, i) => (
-                    <Card key={i} className="rounded-[2.5rem] border-border/40 shadow-xl bg-card overflow-hidden group hover:border-border transition-all">
+                    <Card key={i} className="rounded-[2.5rem] border-border/20 shadow-2xl bg-card overflow-hidden group hover:border-blue-500/30 transition-all duration-500">
                         <CardContent className="p-8">
                             <div className="flex items-center justify-between mb-8">
                                 <div className={cn("h-16 w-16 rounded-[1.6rem] flex items-center justify-center transition-transform group-hover:scale-110 duration-500", s.bg)}>
@@ -486,8 +720,11 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em]">{s.label}</p>
-                                <h3 className="font-medium text-4xl text-foreground tracking-tight">{s.val}</h3>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">{s.label}</p>
+                                <div className="flex items-baseline gap-3">
+                                    <h3 className="font-bold text-4xl text-foreground tracking-tight">{s.val}</h3>
+                                    {s.sub && <span className="text-[10px] font-black text-muted-foreground">{s.sub}</span>}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -497,8 +734,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 space-y-6">
                     <div className="flex items-center justify-between px-1">
-                        <h2 className="font-medium text-xl  text-slate-900 dark:text-white">Personel Listesi</h2>
-                        <div className="flex items-center gap-2 p-1 bg-muted/30 dark:bg-card/50 rounded-2xl border border-border/50">
+                        <h2 className="font-black text-xl text-slate-900 dark:text-white uppercase tracking-tight">Personel Listesi</h2>
+                        <div className="flex items-center gap-2 p-1 bg-muted/30 dark:bg-card/50 rounded-[1.5rem] border border-border/50 backdrop-blur-md">
                             {[
                                 { id: "all", label: "TÜMÜ" },
                                 { id: "SUPER_ADMIN", label: "SÜPER EDN" },
@@ -512,9 +749,9 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     variant="ghost"
                                     onClick={() => setFilter(t.id as any)}
                                     className={cn(
-                                        "h-10 px-6 rounded-xl text-[10px] font-bold tracking-widest transition-all",
+                                        "h-10 px-6 rounded-xl text-[10px] font-black tracking-widest transition-all",
                                         filter === t.id
-                                            ? "bg-card text-foreground shadow-lg dark:shadow-black/20"
+                                            ? "bg-blue-600 text-white shadow-xl shadow-blue-500/20"
                                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                     )}
                                 >
@@ -524,15 +761,15 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                         </div>
                     </div>
 
-                    <Card className="rounded-[2.5rem] overflow-hidden">
+                    <Card className="rounded-[2.5rem] overflow-hidden border-border/20 shadow-2xl">
                         <Table>
-                            <TableHeader className="bg-muted/30 dark:bg-black/20">
+                            <TableHeader className="bg-slate-50/50 dark:bg-black/20">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="font-bold py-6 px-8 text-[10px] uppercase tracking-widest text-muted-foreground">İSİM / ROL</TableHead>
-                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">İŞ SAYISI</TableHead>
-                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">BAŞARI</TableHead>
-                                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">SON GİRİŞ</TableHead>
-                                    <TableHead className="font-bold text-right pr-8 text-[10px] uppercase tracking-widest text-muted-foreground">AKSİYON</TableHead>
+                                    <TableHead className="font-black py-6 px-8 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">İSİM / ROL</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">İŞ SAYISI</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">BAŞARI</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">SON GİRİŞ</TableHead>
+                                    <TableHead className="font-black text-right pr-8 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">İŞLEM</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -540,34 +777,51 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                     {filteredStaff.map((member, idx) => (
                                         <motion.tr
                                             key={member.id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.05 }}
-                                            className="group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors border-b border-slate-50 dark:border-border/50 last:border-none cursor-pointer"
+                                            onClick={() => {
+                                                setSelectedMember(member);
+                                                setEditModalOpen(true);
+                                            }}
+                                            className="group hover:bg-blue-500/[0.02] dark:hover:bg-blue-500/5 transition-all border-b border-border/5 last:border-none cursor-pointer"
                                         >
-                                            <TableCell className="py-5 px-8">
+                                            <TableCell className="py-6 px-8">
                                                 <div className="flex items-center gap-4">
-                                                    <Avatar className="h-12 w-12 rounded-2xl border-2 border-white dark:border-border shadow-sm">
-                                                        <AvatarImage src={member.image || ""} />
-                                                        <AvatarFallback className="bg-slate-100 dark:bg-muted text-slate-900 dark:text-white  text-xs">
-                                                            {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex flex-col gap-1 text-left">
-                                                        <span className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                    <div className="relative">
+                                                        <div className="absolute -inset-1 bg-blue-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                                                        <Avatar className="relative h-14 w-14 rounded-2xl border-2 border-white dark:border-border shadow-md transition-transform group-hover:scale-105">
+                                                            <AvatarImage src={member.image || ""} />
+                                                            <AvatarFallback className="bg-slate-100 dark:bg-muted text-slate-900 dark:text-white text-sm font-black">
+                                                                {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5 text-left">
+                                                        <span className="text-sm font-black text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                                             {member.name} {member.surname || ""}
                                                         </span>
-                                                        <RoleBadge role={member.role} />
+                                                        <div className="flex items-center gap-2">
+                                                            <RoleBadge role={member.role} />
+                                                            {member.leaves?.some(l => new Date(l.startDate) <= new Date() && new Date(l.endDate) >= new Date()) && (
+                                                                <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] font-black tracking-widest px-1.5 py-0">İZİNLİ</Badge>
+                                                            )}
+                                                            {member.email && (
+                                                                <span className="text-[10px] font-bold text-muted-foreground/60 hidden group-hover:block transition-all italic">
+                                                                    {member.email}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm font-bold text-foreground/80">
+                                            <TableCell className="text-sm font-black text-foreground/80">
                                                 {member.role === 'COURIER' && member.shortageTasks
                                                     ? member.shortageTasks.length
                                                     : (member.assignedTickets?.length || 0) + (member.sales?.length || 0)}
                                             </TableCell>
                                             <TableCell className={cn(
-                                                "text-sm font-bold",
+                                                "text-sm font-black",
                                                 member.role === 'COURIER'
                                                     ? (
                                                         (member.shortageTasks?.filter((t: any) => t.isResolved || t.isTaken).length || 0) / Math.max(member.shortageTasks?.length || 1, 1) >= 0.8
@@ -582,31 +836,33 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                                         : 100}`
                                                     : "%98.5"}
                                             </TableCell>
-                                            <TableCell className="text-xs font-bold text-muted-foreground">Şimdi aktif</TableCell>
+                                            <TableCell className="text-[10px] font-black text-muted-foreground uppercase">Şimdi aktif</TableCell>
                                             <TableCell className="text-right pr-8">
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-slate-900 dark:hover:text-white">
+                                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground dark:text-white w-48 rounded-2xl p-2 shadow-2xl">
+                                                    <DropdownMenuContent align="end" className="bg-card border-border/50 text-foreground dark:text-white w-56 rounded-[1.5rem] p-2 shadow-2xl backdrop-blur-xl">
                                                         <DropdownMenuItem
-                                                            onClick={() => {
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 setSelectedMember(member);
                                                                 setEditModalOpen(true);
                                                             }}
-                                                            className="rounded-xl gap-2 cursor-pointer py-3 text-xs font-bold"
+                                                            className="rounded-xl gap-3 cursor-pointer py-4 text-xs font-black uppercase tracking-widest"
                                                         >
-                                                            <Shield className="w-4 h-4 text-blue-500" /> Düzenle & Yetkilendir
+                                                            <Shield className="w-4 h-4 text-blue-500" /> Düzenle & Yetki
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator className="bg-muted dark:bg-white/5" />
+                                                        <DropdownMenuSeparator className="bg-muted dark:bg-white/5 my-1" />
                                                         <DropdownMenuItem
-                                                            onClick={() => {
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 setSelectedMember(member);
                                                                 setDeleteModalOpen(true);
                                                             }}
-                                                            className="rounded-xl gap-2 cursor-pointer py-3 text-xs text-rose-500 font-bold"
+                                                            className="rounded-xl gap-3 cursor-pointer py-4 text-xs text-rose-500 font-black uppercase tracking-widest hover:bg-rose-500/10"
                                                         >
                                                             <XCircle className="w-4 h-4" /> Personeli Çıkar
                                                         </DropdownMenuItem>
@@ -622,12 +878,17 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 </div>
 
                 <div className="lg:col-span-4 space-y-8">
-                    <Card className="rounded-[2.5rem] overflow-hidden">
+                    <Card className="rounded-[2.5rem] border-border/20 shadow-2xl overflow-hidden group">
                         <CardHeader className="p-8 pb-4">
-                            <h2 className="font-medium text-xl ">Yetki Seviyeleri</h2>
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                    <Shield className="w-5 h-5" />
+                                </div>
+                                <h2 className="font-black text-xl uppercase tracking-tight">Yetki Matrisi</h2>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-8 pt-4 space-y-6">
-                            <div className="grid grid-cols-5 text-[10px]  text-muted-foreground uppercase tracking-widest border-b border-slate-50 dark:border-border/50 pb-4">
+                            <div className="grid grid-cols-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] border-b border-border/10 pb-4">
                                 <div className="col-span-1">MODÜL</div>
                                 <div className="text-center">ADM</div>
                                 <div className="text-center">MÜD</div>
@@ -635,37 +896,40 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                                 <div className="text-center">TEK</div>
                             </div>
                             {rolePermissions.map((mod, i) => (
-                                <div key={i} className="grid grid-cols-5 items-center">
-                                    <div className="col-span-1 text-[10px]  text-slate-700 dark:text-foreground">{mod.name}</div>
+                                <div key={i} className="grid grid-cols-5 items-center group/row py-1 transition-all">
+                                    <div className="col-span-1 text-[10px] font-bold text-slate-700 dark:text-foreground group-hover/row:text-blue-500 transition-colors">{mod.name}</div>
                                     {mod.perms.map((p, pi) => (
                                         <div key={pi} className="flex justify-center">
-                                            {p ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-foreground/90 dark:text-slate-800" />}
+                                            {p ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-muted-foreground/20" />}
                                         </div>
                                     ))}
                                 </div>
                             ))}
                             <Button
                                 onClick={() => setTemplateModalOpen(true)}
-                                className="w-full h-12 rounded-2xl bg-white dark:bg-muted border border-slate-200 dark:border-none shadow-sm text-slate-900 dark:text-white  text-xs uppercase tracking-widest"
+                                className="w-full h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border border-border/20 shadow-sm text-foreground text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-100 transition-all mt-4"
                             >
-                                Yetki Şablonlarını Düzenle
+                                Şablonları Güncelle
                             </Button>
                         </CardContent>
                     </Card>
 
-                    <div className="p-1 bg-card dark:bg-blue-600 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                        <div className="p-8 space-y-4 relative z-10">
+                    <div className="p-1 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
+                        <div className="p-8 space-y-5 relative z-10">
                             <div className="flex items-center justify-between text-white">
-                                <h3 className="font-bold text-lg">Performans Ara</h3>
-                                <Activity className="w-5 h-5 text-blue-200" />
+                                <h3 className="font-black text-lg uppercase tracking-tight">Hızlı Arama</h3>
+                                <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                    <Activity className="w-4 h-4 text-white" />
+                                </div>
                             </div>
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-100/60" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                                 <Input
-                                    placeholder="Personel ara..."
+                                    placeholder="İsim veya e-posta..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="h-12 bg-white/20 dark:bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/60 focus:ring-2 focus:ring-white/20 font-bold"
+                                    className="h-14 bg-white/10 border-none rounded-2xl pl-12 text-white placeholder:text-white/40 shadow-inner font-bold text-sm"
                                 />
                             </div>
                         </div>
@@ -673,108 +937,120 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 pt-12">
                 <div className="flex items-center justify-between px-1">
-                    <h2 className="font-medium text-xl  text-slate-900 dark:text-white flex items-center gap-2">
-                        İşlem Logları <Activity className="w-4 h-4 text-blue-500" />
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <h2 className="font-black text-xl text-slate-900 dark:text-white uppercase tracking-tight">İşlem Logları</h2>
+                    </div>
                     <div className="flex items-center gap-3">
                         <div className="relative hidden md:block">
                             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                             <Input
-                                placeholder="İşlem veya personel ara..."
+                                placeholder="İşlem veya personel..."
                                 value={logSearch}
                                 onChange={(e) => setLogSearch(e.target.value)}
-                                className="h-9 w-64 bg-white dark:bg-card/50 border-none rounded-xl pl-9 text-xs "
+                                className="h-11 w-72 bg-white dark:bg-card/50 border border-border/20 rounded-xl pl-10 text-xs font-bold shadow-sm"
                             />
                         </div>
                         <Input
                             type="date"
                             value={logDate}
                             onChange={(e) => setLogDate(e.target.value)}
-                            className="h-9 w-40 bg-white dark:bg-card/50 border-none rounded-xl text-xs "
+                            className="h-11 w-44 bg-white dark:bg-card/50 border border-border/20 rounded-xl text-xs font-bold shadow-sm"
                         />
                         <Button
                             onClick={handleExportCSV}
                             variant="outline"
-                            size="sm"
-                            className="h-9 rounded-xl bg-white dark:bg-card border-none shadow-sm gap-2 text-[10px]  uppercase tracking-widest"
+                            className="h-11 px-6 rounded-xl bg-white dark:bg-card border-none shadow-xl gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
                         >
-                            <Download className="w-3.5 h-3.5" /> CSV İNDİR
+                            <Download className="w-4 h-4" /> CSV İNDİR
                         </Button>
                     </div>
                 </div>
 
-                <div className="glass-card rounded-[2.5rem] overflow-hidden divide-y divide-slate-50 dark:divide-white/5 relative">
+                <div className="bg-card rounded-[2.5rem] overflow-hidden border border-border/10 shadow-2xl relative">
                     {isLogsLoading && (
-                        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center z-10 backdrop-blur-sm">
+                        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center z-10 backdrop-blur-[2px]">
                             <Activity className="w-8 h-8 text-blue-500 animate-pulse" />
                         </div>
                     )}
-                    {logs.map((log, i) => (
-                        <div key={i} className="p-6 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <div className={cn(
-                                    "h-10 w-10 rounded-full flex items-center justify-center",
-                                    log.type === 'service' ? "bg-emerald-500/10 text-emerald-500" : "bg-blue-500/10 text-blue-500"
-                                )}>
-                                    {log.type === 'service' ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></svg>
-                                    )}
+                    <div className="divide-y divide-border/5">
+                        {logs.map((log, i) => (
+                            <div key={i} className="p-6 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className={cn(
+                                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
+                                        log.type === 'service' ? "bg-emerald-500/10 text-emerald-500" : "bg-blue-500/10 text-blue-500"
+                                    )}>
+                                        {log.type === 'service' ? (
+                                            <Shield className="w-5 h-5" />
+                                        ) : (
+                                            <TrendingUp className="w-5 h-5" />
+                                        )}
+                                    </div>
+                                    <div className="space-y-1 text-left">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-black text-foreground/90">
+                                                <span className="text-blue-600 dark:text-blue-400 uppercase text-[9px] font-black px-2 py-0.5 bg-blue-500/10 rounded-md mr-3 tracking-widest">
+                                                    {log.user?.name}
+                                                </span>
+                                                {log.message}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-[10px] text-muted-foreground font-black tracking-widest group-hover:text-foreground transition-colors uppercase italic opacity-40">#{log.id.slice(-8).toUpperCase()}</p>
+                                            <div className="h-1 w-1 rounded-full bg-border"></div>
+                                            <p className="text-[9px] font-black text-muted-foreground tracking-widest uppercase">{log.type === 'service' ? 'TEKNİK SERVİS' : 'SATIŞ SİSTEMİ'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-0.5 text-left">
-                                    <p className="text-sm font-bold text-foreground/90">
-                                        <span className="text-foreground dark:text-white uppercase text-[10px] font-black px-2 py-0.5 bg-muted dark:bg-white/10 rounded-md mr-2">
-                                            {log.user?.name}
-                                        </span>
-                                        {log.message}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground font-black">#{log.id.slice(-8).toUpperCase()}</p>
+                                <div className="flex items-center gap-8">
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
+                                            {new Date(log.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long' })}
+                                        </p>
+                                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">
+                                            {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 transition-all bg-slate-100 dark:bg-white/5">
+                                        <ArrowUpRight className="w-4 h-4" />
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                    <p className="text-[10px]  text-slate-900 dark:text-white">
-                                        {new Date(log.createdAt).toLocaleDateString('tr-TR')}
-                                    </p>
-                                    <p className="text-[10px]  text-muted-foreground">
-                                        {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-sm">
-                                    <ArrowUpRight className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                     {!isLogsLoading && logs.length === 0 && (
-                        <div className="p-20 text-center space-y-4">
-                            <Activity className="w-12 h-12 text-foreground/90 dark:text-slate-800 mx-auto" />
-                            <p className="text-muted-foreground  text-xs uppercase tracking-widest">Kayıt Bulunamadı</p>
+                        <div className="p-32 text-center space-y-5">
+                            <div className="h-20 w-20 bg-slate-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto">
+                                <Activity className="w-10 h-10 text-muted-foreground/30" />
+                            </div>
+                            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em]">Herhangi bir işlem kaydı bulunamadı</p>
                         </div>
                     )}
                 </div>
 
                 {logTotalPages > 1 && (
-                    <div className="flex items-center justify-center gap-4 pt-4">
+                    <div className="flex items-center justify-center gap-6 pt-8 pb-12">
                         <Button
                             variant="ghost"
                             disabled={logPage === 1}
                             onClick={() => setLogPage(p => p - 1)}
-                            className="rounded-xl  text-[10px] uppercase tracking-widest gap-2"
+                            className="h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest gap-3 bg-white dark:bg-card border border-border/10 shadow-lg"
                         >
                             <ChevronLeft className="w-4 h-4" /> Önceki
                         </Button>
-                        <div className="bg-slate-100 dark:bg-muted px-4 py-2 rounded-xl text-[10px]  text-slate-600 dark:text-muted-foreground">
-                            SAYFA {logPage} / {logTotalPages}
+                        <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black tracking-[0.2em] shadow-xl shadow-blue-500/20">
+                            {logPage} / {logTotalPages}
                         </div>
                         <Button
                             variant="ghost"
                             disabled={logPage === logTotalPages}
                             onClick={() => setLogPage(p => p + 1)}
-                            className="rounded-xl  text-[10px] uppercase tracking-widest gap-2"
+                            className="h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest gap-3 bg-white dark:bg-card border border-border/10 shadow-lg"
                         >
                             Sonraki <ChevronRight className="w-4 h-4" />
                         </Button>
@@ -786,7 +1062,10 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
                 isOpen={editModalOpen}
                 onClose={() => setEditModalOpen(false)}
                 member={selectedMember}
-                onUpdate={() => router.refresh()}
+                onUpdate={() => {
+                    router.refresh();
+                    router.refresh(); // Double refresh to ensure revalidation
+                }}
             />
             <StaffDeleteModal
                 isOpen={deleteModalOpen}
@@ -802,12 +1081,3 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
         </div>
     );
 }
-
-
-
-
-
-
-
-
-

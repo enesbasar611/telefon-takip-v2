@@ -1,4 +1,5 @@
 import { NextAuthOptions, getServerSession } from "next-auth";
+import { cache } from "react";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -286,11 +287,10 @@ export const authOptions: NextAuthOptions = {
                 }
             }
 
-            // Real-time DB sync on every request.
-            // Because we always read from DB here, when stopImpersonating() updates
-            // the shopId in DB the very next JWT evaluation (triggered by update() or
-            // any navigation) will automatically carry the fresh value — no merging needed.
-            if (token.id) {
+            // Real-time DB sync on every request - OPTIMIZED WITH TTL
+            // We only hit the database if the token was synced more than 300 seconds ago
+            const now = Math.floor(Date.now() / 1000);
+            if (token.id && (!token.lastSync || now - (token.lastSync as number) > 300)) {
                 try {
                     const dbUser = await (prisma.user as any).findUnique({
                         where: { id: token.id },
@@ -372,6 +372,7 @@ export const authOptions: NextAuthOptions = {
                     token.canEdit = isSuperAdmin ? true : effectiveUser.canEdit;
                     token.canDelete = isSuperAdmin ? true : effectiveUser.canDelete;
                     token.isShopActive = (dbUser as any).shop?.isActive ?? true;
+                    token.lastSync = now; // Update sync timestamp
                 } catch (error) {
                     console.error("NextAuth token DB sync failed:", error);
                 }
@@ -435,12 +436,13 @@ export const authOptions: NextAuthOptions = {
     },
 };
 
-export const getSession = () => getServerSession(authOptions);
 
-export const auth = async () => {
+export const getSession = cache(() => getServerSession(authOptions));
+
+export const auth = cache(async () => {
     const session = await getSession();
     return session;
-};
+});
 
 export function getShopId(): Promise<string>;
 export function getShopId(required: true): Promise<string>;

@@ -35,6 +35,7 @@ interface WidgetConfig {
 
 interface DashboardClientProps {
     initialLayout: WidgetConfig[] | string[];
+    initialData?: unknown;
     widgets: Record<string, React.ReactNode>;
     widgetLabels?: Record<string, string>;
 }

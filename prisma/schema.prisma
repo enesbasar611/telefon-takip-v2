@@ -53,6 +53,7 @@ model Shop {
   supplierTransactions SupplierTransaction[]
   transactions         Transaction[]
   users                User[]
+  leaves               UserLeave[]
 }
 
 model RolePermission {
@@ -106,6 +107,7 @@ model User {
   sessions             Session[]
   shortageTasks        ShortageItem[]  @relation("ShortageAssignment")
   transactions         Transaction[]
+  leaves               UserLeave[]
   shop                 Shop?           @relation(fields: [shopId], references: [id])
 }
 
@@ -175,6 +177,9 @@ model ServiceTicket {
   usedParts             ServiceUsedPart[]
 
   @@unique([shopId, ticketNumber])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+  @@index([shopId, warrantyExpiry])
 }
 
 model ServiceLog {
@@ -216,6 +221,8 @@ model Category {
   products      Product[]
 
   @@unique([shopId, name])
+  @@index([shopId, parentId])
+  @@index([shopId, order])
 }
 
 model Product {
@@ -255,6 +262,9 @@ model Product {
 
   @@unique([shopId, sku])
   @@unique([shopId, barcode])
+  @@index([shopId, categoryId])
+  @@index([shopId, stock])
+  @@index([shopId, createdAt])
 }
 
 model StockAIAlert {
@@ -840,4 +850,21 @@ enum IndustryType {
   GROCERY
   CLOTHING
   GENERAL
+}
+
+model UserLeave {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  type      String   @default("ANNUAL") // ANNUAL, SICK, UNPAID, etc.
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([shopId])
 }

@@ -40,7 +40,6 @@ import {
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import * as XLSX from 'xlsx';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
@@ -357,6 +356,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             customerId: string;
             name: string;
             phone?: string | null;
+            balance: number;
+            balanceUsd: number;
             lastActivity: Date;
             totalRemainingTRY: number;
             totalRemainingUSD: number;
@@ -866,7 +867,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         }
     };
 
-    const exportToExcel = () => {
+    const exportToExcel = async () => {
         const data = aggregatedData.flatMap(item => {
             if (!item.debtItems || item.debtItems.length === 0) {
                 return [{
@@ -893,6 +894,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
             }));
         });
+        const XLSX = await import("xlsx");
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Veresiye Detaylı Liste");
@@ -934,7 +936,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             <span className="sm:hidden">Excel</span>
                         </Button>
                         <Button
-                            onClick={() => {
+                            onClick={async () => {
                                 const data = aggregatedData.flatMap(item => {
                                     if (!item.debtItems || item.debtItems.length === 0) {
                                         return [{
@@ -961,6 +963,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
                                     }));
                                 });
+                                const XLSX = await import("xlsx");
                                 const ws = XLSX.utils.json_to_sheet(data);
                                 const csv = XLSX.utils.sheet_to_csv(ws);
                                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1679,13 +1682,14 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const data = [
                                         ...statementData.debts.map(d => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
                                         ...statementData.transactions.map(t => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
                                     ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
 
+                                    const XLSX = await import("xlsx");
                                     const ws = XLSX.utils.json_to_sheet(data);
                                     const wb = XLSX.utils.book_new();
                                     XLSX.utils.book_append_sheet(wb, ws, "Ekstre");

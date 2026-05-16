@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DeviceReceiptModal } from "./device-receipt-modal";
 import { UpdateDeviceModal } from "./update-device-modal";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -28,12 +29,18 @@ interface DeviceActionsColumnProps {
 export function DeviceActionsColumn({ productId, deviceName, device }: DeviceActionsColumnProps) {
     const [isDeleting, startDelete] = useTransition();
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const handleDelete = async () => {
         startDelete(async () => {
             const result = await deleteDevice(productId);
             if (result.success) {
                 toast.success(`${deviceName} başarıyla silindi.`);
+                await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: ["devices"] }),
+                    queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+                    queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+                ]);
                 router.refresh();
             } else {
                 toast.error(result.error ?? "Cihaz silinirken bir hata oluştu.");

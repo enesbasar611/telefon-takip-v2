@@ -21,6 +21,7 @@ import { getLoyaltyTier } from "@/lib/loyalty-utils";
 import { Sparkles, CreditCard, Banknote, History, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getSettings } from "@/lib/actions/setting-actions";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusMap: Record<ServiceStatus, { label: string; color: string }> = {
   PENDING: { label: "BEKLEMEDE", color: "bg-gray-500" },
@@ -35,6 +36,7 @@ const statusMap: Record<ServiceStatus, { label: string; color: string }> = {
 export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
   const [isPending, startTransition] = useTransition();
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [deliveryData, setDeliveryData] = useState({
     paymentMethod: "CASH",
     applyLoyaltyDiscount: false
@@ -75,6 +77,10 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
       const res = await updateServiceStatus(ticketId, status);
       if (res.success) {
         toast.success(`Durum ${statusMap[status].label} olarak güncellendi.`);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+        ]);
       } else {
         toast.error(res.error);
       }
@@ -93,6 +99,13 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
       );
       if (res.success) {
         toast.success("Cihaz teslim edildi ve işlem kaydedildi.");
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+          queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+          queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
+          queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
+        ]);
         setIsDeliveryModalOpen(false);
       } else {
         toast.error(res.error);
@@ -236,6 +249,4 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
     </DropdownMenu>
   );
 }
-
-
 

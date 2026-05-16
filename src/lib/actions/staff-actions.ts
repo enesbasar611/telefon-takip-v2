@@ -24,6 +24,9 @@ export const getStaff = async (shopId?: string) => {
                         },
                         shortageTasks: {
                             where: { shopId: finalShopId }
+                        },
+                        leaves: {
+                            where: { shopId: finalShopId }
                         }
                     },
                     orderBy: { createdAt: "desc" }
@@ -156,9 +159,9 @@ export async function createStaff(data: {
         const user = await prisma.user.create({
             data: {
                 name: formatName(data.name),
-                surname: data.surname,
+                surname: data.surname ? formatName(data.surname) : undefined,
                 email: normalizedEmail,
-                phone: data.phone,
+                phone: data.phone ? data.phone.replace(/\D/g, '') : undefined,
                 image: data.image,
                 role: data.role,
                 password: hashedPassword,
@@ -201,6 +204,8 @@ export async function updateStaff(userId: string, data: any) {
 
         const updateData: any = { ...data };
         if (data.name) updateData.name = formatName(data.name);
+        if (data.surname) updateData.surname = formatName(data.surname);
+        if (data.phone) updateData.phone = data.phone.replace(/\D/g, '');
 
         // Hash password if it's being updated
         if (data.password && data.password.length > 0) {
@@ -575,5 +580,45 @@ export async function updateDashboardLayout(layout: any) {
     } catch (error) {
         console.error("DEBUG: [updateDashboardLayout] FAILED", error);
         return { success: false, error: "Düzen kaydedilemedi." };
+    }
+}
+
+export async function assignStaffLeave(data: {
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    type: string,
+    note?: string
+}) {
+    try {
+        const shopId = await getShopId();
+        await prisma.userLeave.create({
+            data: {
+                userId: data.userId,
+                shopId,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                type: data.type,
+                note: data.note
+            }
+        });
+        revalidatePath("/personel");
+        return { success: true };
+    } catch (error) {
+        console.error("Error assigning leave:", error);
+        return { success: false, error: "İzin tanımlanamadı." };
+    }
+}
+
+export async function deleteStaffLeave(leaveId: string) {
+    try {
+        const shopId = await getShopId();
+        await prisma.userLeave.delete({
+            where: { id: leaveId, shopId }
+        });
+        revalidatePath("/personel");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "İzin silinemedi." };
     }
 }

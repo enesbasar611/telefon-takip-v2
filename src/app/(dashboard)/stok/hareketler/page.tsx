@@ -1,5 +1,6 @@
 import { getInventoryStats, getCriticalProducts, getAllInventoryMovements } from "@/lib/actions/product-actions";
 import { StockMovementsClient } from "@/components/stok/stock-movements-client";
+import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query";
 
 export const dynamic = 'force-dynamic';
 
@@ -7,29 +8,30 @@ export default async function StokHareketleriPage({ searchParams }: { searchPara
     const page = Number(searchParams?.page) || 1;
     const search = searchParams?.search || "";
 
-    const [stats, criticalProducts, movementData] = await Promise.all([
-        getInventoryStats(),
-        getCriticalProducts(),
-        getAllInventoryMovements({ page, limit: 30, search }),
+    const queryClient = new QueryClient();
+
+    // Parallel prefetching for instant page load without blocking sequentially
+    await Promise.all([
+        queryClient.prefetchQuery({
+            queryKey: ["inventory-stats"],
+            queryFn: async () => await getInventoryStats(),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["critical-products"],
+            queryFn: async () => await getCriticalProducts(),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["inventory-movements", page, search],
+            queryFn: async () => await getAllInventoryMovements({ page, limit: 30, search }),
+        })
     ]);
 
-    const allMovements = movementData.success ? movementData.data : [];
-    const totalMovements = movementData.success ? movementData.total : 0;
-    const totalPages = movementData.success ? movementData.totalPages : 1;
-
     return (
-        <StockMovementsClient
-            movements={allMovements}
-            criticalProducts={criticalProducts}
-            stats={{
-                totalMovements: totalMovements,
-                criticalCount: stats.criticalCount
-            }}
-            pagination={{
-                page,
-                totalPages,
-                search
-            }}
-        />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <StockMovementsClient
+                initialPage={page}
+                initialSearch={search}
+            />
+        </HydrationBoundary>
     );
 }

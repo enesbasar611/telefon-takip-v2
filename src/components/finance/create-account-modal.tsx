@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,21 +14,87 @@ import { cn } from "@/lib/utils";
 
 export function CreateAccountModal({ account, trigger }: { account?: any, trigger?: React.ReactNode }) {
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [accounts, setAccounts] = useState<any[]>([]);
+    const queryClient = useQueryClient();
     const [view, setView] = useState<"LIST" | "FORM" | "BALANCE">("LIST");
     const [selectedAccount, setSelectedAccount] = useState<any>(account || null);
     const [accountType, setAccountType] = useState<string>(selectedAccount?.type || "CASH");
     const isEdit = !!account || (view === "FORM" && !!selectedAccount);
-
-    const fetchAccounts = async () => {
-        const data = await getAccounts();
-        setAccounts(data);
-    };
+    const { data: accounts = [] } = useQuery<any[]>({
+        queryKey: ["finance-accounts"],
+        queryFn: getAccounts,
+        enabled: open,
+        placeholderData: keepPreviousData,
+    });
+    const accountMutation = useMutation({
+        mutationFn: async (formData: FormData) => {
+            if (view === "FORM" && selectedAccount) {
+                const type = formData.get("type") as any;
+                const balanceVal = Number(formData.get("balance"));
+                const limitVal = Number(formData.get("limit"));
+                const availableVal = Number(formData.get("availableBalance"));
+                const finalBalance = type === "CREDIT_CARD" ? limitVal - availableVal : balanceVal;
+                return updateAccount(selectedAccount.id, {
+                    name: formData.get("name") as string,
+                    type,
+                    balance: finalBalance,
+                    limit: limitVal,
+                    billingDay: Number(formData.get("billingDay")) || 1
+                });
+            }
+            if (view === "FORM") {
+                const type = formData.get("type") as any;
+                const balanceVal = Number(formData.get("balance"));
+                const limitVal = Number(formData.get("limit"));
+                const availableVal = Number(formData.get("availableBalance"));
+                const finalBalance = type === "CREDIT_CARD" ? limitVal - availableVal : balanceVal;
+                return createAccount({
+                    name: formData.get("name") as string,
+                    type,
+                    initialBalance: finalBalance,
+                    limit: limitVal,
+                    billingDay: Number(formData.get("billingDay")) || 1
+                });
+            }
+            if (view === "BALANCE" && selectedAccount) {
+                const amount = Number(formData.get("amount"));
+                const description = formData.get("description") as string;
+                return createManualTransaction({
+                    type: "INCOME",
+                    amount,
+                    description: description || "Hizli Bakiye Girisi",
+                    paymentMethod: selectedAccount.type === "CASH" ? "CASH" : "TRANSFER",
+                    accountId: selectedAccount.id,
+                    category: "HIZLI EKLE",
+                    date: new Date().toISOString()
+                });
+            }
+            return { success: false, error: "Islem tipi bulunamadi." };
+        },
+        onSuccess: async (result) => {
+            if (!result?.success) {
+                toast.error(result?.error || "Bir hata olustu");
+                return;
+            }
+            toast.success("Islem basariyla tamamlandi.");
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
+                queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+                queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+                queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
+            ]);
+            if (view === "FORM") {
+                setOpen(false);
+            } else {
+                setView("LIST");
+            }
+        },
+        onError: () => toast.error("Bir hata olustu"),
+    });
+    const loading = accountMutation.isPending;
 
     useEffect(() => {
         if (open) {
-            fetchAccounts();
             if (account) {
                 setView("FORM");
                 setSelectedAccount(account);
@@ -41,71 +108,8 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
-        const formData = new FormData(e.currentTarget);
-
-        let result;
-        if (view === "FORM" && selectedAccount) {
-            const type = formData.get("type") as any;
-            const balanceVal = Number(formData.get("balance"));
-            const limitVal = Number(formData.get("limit"));
-            const availableVal = Number(formData.get("availableBalance"));
-
-            // If it's a credit card, the user enters 'Available Balance' and 'Limit'
-            // We calculate the actual balance (debt) as: Limit - Available Balance
-            const finalBalance = type === "CREDIT_CARD" ? limitVal - availableVal : balanceVal;
-
-            result = await updateAccount(selectedAccount.id, {
-                name: formData.get("name") as string,
-                type: type,
-                balance: finalBalance,
-                limit: limitVal,
-                billingDay: Number(formData.get("billingDay")) || 1
-            });
-        } else if (view === "FORM") {
-            const type = formData.get("type") as any;
-            const balanceVal = Number(formData.get("balance"));
-            const limitVal = Number(formData.get("limit"));
-            const availableVal = Number(formData.get("availableBalance"));
-
-            const finalBalance = type === "CREDIT_CARD" ? limitVal - availableVal : balanceVal;
-
-            result = await createAccount({
-                name: formData.get("name") as string,
-                type: type,
-                initialBalance: finalBalance,
-                limit: limitVal,
-                billingDay: Number(formData.get("billingDay")) || 1
-            });
-        } else if (view === "BALANCE" && selectedAccount) {
-            const amount = Number(formData.get("amount"));
-            const description = formData.get("description") as string;
-
-            result = await createManualTransaction({
-                type: "INCOME",
-                amount,
-                description: description || "Hızlı Bakiye Girişi",
-                paymentMethod: selectedAccount.type === "CASH" ? "CASH" : "TRANSFER",
-                accountId: selectedAccount.id,
-                category: "HIZLI EKLE",
-                date: new Date().toISOString()
-            });
-        }
-
-        setLoading(false);
-        if (result?.success) {
-            toast.success("İşlem başarıyla tamamlandı.");
-            if (view === "FORM") {
-                setOpen(false);
-            } else {
-                setView("LIST");
-                fetchAccounts();
-            }
-        } else {
-            toast.error(result?.error || "Bir hata oluştu");
-        }
+        accountMutation.mutate(new FormData(e.currentTarget));
     };
-
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
