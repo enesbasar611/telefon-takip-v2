@@ -514,7 +514,22 @@ export function ShortageList() {
                                 </PopoverContent>
                               </Popover>
 
-                              <div className="flex items-center gap-1 transition-opacity">
+                              {/* Qty adjuster + Approve inline */}
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-0.5 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
+                                  <span className="text-sm font-black text-blue-400 leading-none">{item.quantity || 1}</span>
+                                  <span className="text-[8px] font-black text-blue-400/70 uppercase leading-none">adet</span>
+                                </span>
+                                <div className="flex items-center bg-card border border-border/50 rounded-lg overflow-hidden h-7">
+                                  <button
+                                    onClick={() => handleQtyChange(item.id, String(Math.max(1, (item.quantity || 1) - 1)))}
+                                    className="h-7 w-6 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
+                                  >−</button>
+                                  <button
+                                    onClick={() => handleQtyChange(item.id, String((item.quantity || 1) + 1))}
+                                    className="h-7 w-6 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
+                                  >+</button>
+                                </div>
                                 <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black rounded-lg transition-all" title="Stok Tamamla">
                                   <CheckCircle2 className="h-4 w-4" />
                                 </Button>
@@ -528,17 +543,9 @@ export function ShortageList() {
                               <span className="text-[10px] font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[8px]  text-muted-foreground/80 uppercase">Alınacak</span>
-                                <Input type="number" value={item.quantity || ""} onChange={(e) => handleQtyChange(item.id, e.target.value)} className="h-8 bg-card border-border/50 text-[10px] px-2  text-blue-500 focus-visible:ring-blue-500 rounded-lg" />
-                              </div>
-                              <div className="flex flex-col gap-1 items-end">
-                                <span className="text-[8px]  text-muted-foreground/80 uppercase">Mevcut</span>
-                                <div className="h-8 flex items-center justify-end px-3 bg-card/50 rounded-lg border border-border/50 w-full">
-                                  <span className={cn("text-[11px] ", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
-                                </div>
-                              </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8px] font-bold text-muted-foreground/80 uppercase">Mevcut Stok</span>
+                              <span className={cn("text-[11px] font-black", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
                             </div>
 
                             {/* Courier Slot */}

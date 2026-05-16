@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useTransition } from "react";
+import { useSocket } from "@/components/providers/socket-provider";
+import { useSession } from "next-auth/react";
 import {
     TrendingUp,
     MessageSquare,
@@ -128,10 +130,37 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [selectedDate, setSelectedDate] = useState<string>(initialDate || "");
     const [mounted, setMounted] = useState(false);
     const [shortcutCourierId, setShortcutCourierId] = useState<string>("");
+    const [itemAdjustedQty, setItemAdjustedQty] = useState<Record<string, number>>({});
+
+    const getAdjustedQty = (item: any) => itemAdjustedQty[item.id] ?? item.quantity ?? 1;
+    const adjustQty = (id: string, current: number, delta: number) => {
+        const next = Math.max(1, current + delta);
+        setItemAdjustedQty(prev => ({ ...prev, [id]: next }));
+    };
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Socket for real-time cross-client sync (replaces polling)
+    const { socket } = useSocket();
+    const { data: session } = useSession();
+    const shopId = (session?.user as any)?.shopId;
+
+    // Emit shortage_update after a mutation so all clients (admin/courier) refresh
+    const emitShortageUpdate = () => {
+        if (socket && shopId) {
+            socket.emit("shortage_update", { roomId: shopId });
+        }
+    };
+
+    // Listen for shortage_updated from other clients → refresh page data
+    useEffect(() => {
+        if (!socket) return;
+        const handler = () => { router.refresh(); };
+        socket.on("shortage_updated", handler);
+        return () => { socket.off("shortage_updated", handler); };
+    }, [socket, router]);
 
     useEffect(() => {
         if (!isAdmin) {
@@ -158,19 +187,39 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         router.push(`/kurye?${searchParams.toString()}`);
     };
 
-    // Polling for live updates
-    useEffect(() => {
-        const interval = setInterval(() => {
-            router.refresh();
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [router]);
+    // Admin notification detector (runs once on mount, then on demand)
+    const [activeCourierNotifications, setActiveCourierNotifications] = useState<any[]>(initialNotifications);
 
-    // Update state and detect new items
+    const pollNotifications = async () => {
+        if (!isAdmin) return;
+        const res = await getCourierNotifications();
+        if (res.success) {
+            res.notifications.forEach((notif: any) => {
+                const lsKey = `notif_seen_${notif.id}`;
+                if (!localStorage.getItem(lsKey)) {
+                    localStorage.setItem(lsKey, "true");
+                    toast.success("Kurye Günü Bitirdi", {
+                        description: notif.message,
+                        duration: 10000,
+                        icon: <Bell className="h-5 w-5 text-orange-500" />
+                    });
+                }
+            });
+            setActiveCourierNotifications(res.notifications);
+        }
+    };
+
+    // Run notification check on mount (admin only)
+    useEffect(() => {
+        pollNotifications();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAdmin]);
+
+
+    // Update state when server re-renders (after router.refresh)
     useEffect(() => {
         if (initialItems.length > lastRefreshCount) {
             setShowNewBadge(true);
-            // Only toast if courier, admins might just be viewing
             if (!isAdmin) {
                 toast("YENİ SİPARİŞ ATANDI!", {
                     description: "Listeniz otomatik güncellendi.",
@@ -181,36 +230,10 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         setItems(initialItems);
         setAllShortages(initialAllShortages);
         setLastRefreshCount(initialItems.length);
-    }, [initialItems, initialAllShortages, lastRefreshCount, isAdmin]);
-
-    // Admin notification detector & Polling
-    const [activeCourierNotifications, setActiveCourierNotifications] = useState<any[]>(initialNotifications);
-
-    useEffect(() => {
-        if (!isAdmin) return;
-
-        const pollNotifications = async () => {
-            const res = await getCourierNotifications();
-            if (res.success) {
-                // Check if any new notification arrived to toast it
-                res.notifications.forEach((notif: any) => {
-                    const lsKey = `notif_seen_${notif.id}`;
-                    if (!localStorage.getItem(lsKey)) {
-                        localStorage.setItem(lsKey, "true");
-                        toast.success("Kurye Günü Bitirdi", {
-                            description: notif.message,
-                            duration: 10000,
-                            icon: <Bell className="h-5 w-5 text-orange-500" />
-                        });
-                    }
-                });
-                setActiveCourierNotifications(res.notifications);
-            }
-        };
-
-        const interval = setInterval(pollNotifications, 5000); // Poll every 5s
-        return () => clearInterval(interval);
-    }, [isAdmin]);
+        // Also re-check notifications when data refreshes
+        pollNotifications();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialItems, initialAllShortages]);
 
     const filteredItems = sortByCourierPriority(items.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -221,7 +244,8 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     ));
 
     const pendingShortages = sortByCourierPriority(allShortages.filter(s => !s.assignedToId));
-    const nextRouteItems = sortByCourierPriority(items.filter((item: any) => !item.isResolved)).slice(0, 3);
+    // Suggested route: exclude already taken or resolved items
+    const nextRouteItems = sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3);
     const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
     const resolveCriticalShortcutQuantity = (item: any, requestedQuantity: number) => {
         const stock = Number(item.product?.stock ?? item.stock ?? 0);
@@ -261,11 +285,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
             const res = await markShortageAsTaken(id, !currentStatus);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün alındı." : "Geri alındı.");
-                // Background sync
+                emitShortageUpdate(); // notify admin/other clients
                 router.refresh();
             } else {
                 toast.error("İşlem başarısız.");
-                router.refresh(); // Sync back
+                router.refresh();
             }
         } catch (error) {
             toast.error("Hata oluştu.");
@@ -325,6 +349,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
             const res = await approveShortageItem(id, quantity, mode, paymentMethod, customPrice, currency, stockPayload);
             if (res.success) {
                 toast.success(mode === "STOCK" ? "Ürün stoğa eklendi." : "Ürün stoğa eklendi ve işlem gerçekleştirildi.");
+                emitShortageUpdate();
                 router.refresh();
             } else {
                 toast.error(res.error || "Onay başarısız.");
@@ -358,6 +383,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 setAllShortages(prev => prev.filter(i => i.id !== id));
                 setSelectedIds(prev => prev.filter(sid => sid !== id));
                 toast.success("Sipariş silindi.");
+                emitShortageUpdate();
                 router.refresh();
             } else {
                 toast.error(res.error || "Silme işlemi başarısız.");
@@ -392,6 +418,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                     setIsSelectionMode(false);
                 }
                 toast.success("Seçili siparişler silindi.");
+                emitShortageUpdate();
                 router.refresh();
             } else {
                 toast.error(res.error || "Toplu silme başarısız.");
@@ -459,6 +486,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 const closedIds = new Set([...finishPreview.notTakenItems, ...finishPreview.takenWithoutStockItems].map((item: any) => item.id));
                 setItems(prev => prev.filter((item: any) => !closedIds.has(item.id)));
                 toast.success(`${finishingCourier.name} kuryesinin günü bitirildi.`);
+                emitShortageUpdate();
                 setIsTransferModalOpen(false);
                 setFinishPreview({ notTakenItems: [], takenWithoutStockItems: [] });
                 router.refresh();
@@ -509,6 +537,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
             const res = await markShortageAsNotFound(id, !currentStatus);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün bulunmadı olarak işaretlendi." : "Bulunmadı işareti kaldırıldı.");
+                emitShortageUpdate();
                 router.refresh();
             } else {
                 toast.error(res.error || "İşlem başarısız.");
@@ -939,8 +968,8 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                     item.isNotFound
                                                         ? "bg-red-500/10 dark:bg-red-500/10 border-red-500/30"
                                                         : item.isTaken
-                                                        ? "bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/20"
-                                                        : "bg-card dark:bg-card/40 border-zinc-200 dark:border-white/5 hover:border-blue-500/30",
+                                                            ? "bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/20"
+                                                            : "bg-card dark:bg-card/40 border-zinc-200 dark:border-white/5 hover:border-blue-500/30",
                                                     selectedIds.includes(item.id) && "border-blue-500/50 bg-blue-500/5"
                                                 )}
                                             >
@@ -967,8 +996,8 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                             item.isNotFound
                                                                 ? "bg-red-500 text-white"
                                                                 : item.isTaken
-                                                                ? "bg-emerald-500 text-white"
-                                                                : "bg-white/5 text-muted-foreground hover:bg-blue-500 hover:text-white border border-white/5"
+                                                                    ? "bg-emerald-500 text-white"
+                                                                    : "bg-white/5 text-muted-foreground hover:bg-blue-500 hover:text-white border border-white/5"
                                                         )}
                                                     >
                                                         {loadingId === item.id ? (
@@ -1002,7 +1031,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                                             {getPriorityLabel(item.courierPriorityLabel)}
                                                                         </Badge>
                                                                     )}
-                                                                    <span className="text-[9px] font-black text-blue-400 uppercase">{item.quantity} adet</span>
+                                                                    {/* Quantity — big and prominent */}
+                                                                    <span className="inline-flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-lg">
+                                                                        <span className="text-base font-black text-blue-400 leading-none">{getAdjustedQty(item)}</span>
+                                                                        <span className="text-[9px] font-black text-blue-400/70 uppercase leading-none">adet</span>
+                                                                    </span>
                                                                     <span className="text-[9px] font-black opacity-30 uppercase">
                                                                         {mounted ? new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                                                     </span>
@@ -1015,30 +1048,46 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                             </div>
 
                                                             {isAdmin && (
-                                                                <div className="flex items-center gap-3 shrink-0">
+                                                                <div className="flex items-center gap-2 shrink-0">
                                                                     {cleanCourierNote(item.notes) && (
-                                                                        <div className="max-w-[200px] truncate bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-[9px] text-muted-foreground font-bold italic">
+                                                                        <div className="max-w-[150px] truncate bg-black/10 px-2 py-1 rounded-lg border border-white/5 text-[9px] text-muted-foreground font-bold italic">
                                                                             {cleanCourierNote(item.notes)}
                                                                         </div>
                                                                     )}
                                                                     {item.isTaken && (
-                                                                        <Button
-                                    onClick={() => {
-                                        setApprovingItem(item);
-                                        setApproveModalOpen(true);
-                                    }}
-                                                                            disabled={loadingId === item.id}
-                                                                            className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] tracking-widest rounded-lg h-8 px-4 shadow-lg shadow-emerald-500/20 gap-2 uppercase group"
-                                                                        >
-                                                                            {loadingId === item.id ? (
-                                                                                <Clock className="w-3 h-3 animate-spin" />
-                                                                            ) : (
-                                                                                <>
-                                                                                    <ArrowUpCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                                                                                    STOK ONAY
-                                                                                </>
-                                                                            )}
-                                                                        </Button>
+                                                                        <>
+                                                                            {/* Quantity adjuster */}
+                                                                            <div className="flex items-center bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden h-8">
+                                                                                <button
+                                                                                    onClick={() => adjustQty(item.id, getAdjustedQty(item), -1)}
+                                                                                    className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
+                                                                                >−</button>
+                                                                                <span className="h-8 min-w-[2rem] px-1 flex items-center justify-center font-black text-sm border-x border-zinc-200 dark:border-white/10">
+                                                                                    {getAdjustedQty(item)}
+                                                                                </span>
+                                                                                <button
+                                                                                    onClick={() => adjustQty(item.id, getAdjustedQty(item), 1)}
+                                                                                    className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
+                                                                                >+</button>
+                                                                            </div>
+                                                                            <Button
+                                                                                onClick={() => {
+                                                                                    setApprovingItem({ ...item, quantity: getAdjustedQty(item) });
+                                                                                    setApproveModalOpen(true);
+                                                                                }}
+                                                                                disabled={loadingId === item.id}
+                                                                                className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] tracking-widest rounded-lg h-8 px-4 shadow-lg shadow-emerald-500/20 gap-2 uppercase group"
+                                                                            >
+                                                                                {loadingId === item.id ? (
+                                                                                    <Clock className="w-3 h-3 animate-spin" />
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <ArrowUpCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                                                                        STOK ONAY
+                                                                                    </>
+                                                                                )}
+                                                                            </Button>
+                                                                        </>
                                                                     )}
                                                                     {!item.isTaken && (
                                                                         <Button

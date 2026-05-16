@@ -137,6 +137,13 @@ app.prepare().then(() => {
             io.to(roomId).emit('process_update_cart_price', { productId, newPrice });
         });
 
+        // Kurye/Admin -> Tüm odaya: eksik listesi değişti (kayıt al/onay gibi)
+        socket.on('shortage_update', ({ roomId }) => {
+            // Değişikliği yapan dahil herkese ilet (tüm oda)
+            io.to(roomId).emit('shortage_updated', { ts: Date.now() });
+            console.log(`[SOCKET] shortage_update → room ${roomId}`);
+        });
+
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
         });
