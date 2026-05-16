@@ -65,12 +65,12 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     w.document.write(`<!DOCTYPE html><html><head><title>Satış Fişi</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; display: flex; justify-content: center; }
-  img { display: block; width: 80mm; height: auto; page-break-inside: avoid; }
-  @page { size: 80mm auto; margin: 5px 0; }
+  body { background: white; }
+  img { display: block; width: 100%; height: auto; page-break-inside: avoid; }
+  @page { size: auto; margin: 5px 0; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    img { filter: grayscale(1) contrast(3) brightness(0.85); width: 80mm; }
+    img { filter: grayscale(1) contrast(3) brightness(0.85); width: 100%; }
   }
 </style>
 </head><body><img src="${url}" /></body></html>`);
