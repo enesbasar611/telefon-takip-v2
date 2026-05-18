@@ -3,7 +3,7 @@ FROM node:20-slim AS deps
 WORKDIR /app
 
 # Gerekli temel sistem paketleri
-RUN apt-get update && apt-get install -y openssl python3 make g++ 
+RUN apt-get update && apt-get install -y openssl python3 make g++
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -18,6 +18,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+RUN apt-get update && apt-get install -y openssl --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
 # Prisma Client oluştur
 RUN npx prisma generate
 
@@ -26,7 +28,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 # Next.js Build
-RUN npm run build
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
+    NEXTAUTH_SECRET="build-time-placeholder-secret" \
+    AUTH_SECRET="build-time-placeholder-secret" \
+    NEXTAUTH_URL="http://localhost:5000" \
+    GOOGLE_CLIENT_ID="build-time-placeholder-client-id" \
+    GOOGLE_CLIENT_SECRET="build-time-placeholder-client-secret" \
+    ADMIN_EMAIL="admin@example.com" \
+    npm run build
 
 # Stage 3: Production runner
 FROM node:20-slim AS runner
