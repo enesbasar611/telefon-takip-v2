@@ -765,12 +765,12 @@ export function CategoryManagementClient() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex h-[calc(100vh-140px)] w-full overflow-hidden bg-white/40 dark:bg-background/40 rounded-3xl border border-zinc-200 dark:border-border/50 backdrop-blur-sm shadow-xl">
+            <div className="flex flex-col lg:flex-row min-h-[800px] lg:h-[calc(100vh-140px)] w-full overflow-hidden bg-white/40 dark:bg-background/40 rounded-3xl border border-zinc-200 dark:border-border/50 backdrop-blur-sm shadow-xl">
                 {/* Sidebar Tree */}
-                <div className="w-[320px] h-full bg-zinc-50/50 dark:bg-[#0D0D0F] border-r border-zinc-200 dark:border-border/50 p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar">
-                    <div className="flex flex-col gap-1 mb-10 text-left">
-                        <h2 className="font-bold text-2xl text-indigo-600 dark:text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-widest leading-none font-medium">Envanter Hiyerarşisi</p>
+                <div className="w-full lg:w-[320px] min-h-[400px] lg:h-full bg-zinc-50/50 dark:bg-[#0D0D0F] border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-border/50 p-4 lg:p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar">
+                    <div className="flex flex-col gap-1 mb-6 lg:mb-10 text-left">
+                        <h2 className="font-bold text-xl lg:text-2xl text-indigo-600 dark:text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
+                        <p className="text-[10px] lg:text-[11px] text-muted-foreground uppercase tracking-widest leading-none font-medium">Envanter Hiyerarşisi</p>
                     </div>
                     {/* Categories Scroll Area Wrapper */}
                     <div className="flex-1 space-y-2 pb-10">

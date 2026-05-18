@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/components/providers/socket-provider";
 import { useSession } from "next-auth/react";
 import {
@@ -40,7 +41,22 @@ import {
     ListTodo,
     X
 } from "lucide-react";
-import { markShortageAsTaken, markShortageAsNotFound, assignShortageToCourier, approveShortageItem, deleteShortageItem, finishMyDay, finishCourierDay, getCourierNotifications, deleteShortageItems as deleteShortageItemsAction } from "@/lib/actions/shortage-actions";
+import {
+    markShortageAsTaken,
+    markShortageAsNotFound,
+    assignShortageToCourier,
+    approveShortageItem,
+    deleteShortageItem,
+    finishMyDay,
+    finishCourierDay,
+    getCourierNotifications,
+    deleteShortageItems as deleteShortageItemsAction,
+    getCourierTasks,
+    getGlobalShortageList
+} from "@/lib/actions/shortage-actions";
+import { getCategories } from "@/lib/actions/product-actions";
+import { getStaff } from "@/lib/actions/staff-actions";
+import { Role } from "@prisma/client";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { AddShortageForm } from "@/components/shortage/add-shortage-form";
@@ -70,7 +86,7 @@ import { cn, getDeterministicColor, getInitials } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface CourierDashboardClientProps {
-    initialItems: any[];
+    initialItems?: any[];
     initialAllShortages?: any[];
     categories?: any[];
     userId: string;
@@ -85,6 +101,8 @@ const priorityWeight: Record<string, number> = {
     YUKSEK: 2,
     NORMAL: 1,
 };
+
+const EMPTY_ARRAY: any[] = [];
 
 const sortByCourierPriority = (list: any[]) =>
     [...list].sort((a, b) => {
@@ -111,15 +129,21 @@ const cleanCourierNote = (notes?: string | null) =>
         .replace(/\[ONCELIK:(ACIL|YUKSEK|NORMAL)\]/gi, "")
         .trim();
 
-export function CourierDashboardClient({ initialItems, initialAllShortages = [], categories = [], userId, userRole, couriers = [], initialNotifications = [], initialDate }: CourierDashboardClientProps) {
+export function CourierDashboardClient({
+    initialItems = EMPTY_ARRAY,
+    initialAllShortages = EMPTY_ARRAY,
+    categories: initialCategories = EMPTY_ARRAY,
+    userId,
+    userRole,
+    couriers: initialCouriers = EMPTY_ARRAY,
+    initialNotifications = EMPTY_ARRAY,
+    initialDate
+}: CourierDashboardClientProps) {
     const router = useRouter();
-    const [items, setItems] = useState(initialItems);
-    const [allShortages, setAllShortages] = useState(initialAllShortages);
-    const [isPending, startTransition] = useTransition();
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [assigningId, setAssigningId] = useState<string | null>(null);
-    const [lastRefreshCount, setLastRefreshCount] = useState(initialItems.length);
     const [showNewBadge, setShowNewBadge] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
     const [isUnassignedOpen, setIsUnassignedOpen] = useState(false);
@@ -132,6 +156,63 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const [shortcutCourierId, setShortcutCourierId] = useState<string>("");
     const [itemAdjustedQty, setItemAdjustedQty] = useState<Record<string, number>>({});
 
+    // React Query for Tasks
+    const { data: tasksData, isLoading: isTasksLoading } = useQuery({
+        queryKey: ["courier-tasks", selectedDate],
+        queryFn: () => getCourierTasks(selectedDate),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    // React Query for Global Shortages
+    const { data: globalShortagesData, isLoading: isGlobalShortagesLoading } = useQuery({
+        queryKey: ["global-shortages", selectedDate],
+        queryFn: () => getGlobalShortageList(selectedDate),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    // React Query for Categories
+    const { data: categoriesData } = useQuery({
+        queryKey: ["categories"],
+        queryFn: () => getCategories(),
+        staleTime: 60 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    // React Query for Couriers (Staff filter)
+    const { data: staffData } = useQuery({
+        queryKey: ["staff"],
+        queryFn: () => getStaff(),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    // React Query for Notifications
+    const { data: notificationsData } = useQuery({
+        queryKey: ["courier-notifications"],
+        queryFn: () => getCourierNotifications(),
+        staleTime: 60 * 1000,
+        refetchInterval: 30 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        enabled: isAdmin,
+    });
+
+    const items = tasksData?.items || initialItems;
+    const allShortages = globalShortagesData || initialAllShortages;
+    const categories = categoriesData || initialCategories;
+    const couriers = useMemo(() => {
+        const filtered = (staffData || initialCouriers).filter((s: Record<string, any>) => s.role === 'COURIER');
+        return filtered.length > 0 ? filtered : EMPTY_ARRAY;
+    }, [staffData, initialCouriers]);
+    const notifications = notificationsData?.notifications || initialNotifications;
+    const activeCourierNotifications = notifications;
+
     const getAdjustedQty = (item: any) => itemAdjustedQty[item.id] ?? item.quantity ?? 1;
     const adjustQty = (id: string, current: number, delta: number) => {
         const next = Math.max(1, current + delta);
@@ -142,25 +223,27 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         setMounted(true);
     }, []);
 
-    // Socket for real-time cross-client sync (replaces polling)
+    // Socket for real-time cross-client sync
     const { socket } = useSocket();
     const { data: session } = useSession();
     const shopId = (session?.user as any)?.shopId;
 
-    // Emit shortage_update after a mutation so all clients (admin/courier) refresh
     const emitShortageUpdate = () => {
         if (socket && shopId) {
             socket.emit("shortage_update", { roomId: shopId });
         }
     };
 
-    // Listen for shortage_updated from other clients → refresh page data
     useEffect(() => {
         if (!socket) return;
-        const handler = () => { router.refresh(); };
+        const handler = () => {
+            queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+            queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+            queryClient.invalidateQueries({ queryKey: ["courier-notifications"] });
+        };
         socket.on("shortage_updated", handler);
         return () => { socket.off("shortage_updated", handler); };
-    }, [socket, router]);
+    }, [socket, queryClient]);
 
     useEffect(() => {
         if (!isAdmin) {
@@ -187,38 +270,25 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         router.push(`/kurye?${searchParams.toString()}`);
     };
 
-    // Admin notification detector (runs once on mount, then on demand)
-    const [activeCourierNotifications, setActiveCourierNotifications] = useState<any[]>(initialNotifications);
-
-    const pollNotifications = async () => {
-        if (!isAdmin) return;
-        const res = await getCourierNotifications();
-        if (res.success) {
-            res.notifications.forEach((notif: any) => {
-                const lsKey = `notif_seen_${notif.id}`;
-                if (!localStorage.getItem(lsKey)) {
-                    localStorage.setItem(lsKey, "true");
-                    toast.success("Kurye Günü Bitirdi", {
-                        description: notif.message,
-                        duration: 10000,
-                        icon: <Bell className="h-5 w-5 text-orange-500" />
-                    });
-                }
-            });
-            setActiveCourierNotifications(res.notifications);
-        }
-    };
-
-    // Run notification check on mount (admin only)
+    // Run notification check on mount/data change
     useEffect(() => {
-        pollNotifications();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAdmin]);
+        if (!isAdmin || !notifications) return;
+        notifications.forEach((notif: any) => {
+            const lsKey = `notif_seen_${notif.id}`;
+            if (!localStorage.getItem(lsKey)) {
+                localStorage.setItem(lsKey, "true");
+                toast.success("Kurye Günü Bitirdi", {
+                    description: notif.message,
+                    duration: 10000,
+                    icon: <Bell className="h-5 w-5 text-orange-500" />
+                });
+            }
+        });
+    }, [isAdmin, notifications]);
 
-
-    // Update state when server re-renders (after router.refresh)
     useEffect(() => {
-        if (initialItems.length > lastRefreshCount) {
+        const prevCount = queryClient.getQueryData(["courier-tasks-prev-count"]) as number || items.length;
+        if (items.length > prevCount) {
             setShowNewBadge(true);
             if (!isAdmin) {
                 toast("YENİ SİPARİŞ ATANDI!", {
@@ -227,26 +297,21 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 });
             }
         }
-        setItems(initialItems);
-        setAllShortages(initialAllShortages);
-        setLastRefreshCount(initialItems.length);
-        // Also re-check notifications when data refreshes
-        pollNotifications();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialItems, initialAllShortages]);
+        queryClient.setQueryData(["courier-tasks-prev-count"], items.length);
+    }, [items, isAdmin, queryClient]);
 
-    const filteredItems = sortByCourierPriority(items.filter(item =>
+    const filteredItems = useMemo(() => sortByCourierPriority(items.filter((item: any) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.shop?.name && item.shop.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.customer?.name && item.customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.requesterName && item.requesterName.toLowerCase().includes(searchTerm.toLowerCase()))
-    ));
+    )), [items, searchTerm]);
 
-    const pendingShortages = sortByCourierPriority(allShortages.filter(s => !s.assignedToId));
-    // Suggested route: exclude already taken or resolved items
-    const nextRouteItems = sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3);
+    const pendingShortages = useMemo(() => sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId)), [allShortages]);
+    const nextRouteItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3), [items]);
     const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
+
     const resolveCriticalShortcutQuantity = (item: any, requestedQuantity: number) => {
         const stock = Number(item.product?.stock ?? item.stock ?? 0);
         const criticalStock = Number(item.product?.criticalStock ?? item.criticalStock ?? 0);
@@ -263,6 +328,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
         return useSuggested ? suggestedQuantity : requestedQuantity;
     };
+
     const getCourierWorkload = (courierId: string) => {
         const activeItems = items.filter((st: any) => st.assignedToId === courierId && !st.isResolved);
         const priorityScore = activeItems.reduce((sum: number, item: any) => sum + (priorityWeight[item.courierPriorityLabel] || 1), 0);
@@ -275,25 +341,17 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
     const handleToggleTaken = async (id: string, currentStatus: boolean) => {
         setLoadingId(id);
-
-        // Optimistic update
-        setItems(prev => prev.map(item =>
-            item.id === id ? { ...item, isTaken: !currentStatus, takenAt: !currentStatus ? new Date().toISOString() : null } : item
-        ));
-
         try {
             const res = await markShortageAsTaken(id, !currentStatus);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün alındı." : "Geri alındı.");
-                emitShortageUpdate(); // notify admin/other clients
-                router.refresh();
+                emitShortageUpdate();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error("İşlem başarısız.");
-                router.refresh();
             }
         } catch (error) {
             toast.error("Hata oluştu.");
-            router.refresh();
         } finally {
             setLoadingId(null);
         }
@@ -301,9 +359,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
     const handleAssignShortcut = async (shortageId: string) => {
         setAssigningId(shortageId);
-
-        // Optimistic update
-        const movedItem = allShortages.find(s => s.id === shortageId);
+        const movedItem = allShortages.find((s: any) => s.id === shortageId);
         const targetCourierId = isAdmin ? shortcutCourierId : userId;
         if (!targetCourierId) {
             toast.error("Atama için kurye seçin.");
@@ -313,24 +369,17 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
         const requestedQty = itemQuantities[shortageId] || movedItem?.quantity || 1;
         const customQty = movedItem ? resolveCriticalShortcutQuantity(movedItem, requestedQty) : requestedQty;
 
-        if (movedItem) {
-            const updatedItem = { ...movedItem, assignedToId: targetCourierId, isTaken: false, quantity: customQty, requesterName: movedItem.requesterName || "Dükkan" };
-            setItems(prev => [updatedItem, ...prev]);
-            setAllShortages(prev => prev.filter(s => s.id !== shortageId));
-        }
-
         try {
             const res = await assignShortageToCourier(shortageId, targetCourierId, customQty);
             if (res.success) {
                 toast.success("Görev listenize eklendi.");
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
                 toast.error("Atama başarısız.");
-                router.refresh();
             }
         } catch (error) {
             toast.error("Hata oluştu.");
-            router.refresh();
         } finally {
             setAssigningId(null);
         }
@@ -341,23 +390,17 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
     const handleApprove = async (id: string, quantity: number, mode: "STOCK" | "SALE" | "DEBT" = "STOCK", paymentMethod?: any, customPrice?: number, currency?: "TL" | "USD" | "EUR", stockPayload?: any) => {
         setLoadingId(id);
-
-        // Optimistic update
-        setItems(prev => prev.filter(item => item.id !== id));
-
         try {
             const res = await approveShortageItem(id, quantity, mode, paymentMethod, customPrice, currency, stockPayload);
             if (res.success) {
                 toast.success(mode === "STOCK" ? "Ürün stoğa eklendi." : "Ürün stoğa eklendi ve işlem gerçekleştirildi.");
                 emitShortageUpdate();
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "Onay başarısız.");
-                router.refresh(); // Sync back
             }
         } catch (err) {
             toast.error("Hata oluştu.");
-            router.refresh();
         } finally {
             setLoadingId(null);
             setApprovingItem(null);
@@ -367,30 +410,23 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const handleDelete = async (id: string) => {
         if (!confirm("Bu siparişi silmek istediğinizden emin misiniz?")) return;
         setLoadingId(id);
-
         try {
             let res = await deleteShortageItem(id);
             if ((res as any).needsStockApproval) {
                 const forceDelete = confirm(`${res.error}\n\nTamam: Yine de sil\nİptal: Stok kaydını yapmaya dön`);
-                if (!forceDelete) {
-                    router.refresh();
-                    return;
-                }
+                if (!forceDelete) return;
                 res = await deleteShortageItem(id, true);
             }
             if (res.success) {
-                setItems(prev => prev.filter(i => i.id !== id));
-                setAllShortages(prev => prev.filter(i => i.id !== id));
-                setSelectedIds(prev => prev.filter(sid => sid !== id));
                 toast.success("Sipariş silindi.");
                 emitShortageUpdate();
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
                 toast.error(res.error || "Silme işlemi başarısız.");
-                router.refresh();
             }
         } catch (err) {
-            router.refresh();
+            toast.error("Hata oluştu.");
         } finally {
             setLoadingId(null);
         }
@@ -399,33 +435,25 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     const handleBulkDelete = async (ids: string[]) => {
         if (!confirm(`${ids.length} adet siparişi silmek istediğinizden emin misiniz?`)) return;
         setLoadingId("bulk");
-
         try {
             let res = await deleteShortageItemsAction(ids);
             if ((res as any).needsStockApproval) {
                 const forceDelete = confirm(`${res.error}\n\nTamam: Yine de sil\nİptal: Stok kaydını yapmaya dön`);
-                if (!forceDelete) {
-                    router.refresh();
-                    return;
-                }
+                if (!forceDelete) return;
                 res = await deleteShortageItemsAction(ids, true);
             }
             if (res.success) {
-                setItems(prev => prev.filter(i => !ids.includes(i.id)));
-                setAllShortages(prev => prev.filter(i => !ids.includes(i.id)));
+                if (selectedIds.length <= ids.length) setIsSelectionMode(false);
                 setSelectedIds(prev => prev.filter(sid => !ids.includes(sid)));
-                if (selectedIds.length <= ids.length) {
-                    setIsSelectionMode(false);
-                }
                 toast.success("Seçili siparişler silindi.");
                 emitShortageUpdate();
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
                 toast.error(res.error || "Toplu silme başarısız.");
-                router.refresh();
             }
         } catch (err) {
-            router.refresh();
+            toast.error("Hata oluştu.");
         } finally {
             setLoadingId(null);
         }
@@ -437,6 +465,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
             const res = await finishMyDay();
             if (res.success) {
                 toast.success("Gününüzü bitirdiğinize dair yöneticiye bildirim gönderildi.");
+                queryClient.invalidateQueries({ queryKey: ["courier-notifications"] });
             } else {
                 toast.error(res.error || "Bildirim gönderilemedi.");
             }
@@ -483,13 +512,12 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 targetDate
             });
             if (res.success) {
-                const closedIds = new Set([...finishPreview.notTakenItems, ...finishPreview.takenWithoutStockItems].map((item: any) => item.id));
-                setItems(prev => prev.filter((item: any) => !closedIds.has(item.id)));
                 toast.success(`${finishingCourier.name} kuryesinin günü bitirildi.`);
                 emitShortageUpdate();
                 setIsTransferModalOpen(false);
                 setFinishPreview({ notTakenItems: [], takenWithoutStockItems: [] });
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
                 toast.error(res.error || "İşlem başarısız.");
             }
@@ -499,7 +527,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
     };
 
     const handleFinishCourierDay = async (courierId: string) => {
-        const courier = couriers.find(c => c.id === courierId);
+        const courier = couriers.find((c: any) => c.id === courierId);
         if (courier) handleFinishDayClick(courier);
     };
 
@@ -522,36 +550,38 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
 
     const stats = {
         total: items.length,
-        taken: items.filter(i => i.isTaken || i.isResolved).length,
-        remaining: items.filter(i => !i.isTaken && !i.isResolved).length
+        taken: items.filter((i: any) => i.isTaken || i.isResolved).length,
+        remaining: items.filter((i: any) => !i.isTaken && !i.isResolved).length
     };
 
     const handleToggleNotFound = async (id: string, currentStatus: boolean) => {
         setLoadingId(id);
-
-        setItems(prev => prev.map(item =>
-            item.id === id ? { ...item, isNotFound: !currentStatus, isTaken: false, takenAt: null } : item
-        ));
-
         try {
             const res = await markShortageAsNotFound(id, !currentStatus);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün bulunmadı olarak işaretlendi." : "Bulunmadı işareti kaldırıldı.");
                 emitShortageUpdate();
-                router.refresh();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "İşlem başarısız.");
-                router.refresh();
             }
         } catch (error) {
             toast.error("Hata oluştu.");
-            router.refresh();
         } finally {
             setLoadingId(null);
         }
     };
 
     const isCourierOnly = userRole === "COURIER";
+
+    if (isTasksLoading || isGlobalShortagesLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <p className="text-muted-foreground animate-pulse text-xs font-black uppercase tracking-widest">Kurye Verileri Yükleniyor...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-in fade-in duration-500 pb-24 relative">
@@ -567,11 +597,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                             <div className="flex items-center gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">SİSTEM CANLI</span>
-                                {couriers.find(c => c.id === userId)?.points > 0 && (
+                                {couriers.find((c: any) => c.id === userId)?.points > 0 && (
                                     <>
                                         <span className="text-[8px] opacity-20 mr-1">•</span>
                                         <TrendingUp className="w-2.5 h-2.5 text-blue-500" />
-                                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{couriers.find(c => c.id === userId).points} PUAN</span>
+                                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{couriers.find((c: any) => c.id === userId).points} PUAN</span>
                                     </>
                                 )}
                             </div>
@@ -617,11 +647,11 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                 )}
 
                 {(isAdmin || isCourierOnly) && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-6">
                         {/* Quick Add Form Card - ONLY FOR ADMIN */}
                         {isAdmin && (
                             <>
-                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 lg:col-span-4">
+                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 xl:col-span-4 lg:col-span-1">
                                     <div className="p-6 space-y-4">
                                         <div className="flex items-center gap-3">
                                             <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
@@ -639,7 +669,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                     </div>
                                 </Card>
 
-                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-hidden group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-40 lg:col-span-5 flex flex-col">
+                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-hidden group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-40 xl:col-span-5 lg:col-span-1 flex flex-col">
                                     <div className="p-6 space-y-4">
                                         <div className="flex items-center gap-3">
                                             <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
@@ -650,8 +680,8 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                                 <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">GÜNLÜK İŞLEM BİTİRME & TAKİP</p>
                                             </div>
                                         </div>
-                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-                                            {couriers.map(c => {
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 content-start overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
+                                            {couriers.map((c: any) => {
                                                 const courierItems = items.filter((st: any) => st.assignedToId === c.id);
                                                 const workload = getCourierWorkload(c.id);
                                                 const totalToday = courierItems.length;
@@ -728,7 +758,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                     </div>
                                 </Card>
 
-                                <div className="lg:col-span-3 flex flex-col gap-4">
+                                <div className="xl:col-span-3 lg:col-span-2 flex flex-col md:flex-row xl:flex-col gap-4">
                                     {[
                                         { label: "GÜNCEL", val: stats.total, color: "blue", icon: Package },
                                         { label: "TAMAM", val: stats.taken, color: "emerald", icon: CheckCircle2 },
@@ -802,7 +832,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                     </Card>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row gap-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
                         <Input
@@ -1351,7 +1381,7 @@ export function CourierDashboardClient({ initialItems, initialAllShortages = [],
                                 </SelectTrigger>
                                 <SelectContent className="rounded-2xl border-zinc-200 dark:border-white/10">
                                     <SelectItem value="pool" className="rounded-xl font-black text-xs uppercase cursor-pointer">Yarın - Atanmamış Havuz</SelectItem>
-                                    {couriers.map(c => (
+                                    {couriers.map((c: any) => (
                                         <SelectItem key={c.id} value={c.id} className="rounded-xl font-black text-xs uppercase cursor-pointer">
                                             Yarın - {c.name} {c.surname}{c.id === finishingCourier?.id ? " (Aynı Kurye)" : ""}
                                         </SelectItem>

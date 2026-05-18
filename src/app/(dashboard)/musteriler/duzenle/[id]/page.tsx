@@ -48,6 +48,7 @@ import {
 import { updateCustomer, getCustomerById } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Müşteri adı en az 2 karakter olmalıdır"),
@@ -65,10 +66,15 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 
 export default function EditCustomerPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const queryClient = useQueryClient();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: customer, isLoading: fetching } = useQuery({
+    queryKey: ["customer", params.id],
+    queryFn: () => getCustomerById(params.id),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
@@ -86,26 +92,38 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
   });
 
   useEffect(() => {
-    async function loadCustomer() {
-      const customer = await getCustomerById(params.id);
-      if (customer) {
-        form.reset({
-          name: customer.name,
-          phone: customer.phone,
-          secondaryPhone: customer.secondaryPhone || "",
-          email: customer.email || "",
-          address: customer.address || "",
-          notes: customer.notes || "",
-          type: customer.type || "BIREYSEL",
-          isVip: customer.isVip || false,
-          photo: customer.photo || "",
-        });
-        setPhotoPreview(customer.photo || null);
-      }
-      setFetching(false);
+    if (customer) {
+      form.reset({
+        name: customer.name || "",
+        phone: customer.phone || "",
+        secondaryPhone: customer.secondaryPhone || "",
+        email: customer.email || "",
+        address: customer.address || "",
+        notes: customer.notes || "",
+        type: customer.type || "BIREYSEL",
+        isVip: customer.isVip || false,
+        photo: customer.photo || "",
+      });
+      setPhotoPreview(customer.photo || null);
     }
-    loadCustomer();
-  }, [params.id]);
+  }, [customer, form]);
+
+  const updateMutation = useMutation({
+    mutationFn: (values: CustomerFormValues) => updateCustomer(params.id, values),
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["customer", params.id] });
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        toast.success("Müşteri profili güncellendi");
+        router.push(`/musteriler/${params.id}`);
+      } else {
+        toast.error(result.error || "Güncelleme sırasında bir hata oluştu");
+      }
+    },
+    onError: () => {
+      toast.error("Bir hata oluştu");
+    }
+  });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -130,25 +148,12 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  async function onSubmit(values: CustomerFormValues) {
-    setLoading(true);
-    try {
-      const result = await updateCustomer(params.id, values);
-      if (result.success) {
-        toast.success("Müşteri profili güncellendi");
-        router.push(`/musteriler/${params.id}`);
-      } else {
-        toast.error(result.error || "Güncelleme sırasında bir hata oluştu");
-      }
-    } catch (error) {
-      toast.error("Bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
+  function onSubmit(values: CustomerFormValues) {
+    updateMutation.mutate(values);
   }
 
   if (fetching) {
-     return <div className="p-20 text-center"><Loader2 className="h-10 w-10 animate-spin mx-auto text-blue-500" /></div>;
+    return <div className="p-20 text-center"><Loader2 className="h-10 w-10 animate-spin mx-auto text-blue-500" /></div>;
   }
 
   return (
@@ -175,10 +180,10 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
             <div className="flex items-center gap-3">
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={updateMutation.isPending}
                 className="bg-blue-500 hover:bg-blue-400 text-black px-10 h-14 rounded-2xl  transition-all flex gap-3"
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 stroke-[3px]" />}
+                {updateMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5 stroke-[3px]" />}
                 DEĞİŞİKLİKLERİ KAYDET
               </Button>
             </div>
@@ -326,17 +331,17 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                           <FormItem className="space-y-3">
                             <FormLabel className="text-gray-600  text-[10px]">YEDEK TELEFON</FormLabel>
                             <FormControl>
-                                <div className="relative group">
-                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors z-10" />
-                                  <IMaskInput
-                                    mask="+90 (000) 000 00 00"
-                                    definitions={{ '0': /[0-9]/ }}
-                                    value={field.value}
-                                    unmask={false}
-                                    onAccept={(value) => field.onChange(value)}
-                                    className="flex h-14 w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm  focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
-                                  />
-                                </div>
+                              <div className="relative group">
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors z-10" />
+                                <IMaskInput
+                                  mask="+90 (000) 000 00 00"
+                                  definitions={{ '0': /[0-9]/ }}
+                                  value={field.value}
+                                  unmask={false}
+                                  onAccept={(value) => field.onChange(value)}
+                                  className="flex h-14 w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm  focus:outline-none focus:ring-1 focus:ring-blue-500/20 pl-12 transition-all"
+                                />
+                              </div>
                             </FormControl>
                             <FormDescription className="text-gray-600 text-[10px]  mt-2">Müşteriye ulaşılamadığında aranacak alternatif kanal.</FormDescription>
                             <FormMessage />
@@ -402,8 +407,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                       <FormItem className="flex items-center justify-between space-y-0">
                         <div className="flex items-center gap-5">
                           <div className={cn(
-                             "p-3 rounded-2xl transition-all shadow-none",
-                             field.value ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : "bg-gray-500/10 text-gray-500 border border-gray-500/10"
+                            "p-3 rounded-2xl transition-all shadow-none",
+                            field.value ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : "bg-gray-500/10 text-gray-500 border border-gray-500/10"
                           )}>
                             <Star className={cn("h-6 w-6", field.value && "fill-blue-500 animate-pulse")} />
                           </div>
@@ -428,10 +433,10 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               {/* Notes Card */}
               <Card className="bg-card border-border/50 shadow-none obsidian flex-1">
                 <CardHeader className="pb-4 px-8 border-b border-white/[0.03] bg-white/[0.01]">
-                   <div className="flex items-center gap-3">
-                      <StickyNote className="h-4 w-4 text-blue-500" />
-                      <CardTitle className="font-medium text-gray-600  text-[10px]">STRATEJİK NOTLAR</CardTitle>
-                   </div>
+                  <div className="flex items-center gap-3">
+                    <StickyNote className="h-4 w-4 text-blue-500" />
+                    <CardTitle className="font-medium text-gray-600  text-[10px]">STRATEJİK NOTLAR</CardTitle>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-8">
                   <FormField

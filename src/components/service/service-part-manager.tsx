@@ -22,12 +22,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { addPartToService, removePartFromService } from "@/lib/actions/service-actions";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function ServicePartManager({ ticketId, products, currentParts }: { ticketId: string; products: any[]; currentParts: any[] }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const queryClient = useQueryClient();
 
   const handleAdd = () => {
     if (!selectedProductId) return;
@@ -38,6 +40,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
         setOpen(false);
         setSelectedProductId("");
         setQuantity("1");
+        queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] });
       } else {
         toast.error(res.error);
       }
@@ -49,6 +52,7 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
       const res = await removePartFromService(partId);
       if (res.success) {
         toast.success("Parça çıkarıldı.");
+        queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] });
       } else {
         toast.error(res.error);
       }

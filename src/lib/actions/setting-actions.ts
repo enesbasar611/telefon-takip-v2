@@ -1,11 +1,10 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getShopId } from "@/lib/auth";
 import { cache } from "react";
 
-import { unstable_cache } from "next/cache";
 
 export const getSettings = cache(async function getSettings() {
   const shopId = await getShopId(false);
@@ -109,6 +108,8 @@ export async function updateShop(data: any) {
     });
     revalidatePath("/");
     revalidatePath("/ayarlar");
+    revalidateTag("shop");
+    revalidateTag(`shop-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("updateShop error:", error);
@@ -156,6 +157,8 @@ export async function saveAIIndustryConfig(serviceFields: any[], inventoryFields
 
     revalidatePath("/");
     revalidatePath("/ayarlar");
+    revalidateTag("shop");
+    revalidateTag(`shop-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("saveAIIndustryConfig error:", error);

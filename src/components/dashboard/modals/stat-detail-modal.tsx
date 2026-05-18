@@ -66,17 +66,20 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                 default: return [];
             }
         },
-        enabled: !!type && isOpen, // Removed shopId/user dependency wait, just keeping it simple
-        placeholderData: keepPreviousData,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        enabled: !!type && isOpen,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+        placeholderData: keepPreviousData
     });
 
     const accountsQuery = useQuery<any[]>({
         queryKey: ["finance-accounts", "dashboard-stat-detail"],
         queryFn: getAccountBalanceDetails,
-        enabled: isOpen && type === "TOTAL_DEBTS",
+        enabled: type === "TOTAL_DEBTS" && isOpen,
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
     const payDebtMutation = useMutation({
         mutationFn: async () => {
@@ -165,7 +168,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[600px] border-border/40 p-0 overflow-hidden bg-background/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+            <DialogContent className="sm:max-w-[600px] border-border/40 p-0 overflow-hidden bg-background/80 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
                 <div className={cn("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r",
                     type === "TOTAL_DEBTS" ? "from-indigo-500 to-purple-600" :
                         type === "COLLECTIONS" ? "from-amber-500 to-orange-600" :

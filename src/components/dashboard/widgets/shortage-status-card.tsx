@@ -53,8 +53,9 @@ export function ShortageStatusCard() {
         queryKey: ["shortages"],
         queryFn: getShortageItems,
         placeholderData: keepPreviousData,
-        refetchInterval: 30000,
-        staleTime: 1000 * 60, // 1 minute
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 
     const isLoading = isInitialLoading && items.length === 0;

@@ -1,39 +1,36 @@
-import { getSettings, getShop } from "@/lib/actions/setting-actions";
-import { getAllReceiptSettings } from "@/lib/actions/receipt-settings";
 import { SettingsInterface } from "@/components/settings/settings-interface";
 import { getSession } from "@/lib/auth";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function AyarlarPage() {
-  const queryClient = new QueryClient();
-  const session = await getSession();
-
-  // Prefetch everything
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: ["settings"],
-      queryFn: getSettings
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["receipt-settings"],
-      queryFn: getAllReceiptSettings
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["shop"],
-      queryFn: getShop
-    })
-  ]);
-
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
-
+function SettingsSkeleton() {
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <SettingsInterface
-        isSuperAdmin={isSuperAdmin}
-      />
-    </HydrationBoundary>
+    <div className="space-y-8 p-6">
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-10 w-48 rounded-xl" />
+        <Skeleton className="h-4 w-96 rounded-lg" />
+      </div>
+      <div className="flex gap-6 mt-8">
+        <div className="w-[220px] space-y-2">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-xl" />
+          ))}
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-[600px] w-full rounded-2xl" />
+        </div>
+      </div>
+    </div>
   );
 }
 
+export default async function AyarlarPage() {
+  const session = await getSession();
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
-
+  return (
+    <Suspense fallback={<SettingsSkeleton />}>
+      <SettingsInterface isSuperAdmin={isSuperAdmin} />
+    </Suspense>
+  );
+}

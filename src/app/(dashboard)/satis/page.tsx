@@ -1,32 +1,11 @@
 import { POSInterface } from "@/components/pos/pos-interface";
-import { getPOSInitialData } from "@/lib/actions/product-actions";
-import { getSaleById } from "@/lib/actions/sale-actions";
 import { ShoppingCart, WifiOff, Loader2 } from "lucide-react";
-import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = 'force-dynamic';
 
-async function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
-  let products: any[] = [];
-  let customers: any[] = [];
-  let categories: any[] = [];
-  let initialSale: any = null;
+function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
   let dbError = false;
-
-  try {
-    const data = await getPOSInitialData();
-    products = data.products;
-    customers = data.customers;
-    categories = data.categories;
-
-    if (searchParams?.saleId) {
-      initialSale = await getSaleById(searchParams.saleId);
-    }
-  } catch (err) {
-    console.error("POS page: DB connection failed, loading with empty data.", err);
-    dbError = true;
-  }
 
   return (
     <>
@@ -57,36 +36,17 @@ async function POSData({ searchParams }: { searchParams: { saleId?: string } }) 
 
       <div className="bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border border-border/40 p-1">
         <POSInterface
-          products={products}
-          customers={customers}
-          categories={categories}
-          initialSale={initialSale}
+          initialSaleId={searchParams?.saleId}
         />
       </div>
     </>
   );
 }
 
-function POSLoading() {
-  return (
-    <div className="flex flex-col gap-10">
-      <div className="flex flex-col gap-4">
-        <div className="h-10 w-64 bg-muted animate-pulse rounded-xl" />
-        <div className="h-4 w-96 bg-muted animate-pulse rounded-lg" />
-      </div>
-      <div className="h-[600px] w-full bg-muted/20 animate-pulse rounded-[2rem] border border-border/40 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
-      </div>
-    </div>
-  );
-}
-
 export default function POSPage({ searchParams }: { searchParams: { saleId?: string } }) {
   return (
     <div className="flex flex-col gap-10 pb-12 animate-in fade-in duration-500">
-      <Suspense fallback={<POSLoading />}>
-        <POSData searchParams={searchParams} />
-      </Suspense>
+      <POSData searchParams={searchParams} />
     </div>
   );
 }

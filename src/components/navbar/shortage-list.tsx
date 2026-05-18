@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ClipboardList,
   CheckCircle2,
@@ -38,7 +38,9 @@ import { cn, getInitials, getDeterministicColor } from "@/lib/utils";
 import { StockReceiptModal } from "./stock-receipt-modal";
 import { Badge } from "@/components/ui/badge";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { useSupplierOrders } from "@/lib/context/supplier-order-context"; import {
+import { useSupplierOrders } from "@/lib/context/supplier-order-context";
+import { useQuery } from "@tanstack/react-query";
+import {
   User,
   UserPlus,
   Store,
@@ -61,14 +63,12 @@ export function ShortageList() {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const [suppliers, setSuppliers] = useState<any[]>([]);
   const { orders, assignProductToSupplier, removeProduct, updateQty: updateSupplierQty, totalItemCount, clearSupplier } = useSupplierOrders();
   const supplierIds = Object.keys(orders);
 
   const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-  const [couriers, setCouriers] = useState<any[]>([]);
 
   // Requester States
   const [requesterType, setRequesterType] = useState<"SHOP" | "CUSTOMER" | "NEW">("SHOP");
@@ -81,15 +81,21 @@ export function ShortageList() {
   const [showCustomerResults, setShowCustomerResults] = useState(false);
   const customerSearchRef = useRef<HTMLDivElement>(null);
 
-  const fetchSuppliers = useCallback(async () => {
-    const [sData, cData] = await Promise.all([getSuppliers(), getCouriers()]);
-    setSuppliers(sData);
-    setCouriers(cData);
-  }, []);
+  const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => getSuppliers(),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: couriers = [], isLoading: isLoadingCouriers } = useQuery({
+    queryKey: ["couriers"],
+    queryFn: () => getCouriers(),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    fetchSuppliers();
-
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
@@ -100,14 +106,7 @@ export function ShortageList() {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [fetchSuppliers]);
-
-  // Refresh suppliers when tab changes to "lists" or "analysis"
-  useEffect(() => {
-    if (activeTab !== "main") {
-      fetchSuppliers();
-    }
-  }, [activeTab, fetchSuppliers]);
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -500,7 +499,7 @@ export function ShortageList() {
                                     {suppliers.length === 0 ? (
                                       <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
                                     ) : (
-                                      suppliers.map(s => (
+                                      suppliers.map((s: any) => (
                                         <button
                                           key={s.id}
                                           onClick={() => handleSendToSupplier(s, item)}
@@ -572,7 +571,7 @@ export function ShortageList() {
                                       <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Kurye bulunamadı</p>
                                     ) : (
                                       <>
-                                        {couriers.map(c => (
+                                        {couriers.map((c: any) => (
                                           <button
                                             key={c.id}
                                             onClick={() => handleAssignToCourier(item.id, c.id)}

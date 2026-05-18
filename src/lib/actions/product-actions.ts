@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { formatTitleCase, formatUppercase } from "@/lib/formatters";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId, auth } from "@/lib/auth";
 import { productSchema } from "@/lib/validations/schemas";
@@ -337,6 +337,8 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
 
     revalidatePath("/stok");
     revalidatePath("/ikinci-el");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -552,6 +554,8 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
     }
 
     revalidatePath("/stok");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
     if (newStock !== undefined && newStock <= 0) {
       await checkStockAndAddShortage(id, product.name);
     }
@@ -589,6 +593,8 @@ export async function applyBulkAIUpdates(updates: any[]) {
     );
 
     revalidatePath("/stok");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
     return { success: true, count: results.length };
   } catch (error) {
     console.error("Bulk AI Update error:", error);
@@ -628,6 +634,8 @@ export async function addInventoryStock(productId: string, quantity: number, not
     ]);
 
     revalidatePath("/stok");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Add inventory stock error:", error);
@@ -709,6 +717,8 @@ export async function quickSellProduct(productId: string, quantity: number) {
 
     revalidatePath("/stok");
     revalidatePath("/");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Quick sell error:", error);

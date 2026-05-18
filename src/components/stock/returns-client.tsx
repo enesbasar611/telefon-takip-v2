@@ -271,8 +271,8 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
-                <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
+                <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-3 w-full">
                     <div className="relative flex-1 max-w-sm group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input
@@ -325,142 +325,144 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
             </div>
 
             {/* Table */}
-            <div className="bg-card/50 backdrop-blur-sm rounded-3xl border border-border/50 overflow-hidden shadow-xl">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow className="hover:bg-transparent border-none">
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6 py-4">İade Bilgisi</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider">Kaynak & Ürün</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider">Müşteri / Bayi</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">İade Tutarı</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-center">Durum</TableHead>
-                            <TableHead className="text-[10px] font-bold uppercase tracking-wider pr-6"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <AnimatePresence mode="popLayout">
-                            {filteredData.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-64 text-center">
-                                        <div className="flex flex-col items-center justify-center space-y-3 opacity-40">
-                                            <Undo2 className="w-12 h-12" />
-                                            <p className="text-sm">Henüz bir iade kaydı bulunmuyor.</p>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredData.map((ticket, index) => (
-                                    <motion.tr
-                                        key={ticket.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ duration: 0.2, delay: index * 0.05 }}
-                                        className="group hover:bg-muted/20 border-border/40 transition-all cursor-default"
-                                    >
-                                        <TableCell className="pl-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "w-10 h-10 rounded-xl flex items-center justify-center",
-                                                    ticket.returnStatus === "PENDING" ? "bg-amber-500/10 text-amber-500" :
-                                                        ticket.returnStatus !== "REJECTED" ? "bg-emerald-500/10 text-emerald-500" :
-                                                            "bg-rose-500/10 text-rose-500"
-                                                )}>
-                                                    <Navigation className="w-5 h-5" />
+            <div className="bg-card/50 backdrop-blur-sm rounded-3xl border border-border/50 overflow-x-auto shadow-xl">
+                <div className="min-w-[1000px]">
+                    <Table>
+                        <TableHeader className="bg-muted/30">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6 py-4">İade Bilgisi</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider">Kaynak & Ürün</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider">Müşteri / Bayi</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">İade Tutarı</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider text-center">Durum</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase tracking-wider pr-6"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <AnimatePresence mode="popLayout">
+                                {filteredData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-64 text-center">
+                                            <div className="flex flex-col items-center justify-center space-y-3 opacity-40">
+                                                <Undo2 className="w-12 h-12" />
+                                                <p className="text-sm">Henüz bir iade kaydı bulunmuyor.</p>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredData.map((ticket, index) => (
+                                        <motion.tr
+                                            key={ticket.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                                            className="group hover:bg-muted/20 border-border/40 transition-all cursor-default"
+                                        >
+                                            <TableCell className="pl-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn(
+                                                        "w-10 h-10 rounded-xl flex items-center justify-center",
+                                                        ticket.returnStatus === "PENDING" ? "bg-amber-500/10 text-amber-500" :
+                                                            ticket.returnStatus !== "REJECTED" ? "bg-emerald-500/10 text-emerald-500" :
+                                                                "bg-rose-500/10 text-rose-500"
+                                                    )}>
+                                                        <Navigation className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold font-mono">{ticket.ticketNumber}</span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {format(new Date(ticket.createdAt), "d MMMM yyyy HH:mm", { locale: tr })}
+                                                        </span>
+                                                    </div>
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-bold font-mono">{ticket.ticketNumber}</span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        {format(new Date(ticket.createdAt), "d MMMM yyyy HH:mm", { locale: tr })}
+                                                    <span className="text-[10px] font-medium text-primary uppercase tracking-tight">
+                                                        {getSourceLabel(ticket.sourceType)}
                                                     </span>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-medium text-primary uppercase tracking-tight">
-                                                    {getSourceLabel(ticket.sourceType)}
-                                                </span>
-                                                <span className="text-xs font-semibold">{ticket.product?.name || "Hizmet/Ürün Belirtilmemiş"}</span>
-                                                {ticket.quantity > 1 && (
-                                                    <span className="text-[10px] text-muted-foreground">{ticket.quantity} Adet</span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                                    {ticket.customer?.photo ? (
-                                                        <img src={ticket.customer.photo} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <User className="w-3 h-3 text-muted-foreground" />
+                                                    <span className="text-xs font-semibold">{ticket.product?.name || "Hizmet/Ürün Belirtilmemiş"}</span>
+                                                    {ticket.quantity > 1 && (
+                                                        <span className="text-[10px] text-muted-foreground">{ticket.quantity} Adet</span>
                                                     )}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                                        {ticket.customer?.photo ? (
+                                                            <img src={ticket.customer.photo} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User className="w-3 h-3 text-muted-foreground" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium">{ticket.customer?.name || ticket.supplier?.name || "Bilinmiyor"}</span>
+                                                        <span className="text-[10px] text-muted-foreground">{ticket.customer?.phone || ticket.supplier?.phone || "-"}</span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-medium">{ticket.customer?.name || ticket.supplier?.name || "Bilinmiyor"}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{ticket.customer?.phone || ticket.supplier?.phone || "-"}</span>
+                                                    <span className="text-xs font-bold">
+                                                        {(ticket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(ticket.refundAmount || 0).toLocaleString('tr-TR')}
+                                                    </span>
+                                                    <span className="text-[9px] text-muted-foreground">{ticket.refundCurrency}</span>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold">
-                                                    {(ticket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(ticket.refundAmount || 0).toLocaleString('tr-TR')}
-                                                </span>
-                                                <span className="text-[9px] text-muted-foreground">{ticket.refundCurrency}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {getStatusBadge(ticket.returnStatus)}
-                                        </TableCell>
-                                        <TableCell className="pr-6">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 rounded-xl border-none shadow-2xl p-1 bg-popover/90 backdrop-blur-sm">
-                                                    <DropdownMenuItem className="rounded-lg gap-2 text-xs" onClick={() => {
-                                                        setSelectedTicket(ticket);
-                                                        // Show a detailed detail view... (future work)
-                                                    }}>
-                                                        <Eye className="w-3.5 h-3.5" /> Detayları Gör
-                                                    </DropdownMenuItem>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                {getStatusBadge(ticket.returnStatus)}
+                                            </TableCell>
+                                            <TableCell className="pr-6">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48 rounded-xl border-none shadow-2xl p-1 bg-popover/90 backdrop-blur-sm">
+                                                        <DropdownMenuItem className="rounded-lg gap-2 text-xs" onClick={() => {
+                                                            setSelectedTicket(ticket);
+                                                            // Show a detailed detail view... (future work)
+                                                        }}>
+                                                            <Eye className="w-3.5 h-3.5" /> Detayları Gör
+                                                        </DropdownMenuItem>
 
-                                                    {ticket.returnStatus === "PENDING" && (
-                                                        <>
-                                                            <div className="h-px bg-muted my-1" />
-                                                            <DropdownMenuItem
-                                                                className="rounded-lg gap-2 text-xs text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10"
-                                                                onClick={() => {
-                                                                    setSelectedTicket(ticket);
-                                                                    setReturnAction("RESTOCKED");
-                                                                    setIsApproveModalOpen(true);
-                                                                }}
-                                                            >
-                                                                <CheckCircle2 className="w-3.5 h-3.5" /> İadeyi İşle
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="rounded-lg gap-2 text-xs text-rose-500 focus:text-rose-500 focus:bg-rose-500/10"
-                                                                onClick={() => {
-                                                                    setSelectedTicket(ticket);
-                                                                    setIsRejectModalOpen(true);
-                                                                }}
-                                                            >
-                                                                <XCircle className="w-3.5 h-3.5" /> Reddet
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </motion.tr>
-                                ))
-                            )}
-                        </AnimatePresence>
-                    </TableBody>
-                </Table>
+                                                        {ticket.returnStatus === "PENDING" && (
+                                                            <>
+                                                                <div className="h-px bg-muted my-1" />
+                                                                <DropdownMenuItem
+                                                                    className="rounded-lg gap-2 text-xs text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10"
+                                                                    onClick={() => {
+                                                                        setSelectedTicket(ticket);
+                                                                        setReturnAction("RESTOCKED");
+                                                                        setIsApproveModalOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" /> İadeyi İşle
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="rounded-lg gap-2 text-xs text-rose-500 focus:text-rose-500 focus:bg-rose-500/10"
+                                                                    onClick={() => {
+                                                                        setSelectedTicket(ticket);
+                                                                        setIsRejectModalOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <XCircle className="w-3.5 h-3.5" /> Reddet
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </motion.tr>
+                                    ))
+                                )}
+                            </AnimatePresence>
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             {/* Approve Modal */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useTransition, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
     CreditCard,
     Wallet,
@@ -44,6 +45,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { LayoutCustomizer } from "@/components/common/layout-customizer";
+import {
+    getDebts,
+    getThisMonthCollected,
+    getCustomerStatement,
+    getDebtStatsDetails,
+    collectGlobalCustomerPayment,
+    startTrackingDebt,
+    deleteCustomerPayment,
+    updateCustomerPayment,
+    updateDebt
+} from "@/lib/actions/debt-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { getSettings, getShop } from "@/lib/actions/setting-actions";
+import { getCustomerById } from "@/lib/actions/customer-actions";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
     Card,
@@ -72,7 +89,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-import { collectGlobalCustomerPayment, startTrackingDebt, getCustomerStatement, getDebtStatsDetails, deleteCustomerPayment, updateCustomerPayment, updateDebt } from "@/lib/actions/debt-actions";
+// Combined imports above
 import { cn, formatCurrency } from "@/lib/utils";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { AddDebtModal } from "./add-debt-modal";
@@ -109,9 +126,9 @@ type Debt = {
 };
 
 interface VeresiyeClientProps {
-    debts: any[];
-    thisMonthCollected: number;
-    accounts: any[];
+    debts?: any[];
+    thisMonthCollected?: number;
+    accounts?: any[];
     rates?: {
         usd: number;
         eur: number;
@@ -120,6 +137,7 @@ interface VeresiyeClientProps {
     };
     settings?: any[];
     shop?: any;
+    shopId?: string | null;
     receiptSettings?: any;
 }
 
@@ -130,14 +148,61 @@ const normalizeSearchText = (value: string) =>
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/ı/g, "i");
 
-export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, settings, shop, receiptSettings }: VeresiyeClientProps) {
+export function VeresiyeClient({
+    debts: propsDebts,
+    thisMonthCollected: propsThisMonthCollected,
+    accounts: propsAccounts,
+    rates: propsRates,
+    settings: propsSettings,
+    shop: propsShop,
+    shopId,
+    receiptSettings
+}: VeresiyeClientProps) {
+    // Data Fetching
+    const { data: debtsData, isLoading: debtsLoading } = useQuery({
+        queryKey: ["debts", shopId],
+        queryFn: () => getDebts()
+    });
+
+    const { data: accountsData, isLoading: accountsLoading } = useQuery({
+        queryKey: ["accounts", shopId],
+        queryFn: () => getAccounts()
+    });
+
+    const { data: ratesData, isLoading: ratesLoading } = useQuery({
+        queryKey: ["rates", shopId],
+        queryFn: () => getExchangeRates(shopId || null)
+    });
+
+    const { data: collectedData, isLoading: collectedLoading } = useQuery({
+        queryKey: ["thisMonthCollected", shopId],
+        queryFn: () => getThisMonthCollected()
+    });
+
+    const { data: settingsData, isLoading: settingsLoading } = useQuery({
+        queryKey: ["settings", shopId],
+        queryFn: () => getSettings()
+    });
+
+    const { data: shopData, isLoading: shopLoading } = useQuery({
+        queryKey: ["shop", shopId],
+        queryFn: () => getShop()
+    });
+
+    const debts = debtsData || propsDebts || [];
+    const accounts = accountsData || propsAccounts || [];
+    const rates = ratesData || propsRates;
+    const thisMonthCollected = collectedData || propsThisMonthCollected || 0;
+    const settings = settingsData || propsSettings || [];
+    const shop = shopData || propsShop;
+
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'overdue' | 'tracking'>('all');
     const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
     const [debtFilter, setDebtFilter] = useState<'all' | 'hasDebt' | 'noDebt'>('all');
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
-    const defaultCurrency = settings?.find(s => s.key === "defaultCurrency")?.value || "TRY";
+    const defaultCurrency = settings?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
     const usdRate = rates?.usd || 32.5;
 
     // Payment States
@@ -149,11 +214,12 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [whatsappCustomer, setWhatsappCustomer] = useState<any>(null);
     const [whatsappMessageContent, setWhatsappMessageContent] = useState<string>("");
 
+
     // Bulk WhatsApp States
     const [bulkWhatsAppModalOpen, setBulkWhatsAppModalOpen] = useState(false);
     const [bulkCustomersToSend, setBulkCustomersToSend] = useState<any[]>([]);
 
-    const filteredAccountsCount = (type: string) => accounts.filter(acc => acc.type === type).length;
+    const filteredAccountsCount = (type: string) => accounts.filter((acc: any) => acc.type === type).length;
 
     // New History & Portfolio Modals
     const [historyCustomer, setHistoryCustomer] = useState<any>(null);
@@ -164,29 +230,48 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     const [editingDebt, setEditingDebt] = useState<any>(null);
     const [editAmount, setEditAmount] = useState<string>("");
 
+    const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
+    const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
+    const [receiptShowPaid, setReceiptShowPaid] = useState(false);
+
     // Stats Detail Modal State
     const [statsModalOpen, setStatsModalOpen] = useState(false);
     const [statsModalType, setStatsModalType] = useState<'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED' | null>(null);
-    const [statsModalData, setStatsModalData] = useState<any[]>([]);
-    const [isExporting, setIsExporting] = useState(false);
-    const [mounted, setMounted] = useState(false);
-    const [statsIsLoading, setStatsIsLoading] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
     const [statsDates, setStatsDates] = useState<{ start?: string; end?: string }>({});
     const [editNotes, setEditNotes] = useState<string>("");
     const [editCurrency, setEditCurrency] = useState<string>("TRY");
 
-
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
-    const [portfolioData, setPortfolioData] = useState<{ tickets: any[], sales: any[], debts: any[], transactions: any[] }>({ tickets: [], sales: [], debts: [], transactions: [] });
 
-    // Receipt Modal State
-    const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
-    const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
-    const [receiptShowPaid, setReceiptShowPaid] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+
+    const queryClient = useQueryClient();
+
+    // Queries
+    const { data: statementData } = useQuery({
+        queryKey: ["customer-statement", historyCustomer?.id || historyCustomer?.customerId],
+        queryFn: () => getCustomerStatement(historyCustomer?.id || historyCustomer?.customerId),
+        enabled: !!(historyCustomer?.id || historyCustomer?.customerId),
+    });
+
+    const { data: statsModalResults, isLoading: statsIsLoading } = useQuery({
+        queryKey: ["debt-stats", statsModalType, statsDates],
+        queryFn: () => getDebtStatsDetails({
+            type: statsModalType!,
+            startDate: statsDates.start ? new Date(statsDates.start) : undefined,
+            endDate: statsDates.end ? new Date(statsDates.end) : undefined
+        }),
+        enabled: !!statsModalType && statsModalOpen,
+    });
+
+    const statsModalData = statsModalResults?.success ? statsModalResults.data : [];
+
+    const { data: portfolioData } = useQuery({
+        queryKey: ["customer-portfolio", portfolioCustomer?.id || portfolioCustomer?.customerId],
+        queryFn: () => getCustomerById(portfolioCustomer?.id || portfolioCustomer?.customerId),
+        enabled: !!(portfolioCustomer?.id || portfolioCustomer?.customerId),
+    });
 
     // Global Payment State
     const [paymentCustomer, setPaymentCustomer] = useState<any>(null);
@@ -231,17 +316,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             const res = await deleteCustomerPayment(txId);
             if (res.success) {
                 toast.success("Tahsilat geri alındı. Borç bakiyeleri güncellendi.");
-                // Update statement data if open
-                if (historyCustomer) {
-                    const statementRes = await getCustomerStatement(historyCustomer.id);
-                    if (statementRes.success) {
-                        setStatementData({
-                            debts: statementRes.debts || [],
-                            transactions: statementRes.transactions || [],
-                            activeReturns: statementRes.activeReturns || []
-                        });
-                    }
-                }
+                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
                 router.refresh();
             } else {
                 toast.error(res.error || "İşlem geri alınamadı.");
@@ -257,17 +332,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             if (res.success) {
                 toast.success("Tahsilat güncellendi.");
                 setEditingTransaction(null);
-                // Update statement data if open
-                if (historyCustomer) {
-                    const statementRes = await getCustomerStatement(historyCustomer.id);
-                    if (statementRes.success) {
-                        setStatementData({
-                            debts: statementRes.debts || [],
-                            transactions: statementRes.transactions || [],
-                            activeReturns: statementRes.activeReturns || []
-                        });
-                    }
-                }
+                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
                 router.refresh();
             } else {
                 toast.error(res.error || "Güncelleme yapılamadı.");
@@ -285,11 +350,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         remainingUSD: number;
     } | null>(null);
 
-    const [statementData, setStatementData] = useState<{
-        debts: any[];
-        transactions: any[];
-        activeReturns?: any[];
-    } | null>(null);
+    const [statementModalOpen, setStatementModalOpen] = useState(false);
 
     const hasActiveReturn = (debtId?: string, saleId?: string, productId?: string) => {
         const activeReturns = statementData?.activeReturns || [];
@@ -311,35 +372,9 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     }, [needsRefresh, paymentSummary, whatsappModalOpen, receiptCustomer, paymentCustomer, router]);
 
     // Layout visibility checks
-    const isAnalysisHidden = settings?.find(s => s.key === "layout_hidden_veresiye_analysis")?.value === "true";
+    const isAnalysisHidden = settings?.find((s: any) => s.key === "layout_hidden_veresiye_analysis")?.value === "true";
 
-    const fetchStatsDetails = async () => {
-        if (!statsModalType) return;
-        setStatsIsLoading(true);
-        try {
-            const res = await getDebtStatsDetails({
-                type: statsModalType,
-                startDate: statsDates.start ? new Date(statsDates.start) : undefined,
-                endDate: statsDates.end ? new Date(statsDates.end) : undefined
-            });
-            if (res.success) {
-                setStatsModalData(res.data || []);
-            } else {
-                toast.error(res.error || "Veriler alınamadı");
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("Beklenmedik bir hata oluştu");
-        } finally {
-            setStatsIsLoading(false);
-        }
-    };
-
-    React.useEffect(() => {
-        if (statsModalOpen && statsModalType) {
-            fetchStatsDetails();
-        }
-    }, [statsModalOpen, statsModalType, statsDates]);
+    // --- Data Aggregation & Calculations ---
 
     // --- Data Aggregation & Calculations ---
     const now = useMemo(() => new Date(), []);
@@ -365,7 +400,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             debtItems: any[];
         }> = {};
 
-        debts.forEach(debt => {
+        debts.forEach((debt: any) => {
             const customerId = debt.customer.id;
             if (!groups[customerId]) {
                 groups[customerId] = {
@@ -432,19 +467,19 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     }, [debts, searchTerm, filterStatus, debtFilter, sortOrder, now]);
 
     const totalReceivableTRY = useMemo(() =>
-        debts.filter(d => !d.isPaid && (!d.currency || d.currency === 'TRY')).reduce((sum, d) => sum + Number(d.remainingAmount), 0),
+        debts.filter((d: any) => !d.isPaid && (!d.currency || d.currency === 'TRY')).reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
         [debts]);
 
     const totalReceivableUSD = useMemo(() =>
-        debts.filter(d => !d.isPaid && d.currency === 'USD').reduce((sum, d) => sum + Number(d.remainingAmount), 0),
+        debts.filter((d: any) => !d.isPaid && d.currency === 'USD').reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
         [debts]);
 
     const totalOverdue = useMemo(() =>
-        debts.filter(d => !d.isPaid && d.dueDate && new Date(d.dueDate) < now)
-            .reduce((sum, d) => sum + Number(d.remainingAmount), 0),
+        debts.filter((d: any) => !d.isPaid && d.dueDate && new Date(d.dueDate) < now)
+            .reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
         [debts, now]);
 
-    const activeDebtorCount = new Set(debts.filter(d => !d.isPaid).map(d => d.customer.id)).size;
+    const activeDebtorCount = new Set(debts.filter((d: any) => !d.isPaid).map((d: any) => d.customer.id)).size;
 
     const statsData = [
         {
@@ -500,7 +535,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     // 3. Aging Analysis (0-30, 31-60, 60+ Days)
     const aging = useMemo(() => {
         let g1 = 0, g2 = 0, g3 = 0;
-        debts.filter(d => !d.isPaid).forEach(d => {
+        debts.filter((d: any) => !d.isPaid).forEach((d: any) => {
             const days = (now.getTime() - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24);
             let amt = Number(d.remainingAmount);
 
@@ -550,22 +585,6 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         setHistoryCustomer(item);
         setHistoryPage(1);
         setSelectedDebtIds([]);
-        setStatementData(null);
-        try {
-            const res = await getCustomerStatement(item.customerId);
-            if (res.success) {
-                setStatementData({
-                    debts: res.debts || [],
-                    transactions: res.transactions || [],
-                    activeReturns: res.activeReturns || []
-                });
-            } else {
-                toast.error(res.error || "Geçmiş verileri alınamadı.");
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Bağlantı hatası: Geçmiş verileri yüklenemedi.");
-        }
     };
 
     const handleCollectPayment = async () => {
@@ -699,10 +718,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
             });
             if (res.success) {
                 toast.success("Borç kaydı güncellendi.");
-                if (historyCustomer) {
-                    const updatedItems = historyCustomer.debtItems.map((d: any) => d.id === editingDebt.id ? res.debt : d);
-                    setHistoryCustomer({ ...historyCustomer, debtItems: updatedItems });
-                }
+                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
                 setEditingDebt(null);
                 router.refresh();
             } else {
@@ -712,16 +728,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
     };
 
     const handleFetchPortfolio = async (customerId: string) => {
-        const { getCustomerById } = await import("@/lib/actions/customer-actions");
-        const fullInfo = await getCustomerById(customerId);
-        if (fullInfo) {
-            setPortfolioData({
-                tickets: fullInfo.tickets || [],
-                sales: fullInfo.sales || [],
-                debts: fullInfo.debts || [],
-                transactions: fullInfo.transactions || []
-            });
-        }
+        // Query automaticly fetches when portfolioCustomer is set
     };
 
     const handleStartTracking = async () => {
@@ -1000,6 +1007,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
         XLSX.utils.book_append_sheet(wb, ws, "Veresiye Detaylı Liste");
         XLSX.writeFile(wb, "Veresiye_Detayli_Liste.xlsx");
     };
+
+    if (debtsLoading || accountsLoading || ratesLoading || collectedLoading || settingsLoading || shopLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                <p className="text-muted-foreground animate-pulse text-xs font-black uppercase tracking-widest">Veriler Yükleniyor...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-in fade-in duration-700 space-y-12">
@@ -1646,7 +1662,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         type="button"
                                         onClick={() => {
                                             setPaymentMethod(method.id as any);
-                                            const fa = accounts.filter(acc =>
+                                            const fa = accounts.filter((acc: any) =>
                                                 method.id === 'CASH' ? acc.type === 'CASH' :
                                                     method.id === 'CARD' ? (acc.type === 'POS' || acc.type === 'BANK') :
                                                         (acc.type === 'BANK')
@@ -1682,7 +1698,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                     {paymentMethod === 'CASH' ? 'KASA SEÇİMİ' : paymentMethod === 'CARD' ? 'POS / HESAP SEÇİMİ' : 'BANKA HESABI SEÇİMİ'}
                                 </Label>
                                 {(() => {
-                                    const filteredAccounts = accounts.filter(acc =>
+                                    const filteredAccounts = accounts.filter((acc: any) =>
                                         paymentMethod === 'CASH' ? acc.type === 'CASH' :
                                             paymentMethod === 'CARD' ? (acc.type === 'POS' || acc.type === 'BANK') :
                                                 (acc.type === 'BANK')
@@ -1712,7 +1728,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
 
                                     return (
                                         <div className="space-y-2">
-                                            {filteredAccounts.map(acc => (
+                                            {filteredAccounts.map((acc: any) => (
                                                 <button
                                                     key={acc.id}
                                                     type="button"
@@ -1768,7 +1784,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                 </AlertDialogContent>
             </AlertDialog >
 
-            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setStatementData(null); setSelectedDebtIds([]); } }}>
+            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); } }}>
                 <AlertDialogContent className="max-w-[800px] h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50">
                     <div className="p-6 md:p-8 bg-muted/30 dark:bg-muted/10 border-b border-border/50 flex flex-wrap items-center justify-between gap-4 shrink-0">
                         <div className="flex items-center gap-3">
@@ -1785,8 +1801,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const data = [
-                                        ...statementData.debts.map(d => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
-                                        ...statementData.transactions.map(t => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
+                                        ...statementData.debts.map((d: any) => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
+                                        ...statementData.transactions.map((t: any) => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
                                     ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
 
                                     const XLSX = await import("xlsx");
@@ -1901,8 +1917,8 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
                                     const combined = [
-                                        ...(statementData.debts || []).map(d => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).map(t => ({
+                                        ...(statementData.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                        ...(statementData.transactions || []).map((t: any) => ({
                                             ...t,
                                             type: 'PAYMENT',
                                             notes: t.description || 'Tahsilat / Ödeme',
@@ -2141,7 +2157,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             <div className="flex items-center gap-4 mt-0.5">
                                 <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length} Kalem Seçili</span>
                                 {historyCustomer && (
-                                    <AddDebtModal rates={rates} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
+                                    <AddDebtModal rates={rates as any} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
                                         <Button variant="ghost" className="h-8 px-3 rounded-lg bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all gap-2 text-[10px] font-black uppercase tracking-widest">
                                             <PlusCircle className="w-3 h-3" />
                                             YENİ BORÇ EKLE
@@ -2320,9 +2336,9 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 <div className="p-8 rounded-[2rem] bg-white border border-slate-200">
                                     <span className="block text-[10px] font-black text-slate-400 uppercase mb-2">SİSTEM HAREKETİ</span>
                                     <div className="space-y-4 pt-2">
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Satış</span><span className="text-xs font-black text-slate-900">{portfolioData.sales.length}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Teknik Servis</span><span className="text-xs font-black text-slate-900">{portfolioData.tickets.length}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Alacak Kaydı</span><span className="text-xs font-black text-slate-900">{portfolioData.debts.length}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Satış</span><span className="text-xs font-black text-slate-900">{portfolioData?.sales?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Teknik Servis</span><span className="text-xs font-black text-slate-900">{portfolioData?.tickets?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Alacak Kaydı</span><span className="text-xs font-black text-slate-900">{portfolioData?.debts?.length ?? '-'}</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -2331,11 +2347,15 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             <div className="md:col-span-2 space-y-8">
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">SON İŞLEMLER</h4>
                                 <div className="space-y-4">
-                                    {[
-                                        ...portfolioData.sales.map(s => ({ ...s, type: 'SALE', label: 'Satış İşlemi', amount: s.finalAmount || 0, formattedDate: new Date(s.createdAt) })),
-                                        ...portfolioData.tickets.map(t => ({ ...t, type: 'TICKET', label: 'Teknik Servis', amount: t.actualCost || 0, formattedDate: new Date(t.createdAt) })),
-                                        ...portfolioData.debts.map(d => ({ ...d, type: 'DEBT', label: 'Alacak Kaydı', amount: d.amount || 0, formattedDate: new Date(d.createdAt) })),
-                                        ...portfolioData.transactions.filter(tx => tx.type === 'INCOME').map(tx => ({ ...tx, type: 'COLLECTION', label: 'Tahsilat', amount: tx.amount || 0, formattedDate: new Date(tx.createdAt) }))
+                                    {!portfolioData ? (
+                                        <div className="flex items-center justify-center h-32">
+                                            <RefreshCcw className="w-6 h-6 text-slate-400 animate-spin" />
+                                        </div>
+                                    ) : [
+                                        ...(portfolioData.sales || []).map((s: any) => ({ ...s, type: 'SALE', label: 'Satış İşlemi', amount: s.finalAmount || 0, formattedDate: new Date(s.createdAt) })),
+                                        ...(portfolioData.tickets || []).map((t: any) => ({ ...t, type: 'TICKET', label: 'Teknik Servis', amount: t.actualCost || 0, formattedDate: new Date(t.createdAt) })),
+                                        ...(portfolioData.debts || []).map((d: any) => ({ ...d, type: 'DEBT', label: 'Alacak Kaydı', amount: d.amount || 0, formattedDate: new Date(d.createdAt) })),
+                                        ...(portfolioData.transactions || []).filter((tx: any) => tx.type === 'INCOME').map((tx: any) => ({ ...tx, type: 'COLLECTION', label: 'Tahsilat', amount: tx.amount || 0, formattedDate: new Date(tx.createdAt) }))
                                     ]
                                         .sort((a: any, b: any) => b.formattedDate.getTime() - a.formattedDate.getTime())
                                         .slice(0, 9)
@@ -2473,7 +2493,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                         const res = await getCustomerStatement(paymentSummary.customerId);
                                         if (res.success) {
                                             setNeedsRefresh(true);
-                                            const cust = debts.find(d => d.customerId === paymentSummary.customerId)?.customer;
+                                            const cust = debts.find((d: any) => d.customerId === paymentSummary.customerId)?.customer;
                                             if (cust) {
                                                 setReceiptCustomer(cust);
                                                 // Prepare merged list for receipt: Debt records + Transaction records
@@ -2564,7 +2584,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                                 />
                             </div>
                             <Button
-                                onClick={fetchStatsDetails}
+                                onClick={() => setStatsDates(d => ({ ...d }))}
                                 className="mt-5 bg-white text-indigo-600 hover:bg-indigo-50 h-10 rounded-xl px-6 font-bold text-xs uppercase"
                             >
                                 Uygula
@@ -2585,7 +2605,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {statsModalData.map((item, idx) => (
+                                {(statsModalData || []).map((item: any, idx: number) => (
                                     <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-indigo-600 font-bold text-xs border border-slate-100">
@@ -2668,7 +2688,7 @@ export function VeresiyeClient({ debts, thisMonthCollected, accounts, rates, set
                         debts={receiptDebts}
                         shopName={receiptSettings?.title || shop?.name}
                         shopPhone={receiptSettings?.phone || shop?.phone}
-                        rates={rates}
+                        rates={rates as any}
                         initialShowPaid={receiptShowPaid}
                         logoUrl={receiptSettings?.logoUrl}
                     />

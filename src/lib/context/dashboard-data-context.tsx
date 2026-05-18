@@ -39,7 +39,8 @@ export function DashboardDataProvider({
         initialData: { rates: initialRates, stats: initialStats, settings: initialSettings },
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 
     const settings: DashboardSetting[] = data?.settings || initialSettings || [];

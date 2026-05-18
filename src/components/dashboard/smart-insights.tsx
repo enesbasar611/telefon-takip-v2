@@ -24,10 +24,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export function SmartInsights({ stats }: { stats: any }) {
+export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?: number, rows?: number }) {
   const [selectedInsight, setSelectedInsight] = useState<any>(null);
   const [details, setDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const isVerySmall = cols < 8;
+  const isShort = rows < 3;
 
   const insights = [
     {
@@ -51,7 +54,7 @@ export function SmartInsights({ stats }: { stats: any }) {
       color: "text-amber-500",
       bg: "bg-amber-500/10",
       border: "border-amber-500/20",
-      show: Number(stats.deadStockCount) > 0,
+      show: Number(stats.deadStockCount) > 0 && !isShort,
       drillDown: true
     },
     {
@@ -63,7 +66,7 @@ export function SmartInsights({ stats }: { stats: any }) {
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
-      show: true,
+      show: !isVerySmall && !isShort,
       drillDown: false
     },
     {
@@ -99,64 +102,80 @@ export function SmartInsights({ stats }: { stats: any }) {
   };
 
   return (
-    <Card className="bg-card border-border shadow-sm h-full overflow-hidden rounded-xl">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 pb-6">
+    <Card className="h-full flex flex-col bg-card border-border shadow-sm overflow-hidden rounded-xl">
+      <CardHeader className={cn(
+        "flex-shrink-0 flex flex-row items-center justify-between border-b border-border",
+        isVerySmall || isShort ? "p-4 py-3" : "p-8 pb-6"
+      )}>
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-            <Zap className="h-5 w-5 text-emerald-500" />
+          <div className={cn(
+            "rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20",
+            isVerySmall || isShort ? "h-8 w-8" : "h-10 w-10"
+          )}>
+            <Zap className={cn("text-emerald-500", isVerySmall || isShort ? "h-4 w-4" : "h-5 w-5")} />
           </div>
           <div>
-            <CardTitle className="font-medium text-lg ">Tahminleyici zeka</CardTitle>
-            <p className="text-xs text-muted-foreground font-medium mt-1">İçgörü ve operasyonel analiz</p>
+            <CardTitle className={cn(
+              "font-medium tracking-tight font-sans uppercase",
+              isVerySmall || isShort ? "text-sm" : "text-lg"
+            )}>Tahminleyici zeka</CardTitle>
+            {!isVerySmall && !isShort && <p className="text-xs text-muted-foreground font-medium mt-1">İçgörü ve operasyonel analiz</p>}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-8 space-y-6">
+      <CardContent className={cn(
+        "flex-1 overflow-y-auto custom-scrollbar",
+        isVerySmall || isShort ? "p-4 space-y-3" : "p-8 space-y-6"
+      )}>
         {insights.map((insight) => (
           <div
             key={insight.id}
             onClick={() => handleOpenDetail(insight)}
             className={cn(
-              "p-6 rounded-[1.5rem] border shadow-sm group transition-all duration-300",
+              "rounded-[1.5rem] border shadow-sm group transition-all duration-300",
               insight.bg,
               insight.border,
-              insight.drillDown ? "cursor-pointer hover:-translate-y-1.5 hover:shadow-md active:scale-95" : "cursor-default"
+              isVerySmall || isShort ? "p-3" : "p-6",
+              insight.drillDown ? "cursor-pointer hover:-translate-y-1 hover:shadow-md active:scale-95" : "cursor-default"
             )}
           >
-            <div className="flex items-start gap-6">
+            <div className="flex items-start gap-4 md:gap-6">
               <div className={cn(
-                "mt-1 h-12 w-12 rounded-[1rem] flex items-center justify-center border bg-card border-border/50 shadow-sm transition-all",
+                "mt-0.5 rounded-[1rem] flex items-center justify-center border bg-card border-border/50 shadow-sm transition-all",
                 insight.color,
-                insight.drillDown && "group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-lg"
+                isVerySmall || isShort ? "h-8 w-8" : "h-12 w-12",
+                insight.drillDown && "group-hover:scale-110 transition-all"
               )}>
-                <insight.icon className="h-6 w-6" />
+                <insight.icon className={cn(isVerySmall || isShort ? "h-4 w-4" : "h-6 w-6")} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className={cn("text-sm font-extrabold", insight.color)}>{insight.title}</h4>
-                  {insight.drillDown && (
-                    <ChevronRight className={cn("h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all", insight.color)} />
-                  )}
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className={cn("font-extrabold uppercase tracking-tight", isVerySmall || isShort ? "text-[10px]" : "text-sm", insight.color)}>{insight.title}</h4>
                 </div>
-                <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
-                  {insight.message}
-                </p>
+                {!isShort && (
+                  <p className={cn(
+                    "font-medium text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed",
+                    isVerySmall ? "text-[9px]" : "text-xs"
+                  )}>
+                    {insight.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
         ))}
         {insights.length === 0 && (
-          <div className="p-10 text-center text-gray-600 text-[10px] ">
+          <div className="p-10 text-center text-gray-600 text-[10px] uppercase tracking-widest">
             Sistem analizi sürüyor...
           </div>
         )}
       </CardContent>
 
       <Dialog open={!!selectedInsight} onOpenChange={(open) => !open && setSelectedInsight(null)}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2.5rem] border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] bg-white/95 backdrop-blur-xl">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2.5rem] border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] bg-white dark:bg-zinc-950/95 backdrop-blur-xl">
           <DialogHeader className={cn("p-10 pb-6 rounded-t-[2.5rem]", selectedInsight?.bg)}>
             <div className="flex items-center gap-6">
-              <div className={cn("h-16 w-16 rounded-[1.5rem] flex items-center justify-center bg-white shadow-xl border border-white/50", selectedInsight?.color)}>
+              <div className={cn("h-16 w-16 rounded-[1.5rem] flex items-center justify-center bg-white dark:bg-zinc-900 shadow-xl border border-white/50 dark:border-white/10", selectedInsight?.color)}>
                 {selectedInsight?.icon && <selectedInsight.icon className="h-8 w-8" />}
               </div>
               <div>
@@ -178,9 +197,9 @@ export function SmartInsights({ stats }: { stats: any }) {
               <div className="space-y-4">
                 {details.length > 0 ? (
                   details.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/10 hover:bg-muted/50 transition-all group">
+                    <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/10 dark:border-white/5 hover:bg-muted/50 transition-all group">
                       <div className="flex items-center gap-5">
-                        <div className="h-12 w-12 rounded-xl bg-white border border-border/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <div className="h-12 w-12 rounded-xl bg-white dark:bg-zinc-900 border border-border/10 dark:border-white/5 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                           {selectedInsight?.id === 1 ? <Package className="h-6 w-6 text-rose-500" /> :
                             selectedInsight?.id === 2 ? <AlertTriangle className="h-6 w-6 text-amber-500" /> :
                               <Wrench className="h-6 w-6 text-blue-500" />}

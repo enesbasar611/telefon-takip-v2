@@ -25,7 +25,7 @@ import {
 import { ConfigEditor } from "@/components/admin/config-editor";
 import { ShopForm } from "@/components/admin/shop-form";
 import { AdminFormsEditor } from "@/components/admin/admin-forms-editor";
-import { impersonateShop, deleteShop } from "@/lib/actions/superadmin-actions";
+import { impersonateShop, deleteShop, getAllShops } from "@/lib/actions/superadmin-actions";
 
 import { Progress } from "@/components/ui/progress";
 import {
@@ -36,10 +36,24 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-export function ShopsClient({ initialShops }: { initialShops: any[] }) {
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+export function ShopsClient() {
     const { update } = useSession();
     const router = useRouter();
-    const [shops, setShops] = useState(initialShops);
+    const queryClient = useQueryClient();
+
+    const { data: shops = [], isLoading } = useQuery({
+        queryKey: ["admin-shops"],
+        queryFn: async () => {
+            const res = await getAllShops();
+            if (!res.success) throw new Error(res.error || "Dükkanlar yüklenemedi");
+            return res.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
     const [activeShop, setActiveShop] = useState<any | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [isFormsEditorOpen, setIsFormsEditorOpen] = useState(false);
@@ -107,9 +121,8 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
             setIsDeleting(false);
             setDeleteProgress(0);
             if (res.success) {
-                setShops(prev => prev.filter(s => s.id !== shop.id));
+                queryClient.invalidateQueries({ queryKey: ["admin-shops"] });
                 toast.success("Dükkan başarıyla silindi.");
-                router.refresh();
             } else {
                 toast.error(res.error);
             }
@@ -117,7 +130,7 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
     };
 
     const handleSaved = () => {
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["admin-shops"] });
         setIsEditorOpen(false);
         setIsFormOpen(false);
     };
@@ -146,7 +159,16 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {shops.length === 0 && (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-12">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
+                                            <p className="text-xs text-muted-foreground">Dükkanlar yükleniyor...</p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : shops.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                                         <div className="flex flex-col items-center gap-2">
@@ -155,127 +177,127 @@ export function ShopsClient({ initialShops }: { initialShops: any[] }) {
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            )}
-                            {shops.map((shop) => {
-                                const owner = shop.users?.[0];
-                                return (
-                                    <TableRow key={shop.id} className="hover:bg-muted/20 transition-colors group">
-                                        <TableCell>
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative">
-                                                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors ${shop.isActive ? "bg-primary/10" : "bg-red-500/10"}`}>
-                                                        <Store className={`h-5 w-5 ${shop.isActive ? "text-primary" : "text-red-500"}`} />
-                                                    </div>
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="font-bold text-foreground truncate max-w-[150px]">{shop.name}</div>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border/50 font-medium">
-                                                            {shop.industry}
-                                                        </Badge>
-                                                        <span className="text-[9px] font-mono text-muted-foreground opacity-50">#{shop.id.slice(-6)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {owner ? (
-                                                <div className="flex flex-col gap-0.5">
-                                                    <div className="text-[13px] font-bold text-foreground truncate max-w-[180px]">{owner.name}</div>
-                                                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
-                                                        <div className="h-1 w-1 rounded-full bg-blue-500" />
-                                                        {owner.email}
-                                                    </div>
-                                                    {owner.phone && (
-                                                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
-                                                            <div className="h-1 w-1 rounded-full bg-emerald-500" />
-                                                            {owner.phone}
+                            ) : (
+                                shops.map((shop: any) => {
+                                    const owner = shop.users?.[0];
+                                    return (
+                                        <TableRow key={shop.id} className="hover:bg-muted/20 transition-colors group">
+                                            <TableCell>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative">
+                                                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors ${shop.isActive ? "bg-primary/10" : "bg-red-500/10"}`}>
+                                                            <Store className={`h-5 w-5 ${shop.isActive ? "text-primary" : "text-red-500"}`} />
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-bold text-foreground truncate max-w-[150px]">{shop.name}</div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border/50 font-medium">
+                                                                {shop.industry}
+                                                            </Badge>
+                                                            <span className="text-[9px] font-mono text-muted-foreground opacity-50">#{shop.id.slice(-6)}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            ) : (
-                                                <span className="text-[11px] text-muted-foreground italic font-medium">Sahip Bilgisi Yok</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="grid grid-cols-3 gap-2 w-fit">
-                                                <div className="flex flex-col" title="Kullanıcılar">
-                                                    <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">USR</span>
-                                                    <span className="text-sm font-bold">{shop._count?.users || 0}</span>
-                                                </div>
-                                                <div className="flex flex-col" title="Müşteriler">
-                                                    <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">CST</span>
-                                                    <span className="text-sm font-bold text-blue-500">{shop._count?.customers || 0}</span>
-                                                </div>
-                                                <div className="flex flex-col" title="Servisler">
-                                                    <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">SRV</span>
-                                                    <span className="text-sm font-bold text-emerald-500">{shop._count?.serviceTickets || 0}</span>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                                {shop.enabledModules.slice(0, 2).map((mod: string) => (
-                                                    <Badge key={mod} variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
-                                                        {mod}
-                                                    </Badge>
-                                                ))}
-                                                {shop.enabledModules.length > 2 && (
-                                                    <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
-                                                        +{shop.enabledModules.length - 2}
-                                                    </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {owner ? (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="text-[13px] font-bold text-foreground truncate max-w-[180px]">{owner.name}</div>
+                                                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                            <div className="h-1 w-1 rounded-full bg-blue-500" />
+                                                            {owner.email}
+                                                        </div>
+                                                        {owner.phone && (
+                                                            <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                                                                <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                                                                {owner.phone}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[11px] text-muted-foreground italic font-medium">Sahip Bilgisi Yok</span>
                                                 )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end items-center gap-2">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    className="h-9 px-3 rounded-xl gap-2 font-bold text-xs bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
-                                                    onClick={() => handleImpersonate(shop)}
-                                                    disabled={impersonatingId === shop.id}
-                                                >
-                                                    {impersonatingId === shop.id ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin text-white" />
-                                                    ) : (
-                                                        <ArrowRight className="h-4 w-4" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="grid grid-cols-3 gap-2 w-fit">
+                                                    <div className="flex flex-col" title="Kullanıcılar">
+                                                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">USR</span>
+                                                        <span className="text-sm font-bold">{shop._count?.users || 0}</span>
+                                                    </div>
+                                                    <div className="flex flex-col" title="Müşteriler">
+                                                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">CST</span>
+                                                        <span className="text-sm font-bold text-blue-500">{shop._count?.customers || 0}</span>
+                                                    </div>
+                                                    <div className="flex flex-col" title="Servisler">
+                                                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">SRV</span>
+                                                        <span className="text-sm font-bold text-emerald-500">{shop._count?.serviceTickets || 0}</span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                                    {shop.enabledModules.slice(0, 2).map((mod: string) => (
+                                                        <Badge key={mod} variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
+                                                            {mod}
+                                                        </Badge>
+                                                    ))}
+                                                    {shop.enabledModules.length > 2 && (
+                                                        <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-muted text-muted-foreground border-0 font-bold">
+                                                            +{shop.enabledModules.length - 2}
+                                                        </Badge>
                                                     )}
-                                                    Aç
-                                                </Button>
-
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-zinc-900 border-border dark:border-white/10 text-foreground dark:text-white rounded-xl shadow-2xl">
-                                                        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Yönetim</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsFormOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
-                                                            <Settings className="h-4 w-4 text-blue-400" /> Genel Ayarlar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
-                                                            <Code2 className="h-4 w-4 text-emerald-400" /> Konfigürasyon (JSON)
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsFormsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
-                                                            <Layout className="h-4 w-4 text-indigo-400" /> Form Tasarımı
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator className="bg-white/5" />
-                                                        <DropdownMenuItem onClick={() => handleImpersonate(shop)} className="gap-2 cursor-pointer focus:bg-white/5">
-                                                            <ShieldAlert className="h-4 w-4 text-amber-400" /> Kimlik Bürünme
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator className="bg-white/5" />
-                                                        <DropdownMenuItem onClick={() => handleDelete(shop)} className="gap-2 cursor-pointer text-red-400 focus:bg-red-500/10 focus:text-red-400 font-bold">
-                                                            <Trash2 className="h-4 w-4" /> Dükkanı Sil
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="h-9 px-3 rounded-xl gap-2 font-bold text-xs bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
+                                                        onClick={() => handleImpersonate(shop)}
+                                                        disabled={impersonatingId === shop.id}
+                                                    >
+                                                        {impersonatingId === shop.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin text-white" />
+                                                        ) : (
+                                                            <ArrowRight className="h-4 w-4" />
+                                                        )}
+                                                        Aç
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                                                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-zinc-900 border-border dark:border-white/10 text-foreground dark:text-white rounded-xl shadow-2xl">
+                                                            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Yönetim</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
+                                                                <Settings className="h-4 w-4 text-blue-400" /> Genel Ayarlar
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
+                                                                <Code2 className="h-4 w-4 text-emerald-400" /> Konfigürasyon (JSON)
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => { setActiveShop(shop); setIsFormsEditorOpen(true); }} className="gap-2 cursor-pointer focus:bg-white/5">
+                                                                <Layout className="h-4 w-4 text-indigo-400" /> Form Tasarımı
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator className="bg-white/5" />
+                                                            <DropdownMenuItem onClick={() => handleImpersonate(shop)} className="gap-2 cursor-pointer focus:bg-white/5">
+                                                                <ShieldAlert className="h-4 w-4 text-amber-400" /> Kimlik Bürünme
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator className="bg-white/5" />
+                                                            <DropdownMenuItem onClick={() => handleDelete(shop)} className="gap-2 cursor-pointer text-red-400 focus:bg-red-500/10 focus:text-red-400 font-bold">
+                                                                <Trash2 className="h-4 w-4" /> Dükkanı Sil
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            )}
                         </TableBody>
                     </Table>
                 </div>

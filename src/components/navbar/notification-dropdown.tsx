@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Bell,
     Clock,
     CheckCheck,
-    Smartphone,
-    TrendingDown,
     ShieldAlert,
-    Truck,
     ShoppingCart,
     CreditCard
 } from "lucide-react";
@@ -35,46 +33,54 @@ import Link from "next/link";
 
 export function NotificationDropdown() {
     const router = useRouter();
-    const [notifications, setNotifications] = useState<SystemNotification[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const queryClient = useQueryClient();
 
-    const fetchNotifications = async () => {
-        setIsLoading(true);
-        try {
-            const data = await getSystemNotifications({ limit: 10 });
-            setNotifications(data.notifications);
-            setUnreadCount(data.unreadCount);
-        } catch (error) {
-            console.error("Failed to fetch notifications:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const { data, isLoading } = useQuery({
+        queryKey: ["system-notifications"],
+        queryFn: async () => {
+            return await getSystemNotifications({ limit: 10 });
+        },
+        staleTime: 60 * 1000,
+        gcTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    const notifications = data?.notifications || [];
+    const unreadCount = data?.unreadCount || 0;
 
     useEffect(() => {
-        fetchNotifications();
+        const handleUpdate = () => {
+            queryClient.invalidateQueries({ queryKey: ["system-notifications"] });
+        };
 
-        const handleUpdate = () => fetchNotifications();
         window.addEventListener("notification-update", handleUpdate);
 
-        const interval = setInterval(fetchNotifications, 2 * 60 * 1000); // 2 mins refresh
         return () => {
-            clearInterval(interval);
             window.removeEventListener("notification-update", handleUpdate);
         };
-    }, []);
+    }, [queryClient]);
 
     const handleAction = async (notification: SystemNotification) => {
         if (!notification.isRead) {
-            setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            // OPTIMISTIC UPDATE: Sunucudan cevap beklemeden arayüzü anında okundu yap ($0ms)
+            queryClient.setQueryData(["system-notifications"], (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                    ...oldData,
+                    notifications: oldData.notifications.map((n: SystemNotification) =>
+                        n.id === notification.id ? { ...n, isRead: true } : n
+                    ),
+                    unreadCount: Math.max(0, oldData.unreadCount - 1)
+                };
+            });
+
+            // Arkadan veritabanını güncelle
             await markNotificationAsReadAction(notification.id);
-            window.dispatchEvent(new CustomEvent("notification-update"));
-            router.refresh();
         }
 
-        // Routing logic
+        // Sayfa yönlendirme mantığı
         if (notification.type === "COMPLETED" || notification.type === "DELIVERY_TIME" || notification.type === "PENDING_APPROVAL") {
             const statusMap: Record<string, string> = {
                 "PENDING": "PENDING",
@@ -121,7 +127,7 @@ export function NotificationDropdown() {
             <DropdownMenuContent align="end" className="w-[420px] bg-card/80 backdrop-blur-3xl border-border shadow-2xl rounded-2xl p-0 overflow-hidden font-sans z-[100]">
                 <DropdownMenuLabel className="p-6 flex items-center justify-between bg-muted/20">
                     <div className="flex flex-col gap-1">
-                        <span className="text-xs  text-foreground">Sistem Bildirimleri</span>
+                        <span className="text-xs text-foreground">Sistem Bildirimleri</span>
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                             <p className="text-[11px] text-muted-foreground font-medium">{unreadCount} Bekleyen İşlem</p>
@@ -131,13 +137,18 @@ export function NotificationDropdown() {
                         variant="ghost"
                         size="sm"
                         onClick={async () => {
+                            // Optimistic clear
+                            queryClient.setQueryData(["system-notifications"], (oldData: any) => {
+                                if (!oldData) return oldData;
+                                return {
+                                    ...oldData,
+                                    notifications: oldData.notifications.map((n: SystemNotification) => ({ ...n, isRead: true })),
+                                    unreadCount: 0
+                                };
+                            });
                             await markAllNotificationsAsReadAction();
-                            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                            setUnreadCount(0);
-                            window.dispatchEvent(new CustomEvent("notification-update"));
-                            router.refresh();
                         }}
-                        className="h-9 text-xs  text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 transition-all"
+                        className="h-9 text-xs text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 transition-all"
                     >
                         Tümünü Okundu İşaretle
                     </Button>
@@ -153,15 +164,15 @@ export function NotificationDropdown() {
                     ) : notifications.length === 0 ? (
                         <div className="p-20 text-center">
                             <ShieldAlert className="h-16 w-16 text-muted-foreground mx-auto opacity-10 mb-6" />
-                            <p className="text-[12px]  text-muted-foreground">Şu an bildirim bulunmuyor</p>
+                            <p className="text-[12px] text-muted-foreground">Şu an bildirim bulunmuyor</p>
                         </div>
                     ) : (
-                        notifications.map((n) => (
-                            <div
+                        notifications.map((n: SystemNotification) => (
+                            <DropdownMenuItem
                                 key={n.id}
                                 onClick={() => handleAction(n)}
                                 className={cn(
-                                    "p-6 border-b border-border/40 last:border-none hover:bg-muted/30 cursor-pointer group transition-all relative",
+                                    "p-6 border-b border-border/40 last:border-none hover:bg-muted/30 cursor-pointer group transition-all relative focus:bg-muted/40 block w-full text-left",
                                     !n.isRead && "bg-primary/[0.02]"
                                 )}
                             >
@@ -179,12 +190,12 @@ export function NotificationDropdown() {
                                     <div className="flex flex-col flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">
                                             <span className={cn(
-                                                "text-[13px]  truncate pr-4 uppercase tracking-tighter",
+                                                "text-[13px] truncate pr-4 uppercase tracking-tighter font-semibold",
                                                 n.isRead ? "text-muted-foreground" : "text-foreground"
                                             )}>
                                                 {n.title}
                                             </span>
-                                            <span className="text-[9px]  text-muted-foreground whitespace-nowrap opacity-60">
+                                            <span className="text-[9px] text-muted-foreground whitespace-nowrap opacity-60">
                                                 {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr }).toUpperCase()}
                                             </span>
                                         </div>
@@ -196,14 +207,14 @@ export function NotificationDropdown() {
                                         </p>
                                     </div>
                                 </div>
-                            </div>
+                            </DropdownMenuItem>
                         ))
                     )}
                 </div>
 
                 <DropdownMenuSeparator className="bg-border m-0" />
                 <Link href="/bildirimler" className="w-full">
-                    <div className="p-5 text-center text-[11px]  uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
+                    <div className="p-5 text-center text-[11px] uppercase tracking-widest text-primary hover:bg-primary/5 transition-all cursor-pointer">
                         Bildirim Merkezine Git
                     </div>
                 </Link>
@@ -211,6 +222,3 @@ export function NotificationDropdown() {
         </DropdownMenu>
     );
 }
-
-
-

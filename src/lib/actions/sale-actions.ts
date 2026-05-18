@@ -307,6 +307,7 @@ export async function deleteSale(id: string, revertStock: boolean = true) {
     revalidatePath("/satis/gecmis");
     revalidatePath("/stok");
     revalidatePath("/veresiye");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Delete sale error:", error);
@@ -361,6 +362,7 @@ export async function deleteSales(ids: string[], revertStock: boolean = true) {
     revalidatePath("/satis/gecmis");
     revalidatePath("/stok");
     revalidatePath("/veresiye");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Delete sales error:", error);

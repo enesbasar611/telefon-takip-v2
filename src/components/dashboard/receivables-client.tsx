@@ -40,9 +40,11 @@ interface ReceivablesClientProps {
     debts: Debt[];
     shopName?: string;
     shopPhone?: string;
+    cols?: number;
+    rows?: number;
 }
 
-export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesClientProps) {
+export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows = 4 }: ReceivablesClientProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -231,44 +233,44 @@ export function ReceivablesClient({ debts, shopName, shopPhone }: ReceivablesCli
                             {customerAggregates.length > 0 ? (
                                 <>
                                     {visibleCustomerAggregates.map((agg) => (
-                                    <div key={agg.id} className="relative group/item">
-                                        <button
-                                            onClick={() => setSelectedCustomerId(agg.id)}
-                                            className="w-full flex items-center justify-between p-5 rounded-[2rem] bg-muted/20 hover:bg-muted/40 transition-all border border-transparent hover:border-border/60 text-left"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn(
-                                                    "h-12 w-12 rounded-2xl flex items-center justify-center font-black text-sm shadow-sm text-white transition-all duration-300",
-                                                    getAvatarColor(agg.name)
-                                                )}>
-                                                    {agg.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-base font-bold tracking-tight text-foreground/90">{agg.name}</span>
-                                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{agg.count} İşlem Bekliyor</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex flex-col items-end">
-                                                    {agg.totalTRY > 0 && <RevealFinancial amount={agg.totalTRY} className="text-lg font-black tabular-nums tracking-tighter leading-tight" />}
-                                                    {agg.totalUSD > 0 && <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-xs font-black text-blue-600/80 font-mono tracking-tighter tabular-nums leading-tight" />}
-                                                </div>
-                                                {agg.phone && (
-                                                    <div
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD);
-                                                        }}
-                                                        className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0 cursor-pointer"
-                                                        title="WhatsApp Mesaj Gönder"
-                                                    >
-                                                        <MessageCircle className="h-5 w-5" />
+                                        <div key={agg.id} className="relative group/item">
+                                            <button
+                                                onClick={() => setSelectedCustomerId(agg.id)}
+                                                className="w-full flex items-center justify-between p-5 rounded-[2rem] bg-muted/20 hover:bg-muted/40 transition-all border border-transparent hover:border-border/60 text-left"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn(
+                                                        "h-12 w-12 rounded-2xl flex items-center justify-center font-black text-sm shadow-sm text-white transition-all duration-300",
+                                                        getAvatarColor(agg.name)
+                                                    )}>
+                                                        {agg.name.charAt(0).toUpperCase()}
                                                     </div>
-                                                )}
-                                                <ChevronRight className="h-5 w-5 text-muted-foreground/30 group-hover/item:text-primary transition-colors shrink-0" />
-                                            </div>
-                                        </button>
-                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-base font-bold tracking-tight text-foreground/90">{agg.name}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{agg.count} İşlem Bekliyor</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex flex-col items-end">
+                                                        {agg.totalTRY > 0 && <RevealFinancial amount={agg.totalTRY} className="text-lg font-black tabular-nums tracking-tighter leading-tight" />}
+                                                        {agg.totalUSD > 0 && <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-xs font-black text-blue-600/80 font-mono tracking-tighter tabular-nums leading-tight" />}
+                                                    </div>
+                                                    {agg.phone && (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD);
+                                                            }}
+                                                            className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0 cursor-pointer"
+                                                            title="WhatsApp Mesaj Gönder"
+                                                        >
+                                                            <MessageCircle className="h-5 w-5" />
+                                                        </div>
+                                                    )}
+                                                    <ChevronRight className="h-5 w-5 text-muted-foreground/30 group-hover/item:text-primary transition-colors shrink-0" />
+                                                </div>
+                                            </button>
+                                        </div>
                                     ))}
                                     {hiddenCustomerCount > 0 && (
                                         <Link

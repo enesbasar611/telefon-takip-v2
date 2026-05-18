@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
@@ -108,8 +109,8 @@ interface StaffMember {
 }
 
 interface StaffManagementClientProps {
-    staff: StaffMember[];
-    logs: any[];
+    staff?: StaffMember[];
+    logs?: any[];
     userRole?: string;
 }
 
@@ -587,36 +588,39 @@ function RoleTemplateModal({
 
 import { PageHeader } from "@/components/ui/page-header";
 
-export function StaffManagementClient({ staff: initialStaff = [], logs: initialLogs = [], userRole }: StaffManagementClientProps) {
+export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, userRole }: StaffManagementClientProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<"all" | "SUPER_ADMIN" | "TECHNICIAN" | "MANAGER" | "CASHIER" | "COURIER">("all");
-    const [localStaff, setLocalStaff] = useState<StaffMember[]>(initialStaff || []);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
 
     // Logs related state
-    const [logs, setLogs] = useState(initialLogs);
     const [logPage, setLogPage] = useState(1);
-    const [logTotalPages, setLogTotalPages] = useState(1);
     const [logSearch, setLogSearch] = useState("");
     const [logDate, setLogDate] = useState("");
-    const [isLogsLoading, setIsLogsLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchLogs = async () => {
-            setIsLogsLoading(true);
-            const res = await getStaffLogs(logPage, 10, logSearch, logDate);
-            if (res.success) {
-                setLogs(res.logs);
-                setLogTotalPages(res.totalPages);
-            }
-            setIsLogsLoading(false);
-        };
-        fetchLogs();
-    }, [logPage, logSearch, logDate]);
+    // React Query for Staff
+    const { data: staffData, isLoading: isStaffLoading } = useQuery({
+        queryKey: ["staff"],
+        queryFn: () => getStaff(),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    // React Query for Logs
+    const { data: logsData, isLoading: isLogsLoading } = useQuery({
+        queryKey: ["staff-logs", logPage, logSearch, logDate],
+        queryFn: () => getStaffLogs(logPage, 10, logSearch, logDate),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const localStaff = staffData || (initialStaff as any) || [];
+    const logs = logsData?.logs || [];
+    const logTotalPages = logsData?.totalPages || 1;
 
     const handleExportCSV = async () => {
         const allLogs = await getAllLogs();
@@ -640,7 +644,7 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     };
 
     const filteredStaff = useMemo(() => {
-        return localStaff.filter(member => {
+        return localStaff.filter((member: any) => {
             const matchesSearch = (member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.surname?.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -655,8 +659,8 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
         let monthlyTotalDays = 0;
-        localStaff.forEach(s => {
-            s.leaves?.forEach(l => {
+        localStaff.forEach((s: any) => {
+            s.leaves?.forEach((l: any) => {
                 const leaveStart = new Date(l.startDate);
                 const leaveEnd = new Date(l.endDate);
 
@@ -673,9 +677,9 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
 
         return {
             total: localStaff.length,
-            active: localStaff.filter(s => s.role !== 'STAFF').length,
-            onLeave: localStaff.filter(s =>
-                s.leaves?.some(l => new Date(l.startDate) <= now && new Date(l.endDate) >= now)
+            active: localStaff.filter((s: any) => s.role !== 'STAFF').length,
+            onLeave: localStaff.filter((s: any) =>
+                s.leaves?.some((l: any) => new Date(l.startDate) <= now && new Date(l.endDate) >= now)
             ).length,
             monthlyTotalDays
         };
@@ -684,12 +688,21 @@ export function StaffManagementClient({ staff: initialStaff = [], logs: initialL
     const rolePermissions = useMemo(() => {
         const roles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "TECHNICIAN"];
         return [
-            { name: "Satış İşlemleri", perms: roles.map(r => localStaff.find(s => s.role === r)?.canSell ?? true) },
-            { name: "Servis Kayıtları", perms: roles.map(r => localStaff.find(s => s.role === r)?.canService ?? true) },
-            { name: "Stok Yönetimi", perms: roles.map(r => localStaff.find(s => s.role === r)?.canStock ?? true) },
-            { name: "Finans & Raporlar", perms: roles.map(r => localStaff.find(s => s.role === r)?.canFinance ?? true) },
+            { name: "Satış İşlemleri", perms: roles.map(r => localStaff.find((s: any) => s.role === r)?.canSell ?? true) },
+            { name: "Servis Kayıtları", perms: roles.map(r => localStaff.find((s: any) => s.role === r)?.canService ?? true) },
+            { name: "Stok Yönetimi", perms: roles.map(r => localStaff.find((s: any) => s.role === r)?.canStock ?? true) },
+            { name: "Finans & Raporlar", perms: roles.map(r => localStaff.find((s: any) => s.role === r)?.canFinance ?? true) },
         ];
     }, [localStaff]);
+
+    if (isStaffLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <Activity className="h-8 w-8 animate-spin text-blue-500" />
+                <p className="text-muted-foreground animate-pulse text-xs font-black uppercase tracking-widest">Personel Verileri Yükleniyor...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-in fade-in duration-700 space-y-12 pb-20">

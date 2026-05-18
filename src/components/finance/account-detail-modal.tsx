@@ -25,11 +25,14 @@ interface Account {
 export function AccountDetailModal({ account }: { account: Account }) {
     const [open, setOpen] = useState(false);
     const [period, setPeriod] = useState<"DAY" | "WEEK" | "MONTH">("WEEK");
-    const { data: analytics, isFetching: loading, refetch } = useQuery<any>({
+    const { data: analytics, isLoading, isFetching, refetch } = useQuery<any>({
         queryKey: ["account-analytics", account.id, period],
         queryFn: () => getAccountAnalytics(account.id, period),
         enabled: open,
         placeholderData: keepPreviousData,
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 
     const icons: any = {
@@ -207,7 +210,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                 </Tabs>
                             </div>
                             <div className="h-[350px] w-full p-6 bg-card/50 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 shadow-inner relative group">
-                                {loading ? (
+                                {isLoading ? (
                                     <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[1px] z-10 rounded-[2.5rem]">
                                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                                     </div>
@@ -345,7 +348,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                     <Button variant="outline" onClick={() => setOpen(false)} className="h-11 text-xs  rounded-2xl px-6 border-border/40 hover:bg-muted/30 uppercase tracking-widest">
                         KAPAT
                     </Button>
-                    <Button disabled={loading} onClick={() => refetch()} className="h-11 text-xs  rounded-2xl px-6 shadow-md uppercase tracking-widest">
+                    <Button disabled={isFetching} onClick={() => refetch()} className="h-11 text-xs  rounded-2xl px-6 shadow-md uppercase tracking-widest">
                         REFRESH
                     </Button>
                 </div>

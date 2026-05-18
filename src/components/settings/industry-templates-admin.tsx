@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Palette, Pencil, Trash2, MessageSquare, CheckCircle2,
     Loader2, ChevronDown, ChevronUp, Sparkles, Globe, Settings2,
@@ -32,8 +33,26 @@ type Template = {
     updatedAt: Date | string;
 };
 
-export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates: Template[] }) {
-    const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates?: Template[] }) {
+    const queryClient = useQueryClient();
+    const { data: fetchedTemplates, isLoading } = useQuery({
+        queryKey: ["industry-templates"],
+        queryFn: async () => {
+            const res = await getIndustryTemplates();
+            return res.success ? (res.data ?? []) : [];
+        },
+        initialData: initialTemplates,
+        staleTime: 10 * 60 * 1000,
+    });
+
+    const [templates, setTemplates] = useState<Template[]>(fetchedTemplates || []);
+
+    useEffect(() => {
+        if (fetchedTemplates) {
+            setTemplates(fetchedTemplates);
+        }
+    }, [fetchedTemplates]);
+
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editData, setEditData] = useState<any>({});
@@ -59,7 +78,7 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates:
         const res = await updateIndustryTemplate(id, editData);
         setSaving(false);
         if (res.success) {
-            setTemplates(templates.map(t => t.id === id ? { ...t, ...editData } as Template : t));
+            queryClient.invalidateQueries({ queryKey: ["industry-templates"] });
             toast.success("Şablon kaydedildi!");
             cancelEdit();
         } else {
@@ -74,7 +93,7 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates:
         setSaving(false);
         if (res.success) {
             toast.success(`${res.count} şablon içe aktarıldı!`);
-            window.location.reload();
+            queryClient.invalidateQueries({ queryKey: ["industry-templates"] });
         } else {
             toast.error(res.error || "İçe aktarma başarısız.");
         }
@@ -86,12 +105,22 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates:
         const res = await deleteIndustryTemplate(id);
         setDeleting(null);
         if (res.success) {
-            setTemplates(templates.filter(t => t.id !== id));
+            queryClient.invalidateQueries({ queryKey: ["industry-templates"] });
             toast.success("Şablon silindi.");
         } else {
             toast.error(res.error || "Silme başarısız.");
         }
     };
+
+    if (isLoading && !templates.length) {
+        return (
+            <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-20 w-full bg-white/5 animate-pulse rounded-2xl" />
+                ))}
+            </div>
+        );
+    }
 
     if (templates.length === 0) {
         return (

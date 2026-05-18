@@ -141,74 +141,92 @@ export const getDashboardStats = async (shopId: string | null) => {
 
 export const getRecentSales = async (shopId: string | null, limit: number = 5) => {
   if (!shopId) return [];
-  try {
-    const tickets = await prisma.serviceTicket.findMany({
-      where: { shopId },
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: true,
-        technician: true
+  return unstable_cache(
+    async () => {
+      try {
+        const tickets = await prisma.serviceTicket.findMany({
+          where: { shopId },
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          include: {
+            customer: true,
+            technician: true
+          }
+        });
+        return serializePrisma(tickets);
+      } catch (error) {
+        console.error("Error fetching recent tickets:", error);
+        return [];
       }
-    });
-    return serializePrisma(tickets);
-  } catch (error) {
-    console.error("Error fetching recent tickets:", error);
-    return [];
-  }
+    },
+    [`recent-tickets-${shopId}-${limit}`],
+    { tags: [`dashboard-${shopId}`, `tickets-${shopId}`], revalidate: 60 }
+  )();
 }
 
-export async function getRecentTransactions(shopId: string | null) {
+export const getRecentTransactions = async (shopId: string | null) => {
   if (!shopId) return [];
-  try {
-    const transactions = await prisma.transaction.findMany({
-      where: { shopId },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: {
-        customer: true,
-        sale: {
+  return unstable_cache(
+    async () => {
+      try {
+        const transactions = await prisma.transaction.findMany({
+          where: { shopId },
+          take: 10,
+          orderBy: { createdAt: "desc" },
           include: {
-            customer: true
+            customer: true,
+            sale: {
+              include: {
+                customer: true
+              }
+            }
           }
-        }
+        });
+        return serializePrisma(transactions);
+      } catch (error) {
+        console.error("Error fetching recent transactions:", error);
+        return [];
       }
-    });
-    return serializePrisma(transactions);
-  } catch (error) {
-    console.error("Error fetching recent transactions:", error);
-    return [];
-  }
+    },
+    [`recent-transactions-${shopId}`],
+    { tags: [`dashboard-${shopId}`, `transactions-${shopId}`], revalidate: 60 }
+  )();
 }
 
 export const getTopProducts = async (shopId: string | null, limit: number = 5) => {
   if (!shopId) return [];
-  try {
-    const products = await prisma.product.findMany({
-      where: { shopId },
-      take: limit,
-      orderBy: { saleItems: { _count: 'desc' } },
-      include: {
-        category: true,
-        _count: {
-          select: { saleItems: true }
-        }
-      }
-    });
+  return unstable_cache(
+    async () => {
+      try {
+        const products = await prisma.product.findMany({
+          where: { shopId },
+          take: limit,
+          orderBy: { saleItems: { _count: 'desc' } },
+          include: {
+            category: true,
+            _count: {
+              select: { saleItems: true }
+            }
+          }
+        });
 
-    return serializePrisma(products.map(p => ({
-      id: p.id,
-      name: p.name,
-      category: p.category.name,
-      price: Number(p.sellPrice),
-      sales: p._count.saleItems,
-      stock: p.stock,
-      criticalStock: p.criticalStock
-    })));
-  } catch (error) {
-    console.error("Error fetching top products:", error);
-    return [];
-  }
+        return serializePrisma(products.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category.name,
+          price: Number(p.sellPrice),
+          sales: p._count.saleItems,
+          stock: p.stock,
+          criticalStock: p.criticalStock
+        })));
+      } catch (error) {
+        console.error("Error fetching top products:", error);
+        return [];
+      }
+    },
+    [`top-products-${shopId}-${limit}`],
+    { tags: [`dashboard-${shopId}`, `products-${shopId}`], revalidate: 300 }
+  )();
 }
 
 export async function getDashboardInit(shopId: string | null) {

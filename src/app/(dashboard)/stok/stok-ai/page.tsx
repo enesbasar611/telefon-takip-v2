@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
     Brain,
     Sparkles,
@@ -28,11 +28,10 @@ import { addShortageItem } from "@/lib/actions/shortage-actions";
 import { EditProductModal } from "@/components/product/edit-product-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function StockAIPage() {
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [isPending, startTransition] = useTransition();
 
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -59,30 +58,28 @@ export default function StockAIPage() {
         }
     };
 
-    const fetchAlerts = async () => {
-        setLoading(true);
-        const data = await getAIAlerts();
-        // @ts-ignore
-        setAlerts(data);
-        setLoading(false);
-    };
+    const { data: alerts = [], isLoading } = useQuery({
+        queryKey: ["stock-ai-alerts"],
+        queryFn: getAIAlerts,
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
 
-    const fetchCategories = async () => {
-        const cats = await getCategories();
-        setCategories(cats);
-    };
-
-    useEffect(() => {
-        fetchAlerts();
-        fetchCategories();
-    }, []);
+    const { data: categories = [] } = useQuery({
+        queryKey: ["categories"],
+        queryFn: getCategories,
+        staleTime: 60 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
 
     const handleRunAnalysis = () => {
         startTransition(async () => {
             const result = await triggerAIAnalysis();
             if (result.success) {
                 toast.success(`Analiz tamamlandı! ${result.count} yeni öneri bulundu.`);
-                fetchAlerts();
+                queryClient.invalidateQueries({ queryKey: ["stock-ai-alerts"] });
             } else {
                 toast.error("Analiz sırasında bir hata oluştu.");
             }
@@ -92,7 +89,7 @@ export default function StockAIPage() {
     const handleDelete = async (id: string) => {
         const result = await deleteAIAlert(id);
         if (result.success) {
-            setAlerts(prev => prev.filter(a => a.id !== id));
+            queryClient.setQueryData<any[]>(["stock-ai-alerts"], (prev = []) => prev.filter(a => a.id !== id));
             toast.success("Öneri gizlendi.");
         }
     };
@@ -148,7 +145,7 @@ export default function StockAIPage() {
                         <span className="text-[10px] bg-muted border border-border px-3 py-1 rounded-full text-foreground/80 font-semibold">{alerts.length} LİSTE</span>
                     </div>
 
-                    {loading ? (
+                    {isLoading ? (
                         <div className="space-y-4">
                             {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full rounded-3xl bg-accent/5" />)}
                         </div>
@@ -161,7 +158,7 @@ export default function StockAIPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        alerts.map((alert) => {
+                        alerts.map((alert: any) => {
                             const style = getTypeStyles(alert.type);
                             return (
                                 <Card key={alert.id} className={cn("rounded-[2rem] bg-card border-border/50 group hover:shadow-lg transition-all duration-300", style.glow, style.border)}>
@@ -267,7 +264,10 @@ export default function StockAIPage() {
                 product={selectedProduct}
                 categories={categories}
                 isOpen={isEditModalOpen}
-                onClose={() => { setIsEditModalOpen(false); fetchAlerts(); }}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ["stock-ai-alerts"] });
+                }}
             />
         </div>
     );

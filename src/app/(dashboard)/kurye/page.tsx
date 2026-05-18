@@ -1,8 +1,14 @@
-import { getCourierTasks, getGlobalShortageList } from "@/lib/actions/shortage-actions";
-import { getCategories } from "@/lib/actions/product-actions";
 import { CourierDashboardClient } from "@/components/courier/courier-dashboard-client";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import {
+    getCourierNotifications,
+    getCourierTasks,
+    getGlobalShortageList,
+} from "@/lib/actions/shortage-actions";
+import { getCategories } from "@/lib/actions/product-actions";
+import { getStaff } from "@/lib/actions/staff-actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,46 +24,42 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
         redirect("/");
     }
 
-    const { items: courierTasks } = await getCourierTasks(searchParams.date);
-    const allShortages = await getGlobalShortageList(searchParams.date);
-    const categories = await getCategories();
+    const selectedDate = searchParams.date || "";
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session.user.role);
+    const queryClient = new QueryClient();
 
-    // Lazy importing getStaff to avoid circular dependencies if any, but regular import is fine.
-    const { getStaff } = await import("@/lib/actions/staff-actions");
-    const allStaff = await getStaff();
-    const couriers = allStaff.filter((s: Record<string, any>) => s.role === 'COURIER');
-
-    // Fetch recent notifications for admins
-    let adminNotifications: any[] = [];
-    if (["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session.user.role || "")) {
-        const prisma = (await import("@/lib/prisma")).default;
-        const shopIdString = session.user.shopId;
-        if (shopIdString) {
-            try {
-                adminNotifications = await prisma.notification.findMany({
-                    where: {
-                        shopId: shopIdString,
-                        type: "COURIER_END_DAY",
-                        isRead: false
-                    },
-                    orderBy: { createdAt: "desc" }
-                });
-            } catch (error) {
-                console.error("Courier admin notifications error:", error);
-            }
-        }
-    }
+    await Promise.all([
+        queryClient.prefetchQuery({
+            queryKey: ["courier-tasks", selectedDate],
+            queryFn: () => getCourierTasks(selectedDate),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["global-shortages", selectedDate],
+            queryFn: () => getGlobalShortageList(selectedDate),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["categories"],
+            queryFn: () => getCategories(),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["staff"],
+            queryFn: () => getStaff(),
+        }),
+        ...(isAdmin ? [
+            queryClient.prefetchQuery({
+                queryKey: ["courier-notifications"],
+                queryFn: () => getCourierNotifications(),
+            })
+        ] : []),
+    ]);
 
     return (
-        <CourierDashboardClient
-            initialItems={courierTasks || []}
-            initialAllShortages={allShortages}
-            categories={categories}
-            userId={session.user.id}
-            userRole={session.user.role}
-            couriers={couriers}
-            initialNotifications={adminNotifications}
-            initialDate={searchParams.date}
-        />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <CourierDashboardClient
+                userId={session.user.id}
+                userRole={session.user.role}
+                initialDate={selectedDate}
+            />
+        </HydrationBoundary>
     );
 }

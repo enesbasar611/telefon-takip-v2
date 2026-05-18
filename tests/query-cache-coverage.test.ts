@@ -25,7 +25,7 @@ assert(!shortageStatusCard.includes("setInterval(fetchData"), "Shortage status d
 
 assert(dashboardPage.includes("HydrationBoundary"), "Dashboard page should hydrate React Query cache from server data.");
 assert(dashboardPage.includes("dehydrate(queryClient)"), "Dashboard page should dehydrate prefetched dashboard queries.");
-assert(dashboardPage.includes('setQueryData(["dashboard-init", shopId || ""], dashboardInit)'), "Dashboard page should seed dashboard-init query with shop scoped initial data.");
+assert(dashboardPage.includes('setQueryData(["dashboard-init", shopId || ""], initialStats)'), "Dashboard page should seed dashboard-init query with shop scoped initial data.");
 assert(!dashboardPage.includes("<Suspense fallback={<DashboardPageSkeleton />}>"), "Dashboard page should not stream a full-page skeleton during normal SSR.");
 assert(!dashboardPage.includes("<Suspense fallback={<ChartSkeleton />}>"), "Dashboard chart widgets should render with server data instead of chart skeleton fallbacks.");
 

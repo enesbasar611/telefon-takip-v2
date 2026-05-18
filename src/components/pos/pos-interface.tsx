@@ -41,9 +41,11 @@ import {
   UserPlus,
   Loader2
 } from "lucide-react";
-import { createSale } from "@/lib/actions/sale-actions";
+import { createSale, getSaleById } from "@/lib/actions/sale-actions";
+import { getPOSInitialData } from "@/lib/actions/product-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { cn, formatPhone, formatCurrency } from "@/lib/utils";
@@ -56,15 +58,35 @@ import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
-export function POSInterface({ products: initialProducts, customers, categories, initialSale }: {
-  products: any[];
-  customers: any[];
-  categories: any[];
-  initialSale?: any;
+export function POSInterface({ initialSaleId }: {
+  initialSaleId?: string;
 }) {
+  const queryClient = useQueryClient();
+
+  const { data: posData, isLoading: isPosLoading } = useQuery({
+    queryKey: ["pos-initial-data"],
+    queryFn: () => getPOSInitialData(),
+    refetchOnWindowFocus: false,
+    staleTime: 10 * 60 * 1000, // 10 minutes cache to avoid DB hits on every view
+  });
+
+  const { data: initialSale } = useQuery({
+    queryKey: ["sale", initialSaleId],
+    queryFn: () => getSaleById(initialSaleId!),
+    enabled: !!initialSaleId
+  });
+
+  const customers = posData?.customers || [];
+  const products = posData?.products || [];
+  const categories = posData?.categories || [];
+
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
-  const [products, setProducts] = useState(initialProducts);
+  const { data: settingsData } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => getSettings(),
+  });
+
   const { rates: exchangeRates } = useDashboardData();
 
   // Show receipt if arrived via sale confirmation URL
@@ -74,11 +96,6 @@ export function POSInterface({ products: initialProducts, customers, categories,
       setShowReceipt(true);
     }
   }, [initialSale]);
-
-  // Sync prop changes in the background (e.g. after router.refresh)
-  useEffect(() => {
-    setProducts(initialProducts);
-  }, [initialProducts]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -91,22 +108,15 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const [lastSale, setLastSale] = useState<any>(null);
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
 
-  const [pointValueTl, setPointValueTl] = useState<number>(5);
-  const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+  const pointValueTl = useMemo(() => {
+    const loyaltyVal = settingsData?.find((s: any) => s.key === "loyalty_point_value_tl")?.value;
+    return Number(loyaltyVal) || 5;
+  }, [settingsData]);
 
-  // Load points config
-  useEffect(() => {
-    async function fetchPointsSettings() {
-      try {
-        const settings = await getSettings();
-        const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
-        setPointValueTl(Number(config.loyalty_point_value_tl) || 5);
-        setLoyaltyEnabled(config.loyalty_enabled !== "false");
-      } catch (err) {
-      }
-    }
-    fetchPointsSettings();
-  }, []);
+  const loyaltyEnabled = useMemo(() => {
+    const enabled = settingsData?.find((s: any) => s.key === "loyalty_enabled")?.value;
+    return enabled !== "false";
+  }, [settingsData]);
 
   // Yeni Müşteri Ekleme State'leri
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
@@ -122,7 +132,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
   // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
   useEffect(() => {
     const cid = searchParams.get("customerId");
-    if (cid && customers.find((c) => c.id === cid)) {
+    if (cid && customers.find((c: any) => c.id === cid)) {
       setSelectedCustomerId(cid);
     }
   }, [searchParams, customers]);
@@ -182,11 +192,20 @@ export function POSInterface({ products: initialProducts, customers, categories,
       const res = await createCustomer({ name: newCustomer.name, phone: newCustomer.phone });
       if (res.success && res.customer) {
         toast({ title: "Başarılı", description: "Yeni müşteri sisteme kaydedildi ve seçildi." });
-        customers.push(res.customer); // UI update without reload dependency
+
+        // Safely update the query cache instead of mutating the local array
+        queryClient.setQueryData(["pos-initial-data"], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            customers: [res.customer, ...old.customers]
+          };
+        });
+
         setSelectedCustomerId(res.customer.id);
         setIsNewCustomerOpen(false);
         setNewCustomer({ name: "", phone: "" });
-        router.refresh(); // Fetch new server data
+        queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] }); // Fetch new list naturally
       } else {
         toast({ title: "Hata", description: res.error || "Müşteri oluşturulamadı.", variant: "destructive" });
       }
@@ -217,7 +236,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
   }
 
   const addToCart = useCallback((product: any) => {
-    if (!product) return;
+    if (products.length === 0) return;
 
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
@@ -239,7 +258,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
       }
       return [...currentCart, { ...product, quantity: 1 }];
     });
-  }, [toast]); // Removed products dependency as it's not used inside the state updater
+  }, [toast, products]); // Added products dependency
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
@@ -269,7 +288,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
     setCart((prev) => prev.map((item) => {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
-        const originalProduct = products.find((p) => p.id === id);
+        const originalProduct = products.find((p: any) => p.id === id);
         if (delta > 0 && newQty > (originalProduct?.stock || 0)) {
           toast({ title: "Stok Yetersiz", variant: "destructive" });
           return item;
@@ -362,7 +381,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
 
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
-    return customers.find(c => c.id === selectedCustomerId);
+    return customers.find((c: any) => c.id === selectedCustomerId);
   }, [selectedCustomerId, customers]);
 
   const totalPoints = selectedCustomer?.loyaltyPoints || 0;
@@ -400,15 +419,20 @@ export function POSInterface({ products: initialProducts, customers, categories,
         });
 
         if (result.success) {
-          // 1. Optimistic Stock Update: Update local product state immediately
-          const updatedProducts = products.map((p: any) => {
-            const soldItem = cart.find(item => item.id === p.id);
-            if (soldItem) {
-              return { ...p, stock: p.stock - soldItem.quantity };
-            }
-            return p;
+          // 1. Optimistic Stock Update: Update query cache immediately
+          queryClient.setQueryData(["pos-initial-data"], (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              products: old.products.map((p: any) => {
+                const soldItem = cart.find(item => item.id === p.id);
+                if (soldItem) {
+                  return { ...p, stock: p.stock - soldItem.quantity };
+                }
+                return p;
+              })
+            };
           });
-          setProducts(updatedProducts);
 
           // 2. Receipt and Success State
           setLastSale(result.data);
@@ -418,6 +442,13 @@ export function POSInterface({ products: initialProducts, customers, categories,
           setCart([]);
           setSearchTerm("");
           setSelectedCustomerId(undefined);
+          // 4. Invalidate to seamlessly update server state without reload
+          queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] });
+
           toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
 
           // 5. Notifications
@@ -436,7 +467,8 @@ export function POSInterface({ products: initialProducts, customers, categories,
   const closeReceiptAndReload = () => {
     setShowReceipt(false);
     setLastSale(null);
-    router.refresh();
+    // No direct router.refresh() needed here, state is cleanly reset.
+    // The background query invalidation has already synced everything.
   };
 
   return (
@@ -513,7 +545,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
                 >
                   TÜMÜ
                 </TabsTrigger>
-                {categories.map((cat) => (
+                {categories.map((cat: any) => (
                   <TabsTrigger
                     key={cat.id}
                     value={cat.id}
@@ -528,54 +560,60 @@ export function POSInterface({ products: initialProducts, customers, categories,
 
           {/* Grid Area */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/5 relative">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {filteredProducts.map((product) => {
-                const productCurrency = getCartItemCurrency(product);
-                const displayPrice = getCartDisplayPrice(product);
-                const priceStr = formatCurrency(displayPrice);
-                // Standardized font size for price to avoid truncation
-                const priceSizeClass = "text-lg sm:text-xl font-black";
+            {isPosLoading && (posData?.products || []).length === 0 ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <Loader2 className="h-10 w-10 text-primary animate-spin opacity-50" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {filteredProducts.map((product) => {
+                  const productCurrency = getCartItemCurrency(product);
+                  const displayPrice = getCartDisplayPrice(product);
+                  const priceStr = formatCurrency(displayPrice);
+                  // Standardized font size for price to avoid truncation
+                  const priceSizeClass = "text-lg sm:text-xl font-black";
 
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    disabled={product.stock <= 0}
-                    className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]"
-                  >
-                    {/* Top Row: Category & Stock */}
-                    <div className="flex items-start justify-between gap-2 mb-auto z-10">
-                      <div className="text-[8px] sm:text-[10px] text-primary flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity min-w-0 flex-1">
-                        <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-                        <span className="truncate">
-                          {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
-                        </span>
-                      </div>
-                      <div className="shrink-0 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-emerald-500/10 text-[8px] sm:text-[10px] font-bold text-emerald-600 border border-emerald-500/20 shadow-sm transition-transform group-hover:scale-105">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
-                        {product.stock}
-                      </div>
-                    </div>
-
-                    {/* Bottom Row: Price & Title */}
-                    <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
-                      <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
-                        {getCartCurrencySymbol(product)}{priceStr}
-                      </div>
-                      {productCurrency !== "TRY" && (
-                        <div className="text-[10px] font-semibold text-muted-foreground">
-                          ₺{formatCurrency(product.sellPrice)}
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      disabled={product.stock <= 0}
+                      className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]"
+                    >
+                      {/* Top Row: Category & Stock */}
+                      <div className="flex items-start justify-between gap-2 mb-auto z-10">
+                        <div className="text-[8px] sm:text-[10px] text-primary flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity min-w-0 flex-1">
+                          <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                          <span className="truncate">
+                            {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
+                          </span>
                         </div>
-                      )}
-                      <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">
-                        {product.name}
+                        <div className="shrink-0 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-emerald-500/10 text-[8px] sm:text-[10px] font-bold text-emerald-600 border border-emerald-500/20 shadow-sm transition-transform group-hover:scale-105">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
+                          {product.stock}
+                        </div>
                       </div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
-                  </button>
-                );
-              })}
-            </div>
+
+                      {/* Bottom Row: Price & Title */}
+                      <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
+                        <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
+                          {getCartCurrencySymbol(product)}{priceStr}
+                        </div>
+                        {productCurrency !== "TRY" && (
+                          <div className="text-[10px] font-semibold text-muted-foreground">
+                            ₺{formatCurrency(product.sellPrice)}
+                          </div>
+                        )}
+                        <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">
+                          {product.name}
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -657,7 +695,7 @@ export function POSInterface({ products: initialProducts, customers, categories,
               </SelectTrigger>
               <SelectContent className="bg-card border border-border/60 text-foreground rounded-[1.5rem] shadow-2xl p-2 max-h-80">
                 <SelectItem value="null" className="text-[13px] font-medium py-3 rounded-xl hover:bg-muted transition-colors">Varsayılan (İsimsiz)</SelectItem>
-                {customers.map((c) => (
+                {customers.map((c: any) => (
                   <SelectItem key={c.id} value={c.id} className="text-[13px]  py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
                     <div className="flex flex-col gap-1">
                       <span className=" leading-none text-foreground/90">{c.name}</span>

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: telefon-takip-local
+    restart: always
+    command: npm run dev -- -p 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - whatsapp-auth:/app/.whatsapp-auth
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+
+volumes:
+  whatsapp-auth:

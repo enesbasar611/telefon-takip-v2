@@ -79,7 +79,10 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
         toast.success(`Durum ${statusMap[status].label} olarak güncellendi.`);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] }),
           queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+          queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] }),
         ]);
       } else {
         toast.error(res.error);
@@ -101,7 +104,12 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
         toast.success("Cihaz teslim edildi ve işlem kaydedildi.");
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] }),
           queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+          queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] }),
           queryClient.invalidateQueries({ queryKey: ["transactions"] }),
           queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
           queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),

@@ -167,6 +167,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["devices"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
         queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
       ]);
     },

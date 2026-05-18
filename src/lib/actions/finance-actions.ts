@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { format, isAfter, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { getShopId, getUserId } from "@/lib/auth";
@@ -98,6 +98,7 @@ export async function createAccount(data: {
     }
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
     console.error("Account creation error:", error);
@@ -219,6 +220,7 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
     revalidatePath("/satis/kasa");
     revalidatePath("/");
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -337,6 +339,7 @@ export async function updateManualTransaction(
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -444,6 +447,7 @@ export async function updateAccount(id: string, data: {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
     console.error("Account update error:", error);
@@ -546,6 +550,7 @@ export async function openDailySession(openingBalance: number, notes?: string) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, session: serializePrisma(session) };
   } catch (error) {
     return { success: false, error: "Kasa açılamadı." };
@@ -555,6 +560,7 @@ export async function openDailySession(openingBalance: number, notes?: string) {
 export async function closeDailySession(id: string, actualBalance: number, notes?: string) {
   try {
     const userId = await getUserId();
+    const shopId = await getShopId();
 
     const session = await prisma.dailySession.findUnique({
       where: { id },
@@ -615,6 +621,7 @@ export async function closeDailySession(id: string, actualBalance: number, notes
 
     revalidatePath("/satis/kasa");
     revalidatePath("/dashboard");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("closeDailySession error:", error);
@@ -630,6 +637,7 @@ export async function transferFunds(data: {
   description: string;
 }) {
   try {
+    const shopId = await getShopId();
     // Check inside the try block below to get userId
     if (data.fromAccountId === data.toAccountId) {
       return { success: false, error: "Aynı hesaba transfer yapılamaz." };
@@ -680,6 +688,7 @@ export async function transferFunds(data: {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Transfer error:", error);
@@ -829,6 +838,7 @@ export async function paySupplierDebt(data: {
     revalidatePath("/satis/kasa");
     revalidatePath("/tedarikciler");
     revalidatePath("/");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(result.transaction) };
   } catch (error) {
     console.error("Pay supplier debt error:", error);
@@ -867,6 +877,7 @@ export async function deleteAccount(id: string) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Account deletion error:", error);
@@ -906,6 +917,7 @@ export async function deleteTransaction(id: string) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Delete transaction error:", error);
@@ -947,6 +959,7 @@ export async function deleteTransactions(ids: string[]) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("Bulk delete transactions error:", error);

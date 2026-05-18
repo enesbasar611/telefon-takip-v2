@@ -30,8 +30,8 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
         queryKey: ["shortages"],
         queryFn: () => getShortageItems(),
         placeholderData: keepPreviousData,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        refetchOnWindowFocus: true,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
     });
 
     const addShortage = async (data: {

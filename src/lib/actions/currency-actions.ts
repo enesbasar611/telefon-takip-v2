@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
 
@@ -38,48 +38,54 @@ export async function syncAllRates(providedShopId?: string) {
       prisma.setting.upsert({ where: { shopId_key: { shopId, key: "currency_last_update" } }, update: { value: new Date().toISOString() }, create: { shopId, key: "currency_last_update", value: new Date().toISOString() } })
     ]);
 
-    // BU SATIR HATA VERDİRİYOR OLABİLİR: Cache içinden çağrıldığında sorun çıkarır.
-    // Şimdilik burada kalsın ama cache içinden çağırmayacağız.
     revalidatePath("/");
+    // Bust the rates cache so the next layout render gets fresh data
+    revalidateTag(`rates-${shopId}`);
+    revalidateTag("rates");
     return { success: true };
   } catch (error) {
     return { success: false };
   }
 }
 
-// 2. KRİTİK DEĞİŞİKLİK: Anlık veriyi döndür, sync'i arka planda yap (non-blocking)
+// Cached exchange rates — busted by syncAllRates or manual currency update
 export const getExchangeRates = async (shopId: string | null) => {
   if (!shopId) {
     return {
       usd: 34, eur: 37, ga: 3000, dealerProfit: 200, customerProfit: 700, lastUpdate: new Date()
     };
   }
-  // DB'den direkt çek (cache bypass - layout'ta sadece bir kez çağrılır)
-  let settings = await prisma.setting.findMany({
-    where: {
-      shopId,
-      key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] }
-    }
-  });
 
-  const lastUpdateStr = settings.find(s => s.key === "currency_last_update")?.value;
-  const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
-  const now = new Date();
+  return unstable_cache(
+    async () => {
+      let settings = await prisma.setting.findMany({
+        where: {
+          shopId,
+          key: { in: ["exchange_rate_usd", "exchange_rate_eur", "exchange_rate_ga", "currency_last_update", "dealer_profit_tl", "customer_profit_tl"] }
+        }
+      });
 
-  // Eğer veri eksikse veya 2 saat geçmişse ARKA PLANDA (non-blocking) sync başlat
-  // Layout render'ı ASLA bloklama - stale veriyi hemen dön
-  const isStale = settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000);
-  if (isStale) {
-    // Fire-and-forget: await YOK, arka planda çalışır
-    syncAllRates(shopId).catch(() => { });
-  }
+      const lastUpdateStr = settings.find(s => s.key === "currency_last_update")?.value;
+      const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(0);
+      const now = new Date();
 
-  return {
-    usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "34"),
-    eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "37"),
-    ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "3000"),
-    dealerProfit: parseFloat(settings.find(s => s.key === "dealer_profit_tl")?.value || "200"),
-    customerProfit: parseFloat(settings.find(s => s.key === "customer_profit_tl")?.value || "700"),
-    lastUpdate
-  };
+      // Eğer veri eksikse veya 2 saat geçmişse arka planda sync başlat
+      const isStale = settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000);
+      if (isStale) {
+        // Fire-and-forget: revalidateTag çağrısı syncAllRates içinde yapılır
+        syncAllRates(shopId).catch(() => { });
+      }
+
+      return {
+        usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "34"),
+        eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "37"),
+        ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "3000"),
+        dealerProfit: parseFloat(settings.find(s => s.key === "dealer_profit_tl")?.value || "200"),
+        customerProfit: parseFloat(settings.find(s => s.key === "customer_profit_tl")?.value || "700"),
+        lastUpdate
+      };
+    },
+    [`rates-${shopId}`],
+    { tags: [`rates-${shopId}`, "rates"], revalidate: 1800 } // 30 dakika
+  )();
 };

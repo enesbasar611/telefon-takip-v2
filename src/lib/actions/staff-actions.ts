@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { Role } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { serializePrisma, formatName } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getDefaultStaffPermissions } from "@/lib/staff-permissions";
@@ -177,6 +177,7 @@ export async function createStaff(data: {
             }
         });
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true, user: serializePrisma(user) };
     } catch (error) {
         console.error("Error creating staff:", error);
@@ -220,6 +221,7 @@ export async function updateStaff(userId: string, data: any) {
         });
 
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         console.error("Error updating staff:", error);
@@ -235,6 +237,7 @@ export async function updateStaffCommission(userId: string, rate: number) {
             data: { commissionRate: rate }
         });
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         return { success: false, error: "Komisyon oranı güncellenemedi." };
@@ -325,6 +328,7 @@ export async function deleteStaff(userId: string, options?: {
         });
 
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         console.error("Error deleting staff:", error);
@@ -517,6 +521,7 @@ export async function updateProfile(data: {
         });
 
         revalidatePath("/(dashboard)/profil");
+        revalidateTag(`staff-${shopId}`);
         return { success: true, user: serializePrisma(updated) };
     } catch (error) {
         console.error("Error updating profile:", error);
@@ -571,9 +576,8 @@ export async function updateDashboardLayout(layout: any) {
 
         // Also revalidate the shop-specific cache tags
         if (shopId) {
-            const { revalidateTag } = await import("next/cache");
             revalidateTag(`dashboard-${shopId}`);
-            revalidateTag(`staff-list-${shopId}`);
+            revalidateTag(`staff-${shopId}`);
         }
 
         return { success: true };
@@ -603,6 +607,7 @@ export async function assignStaffLeave(data: {
             }
         });
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         console.error("Error assigning leave:", error);
@@ -617,6 +622,7 @@ export async function deleteStaffLeave(leaveId: string) {
             where: { id: leaveId, shopId }
         });
         revalidatePath("/personel");
+        revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         return { success: false, error: "İzin silinemedi." };

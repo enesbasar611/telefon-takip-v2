@@ -58,9 +58,11 @@ import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Wrench } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const MAX_PHOTOS = 6;
 const MAX_SIZE_MB = 3;
+const EMPTY_ARRAY: any[] = [];
 
 const normalizePhoneNumber = (value?: string | null) => {
   let digits = (value || "").replace(/\D/g, "");
@@ -319,28 +321,55 @@ function PhotoUploader({
 // Main Page
 // ---------------------------------------------------------------------------
 export default function NewServicePage() {
-  const [isPending, startTransition] = useTransition();
-  const [technicians, setTechnicians] = useState<any[]>([]);
+  const router = useRouter();
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [foundCustomer, setFoundCustomer] = useState<any>(null);
-  const [isLookingUp, setIsLookingUp] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<any[]>([]);
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
-  const [isLookingUpName, setIsLookingUpName] = useState(false);
   const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isCustomerCreated, setIsCustomerCreated] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
-  const [shop, setShop] = useState<any>(null);
   const [isDiagnosticPending, setIsDiagnosticPending] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const { toast } = useToast();
-  const router = useRouter();
-  const { data: session } = useSession();
+  const { data: shop } = useQuery({
+    queryKey: ["shop"],
+    queryFn: () => getShop(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: technicians = EMPTY_ARRAY } = useQuery({
+    queryKey: ["staff"],
+    queryFn: async () => {
+      const staffList = await getStaff();
+      const assignableStaff = staffList.filter((member: any) => ASSIGNABLE_SERVICE_ROLES.includes(member.role));
+      const currentUser = assignableStaff.find((member: any) => member.id === session?.user?.id);
+      const currentUserCanOwnService = currentUser && SERVICE_OWNER_ROLES.includes(currentUser.role);
+      const managerFallback =
+        assignableStaff.find((member: any) => member.role === "SHOP_MANAGER") ||
+        assignableStaff.find((member: any) => member.role === "ADMIN") ||
+        assignableStaff.find((member: any) => member.role === "MANAGER") ||
+        assignableStaff.find((member: any) => member.role === "SUPER_ADMIN");
+      const technicianFallback = assignableStaff.find((member: any) => member.role === "TECHNICIAN");
+      const defaultAssignee = currentUserCanOwnService ? currentUser : managerFallback || technicianFallback || assignableStaff[0];
+
+      const list = [
+        ...(defaultAssignee ? [defaultAssignee] : []),
+        ...assignableStaff.filter((member: any) => member.id !== defaultAssignee?.id),
+      ];
+
+      return list;
+    },
+    enabled: !!session?.user?.id,
+  });
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
@@ -377,67 +406,31 @@ export default function NewServicePage() {
   const industryFields = getServiceFormFields(shop);
 
   useEffect(() => {
-    async function loadInitialData() {
-      try {
-        const [s, staffList] = await Promise.all([
-          getShop(),
-          getStaff()
-        ]);
-        setShop(s);
-
-        const assignableStaff = staffList.filter((member: any) => ASSIGNABLE_SERVICE_ROLES.includes(member.role));
-        const currentUser = assignableStaff.find((member: any) => member.id === session?.user?.id);
-        const currentUserCanOwnService = currentUser && SERVICE_OWNER_ROLES.includes(currentUser.role);
-        const managerFallback =
-          assignableStaff.find((member: any) => member.role === "SHOP_MANAGER") ||
-          assignableStaff.find((member: any) => member.role === "ADMIN") ||
-          assignableStaff.find((member: any) => member.role === "MANAGER") ||
-          assignableStaff.find((member: any) => member.role === "SUPER_ADMIN");
-        const technicianFallback = assignableStaff.find((member: any) => member.role === "TECHNICIAN");
-        const defaultAssignee = currentUserCanOwnService ? currentUser : managerFallback || technicianFallback || assignableStaff[0];
-
-        const techList = [
-          ...(defaultAssignee ? [defaultAssignee] : []),
-          ...assignableStaff.filter((member: any) => member.id !== defaultAssignee?.id),
-        ];
-
-        setTechnicians(techList);
-        if (defaultAssignee && !form.getValues("technicianId")) {
-          form.setValue("technicianId", defaultAssignee.id);
-        }
-      } catch (e) {
-        console.error("Initial data load error:", e);
-      }
+    if (technicians.length > 0 && !form.getValues("technicianId")) {
+      form.setValue("technicianId", technicians[0].id);
     }
-    loadInitialData();
-  }, [form, session?.user?.id]);
+  }, [technicians, form]);
 
   const watchModel = form.watch("deviceModel");
+  const { data: models = EMPTY_ARRAY } = useQuery({
+    queryKey: ["model-search", watchModel],
+    queryFn: () => searchDeviceModels(watchModel),
+    enabled: watchModel.length >= 2,
+  });
+
   useEffect(() => {
-    const fetchModels = async () => {
-      if (watchModel && watchModel.length >= 2) {
-        const models = await searchDeviceModels(watchModel);
-        setModelSuggestions(models);
-        setShowSuggestions(models.length > 0);
-      } else {
-        setModelSuggestions([]);
-        setShowSuggestions(false);
-      }
-    };
-    fetchModels();
-  }, [watchModel]);
+    setModelSuggestions(models);
+    setShowSuggestions(models.length > 0);
+  }, [models]);
 
   const problemDesc = form.watch("problemDesc");
-  const deviceModel = form.watch("deviceModel");
 
-  const handleAIDiagnosis = async () => {
-    if (!problemDesc) {
-      toast({ title: "Hata", description: "Lütfen önce bir arıza açıklaması girin.", variant: "destructive" });
-      return;
-    }
-    setIsDiagnosticPending(true);
-    try {
-      const result = await parseServiceDiagnosticWithAI(problemDesc, deviceModel, shop?.industry);
+  const aiDiagnosisMutation = useMutation({
+    mutationFn: async () => {
+      if (!problemDesc) throw new Error("Lütfen önce bir arıza açıklaması girin.");
+      return parseServiceDiagnosticWithAI(problemDesc, watchModel, shop?.industry);
+    },
+    onSuccess: (result) => {
       if (result.success) {
         setDiagnosticResult(result.data);
         form.setValue("estimatedCost", String(result.data.estimatedTotalPrice));
@@ -445,127 +438,122 @@ export default function NewServicePage() {
       } else {
         toast({ title: "AI Hatası", description: result.error, variant: "destructive" });
       }
-    } catch (error) {
-      console.error("AI Diagnosis error:", error);
-    } finally {
-      setIsDiagnosticPending(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "AI Hatası", description: error.message, variant: "destructive" });
     }
-  };
+  });
+
+  const handleAIDiagnosis = () => aiDiagnosisMutation.mutate();
 
   const watchName = form.watch("customerName");
+  const { data: nameLookupResults = EMPTY_ARRAY } = useQuery({
+    queryKey: ["customer-name-search", watchName],
+    queryFn: () => findCustomerByName(watchName),
+    enabled: watchName.length >= 2 && (!foundCustomer || watchName !== foundCustomer.name),
+  });
+
   useEffect(() => {
-    const lookupByName = async () => {
-      if (!watchName || watchName.trim().length < 2) {
-        setNameSuggestions([]);
-        setShowNameSuggestions(false);
-        return;
-      }
-      if (foundCustomer && form.getValues("customerName") === foundCustomer.name) return;
-      setIsLookingUpName(true);
-      const results = await findCustomerByName(watchName);
-      setNameSuggestions(results);
-      setShowNameSuggestions(results.length > 0);
-      setIsLookingUpName(false);
-    };
-    const t = setTimeout(lookupByName, 350);
-    return () => clearTimeout(t);
-  }, [watchName, foundCustomer, form]);
+    setNameSuggestions(nameLookupResults);
+    setShowNameSuggestions(nameLookupResults.length > 0);
+  }, [nameLookupResults]);
 
   const watchPhone = form.watch("customerPhone");
+  const purePhone = normalizePhoneNumber(watchPhone);
+  const { data: phoneLookupResult } = useQuery({
+    queryKey: ["customer-phone-search", purePhone],
+    queryFn: () => findCustomerByPhone(purePhone),
+    enabled: purePhone.length >= 7,
+  });
+
   useEffect(() => {
-    const lookup = async () => {
-      const purePhone = normalizePhoneNumber(watchPhone);
-      if (purePhone.length >= 7) {
-        setIsLookingUp(true);
-        const customer = await findCustomerByPhone(purePhone);
-        if (customer) {
-          setFoundCustomer(customer);
-          form.setValue("customerName", customer.name);
-          form.clearErrors("customerName");
-          if (!isCustomerCreated) {
-            toast({ title: "Müşteri Tanındı", description: `${customer.name} sistemde kayıtlı.` });
-          }
-        } else {
-          setFoundCustomer(null);
-          setIsCustomerCreated(false);
-        }
-        setIsLookingUp(false);
+    if (phoneLookupResult) {
+      setFoundCustomer(phoneLookupResult);
+      form.setValue("customerName", phoneLookupResult.name);
+      form.clearErrors("customerName");
+      if (!isCustomerCreated) {
+        toast({ title: "Müşteri Tanındı", description: `${phoneLookupResult.name} sistemde kayıtlı.` });
       }
-    };
-    lookup();
-  }, [watchPhone, form, isCustomerCreated]);
+    } else if (purePhone.length >= 10) {
+      setFoundCustomer(null);
+      setIsCustomerCreated(false);
+    }
+  }, [phoneLookupResult, purePhone, isCustomerCreated, form]);
+
+  const createCustomerMutation = useMutation({
+    mutationFn: (data: { name: string, phone: string, email: string }) => createCustomerMuted(data),
+    onSuccess: (res, variables) => {
+      if (res.success) {
+        setFoundCustomer(res.customer);
+        setIsCustomerCreated(true);
+        toast({ title: "✅ Müşteri Kaydedildi!", description: `${variables.name} sisteme eklendi.` });
+      } else {
+        toast({ title: "Hata", description: res.error, variant: "destructive" });
+      }
+    },
+    onError: () => {
+      toast({ title: "Hata", description: "Müşteri kaydı sırasında sorun oluştu.", variant: "destructive" });
+    }
+  });
 
   const handleQuickCustomerCreate = async () => {
     const isValid = await form.trigger(["customerName", "customerPhone"]);
     if (!isValid) return;
-
-    const name = form.getValues("customerName");
-    const phone = normalizePhoneNumber(form.getValues("customerPhone"));
-
-    setIsCreatingCustomer(true);
-    try {
-      const res = await createCustomerMuted({ name, phone, email: "" });
-      if (res.success) {
-        setFoundCustomer(res.customer);
-        setIsCustomerCreated(true);
-        toast({ title: "✅ Müşteri Kaydedildi!", description: `${name} sisteme eklendi.` });
-      } else {
-        toast({ title: "Hata", description: res.error, variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Hata", description: "Müşteri kaydı sırasında sorun oluştu.", variant: "destructive" });
-    } finally {
-      setIsCreatingCustomer(false);
-    }
+    createCustomerMutation.mutate({
+      name: form.getValues("customerName"),
+      phone: normalizePhoneNumber(form.getValues("customerPhone")),
+      email: ""
+    });
   };
 
-  const onSubmit = async (values: ServiceFormValues) => {
-    startTransition(async () => {
-      try {
-        const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
+  const createServiceMutation = useMutation({
+    mutationFn: async (values: ServiceFormValues) => {
+      const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
+      const notesStr = [
+        values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
+        values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
+      ].filter(Boolean).join(" | ");
 
-        const notesStr = [
-          values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
-          values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
-        ].filter(Boolean).join(" | ");
-
-        const result = await createServiceTicket({
-          customerName: values.customerName,
-          customerPhone: normalizePhoneNumber(values.customerPhone),
-          customerEmail: "",
-          deviceBrand,
-          deviceModel,
-          imei,
-          problemDesc: values.problemDesc,
-          estimatedCost: Number(values.estimatedCost),
-          downPayment: Number(values.downPayment),
-          notes: notesStr,
-          technicianId: values.technicianId,
-          estimatedDeliveryDate: values.estimatedDeliveryDate,
-          photos: photos.map(p => p.dataUrl),
-          priority: values.priority ?? 1,
-          attributes,
-        });
-
-        if (result?.success) {
-          setShowSuccessModal(true);
-        } else {
-          toast({
-            title: "Hata",
-            description: result?.error || "Servis kaydı oluşturulamadı.",
-            variant: "destructive"
-          });
-        }
-      } catch (error: any) {
-        console.error("Submit error:", error);
+      return createServiceTicket({
+        customerName: values.customerName,
+        customerPhone: normalizePhoneNumber(values.customerPhone),
+        customerEmail: "",
+        deviceBrand,
+        deviceModel,
+        imei,
+        problemDesc: values.problemDesc,
+        estimatedCost: Number(values.estimatedCost),
+        downPayment: Number(values.downPayment),
+        notes: notesStr,
+        technicianId: values.technicianId,
+        estimatedDeliveryDate: values.estimatedDeliveryDate,
+        photos: photos.map(p => p.dataUrl),
+        priority: values.priority ?? 1,
+        attributes,
+      });
+    },
+    onSuccess: (result) => {
+      if (result?.success) {
+        queryClient.invalidateQueries({ queryKey: ["services"] });
+        setShowSuccessModal(true);
+      } else {
         toast({
           title: "Hata",
-          description: "Bağlantı hatası veya yetki sorunu oluştu.",
+          description: result?.error || "Servis kaydı oluşturulamadı.",
           variant: "destructive"
         });
       }
-    });
-  };
+    },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "Bağlantı hatası veya yetki sorunu oluştu.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const onSubmit = (values: ServiceFormValues) => createServiceMutation.mutate(values);
 
   const currentEstimatedCost = form.watch("estimatedCost") || "0";
   const errors = form.formState.errors;
@@ -684,11 +672,10 @@ export default function NewServicePage() {
                       <Button
                         type="button"
                         onClick={handleQuickCustomerCreate}
-                        disabled={isCreatingCustomer}
                         size="sm"
                         className="font-medium gap-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-9"
                       >
-                        {isCreatingCustomer ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                        {createCustomerMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" strokeWidth={1.5} />}
                         Yeni Ekle
                       </Button>
                     )
@@ -709,9 +696,7 @@ export default function NewServicePage() {
                       onFocus={() => nameSuggestions.length > 0 && setShowNameSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
                     />
-                    {isLookingUpName && (
-                      <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                    )}
+                    {/* isLookingUpName and isLookingUp logic refactored to component queries */}
                   </div>
                   {showNameSuggestions && nameSuggestions.length > 0 && (
                     <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-[100] bg-card border border-border rounded-2xl shadow-xl overflow-hidden py-1">
@@ -745,7 +730,7 @@ export default function NewServicePage() {
                     required
                     value={form.watch("customerPhone")}
                     error={errors.customerPhone?.message as string}
-                    isLookingUp={isLookingUp}
+                    isLookingUp={false}
                     onChange={(val) => {
                       form.setValue("customerPhone", val);
                       const raw = normalizePhoneNumber(val);
@@ -825,9 +810,9 @@ export default function NewServicePage() {
                   variant="outline"
                   className="h-9 rounded-xl bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-xs font-medium"
                   onClick={handleAIDiagnosis}
-                  disabled={isDiagnosticPending}
+                  disabled={aiDiagnosisMutation.isPending}
                 >
-                  {isDiagnosticPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {aiDiagnosisMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   BAŞAR AI ile Analiz Et
                 </Button>
               </div>
@@ -1114,7 +1099,7 @@ export default function NewServicePage() {
                     onClick={() => {
                       if (!canSubmitService) markRequiredFields();
                     }}
-                    disabled={isPending || showSuccessModal}
+                    disabled={createServiceMutation.isPending || showSuccessModal}
                     className={cn(
                       "relative h-14 px-12 font-black rounded-2xl gap-3 transition-all shadow-xl text-lg",
                       !canSubmitService
@@ -1122,7 +1107,7 @@ export default function NewServicePage() {
                         : "bg-primary hover:bg-primary/90 text-primary-foreground"
                     )}
                   >
-                    {isPending ? (
+                    {createServiceMutation.isPending ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
                     ) : !canSubmitService ? (
                       <AlertCircle className="h-6 w-6" strokeWidth={2.5} />

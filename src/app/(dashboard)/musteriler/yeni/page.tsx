@@ -39,18 +39,20 @@ import {
   UserCircle,
   Star,
   StickyNote,
-  UserPlus
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { customerSchema } from "@/lib/validations/schemas";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type CustomerFormValues = z.input<typeof customerSchema>;
 
 export default function NewCustomerPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +69,22 @@ export default function NewCustomerPage() {
       isVip: false,
       photo: "",
     },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (values: CustomerFormValues) => createCustomer(values),
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        toast.success("Müşteri başarıyla oluşturuldu");
+        router.push("/musteriler");
+      } else {
+        toast.error(result.error || "Müşteri oluşturulurken bir hata oluştu");
+      }
+    },
+    onError: () => {
+      toast.error("Bir hata oluştu");
+    }
   });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,21 +110,8 @@ export default function NewCustomerPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  async function onSubmit(values: CustomerFormValues) {
-    setLoading(true);
-    try {
-      const result = await createCustomer(values);
-      if (result.success) {
-        toast.success("Müşteri başarıyla oluşturuldu");
-        router.push("/musteriler");
-      } else {
-        toast.error(result.error || "Müşteri oluşturulurken bir hata oluştu");
-      }
-    } catch (error) {
-      toast.error("Bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
+  function onSubmit(values: CustomerFormValues) {
+    createMutation.mutate(values);
   }
 
   return (
@@ -129,11 +134,11 @@ export default function NewCustomerPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={createMutation.isPending}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl flex gap-2 shadow-lg shadow-blue-500/20"
                 >
-                  <Save className="h-4 w-4" />
-                  {loading ? "Kaydediliyor..." : "Kaydet"}
+                  {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {createMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
                 </Button>
               </div>
             }

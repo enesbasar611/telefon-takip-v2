@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronLeft, ChevronRight, Activity, PenTool, Receipt, DollarSign, CheckCircle2, RefreshCw, Trash2, CheckSquare, Square, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarGrid, CalendarEvent } from "./calendar-grid";
@@ -16,7 +17,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
 interface AjandaPageClientProps {
-    initialEvents: CalendarEvent[];
+    initialEvents?: CalendarEvent[];
 }
 
 const TYPE_CONFIG: any = {
@@ -28,54 +29,50 @@ const TYPE_CONFIG: any = {
 
 export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-    const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [isPending, startTransition] = useTransition();
 
-    // Load accounts for financial actions
-    useEffect(() => {
-        getAccounts().then(acc => setAccounts(acc || []));
-    }, []);
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
 
-    // Re-fetch events from server after any mutation
-    const refreshEvents = useCallback(async () => {
-        setIsRefreshing(true);
-        setSelectedIds([]);  // clear selection on refresh
-        try {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            const fresh = await getCalendarEventsAction(year, month) as CalendarEvent[];
-            setEvents(fresh);
-        } catch (e) {
-            console.error("Event refresh failed:", e);
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, [currentDate]);
+    // React Query for Calendar Events
+    const { data: eventsData, isLoading: isEventsLoading, isFetching: isEventsFetching } = useQuery({
+        queryKey: ["agenda-events", year, month],
+        queryFn: () => getCalendarEventsAction(year, month),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
 
-    // When month changes, re-fetch for the new viewing range
-    const handleMonthChange = useCallback(async (newDate: Date) => {
+    // React Query for Accounts
+    const { data: accountsData } = useQuery({
+        queryKey: ["accounts"],
+        queryFn: () => getAccounts(),
+        staleTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const events = (eventsData || initialEvents || []) as CalendarEvent[];
+    const accounts = (accountsData || []) as any[];
+
+    const refreshEvents = useCallback(() => {
+        setSelectedIds([]);
+        queryClient.invalidateQueries({ queryKey: ["agenda-events"] });
+    }, [queryClient]);
+
+    const handleMonthChange = (newDate: Date) => {
         setCurrentDate(newDate);
-        setIsRefreshing(true);
-        try {
-            const fresh = await getCalendarEventsAction(newDate.getFullYear(), newDate.getMonth() + 1) as CalendarEvent[];
-            setEvents(fresh);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, []);
+    };
+
+    const isRefreshing = isEventsFetching || isEventsLoading;
 
     const handleModalClose = useCallback(async () => {
         setIsDayModalOpen(false);
-        await refreshEvents();
+        refreshEvents();
         router.refresh();
     }, [refreshEvents, router]);
 
@@ -83,20 +80,17 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
         const monthName = format(currentDate, "MMMM", { locale: tr });
         if (!window.confirm(`${monthName} ayına ait TÜM kayıtları takvimden kaldırmak istediğinizden emin misiniz? (Sistemden silinmez, sadece bu görünümden gizlenir)`)) return;
 
-        setIsRefreshing(true);
         try {
-            const res = await clearMonthAgendaEventsAction(currentDate.getFullYear(), currentDate.getMonth() + 1);
+            const res = await clearMonthAgendaEventsAction(year, month);
             if (res.success) {
                 toast.success(`${monthName} ayı başarıyla temizlendi.`);
-                await refreshEvents();
+                refreshEvents();
                 router.refresh();
             } else {
                 toast.error(res.error || "Temizleme işlemi başarısız.");
             }
         } catch (error) {
             toast.error("Bir hata oluştu.");
-        } finally {
-            setIsRefreshing(false);
         }
     }
 
@@ -111,7 +105,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
             const res = await bulkDeleteAgendaEventsAction(selectedIds);
             if (res.success) {
                 toast.success("Seçili kayıtlar takvimden kaldırıldı.");
-                await refreshEvents();
+                refreshEvents();
                 router.refresh();
             } else {
                 toast.error(res.error || "Hata oluştu.");
@@ -130,23 +124,23 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
             {/* Left Area: Calendar */}
             <div className="flex-1 min-w-0 flex flex-col gap-6">
                 {/* Header Controls */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-border p-5 rounded-[2.5rem] shadow-sm gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-border p-4 rounded-xl shadow-sm gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-muted/50 rounded-2xl border border-border p-1">
+                        <div className="flex items-center bg-muted/50 rounded-lg border border-border p-1">
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-                                className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-md"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="w-32 sm:w-40 text-center text-[13px] font-bold uppercase tracking-widest text-foreground">
+                            <span className="w-32 sm:w-40 text-center text-xs font-bold uppercase tracking-widest text-foreground">
                                 {format(currentDate, "MMMM yyyy", { locale: tr })}
                             </span>
                             <Button
                                 variant="ghost" size="icon"
                                 onClick={() => handleMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-                                className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-md"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -154,7 +148,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         <Button
                             onClick={() => handleMonthChange(new Date())}
                             variant="outline"
-                            className="h-11 border-border bg-background hover:bg-muted text-foreground font-black rounded-2xl px-5 text-[10px] tracking-[0.2em]"
+                            className="h-8 border-border bg-background hover:bg-muted text-foreground font-black rounded-md px-3 text-[10px] tracking-widest"
                         >
                             BUGÜN
                         </Button>
@@ -162,10 +156,12 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
 
                     <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-1">
                         <Button
-                            onClick={refreshEvents}
+                            onClick={() => {
+                                queryClient.invalidateQueries({ queryKey: ["agenda-events", year, month] });
+                            }}
                             variant="ghost"
                             size="icon"
-                            className={cn("h-11 w-11 text-muted-foreground hover:text-foreground rounded-2xl bg-muted/60 border border-border", isRefreshing && "animate-spin")}
+                            className={cn("h-8 w-8 text-muted-foreground hover:text-foreground rounded-md bg-muted/60 border border-border", isRefreshing && "animate-spin")}
                         >
                             <RefreshCw className="h-4 w-4" />
                         </Button>
@@ -173,7 +169,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
                         <Button
                             onClick={handleClearMonth}
                             variant="ghost"
-                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 rounded-2xl h-11 px-6 flex items-center gap-2 border border-rose-500/20 transition-all font-black group"
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/5 rounded-md h-8 px-4 flex items-center gap-2 border border-rose-500/20 transition-all font-black group"
                         >
                             <Trash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
                             <span className="hidden sm:inline text-[10px] uppercase tracking-[0.15em] leading-none">Ayı Temizle</span>
@@ -181,7 +177,7 @@ export function AjandaPageClient({ initialEvents }: AjandaPageClientProps) {
 
                         <Button
                             onClick={() => { setSelectedDate(new Date()); setIsDayModalOpen(true); }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-11 px-7 flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 transition-all font-black"
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-md h-8 px-4 flex items-center gap-2 shadow-sm active:scale-95 transition-all font-black"
                         >
                             <Plus className="h-4 w-4" />
                             <span className="hidden sm:inline text-[10px] uppercase tracking-[0.15em] leading-none">Yeni İşlem</span>

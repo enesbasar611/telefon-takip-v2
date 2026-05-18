@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import prisma from "@/lib/prisma";
 import { ServiceStatus } from "@prisma/client";
 import { serializePrisma, formatName, toTitleCase } from "@/lib/utils";
@@ -186,6 +186,8 @@ export async function createServiceTicket(rawData: any) {
     revalidatePath("/servis/liste");
     revalidatePath("/satis/kasa");
     revalidatePath("/");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`tickets-${shopId}`);
     return { success: true, data: serializePrisma(ticket), whatsappPending };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -372,6 +374,8 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
     revalidatePath("/stok");
     revalidatePath("/satis/kasa");
     revalidatePath("/");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`tickets-${shopId}`);
     return { success: true, data: serializePrisma(ticket), whatsappPending };
   } catch (error) {
     console.error("Error updating service status:", error);
@@ -391,6 +395,7 @@ export async function updateServiceCost(ticketId: string, estimatedCost: number,
     });
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${ticketId}`);
+    revalidateTag(`tickets-${shopId}`);
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
     console.error("Error updating service cost:", error);
@@ -451,6 +456,8 @@ export async function addServiceLogWithNote(ticketId: string, status: ServiceSta
 
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${ticketId}`);
+    revalidateTag(`tickets-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, data: serializePrisma(log) };
   } catch (error) {
     console.error("Error adding service log:", error);
@@ -484,6 +491,7 @@ export async function assignTechnician(ticketId: string, technicianId: string) {
     });
 
     revalidatePath("/servis/liste");
+    revalidateTag(`tickets-${shopId}`);
     return { success: true, data: serializePrisma(ticket) };
   } catch (error) {
     console.error("Error assigning technician:", error);
@@ -561,6 +569,8 @@ export async function addPartToService(ticketId: string, productId: string, quan
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${ticketId}`);
     revalidatePath("/stok");
+    revalidateTag(`tickets-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Error adding part to service:", error);
@@ -610,6 +620,8 @@ export async function removePartFromService(partId: string) {
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${part.ticketId}`);
     revalidatePath("/stok");
+    revalidateTag(`tickets-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Error removing part from service:", error);
@@ -641,6 +653,7 @@ export async function updateServiceUsedPart(partId: string, data: { unitPrice?: 
 
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${part.ticketId}`);
+    revalidateTag(`tickets-${shopId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Error updating service part:", error);
@@ -754,6 +767,8 @@ export async function orderAndAddPartToService(data: {
     revalidatePath(`/servis/liste`);
     revalidatePath(`/servis/${data.ticketId}`);
     revalidatePath("/tedarikciler");
+    revalidateTag(`tickets-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Order and add part error:", error);

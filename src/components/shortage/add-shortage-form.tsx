@@ -9,13 +9,10 @@ import {
     Trash2,
     Loader2,
     PackagePlus,
-    Store,
     User,
-    Phone,
     CheckCircle2,
     PackageCheck,
     Hash,
-    CheckCircle,
     AlertTriangle,
     ArrowRight,
     Users,
@@ -178,7 +175,6 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
     };
 
     const handleAssign = async () => {
-        // Collect all items to assign: basket + current selection (if any)
         const itemsToAssign: any[] = [...basket];
 
         if (selectedProduct || newName.trim()) {
@@ -226,14 +222,12 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
 
             await addShortageBulk(finalItems);
 
-            // Reset
             setNewName("");
             setSelectedProduct(null);
             setQuantity(1);
             setBasket([]);
             setShowResults(false);
             onSuccess?.();
-            // toast.success is handled by context
         } catch (err) {
             toast.error("Atama sırasında bir hata oluştu.");
         } finally {
@@ -244,7 +238,7 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
     const handleSelectProduct = (product: any) => {
         setSelectedProduct(product);
         setNewName(product.name);
-        setSearchResults([]); // Clear results immediately
+        setSearchResults([]);
         setShowResults(false);
     };
 
@@ -269,29 +263,29 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
     return (
         <div className={cn("space-y-4", className)}>
             <div className="space-y-4 bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl">
-                <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 shrink-0">
                         <UserPlus className="h-3 w-3 text-blue-400" /> Sipariş Veren
                     </p>
-                    <div className="flex bg-card/60 p-1 rounded-lg border border-border/50">
+                    <div className="flex bg-card/60 p-1 rounded-lg border border-border/50 shrink-0 w-full sm:w-auto overflow-hidden">
                         <button
                             type="button"
                             onClick={() => handleRequesterTypeChange("SHOP")}
-                            className={cn("px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "SHOP" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
+                            className={cn("flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "SHOP" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
                         >
                             DÜKKAN
                         </button>
                         <button
                             type="button"
                             onClick={() => handleRequesterTypeChange("CUSTOMER")}
-                            className={cn("px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "CUSTOMER" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
+                            className={cn("flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "CUSTOMER" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
                         >
                             BAYİ
                         </button>
                         <button
                             type="button"
                             onClick={() => handleRequesterTypeChange("NEW")}
-                            className={cn("px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "NEW" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
+                            className={cn("flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black rounded-md transition-all", requesterType === "NEW" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}
                         >
                             YENİ
                         </button>
@@ -339,7 +333,7 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                 )}
 
                 {requesterType === "NEW" && (
-                    <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
                         <Input
                             placeholder="Müşteri Adı..."
                             value={newRequesterName}
@@ -404,8 +398,8 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                                 )}
                             >
                                 <Users className={cn("h-3 w-3 absolute -right-1 -bottom-1 opacity-10 scale-150 transition-transform group-hover:scale-[2]", selectedCourierId === courier.id && "opacity-40")} />
-                                <span className="relative z-10">{courier.name}</span>
-                                <span className={cn("text-[8px] font-bold opacity-60 uppercase relative z-10", selectedCourierId === courier.id && "opacity-100")}>{courier.surname}</span>
+                                <span className="relative z-10 w-full text-left truncate">{courier.name}</span>
+                                <span className={cn("text-[8px] font-bold opacity-60 uppercase relative z-10 w-full text-left truncate", selectedCourierId === courier.id && "opacity-100")}>{courier.surname}</span>
                             </button>
                         ))}
                     </div>
@@ -498,8 +492,8 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                                                         <span className="text-base font-black group-hover/item:text-blue-500 uppercase truncate leading-tight dark:text-zinc-100">{p.name}</span>
                                                         <span className="text-[10px] font-black group-hover/item:text-blue-500/70 opacity-50 uppercase tracking-widest">{p.barcode || "BARKODSUZ"}</span>
                                                     </div>
-                                                    <Badge className={cn("px-4 py-1.5 rounded-xl font-black text-[10px] shrink-0 shadow-lg", p.stock <= 0 ? "bg-rose-500/20 text-rose-500 group-hover/item:bg-rose-500/30" : "bg-emerald-500/20 text-emerald-500 shadow-emerald-500/10")}>
-                                                        {p.stock} STOK
+                                                    <Badge className={cn("px-4 py-1.5 rounded-xl font-black text-[10px] shrink-0 shadow-lg", (p.stock || 0) <= 0 ? "bg-rose-500/20 text-rose-500 group-hover/item:bg-rose-500/30" : "bg-emerald-500/20 text-emerald-500 shadow-emerald-500/10")}>
+                                                        {p.stock || 0} STOK
                                                     </Badge>
                                                 </div>
                                             </button>
@@ -523,7 +517,6 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                         </Button>
                     )}
                     <div className="flex items-center gap-3">
-                        {/* Quantity Controls */}
                         <div className="flex items-center bg-card/60 p-1.5 rounded-xl border border-border/50 h-12 shrink-0">
                             <button
                                 type="button"
@@ -577,7 +570,6 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                         </div>
                     </div>
 
-                    {/* Basket List UI */}
                     {basket.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 opacity-50 mb-3">
@@ -606,18 +598,19 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                         </div>
                     )}
                 </div>
-
-                <QuickCreateProductModal
-                    open={isQuickCreateOpen}
-                    onOpenChange={setIsQuickCreateOpen}
-                    categories={categories}
-                    initialName={newName}
-                    onSuccess={(product) => {
-                        handleSelectProduct(product);
-                        setIsQuickCreateOpen(false);
-                    }}
-                />
             </div>
+
+            <QuickCreateProductModal
+                open={isQuickCreateOpen}
+                onOpenChange={setIsQuickCreateOpen}
+                categories={categories}
+                initialName={newName}
+                onSuccess={(product) => {
+                    handleSelectProduct(product);
+                    setIsQuickCreateOpen(false);
+                }}
+            />
         </div>
     );
 }
+

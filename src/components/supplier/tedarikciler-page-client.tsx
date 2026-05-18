@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,13 +60,15 @@ import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { SupplierPaymentModal } from "./supplier-payment-modal";
 import { Checkbox } from "@/components/ui/checkbox";
-import { deletePurchaseOrdersAction } from "@/lib/actions/purchase-actions";
+import { deletePurchaseOrdersAction, getPurchaseOrders, getSuppliers, getCriticalAndOutOfStockProducts } from "@/lib/actions/purchase-actions";
+import { getAIAlerts } from "@/lib/actions/stock-ai-actions";
+import { getShop } from "@/lib/actions/setting-actions";
 
 interface TedarikcilerPageClientProps {
-    suppliers: any[];
-    purchaseOrders: any[];
-    aiAlerts: any[];
-    criticalProducts: any[];
+    suppliers?: any[];
+    purchaseOrders?: any[];
+    aiAlerts?: any[];
+    criticalProducts?: any[];
     shop?: any;
 }
 
@@ -81,12 +84,53 @@ import { SupplierProfile } from "./supplier-profile";
 import { PurchaseForm } from "./purchase-form";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 
-export function TedarikcilerPageClient({ suppliers, purchaseOrders: initialPurchaseOrders, aiAlerts, criticalProducts, shop }: TedarikcilerPageClientProps) {
-    const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
+export function TedarikcilerPageClient({
+    suppliers: initialSuppliers,
+    purchaseOrders: initialPurchaseOrders,
+    aiAlerts: initialAiAlerts,
+    criticalProducts: initialCriticalProducts,
+    shop: initialShop
+}: TedarikcilerPageClientProps) {
+    const { data: suppliersData } = useQuery({
+        queryKey: ["suppliers"],
+        queryFn: () => getSuppliers(),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
 
-    useEffect(() => {
-        setPurchaseOrders(initialPurchaseOrders);
-    }, [initialPurchaseOrders]);
+    const { data: purchaseOrdersData } = useQuery({
+        queryKey: ["purchase-orders"],
+        queryFn: () => getPurchaseOrders(),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const { data: aiAlertsData } = useQuery({
+        queryKey: ["ai-alerts"],
+        queryFn: () => getAIAlerts(),
+        staleTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const { data: criticalProductsData } = useQuery({
+        queryKey: ["critical-products"],
+        queryFn: () => getCriticalAndOutOfStockProducts(),
+        staleTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const { data: shopData } = useQuery({
+        queryKey: ["shop"],
+        queryFn: () => getShop(),
+        staleTime: 60 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const suppliers = (suppliersData || initialSuppliers || []) as any[];
+    const purchaseOrders = (purchaseOrdersData || initialPurchaseOrders || []) as any[];
+    const aiAlerts = (aiAlertsData || initialAiAlerts || []) as any[];
+    const criticalProducts = (criticalProductsData || initialCriticalProducts || []) as any[];
+    const shop = shopData || initialShop;
 
     const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
     const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);

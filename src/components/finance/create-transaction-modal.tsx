@@ -159,6 +159,9 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
         queryClient.invalidateQueries({ queryKey: ["finance-summary"] }),
         queryClient.invalidateQueries({ queryKey: ["daily-session"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
         queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
       ]);
