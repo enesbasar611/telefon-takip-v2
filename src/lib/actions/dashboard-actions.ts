@@ -170,7 +170,7 @@ export const getRecentTransactions = async (shopId: string | null) => {
     async () => {
       try {
         const transactions = await prisma.transaction.findMany({
-          where: { shopId },
+          where: { shopId, paymentMethod: { not: "DEBT" } },
           take: 10,
           orderBy: { createdAt: "desc" },
           include: {

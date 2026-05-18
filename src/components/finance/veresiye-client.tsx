@@ -148,6 +148,54 @@ const normalizeSearchText = (value: string) =>
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/ı/g, "i");
 
+const safeExportDate = (value?: string | Date | null) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return format(date, "dd.MM.yyyy", { locale: tr });
+};
+
+const safeSheetName = (name: string, index: number) => {
+    const cleanName = (name || `Musteri ${index + 1}`)
+        .replace(/[\\/?*[\]:]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 28);
+    return `${index + 1}-${cleanName || "Musteri"}`.slice(0, 31);
+};
+
+const csvCell = (value: any) => {
+    const text = value === null || value === undefined ? "" : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+};
+
+const debtExportTitle = (debt: any) =>
+    debt?.sale?.items?.length
+        ? debt.sale.items
+            .map((item: any) => `${item?.product?.name || item?.productName || "Ürün"} x${item?.quantity || 1}`)
+            .join(", ")
+        :
+        debt?.product?.name ||
+        debt?.productName ||
+        debt?.itemName ||
+        debt?.description ||
+        debt?.notes ||
+        "Veresiye kaydı";
+
+const paymentExportTitle = (payment: any) =>
+    payment?.description ||
+    payment?.notes ||
+    payment?.account?.name ||
+    "Tahsilat";
+
+const getSafeDebtRemaining = (debt: any) => {
+    const amount = Number(debt?.amount);
+    const remaining = Number(debt?.remainingAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+    if (!Number.isFinite(remaining)) return 0;
+    return Math.min(Math.max(remaining, 0), amount);
+};
+
 export function VeresiyeClient({
     debts: propsDebts,
     thisMonthCollected: propsThisMonthCollected,
@@ -248,6 +296,18 @@ export function VeresiyeClient({
 
     const queryClient = useQueryClient();
 
+    const invalidateReceivables = () => {
+        queryClient.invalidateQueries({ queryKey: ["debts"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-portfolio"] });
+        queryClient.invalidateQueries({ queryKey: ["debt-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["thisMonthCollected"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+    };
+
     // Queries
     const { data: statementData } = useQuery({
         queryKey: ["customer-statement", historyCustomer?.id || historyCustomer?.customerId],
@@ -316,7 +376,7 @@ export function VeresiyeClient({
             const res = await deleteCustomerPayment(txId);
             if (res.success) {
                 toast.success("Tahsilat geri alındı. Borç bakiyeleri güncellendi.");
-                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
+                invalidateReceivables();
                 router.refresh();
             } else {
                 toast.error(res.error || "İşlem geri alınamadı.");
@@ -332,7 +392,7 @@ export function VeresiyeClient({
             if (res.success) {
                 toast.success("Tahsilat güncellendi.");
                 setEditingTransaction(null);
-                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
+                invalidateReceivables();
                 router.refresh();
             } else {
                 toast.error(res.error || "Güncelleme yapılamadı.");
@@ -417,8 +477,9 @@ export function VeresiyeClient({
                 };
             }
 
-            if (!debt.isPaid) {
-                const amount = Number(debt.remainingAmount);
+            const remainingAmount = getSafeDebtRemaining(debt);
+            if (!debt.isPaid && remainingAmount > 0) {
+                const amount = remainingAmount;
                 if (debt.currency === 'USD') groups[customerId].totalRemainingUSD += amount;
                 else groups[customerId].totalRemainingTRY += amount;
             }
@@ -467,19 +528,19 @@ export function VeresiyeClient({
     }, [debts, searchTerm, filterStatus, debtFilter, sortOrder, now]);
 
     const totalReceivableTRY = useMemo(() =>
-        debts.filter((d: any) => !d.isPaid && (!d.currency || d.currency === 'TRY')).reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
+        debts.filter((d: any) => !d.isPaid && (!d.currency || d.currency === 'TRY')).reduce((sum: number, d: any) => sum + getSafeDebtRemaining(d), 0),
         [debts]);
 
     const totalReceivableUSD = useMemo(() =>
-        debts.filter((d: any) => !d.isPaid && d.currency === 'USD').reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
+        debts.filter((d: any) => !d.isPaid && d.currency === 'USD').reduce((sum: number, d: any) => sum + getSafeDebtRemaining(d), 0),
         [debts]);
 
     const totalOverdue = useMemo(() =>
         debts.filter((d: any) => !d.isPaid && d.dueDate && new Date(d.dueDate) < now)
-            .reduce((sum: number, d: any) => sum + Number(d.remainingAmount), 0),
+            .reduce((sum: number, d: any) => sum + getSafeDebtRemaining(d), 0),
         [debts, now]);
 
-    const activeDebtorCount = new Set(debts.filter((d: any) => !d.isPaid).map((d: any) => d.customer.id)).size;
+    const activeDebtorCount = new Set(debts.filter((d: any) => !d.isPaid && getSafeDebtRemaining(d) > 0).map((d: any) => d.customer.id)).size;
 
     const statsData = [
         {
@@ -537,7 +598,7 @@ export function VeresiyeClient({
         let g1 = 0, g2 = 0, g3 = 0;
         debts.filter((d: any) => !d.isPaid).forEach((d: any) => {
             const days = (now.getTime() - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-            let amt = Number(d.remainingAmount);
+            let amt = getSafeDebtRemaining(d);
 
             // Normalize to default currency for calculations
             if (defaultCurrency === 'TRY' && d.currency === 'USD') {
@@ -611,6 +672,7 @@ export function VeresiyeClient({
 
             if (res.success) {
                 toast.success("Ödeme başarıyla tahsil edildi.");
+                invalidateReceivables();
                 setNeedsRefresh(true);
 
                 // Trigger whatsapp receipt if customer has phone
@@ -692,6 +754,7 @@ export function VeresiyeClient({
             const res = await deleteDebt(debtId);
             if (res.success) {
                 toast.success("Borç kaydı başarıyla silindi.");
+                invalidateReceivables();
                 if (historyCustomer) {
                     setHistoryCustomer({
                         ...historyCustomer,
@@ -718,7 +781,7 @@ export function VeresiyeClient({
             });
             if (res.success) {
                 toast.success("Borç kaydı güncellendi.");
-                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
+                invalidateReceivables();
                 setEditingDebt(null);
                 router.refresh();
             } else {
@@ -738,6 +801,7 @@ export function VeresiyeClient({
             const res = await startTrackingDebt(trackingDebt.id, new Date(trackingDate));
             if (res.success) {
                 toast.success("Takip başarıyla başlatıldı.");
+                invalidateReceivables();
                 setTrackingDebt(null);
                 setTrackingDate("");
             } else {
@@ -974,38 +1038,147 @@ export function VeresiyeClient({
         }
     };
 
-    const exportToExcel = async () => {
-        const data = aggregatedData.flatMap(item => {
-            if (!item.debtItems || item.debtItems.length === 0) {
-                return [{
-                    "Müşteri": item.name,
-                    "Telefon": item.phone || "-",
-                    "Toplam Borç (TL)": item.totalRemainingTRY,
-                    "Toplam Borç (USD)": item.totalRemainingUSD,
-                    "Alınan Ürün/İşlem": "-",
-                    "İşlem Tutarı": 0,
-                    "Kalan Tutar": 0,
-                    "Para Birimi": "-",
-                    "Tarih": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
-                }];
-            }
-            return item.debtItems.map((debt: any) => ({
-                "Müşteri": item.name,
-                "Telefon": item.phone || "-",
-                "Toplam Borç (TL)": item.totalRemainingTRY,
-                "Toplam Borç (USD)": item.totalRemainingUSD,
-                "Alınan Ürün/İşlem": debt.notes || "-",
-                "İşlem Tutarı": Number(debt.amount),
-                "Kalan Tutar": Number(debt.remainingAmount),
-                "Para Birimi": debt.currency || "TRY",
-                "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
+    const getExportCustomers = () => {
+        const selectedIds = new Set(selectedCustomerIds);
+        const customers = selectedIds.size > 0
+            ? aggregatedData.filter((item) => selectedIds.has(item.customerId))
+            : aggregatedData;
+
+        return customers.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+    };
+
+    const buildCustomerExportSections = async () => {
+        const customers = getExportCustomers();
+
+        if (customers.length === 0) {
+            toast.error("Dışarı aktarılacak müşteri bulunamadı.");
+            return [];
+        }
+
+        const toastId = toast.loading("Veresiye çıktısı hazırlanıyor...");
+
+        try {
+            const sections = await Promise.all(customers.map(async (customer) => {
+                const statement = await getCustomerStatement(customer.customerId);
+                const statementDebts = statement.success ? (statement.debts || []) : [];
+                const statementPayments = statement.success ? (statement.transactions || []) : [];
+                const debtsForExport = statementDebts.length > 0 ? statementDebts : customer.debtItems;
+
+                return {
+                    customer,
+                    debts: debtsForExport,
+                    payments: statementPayments,
+                };
             }));
-        });
+
+            toast.success("Çıktı hazırlandı.", { id: toastId });
+            return sections;
+        } catch (error) {
+            console.error(error);
+            toast.error("Çıktı hazırlanırken hata oluştu.", { id: toastId });
+            return [];
+        }
+    };
+
+    const exportRowsForCustomer = (section: any) => {
+        const { customer, debts, payments } = section;
+        const rows: any[][] = [
+            ["Müşteri", customer.name],
+            ["Telefon", customer.phone || "-"],
+            ["Kalan Borç (TL)", Number(customer.totalRemainingTRY || 0)],
+            ["Kalan Borç (USD)", Number(customer.totalRemainingUSD || 0)],
+            ["Kayıt Sayısı", debts.length],
+            [],
+            ["ALINAN ÜRÜNLER / BORÇLAR"],
+            ["Tarih", "Ürün / İşlem", "İşlem Tutarı", "Kalan Tutar", "Para Birimi", "Durum", "Vade"],
+        ];
+
+        if (debts.length === 0) {
+            rows.push(["-", "Borç kaydı yok", 0, 0, "-", "-", "-"]);
+        } else {
+            debts.forEach((debt: any) => {
+                rows.push([
+                    safeExportDate(debt.createdAt),
+                    debtExportTitle(debt),
+                    Number(debt.amount || 0),
+                    getSafeDebtRemaining(debt),
+                    debt.currency || "TRY",
+                    debt.isPaid ? "Ödendi" : "Açık",
+                    safeExportDate(debt.dueDate),
+                ]);
+            });
+        }
+
+        rows.push([]);
+        rows.push(["ÖDEMELER"]);
+        rows.push(["Tarih", "Açıklama", "Tutar", "Para Birimi", "Ödeme Yöntemi"]);
+
+        if (payments.length === 0) {
+            rows.push(["-", "Ödeme kaydı yok", 0, "-", "-"]);
+        } else {
+            payments.forEach((payment: any) => {
+                rows.push([
+                    safeExportDate(payment.createdAt || payment.date),
+                    paymentExportTitle(payment),
+                    Number(payment.amount || 0),
+                    payment.currency || "TRY",
+                    payment.paymentMethod || payment.type || "-",
+                ]);
+            });
+        }
+
+        return rows;
+    };
+
+    const exportToExcel = async () => {
+        const sections = await buildCustomerExportSections();
+        if (sections.length === 0) return;
+
         const XLSX = await import("xlsx");
-        const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Veresiye Detaylı Liste");
-        XLSX.writeFile(wb, "Veresiye_Detayli_Liste.xlsx");
+
+        sections.forEach((section, index) => {
+            const ws = XLSX.utils.aoa_to_sheet(exportRowsForCustomer(section));
+            ws["!cols"] = [
+                { wch: 16 },
+                { wch: 42 },
+                { wch: 16 },
+                { wch: 16 },
+                { wch: 14 },
+                { wch: 14 },
+                { wch: 14 },
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName(section.customer.name, index));
+        });
+
+        const suffix = selectedCustomerIds.length > 0 ? "Secili_Musteriler" : "Tum_Musteriler";
+        XLSX.writeFile(wb, `Veresiye_${suffix}.xlsx`);
+    };
+
+    const exportToCsv = async () => {
+        const sections = await buildCustomerExportSections();
+        if (sections.length === 0) return;
+
+        const rows = sections.flatMap((section, index) => [
+            [`SAYFA ${index + 1}: ${section.customer.name}`],
+            ...exportRowsForCustomer(section),
+            [],
+            ["--- SAYFA SONU ---"],
+            [],
+        ]);
+
+        const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(";")).join("\n")}`;
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const suffix = selectedCustomerIds.length > 0 ? "Secili_Musteriler" : "Tum_Musteriler";
+
+        link.href = url;
+        link.setAttribute("download", `Veresiye_${suffix}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     if (debtsLoading || accountsLoading || ratesLoading || collectedLoading || settingsLoading || shopLoading) {
@@ -1052,45 +1225,7 @@ export function VeresiyeClient({
                             <span className="sm:hidden">Excel</span>
                         </Button>
                         <Button
-                            onClick={async () => {
-                                const data = aggregatedData.flatMap(item => {
-                                    if (!item.debtItems || item.debtItems.length === 0) {
-                                        return [{
-                                            "Müşteri": item.name,
-                                            "Telefon": item.phone || "-",
-                                            "Toplam Borç (TL)": item.totalRemainingTRY,
-                                            "Toplam Borç (USD)": item.totalRemainingUSD,
-                                            "Alınan Ürün/İşlem": "-",
-                                            "İşlem Tutarı": 0,
-                                            "Kalan Tutar": 0,
-                                            "Para Birimi": "-",
-                                            "Tarih": format(item.lastActivity, "dd.MM.yyyy", { locale: tr })
-                                        }];
-                                    }
-                                    return item.debtItems.map((debt: any) => ({
-                                        "Müşteri": item.name,
-                                        "Telefon": item.phone || "-",
-                                        "Toplam Borç (TL)": item.totalRemainingTRY,
-                                        "Toplam Borç (USD)": item.totalRemainingUSD,
-                                        "Alınan Ürün/İşlem": debt.notes || "-",
-                                        "İşlem Tutarı": Number(debt.amount),
-                                        "Kalan Tutar": Number(debt.remainingAmount),
-                                        "Para Birimi": debt.currency || "TRY",
-                                        "Tarih": format(new Date(debt.createdAt), "dd.MM.yyyy", { locale: tr })
-                                    }));
-                                });
-                                const XLSX = await import("xlsx");
-                                const ws = XLSX.utils.json_to_sheet(data);
-                                const csv = XLSX.utils.sheet_to_csv(ws);
-                                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement("a");
-                                link.href = url;
-                                link.setAttribute("download", "Veresiye_Listesi.csv");
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }}
+                            onClick={exportToCsv}
                             variant="ghost"
                             className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-muted/50 border border-border shadow-xl gap-2 text-xs hover:bg-muted transition-all text-foreground"
                         >
@@ -1262,7 +1397,7 @@ export function VeresiyeClient({
                                             className={cn(
                                                 "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all",
                                                 filterStatus === s
-                                                    ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
+                                                    ? "bg-background dark:bg-zinc-800 text-indigo-600 shadow-sm"
                                                     : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
@@ -1918,7 +2053,7 @@ export function VeresiyeClient({
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
                                     const combined = [
                                         ...(statementData.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).map((t: any) => ({
+                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({
                                             ...t,
                                             type: 'PAYMENT',
                                             notes: t.description || 'Tahsilat / Ödeme',
@@ -1948,12 +2083,12 @@ export function VeresiyeClient({
                             const debtsToDisplay = statementData?.debts || (historyCustomer as any)?.debtItems || [];
                             const items = [
                                 ...debtsToDisplay.map((d: any) => ({ ...d, listType: 'DEBT' })),
-                                ...(statementData?.transactions || []).map((t: any) => ({ ...t, listType: 'PAYMENT' }))
+                                ...((statementData?.transactions || []) as any[]).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, listType: 'PAYMENT' }))
                             ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                             const isDataLoading = !statementData;
 
-                            if (items.length === 0 && !isDataLoading) return <div className="text-center py-12 text-slate-400 font-bold uppercase text-[10px]">Veri Bulunamadı</div>;
+                            if (items.length === 0 && !isDataLoading) return <div className="text-center py-12 text-muted-foreground font-bold uppercase text-[10px]">Veri Bulunamadı</div>;
 
                             return (
                                 <>
@@ -2004,7 +2139,7 @@ export function VeresiyeClient({
                                                             {item.sale && (
                                                                 <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 rounded-full font-black border border-indigo-500/10">POS SATIŞI</span>
                                                             )}
-                                                            {Number(item.amount) !== Number(item.remainingAmount) && (
+                                                            {Number(item.amount) !== getSafeDebtRemaining(item) && (
                                                                 <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded italic">
                                                                     Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                                 </span>
@@ -2069,7 +2204,7 @@ export function VeresiyeClient({
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{item.isPaid ? "ÖDENDİ" : "KALAN"}:</span>
                                                             <span className={cn("text-sm font-black tabular-nums", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
-                                                                {item.currency === 'USD' ? '$' : '₺'}{Number(item.remainingAmount).toLocaleString('tr-TR')}
+                                                                {item.currency === 'USD' ? '$' : '₺'}{getSafeDebtRemaining(item).toLocaleString('tr-TR')}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -2174,8 +2309,8 @@ export function VeresiyeClient({
                                     let sumUSD = 0;
                                     (historyCustomer?.debtItems || []).forEach((d: any) => {
                                         if (selectedDebtIds.includes(d.id)) {
-                                            if (d.currency === 'USD') sumUSD += Number(d.remainingAmount);
-                                            else sumTRY += Number(d.remainingAmount);
+                                            if (d.currency === 'USD') sumUSD += getSafeDebtRemaining(d);
+                                            else sumTRY += getSafeDebtRemaining(d);
                                         }
                                     });
 
@@ -2255,9 +2390,8 @@ export function VeresiyeClient({
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* --- Portfolio Modal --- */}
             <AlertDialog open={!!portfolioCustomer} onOpenChange={(o) => { if (!o) setPortfolioCustomer(null); }}>
-                <AlertDialogContent className="max-w-[900px] h-[85vh] bg-white rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-[0_50px_200px_-50px_rgba(0,0,0,0.5)] border-none">
+                <AlertDialogContent className="max-w-[900px] h-[85vh] bg-background dark:bg-zinc-950 rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-[0_50px_200px_-50px_rgba(0,0,0,0.5)] border-none">
                     <div className="px-10 py-12 bg-slate-900 border-b border-white/5 relative overflow-hidden shrink-0">
                         <div className="absolute top-0 right-0 p-12 opacity-10"><User className="w-32 h-32 rotate-12 text-white" /></div>
                         <div className="relative z-10 flex items-center gap-8">
@@ -2311,7 +2445,7 @@ export function VeresiyeClient({
                         </div>
                     </div>
 
-                    <div className="p-10 overflow-y-auto flex-1 scrollbar-hide bg-slate-50">
+                    <div className="p-10 overflow-y-auto flex-1 scrollbar-hide bg-slate-50 dark:bg-zinc-900/50">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {/* Stats Column */}
                             <div className="space-y-6">
@@ -2333,23 +2467,23 @@ export function VeresiyeClient({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-8 rounded-[2rem] bg-white border border-slate-200">
-                                    <span className="block text-[10px] font-black text-slate-400 uppercase mb-2">SİSTEM HAREKETİ</span>
+                                <div className="p-8 rounded-[2rem] bg-card border border-border">
+                                    <span className="block text-[10px] font-black text-muted-foreground uppercase mb-2">SİSTEM HAREKETİ</span>
                                     <div className="space-y-4 pt-2">
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Satış</span><span className="text-xs font-black text-slate-900">{portfolioData?.sales?.length ?? '-'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Teknik Servis</span><span className="text-xs font-black text-slate-900">{portfolioData?.tickets?.length ?? '-'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Alacak Kaydı</span><span className="text-xs font-black text-slate-900">{portfolioData?.debts?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Satış</span><span className="text-xs font-black text-foreground">{portfolioData?.sales?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Teknik Servis</span><span className="text-xs font-black text-foreground">{portfolioData?.tickets?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Alacak Kaydı</span><span className="text-xs font-black text-foreground">{portfolioData?.debts?.length ?? '-'}</span></div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Feed Column */}
                             <div className="md:col-span-2 space-y-8">
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">SON İŞLEMLER</h4>
+                                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-2">SON İŞLEMLER</h4>
                                 <div className="space-y-4">
                                     {!portfolioData ? (
                                         <div className="flex items-center justify-center h-32">
-                                            <RefreshCcw className="w-6 h-6 text-slate-400 animate-spin" />
+                                            <RefreshCcw className="w-6 h-6 text-muted-foreground animate-spin" />
                                         </div>
                                     ) : [
                                         ...(portfolioData.sales || []).map((s: any) => ({ ...s, type: 'SALE', label: 'Satış İşlemi', amount: s.finalAmount || 0, formattedDate: new Date(s.createdAt) })),
@@ -2360,7 +2494,7 @@ export function VeresiyeClient({
                                         .sort((a: any, b: any) => b.formattedDate.getTime() - a.formattedDate.getTime())
                                         .slice(0, 9)
                                         .map((item: any, i) => (
-                                            <div key={i} className={cn("flex items-center gap-5 p-4 md:p-6 bg-white rounded-3xl border border-slate-100 shadow-sm transition-all cursor-default", item.type === 'DEBT' && item.isPaid && "opacity-60")}>
+                                            <div key={i} className={cn("flex items-center gap-5 p-4 md:p-6 bg-card rounded-3xl border border-border shadow-sm transition-all cursor-default", item.type === 'DEBT' && item.isPaid && "opacity-60")}>
                                                 <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shrink-0",
                                                     item.type === 'SALE' ? "bg-indigo-100 text-indigo-600" :
                                                         item.type === 'TICKET' ? "bg-amber-100 text-amber-600" :
@@ -2374,22 +2508,22 @@ export function VeresiyeClient({
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="block text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
+                                                        <span className="block text-[9px] font-black text-muted-foreground uppercase">{item.label}</span>
                                                         {item.type === 'DEBT' && (
                                                             <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase", item.isPaid ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
                                                                 {item.isPaid ? "ÖDENDİ" : "BEKLİYOR"}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className="block text-xs md:text-sm font-bold text-slate-900 truncate">{item.saleNumber || item.ticketNumber || item.deviceModel || item.notes || "Belirtilmemiş İşlem"}</span>
-                                                    <span className="block text-[10px] text-slate-400 mt-0.5">{item.formattedDate.toLocaleDateString('tr-TR')}</span>
+                                                    <span className="block text-xs md:text-sm font-bold text-foreground truncate">{item.saleNumber || item.ticketNumber || item.deviceModel || item.notes || "Belirtilmemiş İşlem"}</span>
+                                                    <span className="block text-[10px] text-muted-foreground mt-0.5">{item.formattedDate.toLocaleDateString('tr-TR')}</span>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end">
-                                                    <span className={cn("text-base md:text-lg font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600" : "text-slate-900")}>
+                                                    <span className={cn("text-base md:text-lg font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600" : "text-foreground")}>
                                                         {item.type === 'COLLECTION' ? '+' : ''}{item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
                                                     {item.currency === 'USD' && (
-                                                        <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                                                        <span className="text-[10px] font-bold text-muted-foreground tabular-nums">
                                                             ~₺{Math.round(Number(item.amount) * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
                                                         </span>
                                                     )}
@@ -2425,7 +2559,7 @@ export function VeresiyeClient({
                         </div>
                     </div>
                     <div className="p-10 border-t border-slate-100 shrink-0 flex justify-end">
-                        <Button variant="ghost" onClick={() => setPortfolioCustomer(null)} className="h-14 px-10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-400">PENCEREYİ KAPAT</Button>
+                        <Button variant="ghost" onClick={() => setPortfolioCustomer(null)} className="h-14 px-10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-muted-foreground">PENCEREYİ KAPAT</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -2436,7 +2570,7 @@ export function VeresiyeClient({
                     setPaymentSummary(null);
                 }
             }}>
-                <AlertDialogContent className="max-w-[500px] bg-white rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
+                <AlertDialogContent className="max-w-[500px] bg-background dark:bg-zinc-950 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
                     <div className="p-8 bg-emerald-500 text-white flex flex-col items-center gap-4 text-center">
                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
                             <CheckCircle2 className="w-10 h-10 text-white" />
@@ -2448,7 +2582,7 @@ export function VeresiyeClient({
                     </div>
                     <div className="p-8 space-y-6">
                         <div className="space-y-3">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ÖDEME YAPILAN KALEMLER</span>
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">ÖDEME YAPILAN KALEMLER</span>
                             <div className="space-y-1.5">
                                 {paymentSummary?.items.map((it, i) => (
                                     <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -2548,7 +2682,7 @@ export function VeresiyeClient({
             }
             {/* --- Stats Detail Modal --- */}
             <AlertDialog open={statsModalOpen} onOpenChange={setStatsModalOpen}>
-                <AlertDialogContent className="max-w-[900px] w-[95vw] bg-white rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none flex flex-col max-h-[85vh]">
+                <AlertDialogContent className="max-w-[900px] w-[95vw] bg-background dark:bg-zinc-950 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none flex flex-col max-h-[85vh]">
                     <div className="p-8 bg-indigo-600 text-white flex flex-col gap-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><History className="w-48 h-48 rotate-12" /></div>
                         <div className="flex justify-between items-start relative z-10">
@@ -2585,7 +2719,7 @@ export function VeresiyeClient({
                             </div>
                             <Button
                                 onClick={() => setStatsDates(d => ({ ...d }))}
-                                className="mt-5 bg-white text-indigo-600 hover:bg-indigo-50 h-10 rounded-xl px-6 font-bold text-xs uppercase"
+                                className="mt-5 bg-background dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 hover:bg-muted h-10 rounded-xl px-6 font-bold text-xs uppercase"
                             >
                                 Uygula
                             </Button>
@@ -2606,13 +2740,13 @@ export function VeresiyeClient({
                         ) : (
                             <div className="space-y-3">
                                 {(statsModalData || []).map((item: any, idx: number) => (
-                                    <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 hover:border-slate-200 transition-all group">
+                                    <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted/40 border border-border rounded-2xl hover:bg-muted/60 transition-all group">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-indigo-600 font-bold text-xs border border-slate-100">
+                                            <div className="w-10 h-10 rounded-full bg-background dark:bg-zinc-800 flex items-center justify-center shadow-sm text-indigo-600 font-bold text-xs border border-border">
                                                 {item.customer?.name?.[0] || '?'}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase text-sm tracking-tight">{item.customer?.name || "Bilinmeyen Müşteri"}
+                                                <span className="font-bold text-foreground group-hover:text-indigo-600 transition-colors uppercase text-sm tracking-tight">{item.customer?.name || "Bilinmeyen Müşteri"}
                                                     {(statsModalType === 'COLLECTED') && <Badge variant="secondary" className="ml-2 text-[8px] px-1.5 h-4">{item.paymentMethod}</Badge>}
                                                 </span>
                                                 <div className="flex items-center gap-4 mt-1">
@@ -2633,7 +2767,7 @@ export function VeresiyeClient({
                                                     "text-lg font-black font-mono",
                                                     (statsModalType === 'COLLECTED' || item.type === 'INCOME') ? "text-emerald-600" : "text-rose-600"
                                                 )}>
-                                                    {item.currency === 'USD' ? '$' : '₺'}{Number(item.remainingAmount || item.amount).toLocaleString('tr-TR')}
+                                                    {item.currency === 'USD' ? '$' : '₺'}{(item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : Number(item.amount || 0)).toLocaleString('tr-TR')}
                                                 </span>
                                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                                     {(statsModalType === 'COLLECTED' || item.type === 'INCOME') ? "Tahsil Edildi" : "Kalan Borç"}
@@ -2724,3 +2858,4 @@ export function VeresiyeClient({
         </div>
     );
 }
+

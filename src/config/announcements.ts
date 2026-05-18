@@ -22,6 +22,41 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
     {
+        id: "v2.2.0-panel-raporlama-iyilestirmeleri",
+        version: "2.2.0",
+        date: "2026-05-18",
+        type: "UPDATE",
+        title: "Panel, Raporlama ve Dışa Aktarma İyileştirildi",
+        description: "Dashboard daha stabil açılıyor, raporlar daha okunabilir hale geldi ve veresiye çıktıları artık müşteri bazlı hazırlanıyor.",
+        features: [
+            {
+                title: "Dashboard Düzeni Sabitlendi",
+                description: "İlk açılışta kartların sıkışması ve üst üste binmesi engellendi. Kullanıcının son kaydettiği panel düzeni artık korunuyor.",
+                icon: "LayoutDashboard"
+            },
+            {
+                title: "Daha Hızlı ve Sakin Geçişler",
+                description: "Dashboard, kurye ve stok gibi yoğun ekranlarda gereksiz yeniden yüklemeler azaltıldı; eski veri korunarak titreşim ve bekleme hissi düşürüldü.",
+                icon: "Zap"
+            },
+            {
+                title: "Veresiye Excel/CSV Çıktıları",
+                description: "Müşteri seçiliyken sadece seçili müşteriler, seçim yokken tüm müşteriler aktarılır. Excel'de her müşteri ayrı sayfada; CSV'de ayrı bölümler halinde görünür.",
+                icon: "FileSpreadsheet"
+            },
+            {
+                title: "Başar AI Servis Raporu",
+                description: "Teknik servis AI analiz penceresi dark/light moda uyumlu, daha kısa ve daha anlaşılır bir rapor görünümüne kavuştu.",
+                icon: "Sparkles"
+            },
+            {
+                title: "Ayarlar Formları Düzeltildi",
+                description: "Dinamik formlar sekmesinde dükkan bilgisi yüklenirken oluşan hata giderildi; formlar artık daha güvenli açılıyor.",
+                icon: "Settings"
+            }
+        ]
+    },
+    {
         id: "v2.1.0-kurye-takip",
         version: "2.1.0",
         date: "2024-05-08",

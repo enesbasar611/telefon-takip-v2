@@ -6,6 +6,18 @@ import { getShopId, getUserId } from "@/lib/auth";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
+const normalizeMoney = (value: unknown) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Number(amount.toFixed(2));
+};
+
+const clampRemainingAmount = (remaining: unknown, amount: unknown) => {
+  const safeAmount = Math.max(0, normalizeMoney(amount));
+  const safeRemaining = Math.max(0, normalizeMoney(remaining));
+  return Math.min(safeRemaining, safeAmount);
+};
+
 export async function getDebts() {
   try {
     const shopId = await getShopId(false);
@@ -82,7 +94,12 @@ export async function createDebt(data: {
         select: { balance: true, balanceUsd: true, name: true }
       });
 
-      let initialRemaining = data.amount;
+      const debtAmount = normalizeMoney(data.amount);
+      if (debtAmount <= 0) {
+        throw new Error("Geçerli bir borç tutarı giriniz.");
+      }
+
+      let initialRemaining = debtAmount;
       const currency = data.currency || "TRY";
       const balanceField = currency === "USD" ? "balanceUsd" : "balance";
       const currentBalance = Number(customer?.[balanceField] || 0);
@@ -119,8 +136,8 @@ export async function createDebt(data: {
       const newDebt = await tx.debt.create({
         data: {
           customerId: data.customerId,
-          amount: data.amount,
-          remainingAmount: initialRemaining,
+          amount: debtAmount,
+          remainingAmount: clampRemainingAmount(initialRemaining, debtAmount),
           currency: currency,
           isPaid: initialRemaining <= 0.01,
           exchangeRate: data.exchangeRate,
@@ -136,9 +153,9 @@ export async function createDebt(data: {
       await tx.transaction.create({
         data: {
           type: "INCOME", // It's an asset increase (receivable)
-          amount: data.amount,
+          amount: debtAmount,
           currency: currency,
-          description: `VERESİYE BORÇ: ${data.notes || (data.items ? data.items[0]?.title : 'Yeni Borç')}${initialRemaining < data.amount ? ' (Kısmi Ödeme Yapıldı)' : ''}`,
+          description: `VERESİYE BORÇ: ${data.notes || (data.items ? data.items[0]?.title : 'Yeni Borç')}${initialRemaining < debtAmount ? ' (Kısmi Ödeme Yapıldı)' : ''}`,
           paymentMethod: "DEBT",
           userId,
           shopId,
@@ -212,22 +229,28 @@ export async function updateDebt(data: {
     const existing = await prisma.debt.findUnique({ where: { id: data.id, shopId } });
     if (!existing) return { success: false, error: "Kayıt bulunamadı." };
 
+    const debtAmount = normalizeMoney(data.amount);
+    if (debtAmount <= 0) return { success: false, error: "Geçerli bir borç tutarı giriniz." };
+
     // Calculate the difference between old and new amount to adjust remaining
-    const diff = data.amount - Number(existing.amount);
-    const newRemaining = Number(existing.remainingAmount) + diff;
+    const existingAmount = normalizeMoney(existing.amount);
+    const existingRemaining = clampRemainingAmount(existing.remainingAmount, existing.amount);
+    const diff = debtAmount - existingAmount;
+    const newRemaining = clampRemainingAmount(existingRemaining + diff, debtAmount);
 
     const debt = await prisma.debt.update({
       where: { id: data.id, shopId },
       data: {
-        amount: data.amount,
+        amount: debtAmount,
         currency: data.currency,
         notes: data.notes,
-        remainingAmount: newRemaining < 0 ? 0 : newRemaining, // Ensure no negative remainings
-        isPaid: newRemaining <= 0
+        remainingAmount: newRemaining,
+        isPaid: newRemaining <= 0.01
       }
     });
 
     revalidatePath("/veresiye");
+    revalidateTag(`dashboard-${shopId}`);
     return { success: true, debt: serializePrisma(debt) };
   } catch (error) {
     console.error("updateDebt error:", error);
@@ -247,7 +270,10 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
     });
     if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
 
-    const newRemaining = Number(debt.remainingAmount) - paymentAmount;
+    const currentRemaining = clampRemainingAmount(debt.remainingAmount, debt.amount);
+    const appliedPayment = Math.min(paymentAmount, currentRemaining);
+    const excessPayment = Math.max(0, paymentAmount - appliedPayment);
+    const newRemaining = clampRemainingAmount(currentRemaining - appliedPayment, debt.amount);
 
     // Use a transaction to ensure all updates happen together
     await prisma.$transaction(async (tx) => {
@@ -256,9 +282,17 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
         where: { id: debtId, shopId },
         data: {
           remainingAmount: newRemaining,
-          isPaid: newRemaining <= 0
+          isPaid: newRemaining <= 0.01
         }
       });
+
+      if (excessPayment > 0.01) {
+        const balanceField = debt.currency === "USD" ? "balanceUsd" : "balance";
+        await tx.customer.update({
+          where: { id: debt.customerId },
+          data: { [balanceField]: { increment: excessPayment } }
+        });
+      }
 
       // 2. Identify the target finance account
       let targetAccountId = accountId;
@@ -290,6 +324,7 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
         data: {
           type: "INCOME",
           amount: paymentAmount,
+          currency: debt.currency || "TRY",
           description: `Borç Tahsilatı: ${debt.customer.name}`,
           paymentMethod,
           financeAccountId: targetAccountId,
@@ -397,7 +432,7 @@ export async function collectGlobalCustomerPayment(
         let amountToApplyFromPayment = 0;
         let amountToReduceFromDebt = 0;
 
-        const debtRemaining = Number(debt.remainingAmount);
+        const debtRemaining = clampRemainingAmount(debt.remainingAmount, debt.amount);
 
         // Case 1: Same currency
         if (debt.currency === paymentCurrency) {
@@ -418,11 +453,12 @@ export async function collectGlobalCustomerPayment(
         }
 
         if (amountToReduceFromDebt > 0.001) { // Only update if significant
+          const newRemaining = clampRemainingAmount(debtRemaining - amountToReduceFromDebt, debt.amount);
           await tx.debt.update({
             where: { id: debt.id },
             data: {
-              remainingAmount: { decrement: amountToReduceFromDebt },
-              isPaid: (debtRemaining - amountToReduceFromDebt) <= 0.01
+              remainingAmount: newRemaining,
+              isPaid: newRemaining <= 0.01
             }
           });
           remainingPayment -= amountToApplyFromPayment;
@@ -478,8 +514,9 @@ export async function collectGlobalCustomerPayment(
       where: { customerId, shopId, isPaid: false }
     });
     for (const d of remainingDebts) {
-      if (d.currency === "USD") totalRemainingUSD += Number(d.remainingAmount);
-      else totalRemainingTRY += Number(d.remainingAmount);
+      const remaining = clampRemainingAmount(d.remainingAmount, d.amount);
+      if (d.currency === "USD") totalRemainingUSD += remaining;
+      else totalRemainingTRY += remaining;
     }
 
     if (!customerId) {
@@ -519,7 +556,11 @@ export async function getCustomerStatement(customerId: string) {
       orderBy: { createdAt: "desc" }
     });
     const transactions = await prisma.transaction.findMany({
-      where: { customerId, shopId },
+      where: {
+        customerId,
+        shopId,
+        paymentMethod: { not: "DEBT" }
+      },
       orderBy: { createdAt: "desc" }
     });
 

@@ -29,6 +29,7 @@ import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AddDebtModalProps {
     children?: React.ReactNode;
@@ -79,6 +80,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
     const { toast } = useToast();
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const { defaultCurrency, settings } = useDashboardData();
     const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
@@ -364,6 +366,12 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 setSelectedCustomerInfo(null);
                 setDebtItems([]);
                 if (onSuccess) onSuccess();
+                queryClient.invalidateQueries({ queryKey: ["debts"] });
+                queryClient.invalidateQueries({ queryKey: ["customer-statement"] });
+                queryClient.invalidateQueries({ queryKey: ["customer-portfolio"] });
+                queryClient.invalidateQueries({ queryKey: ["thisMonthCollected"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
                 router.refresh();
             } else {
                 toast({

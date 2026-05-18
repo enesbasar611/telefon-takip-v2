@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bike, Palette, Layout, Sparkles, ChevronRight, ChevronLeft, Check, X } from "lucide-react";
+import { Bike, Palette, Layout, Sparkles, ChevronRight, ChevronLeft, Check, X, LayoutDashboard, Zap, FileSpreadsheet, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
@@ -21,9 +21,35 @@ const iconMap: Record<string, any> = {
     Palette,
     Layout,
     Sparkles,
+    LayoutDashboard,
+    Zap,
+    FileSpreadsheet,
+    Settings,
 };
 
 const settingValueToString = (value: unknown) => typeof value === "string" ? value : "";
+
+const getAnnouncementSignature = (announcement: Announcement) => {
+    const payload = JSON.stringify({
+        id: announcement.id,
+        version: announcement.version,
+        date: announcement.date,
+        title: announcement.title,
+        description: announcement.description,
+        features: announcement.features,
+        type: announcement.type,
+    });
+
+    let hash = 0;
+    for (let i = 0; i < payload.length; i++) {
+        hash = ((hash << 5) - hash + payload.charCodeAt(i)) | 0;
+    }
+
+    return Math.abs(hash).toString(36);
+};
+
+const getAnnouncementSeenKey = (announcement: Announcement) =>
+    `${announcement.id}:${getAnnouncementSignature(announcement)}`;
 
 export function AnnouncementsModal() {
     const { settings } = useDashboardData();
@@ -44,10 +70,18 @@ export function AnnouncementsModal() {
 
         const allSeenIds = Array.from(new Set([...dbSeenIds, ...localSeenIds]));
 
-        const unseen = ANNOUNCEMENTS.filter(a => !allSeenIds.includes(a.id));
+        const unseen = ANNOUNCEMENTS.filter((announcement, index) => {
+            const seenKey = getAnnouncementSeenKey(announcement);
+            const wasSeenWithCurrentContent = allSeenIds.includes(seenKey);
+            const wasSeenBeforeContentTracking = allSeenIds.includes(announcement.id);
+
+            if (index > 0 && wasSeenBeforeContentTracking) return false;
+            return !wasSeenWithCurrentContent;
+        });
 
         if (unseen.length > 0) {
             setUnseenAnnouncements(unseen);
+            setCurrentIndex(0);
             setHasBeenShown(true);
             // Small delay for better UX
             const timer = setTimeout(() => setOpen(true), 2000);
@@ -57,7 +91,7 @@ export function AnnouncementsModal() {
 
     const handleClose = async () => {
         setOpen(false);
-        const seenIds = unseenAnnouncements.map(a => a.id);
+        const seenIds = unseenAnnouncements.flatMap(a => [a.id, getAnnouncementSeenKey(a)]);
         const dbSeenRaw = settingValueToString(settings?.find(s => s.key === "seen_announcements")?.value);
         const existingIds = dbSeenRaw.split(",").filter(Boolean);
 
