@@ -25,16 +25,15 @@ import { cn } from "@/lib/utils";
 import { GripVertical, X, Plus, RotateCcw, Maximize2, LayoutList, LayoutGrid, MousePointer2, Eraser, History, Save, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDashboard } from "./dashboard-context";
-
-interface WidgetConfig {
-    id: string;
-    cols: number;
-    rows: number;
-    settings?: Record<string, any>;
-}
+import {
+    DashboardWidgetConfig,
+    getSystemDashboardLayout,
+    isCollapsedDashboardLayout,
+    normalizeDashboardLayout,
+} from "@/lib/dashboard-layout";
 
 interface DashboardClientProps {
-    initialLayout: WidgetConfig[] | string[];
+    initialLayout: DashboardWidgetConfig[] | string[];
     initialData?: unknown;
     widgets: Record<string, React.ReactNode>;
     widgetLabels?: Record<string, string>;
@@ -43,49 +42,26 @@ interface DashboardClientProps {
 
 export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, shopId }: DashboardClientProps) {
     const { isEditMode, setIsEditMode, saveLayout, isPending, hasChanges, setHasChanges } = useDashboard();
-    const [items, setItems] = useState<WidgetConfig[]>([]);
+    const availableWidgetIds = useMemo(() => Object.keys(widgets), [widgets]);
+    const defaultSystemLayout = useMemo(
+        () => getSystemDashboardLayout(availableWidgetIds),
+        [availableWidgetIds]
+    );
+    const [items, setItems] = useState<DashboardWidgetConfig[]>([]);
     const [activeId, setActiveId] = useState<string | null>(null);
     const prevEditMode = useRef(isEditMode);
 
-    // BONE STRUCTURE (KEMİK YAPI) - 24 Column High-Fidelity Structured Bento
-    const DEFAULT_SYSTEM_LAYOUT: WidgetConfig[] = [
-        // Row 1 & 2: 8 Stats (4+4)
-        { id: "stat_sales", cols: 6, rows: 1 },
-        { id: "stat_income", cols: 6, rows: 1 },
-        { id: "stat_collections", cols: 6, rows: 1 },
-        { id: "stat_ready", cols: 6, rows: 1 },
-        { id: "stat_pending", cols: 6, rows: 1 },
-        { id: "stat_stock", cols: 6, rows: 1 },
-        { id: "stat_debts", cols: 6, rows: 1 },
-        { id: "stat_accounts", cols: 6, rows: 1 },
+    const normalize = (layout: (DashboardWidgetConfig | string)[]): DashboardWidgetConfig[] => {
+        if (isCollapsedDashboardLayout(layout)) {
+            return defaultSystemLayout.map(item => ({ ...item }));
+        }
 
-        // Row 3: Main Analytical Focus
-        { id: "revenue", cols: 18, rows: 5 },
-        { id: "service_status", cols: 6, rows: 5 },
-
-        // Row 4+: Support Modules
-        { id: "ai_insights", cols: 12, rows: 4 },
-        { id: "shortage_status", cols: 12, rows: 5 },
-        { id: "inventory", cols: 8, rows: 6 },
-        { id: "service_queue", cols: 16, rows: 6 },
-        { id: "transactions", cols: 16, rows: 6 },
-        { id: "activity", cols: 8, rows: 6 },
-        { id: "receivables", cols: 24, rows: 4 },
-    ].filter(w => widgets[w.id]);
-
-    const normalize = (layout: (WidgetConfig | string)[]): WidgetConfig[] => {
-        return layout.map(idOrConfig => {
-            if (typeof idOrConfig === 'string') {
-                const def = DEFAULT_SYSTEM_LAYOUT.find(d => d.id === idOrConfig);
-                return def || { id: idOrConfig, cols: 3, rows: 2 };
-            }
-            return idOrConfig;
-        }).filter(item => widgets[item.id]);
+        return normalizeDashboardLayout(layout, availableWidgetIds, defaultSystemLayout);
     };
 
     useEffect(() => {
         setItems(normalize(initialLayout));
-    }, [initialLayout]);
+    }, [initialLayout, defaultSystemLayout, availableWidgetIds]);
 
     const handleSave = async (silent = false) => {
         if (!hasChanges) return;
@@ -200,7 +176,7 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
                             <Button variant="outline" size="sm" onClick={() => setItems(normalize(initialLayout))} className="rounded-full h-10 border-orange-500/20 hover:bg-orange-500/10 text-orange-600 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm">
                                 <History className="h-4 w-4 mr-2" /> Geri Al
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setItems(DEFAULT_SYSTEM_LAYOUT)} className="rounded-full h-10 border-rose-500/20 hover:bg-rose-500/10 text-rose-600 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm">
+                            <Button variant="outline" size="sm" onClick={() => { setItems(defaultSystemLayout.map(item => ({ ...item }))); setHasChanges(true); }} className="rounded-full h-10 border-rose-500/20 hover:bg-rose-500/10 text-rose-600 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm">
                                 <RotateCcw className="h-4 w-4 mr-2" /> Varsayılan
                             </Button>
                         </div>

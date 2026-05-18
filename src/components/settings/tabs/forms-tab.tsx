@@ -18,13 +18,15 @@ import { getIndustryConfig } from "@/lib/industry-utils";
 
 export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: string }) {
     const [isPending, startTransition] = useTransition();
-    const industryConfig = useMemo(() => getIndustryConfig(shop.industry), [shop.industry]);
+    const shopIndustry = shop?.industry || "GENERAL";
+    const shopThemeConfig = shop?.themeConfig || {};
+    const industryConfig = useMemo(() => getIndustryConfig(shopIndustry), [shopIndustry]);
 
     const initialThemeConfig = useMemo(() => {
         const config = {
-            productFields: shop.themeConfig?.productFields || [],
-            serviceFields: shop.themeConfig?.serviceFields || [],
-            accessories: shop.themeConfig?.accessories || []
+            productFields: shopThemeConfig.productFields || [],
+            serviceFields: shopThemeConfig.serviceFields || [],
+            accessories: shopThemeConfig.accessories || []
         };
 
         // If the shop hasn't customized their forms yet (empty lists),
@@ -40,7 +42,7 @@ export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: strin
         }
 
         return config;
-    }, [shop.themeConfig, industryConfig]);
+    }, [shopThemeConfig, industryConfig]);
 
     const [themeConfig, setThemeConfig] = useState<{
         productFields: any[];
@@ -115,14 +117,14 @@ export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: strin
     };
 
     const handleAIGenerate = async () => {
-        if (!shop.industry) {
+        if (!shopIndustry || shopIndustry === "GENERAL") {
             toast.error("Önce dükkan sektörünü belirlemelisiniz.");
             return;
         }
         startTransition(async () => {
             const toastId = toast.loading("AI ile formlar yenileniyor...");
             try {
-                const result = await generateIndustryConfigWithAI(shop.industry);
+                const result = await generateIndustryConfigWithAI(shopIndustry);
                 if (result.success) {
                     setThemeConfig(result.data);
                     toast.success("AI formları oluşturdu! Değişiklikleri kaydetmeyi unutmayın.", { id: toastId });

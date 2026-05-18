@@ -39,6 +39,11 @@ import { TopProductsStream } from "@/components/dashboard/streamed/top-products-
 
 import { getDashboardInit, getDashboardStats, getTopProducts } from "@/lib/actions/dashboard-actions";
 import { getDebts } from "@/lib/actions/debt-actions";
+import {
+  getSystemDashboardLayout,
+  isCollapsedDashboardLayout,
+  normalizeDashboardLayout,
+} from "@/lib/dashboard-layout";
 
 async function DashboardContentData() {
   const queryClient = new QueryClient();
@@ -116,34 +121,6 @@ async function DashboardContentData() {
     { id: "stat_accounts", type: "CASH_BALANCE", label: "Satış Hacmi", value: s.todaySales || "0", subValue: "Bugünkü ciro", iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10", usdValue: s.todaySalesUSD },
   ];
 
-  const defaultLayout = [
-    ...statItems.map(s => s.id),
-    "revenue",
-    ...(showService ? ["service_status"] : []),
-    "shortage_status",
-    "ai_insights",
-    "receivables",
-    ...(showService ? ["service_queue"] : []),
-    "activity",
-    "transactions",
-    "inventory"
-  ];
-
-  const savedLayout = profile?.dashboardLayout as any[];
-  let layout: any[];
-
-  if (Array.isArray(savedLayout) && savedLayout.length > 0) {
-    const missingItems = defaultLayout.filter(defaultId => {
-      return !savedLayout.some(item => {
-        const itemId = typeof item === 'string' ? item : item.id;
-        return itemId === defaultId;
-      });
-    });
-    layout = [...savedLayout, ...missingItems];
-  } else {
-    layout = defaultLayout;
-  }
-
   const widgets: any = {
     revenue: <RevenueAnalysisStream />,
     service_status: <ServiceStatusStream title={serviceLabel} />,
@@ -172,6 +149,13 @@ async function DashboardContentData() {
     shortage_status: "Kurye Durumu",
   };
   statItems.forEach(s => { widgetLabels[s.id] = s.label; });
+
+  const availableWidgetIds = Object.keys(widgets);
+  const defaultLayout = getSystemDashboardLayout(availableWidgetIds);
+  const savedLayout = profile?.dashboardLayout as any[];
+  const layout = Array.isArray(savedLayout) && savedLayout.length > 0 && !isCollapsedDashboardLayout(savedLayout)
+    ? normalizeDashboardLayout(savedLayout, availableWidgetIds, defaultLayout)
+    : defaultLayout;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
