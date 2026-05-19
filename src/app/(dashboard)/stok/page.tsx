@@ -1,5 +1,6 @@
 import { Package } from "lucide-react";
 import { getCategories } from "@/lib/actions/product-actions";
+import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { CreateProductModal } from "@/components/product/create-product-modal";
 import { BulkAddProductModal } from "@/components/product/bulk-add-product-modal";
 import { StockMetricsStream } from "@/components/product/streamed/stock-metrics-stream";
@@ -34,8 +35,9 @@ function CardSkeleton() {
 }
 
 export default async function StokPage({ searchParams }: { searchParams: any }) {
-  const [categories, shop] = await Promise.all([
+  const [categories, suppliers, shop] = await Promise.all([
     getCategories(),
+    getSuppliers(),
     getShop()
   ]);
 
@@ -50,7 +52,11 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         actions={
           <>
             <BulkAddProductModal categories={categories} shop={shop} />
-            <CreateProductModal categories={categories} shop={shop} />
+            <CreateProductModal
+              categories={categories}
+              suppliers={suppliers}
+              shop={shop}
+            />
           </>
         }
       />

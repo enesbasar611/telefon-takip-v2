@@ -14,6 +14,10 @@ export async function getSuppliers() {
       include: {
         purchases: {
           include: { items: { include: { product: true } } }
+        },
+        inventoryMovements: {
+          include: { product: true },
+          orderBy: { createdAt: "desc" }
         }
       },
       orderBy: { createdAt: "desc" }

@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import {
   PlusCircle, Loader2, Package, Barcode, TrendingUp, AlertTriangle,
   DollarSign, MapPin, ChevronRight, Sparkles,
-  ChevronDown, CheckCircle2, XCircle, Wand2
+  ChevronDown, CheckCircle2, XCircle, Wand2, Truck
 } from "lucide-react";
 import { createProduct } from "@/lib/actions/product-actions";
 import { parseProductWithAI } from "@/lib/actions/gemini-actions";
@@ -43,6 +43,7 @@ import { ScanLine } from "lucide-react";
 const productSchema = z.object({
   name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
   categoryId: z.string().min(1, "Kategori seçiniz"),
+  supplierId: z.string().optional(),
   buyPrice: z.string().min(1, "Alış fiyatı gereklidir"),
   buyPriceUsd: z.string().optional(),
   sellPrice: z.string().min(1, "Satış fiyatı gereklidir"),
@@ -61,13 +62,19 @@ interface Category {
   parentId: string | null;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+}
+
 interface CreateProductModalProps {
   categories: Category[];
+  suppliers?: Supplier[];
   shop?: any;
   autoOpen?: boolean;
 }
 
-export function CreateProductModal({ categories, shop, autoOpen = false }: CreateProductModalProps) {
+export function CreateProductModal({ categories, suppliers = [], shop, autoOpen = false }: CreateProductModalProps) {
   const { rates: exchangeRates, defaultCurrency } = useDashboardData();
   const [open, setOpen] = useState(autoOpen);
   const [isPending, startTransition] = useTransition();
@@ -116,7 +123,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
     reset,
   } = useForm<any>({
     resolver: zodResolver(productSchema.passthrough()),
-    defaultValues: { stock: "0", criticalStock: "5", buyPrice: "0", buyPriceUsd: "", sellPrice: "0", sellPriceUsd: "" }
+    defaultValues: { stock: "0", criticalStock: "1", buyPrice: "0", buyPriceUsd: "", sellPrice: "0", sellPriceUsd: "" }
   });
 
   const calculateTryPrice = (val: string) => {
@@ -200,6 +207,7 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
         criticalStock: Number(data.criticalStock),
         barcode: barcode || data.barcode,
         location: location || data.location,
+        supplierId: data.supplierId,
         attributes: {
           ...attributes,
           priceCurrency: currency
@@ -514,21 +522,37 @@ export function CreateProductModal({ categories, shop, autoOpen = false }: Creat
                   <div className="w-4 h-[2px] bg-slate-700/50 rounded-full" /> Envanter Konumlandırması
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-                  <div className="md:col-span-3 space-y-2">
+                  <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-muted-foreground">Başlangıç Stoğu</Label>
                     <Input id="stock" type="number" {...register("stock")} className="bg-muted border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
                   </div>
-                  <div className="md:col-span-3 space-y-2">
+                  <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                     </Label>
                     <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-600 dark:text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
                   </div>
-                  <div className="md:col-span-6 space-y-2">
+                  <div className="md:col-span-4 space-y-2">
                     <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-blue-400" /> Raf / Konum
                     </Label>
                     <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                  </div>
+                  <div className="md:col-span-4 space-y-2">
+                    <Label htmlFor="supplierId" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-orange-400" /> Varsayılan Tedarikçi
+                    </Label>
+                    <Select onValueChange={(val) => setValue("supplierId", val === "none" ? undefined : val)} value={watch("supplierId")}>
+                      <SelectTrigger id="supplierId" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium focus:ring-1 focus:ring-blue-500/50 transition-all">
+                        <SelectValue placeholder="Tedarikçi Seçin..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="none" className="text-[13px]">Seçilmedi</SelectItem>
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.id} className="text-[13px]">{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

@@ -127,7 +127,11 @@ export async function getSupplierProfileDataAction(supplierId: string) {
                     include: { items: true },
                 },
                 transactions: {
-                    orderBy: { date: "desc" },
+                    orderBy: { createdAt: "desc" },
+                },
+                inventoryMovements: {
+                    include: { product: true },
+                    orderBy: { createdAt: "desc" },
                 },
             },
         });
@@ -350,6 +354,7 @@ export async function receivePurchaseOrderAction(
                         await tx.inventoryMovement.create({
                             data: {
                                 productId: productId,
+                                supplierId: order.supplierId,
                                 quantity: rItem.receivedQuantity,
                                 type: "PURCHASE",
                                 notes: priceNote,

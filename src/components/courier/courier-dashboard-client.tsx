@@ -39,7 +39,8 @@ import {
     ArrowUpCircle,
     User,
     ListTodo,
-    X
+    X,
+    Truck
 } from "lucide-react";
 import {
     markShortageAsTaken,
@@ -52,10 +53,13 @@ import {
     getCourierNotifications,
     deleteShortageItems as deleteShortageItemsAction,
     getCourierTasks,
-    getGlobalShortageList
+    getGlobalShortageList,
+    bulkMarkShortageAsTaken,
+    bulkMarkShortageAsNotFound
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { Role } from "@prisma/client";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
@@ -155,6 +159,9 @@ export function CourierDashboardClient({
     const [mounted, setMounted] = useState(false);
     const [shortcutCourierId, setShortcutCourierId] = useState<string>("");
     const [itemAdjustedQty, setItemAdjustedQty] = useState<Record<string, number>>({});
+    const [selectedSuppliers, setSelectedSuppliers] = useState<Record<string, string>>({});
+    const [bulkSupplierId, setBulkSupplierId] = useState<string>("none");
+    const [isBulkLoading, setIsBulkLoading] = useState(false);
 
     // React Query for Tasks
     const { data: tasksData, isLoading: isTasksLoading } = useQuery({
@@ -192,6 +199,14 @@ export function CourierDashboardClient({
         refetchOnMount: false,
     });
 
+    const { data: suppliersData } = useQuery({
+        queryKey: ["suppliers"],
+        queryFn: () => getSuppliers(),
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
     // React Query for Notifications
     const { data: notificationsData } = useQuery({
         queryKey: ["courier-notifications"],
@@ -206,6 +221,7 @@ export function CourierDashboardClient({
     const items = tasksData?.items || initialItems;
     const allShortages = globalShortagesData || initialAllShortages;
     const categories = categoriesData || initialCategories;
+    const suppliers = suppliersData || EMPTY_ARRAY;
     const couriers = useMemo(() => {
         const filtered = (staffData || initialCouriers).filter((s: Record<string, any>) => s.role === 'COURIER');
         return filtered.length > 0 ? filtered : EMPTY_ARRAY;
@@ -341,8 +357,9 @@ export function CourierDashboardClient({
 
     const handleToggleTaken = async (id: string, currentStatus: boolean) => {
         setLoadingId(id);
+        const supplierId = selectedSuppliers[id] || undefined;
         try {
-            const res = await markShortageAsTaken(id, !currentStatus);
+            const res = await markShortageAsTaken(id, !currentStatus, supplierId);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün alındı." : "Geri alındı.");
                 emitShortageUpdate();
@@ -572,6 +589,50 @@ export function CourierDashboardClient({
         }
     };
 
+    const handleBulkMarkTaken = async () => {
+        if (selectedIds.length === 0) return;
+        setIsBulkLoading(true);
+        try {
+            const supplierId = bulkSupplierId === "none" ? null : bulkSupplierId;
+            const res = await bulkMarkShortageAsTaken(selectedIds, true, supplierId);
+            if (res.success) {
+                toast.success(`${selectedIds.length} ürün alındı olarak işaretlendi.`);
+                setSelectedIds([]);
+                setIsSelectionMode(false);
+                emitShortageUpdate();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+            }
+        } catch (error) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setIsBulkLoading(false);
+        }
+    };
+
+    const handleBulkMarkNotFound = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`${selectedIds.length} ürünü "Bulunmadı" olarak işaretlemek istediğinize emin misiniz?`)) return;
+        setIsBulkLoading(true);
+        try {
+            const res = await bulkMarkShortageAsNotFound(selectedIds, true);
+            if (res.success) {
+                toast.success(`${selectedIds.length} ürün bulunmadı olarak işaretlendi.`);
+                setSelectedIds([]);
+                setIsSelectionMode(false);
+                emitShortageUpdate();
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+            }
+        } catch (error) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setIsBulkLoading(false);
+        }
+    };
+
     const isCourierOnly = userRole === "COURIER";
 
     if (isTasksLoading || isGlobalShortagesLoading) {
@@ -597,18 +658,25 @@ export function CourierDashboardClient({
                             <div className="flex items-center gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">SİSTEM CANLI</span>
-                                {couriers.find((c: any) => c.id === userId)?.points > 0 && (
-                                    <>
-                                        <span className="text-[8px] opacity-20 mr-1">•</span>
-                                        <TrendingUp className="w-2.5 h-2.5 text-blue-500" />
-                                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{couriers.find((c: any) => c.id === userId).points} PUAN</span>
-                                    </>
-                                )}
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                setIsSelectionMode(!isSelectionMode);
+                                if (isSelectionMode) setSelectedIds([]);
+                            }}
+                            className={cn(
+                                "rounded-full h-9 w-9 transition-all",
+                                isSelectionMode ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-zinc-100 dark:bg-white/5 text-muted-foreground"
+                            )}
+                        >
+                            <CheckSquare className="h-4 w-4" />
+                        </Button>
                         {showNewBadge && (
                             <Button
                                 variant="ghost"
@@ -832,8 +900,19 @@ export function CourierDashboardClient({
                     </Card>
                 )}
 
-                <div className="flex flex-col md:flex-row gap-2">
-                    <div className="relative flex-1">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-4xl mx-auto w-full">
+                    {isAdmin && (
+                        <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-4 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 min-w-[180px] w-full md:w-auto">
+                            <span className="text-[10px] uppercase font-black text-muted-foreground mr-2 shrink-0">GÜN:</span>
+                            <Input
+                                type="date"
+                                value={selectedDate}
+                                onChange={handleDateChange}
+                                className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-black uppercase text-xs w-full"
+                            />
+                        </div>
+                    )}
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
                         <Input
                             placeholder="ÜRÜN VEYA BAYİ ARA..."
@@ -842,39 +921,30 @@ export function CourierDashboardClient({
                             className="pl-12 bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 rounded-2xl h-14 font-black uppercase text-xs tracking-widest focus:ring-blue-500/20"
                         />
                     </div>
-                    {isAdmin && (
-                        <div className="flex gap-2">
-                            <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-4 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 min-w-[200px]">
-                                <span className="text-[10px] uppercase font-black text-muted-foreground mr-2 shrink-0">GÜN:</span>
-                                <Input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={handleDateChange}
-                                    className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-black uppercase text-xs"
-                                />
-                            </div>
-                            <div className="flex gap-2 bg-zinc-100 dark:bg-white/5 p-1 rounded-2xl border border-zinc-200 dark:border-white/5">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                        setIsSelectionMode(!isSelectionMode);
-                                        if (isSelectionMode) setSelectedIds([]);
-                                    }}
-                                    className={cn(
-                                        "rounded-xl h-12 w-12",
-                                        isSelectionMode ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-muted-foreground hover:text-indigo-500"
-                                    )}
-                                    title={isSelectionMode ? "Seçimi Kapat" : "Seçim Modunu Aç"}
-                                >
-                                    <CheckSquare className="h-5 w-5" />
-                                </Button>
+                    <div className="flex gap-2 w-full md:w-auto justify-center">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                setIsSelectionMode(!isSelectionMode);
+                                if (isSelectionMode) setSelectedIds([]);
+                            }}
+                            className={cn(
+                                "rounded-xl h-14 w-14 shrink-0 transition-all",
+                                isSelectionMode ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-zinc-100 dark:bg-white/5 text-muted-foreground hover:text-indigo-500 border border-zinc-200 dark:border-white/5"
+                            )}
+                            title={isSelectionMode ? "Seçimi Kapat" : "Seçim Modunu Aç"}
+                        >
+                            <CheckSquare className="h-6 w-6" />
+                        </Button>
+                        {isAdmin && (
+                            <div className="flex gap-2 bg-zinc-100 dark:bg-white/5 p-1 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 items-center">
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setViewMode('single')}
                                     className={cn(
-                                        "rounded-xl h-12 w-12",
+                                        "rounded-xl h-11 w-11",
                                         viewMode === 'single' ? "bg-white dark:bg-white/10 text-blue-600 dark:text-white shadow-sm" : "text-muted-foreground hover:text-blue-600 dark:hover:text-white"
                                     )}
                                 >
@@ -885,15 +955,15 @@ export function CourierDashboardClient({
                                     size="icon"
                                     onClick={() => setViewMode('double')}
                                     className={cn(
-                                        "rounded-xl h-12 w-12",
+                                        "rounded-xl h-11 w-11",
                                         viewMode === 'double' ? "bg-white dark:bg-white/10 text-blue-600 dark:text-white shadow-sm" : "text-muted-foreground hover:text-blue-600 dark:hover:text-white"
                                     )}
                                 >
                                     <LayoutGrid className="h-5 w-5" />
                                 </Button>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 <div className={cn(
@@ -992,33 +1062,43 @@ export function CourierDashboardClient({
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95 }}
+                                                onClick={() => isSelectionMode && toggleSelect(item.id)}
                                                 className={cn(
-                                                    "group transition-all duration-300 border shadow-sm relative overflow-hidden",
-                                                    isAdmin ? "p-3 rounded-xl flex items-center gap-4" : "p-4 rounded-2xl flex flex-col",
+                                                    "group transition-all duration-300 border shadow-sm relative overflow-hidden shrink-0",
+                                                    isAdmin ? "p-3 rounded-xl flex items-center gap-4" : "p-4 rounded-2xl flex flex-col min-h-[160px] cursor-pointer",
+                                                    isSelectionMode && "active:scale-[0.98] ring-2 ring-blue-500/20",
                                                     item.isNotFound
                                                         ? "bg-red-500/10 dark:bg-red-500/10 border-red-500/30"
                                                         : item.isTaken
                                                             ? "bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/20"
                                                             : "bg-card dark:bg-card/40 border-zinc-200 dark:border-white/5 hover:border-blue-500/30",
-                                                    selectedIds.includes(item.id) && "border-blue-500/50 bg-blue-500/5"
+                                                    selectedIds.includes(item.id) && "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5"
                                                 )}
                                             >
-                                                {isAdmin && isSelectionMode && (
-                                                    <button
-                                                        onClick={() => toggleSelect(item.id)}
-                                                        className={cn(
-                                                            "h-6 w-6 rounded-lg flex items-center justify-center transition-all border shrink-0",
-                                                            selectedIds.includes(item.id)
-                                                                ? "bg-blue-500 border-blue-500 text-black"
-                                                                : "border-zinc-300 dark:border-white/10 hover:border-blue-500"
-                                                        )}
-                                                    >
-                                                        {selectedIds.includes(item.id) && <Check className="h-4 w-4" />}
-                                                    </button>
+                                                {isSelectionMode && (
+                                                    <div className="absolute top-3 right-3 z-10">
+                                                        <div
+                                                            className={cn(
+                                                                "h-6 w-6 rounded-lg flex items-center justify-center transition-all border shrink-0",
+                                                                selectedIds.includes(item.id)
+                                                                    ? "bg-blue-500 border-blue-500 text-black shadow-lg shadow-blue-500/20"
+                                                                    : "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-white/10"
+                                                            )}
+                                                        >
+                                                            {selectedIds.includes(item.id) && <Check className="h-4 w-4" />}
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                <div className={cn("flex items-center gap-4", isAdmin ? "flex-1" : "w-full")}>
+                                                <div className={cn("flex items-center gap-4", isAdmin ? "flex-1" : "w-full mb-auto")}>
                                                     <button
-                                                        onClick={() => !item.isNotFound && handleToggleTaken(item.id, item.isTaken)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (isSelectionMode) {
+                                                                toggleSelect(item.id);
+                                                                return;
+                                                            }
+                                                            !item.isNotFound && handleToggleTaken(item.id, item.isTaken);
+                                                        }}
                                                         disabled={loadingId === item.id}
                                                         className={cn(
                                                             "rounded-xl flex items-center justify-center transition-all shrink-0 shadow-lg group-active:scale-90",
@@ -1087,21 +1167,25 @@ export function CourierDashboardClient({
                                                                     {item.isTaken && (
                                                                         <>
                                                                             {/* Quantity adjuster */}
-                                                                            <div className="flex items-center bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden h-8">
+                                                                            <div
+                                                                                className="flex items-center bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden h-8"
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                            >
                                                                                 <button
-                                                                                    onClick={() => adjustQty(item.id, getAdjustedQty(item), -1)}
+                                                                                    onClick={(e) => { e.stopPropagation(); adjustQty(item.id, getAdjustedQty(item), -1); }}
                                                                                     className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
                                                                                 >−</button>
                                                                                 <span className="h-8 min-w-[2rem] px-1 flex items-center justify-center font-black text-sm border-x border-zinc-200 dark:border-white/10">
                                                                                     {getAdjustedQty(item)}
                                                                                 </span>
                                                                                 <button
-                                                                                    onClick={() => adjustQty(item.id, getAdjustedQty(item), 1)}
+                                                                                    onClick={(e) => { e.stopPropagation(); adjustQty(item.id, getAdjustedQty(item), 1); }}
                                                                                     className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
                                                                                 >+</button>
                                                                             </div>
                                                                             <Button
-                                                                                onClick={() => {
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
                                                                                     setApprovingItem({ ...item, quantity: getAdjustedQty(item) });
                                                                                     setApproveModalOpen(true);
                                                                                 }}
@@ -1123,7 +1207,10 @@ export function CourierDashboardClient({
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="icon"
-                                                                            onClick={() => handleDelete(item.id)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDelete(item.id);
+                                                                            }}
                                                                             disabled={loadingId === item.id}
                                                                             className="h-8 w-8 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
                                                                         >
@@ -1137,21 +1224,47 @@ export function CourierDashboardClient({
                                                 </div>
 
                                                 {!isAdmin && (
-                                                    <div className="mt-3 flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => handleToggleNotFound(item.id, item.isNotFound)}
-                                                            disabled={loadingId === item.id || item.isTaken}
-                                                            className={cn(
-                                                                "h-10 rounded-xl text-[10px] font-black uppercase tracking-widest flex-1",
-                                                                item.isNotFound
-                                                                    ? "bg-red-500 text-white border-red-500"
-                                                                    : "border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white"
-                                                            )}
-                                                        >
-                                                            <X className="w-3 h-3 mr-1" />
-                                                            {item.isNotFound ? "İşareti Kaldır" : "Bulunmadı"}
-                                                        </Button>
+                                                    <div className="mt-4 flex flex-col gap-2">
+                                                        <div onClick={(e) => e.stopPropagation()} className="relative">
+                                                            <Select
+                                                                value={selectedSuppliers[item.id] || item.supplierId || ""}
+                                                                onValueChange={(val) => setSelectedSuppliers(prev => ({ ...prev, [item.id]: val }))}
+                                                                disabled={item.isTaken || item.isResolved}
+                                                            >
+                                                                <SelectTrigger className="h-11 rounded-xl border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 shadow-sm font-black text-[10px] uppercase">
+                                                                    <div className="flex items-center gap-2 truncate">
+                                                                        <Truck className="w-3.5 h-3.5 text-blue-500 opacity-70" />
+                                                                        <SelectValue placeholder="TEDARİKÇİ SEÇ..." />
+                                                                    </div>
+                                                                </SelectTrigger>
+                                                                <SelectContent className="rounded-2xl border-zinc-200 dark:border-white/10 max-h-[250px]">
+                                                                    {suppliers.map((s: any) => (
+                                                                        <SelectItem key={s.id} value={s.id} className="rounded-xl font-black text-[10px] uppercase cursor-pointer py-3">
+                                                                            {s.name}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleToggleNotFound(item.id, item.isNotFound);
+                                                                }}
+                                                                disabled={loadingId === item.id || item.isTaken}
+                                                                className={cn(
+                                                                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex-1 transition-all",
+                                                                    item.isNotFound
+                                                                        ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
+                                                                        : "border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white"
+                                                                )}
+                                                            >
+                                                                <X className="w-3.5 h-3.5 mr-1.5" />
+                                                                {item.isNotFound ? "İşareti Kaldır" : "Bulunamadı"}
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {!isAdmin && cleanCourierNote(item.notes) && (
@@ -1305,44 +1418,90 @@ export function CourierDashboardClient({
                         </div>
                     </motion.div>
                 </Card>
-            </div>
+            </div >
 
             {/* Bulk Action Bar */}
             <AnimatePresence>
-                {selectedIds.length > 0 && (
-                    <motion.div
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 100, opacity: 0 }}
-                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[70] w-full max-w-sm px-4"
-                    >
-                        <div className="bg-zinc-900 dark:bg-white text-white dark:text-black rounded-3xl p-4 shadow-2xl flex items-center justify-between border border-white/10 dark:border-black/5">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest opacity-50">SEÇİLİ</span>
-                                <span className="text-xl font-black tabular-nums tracking-tighter">{selectedIds.length} SİPARİŞ</span>
+                {
+                    selectedIds.length > 0 && (
+                        <motion.div
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 100, opacity: 0 }}
+                            className="fixed bottom-8 inset-x-0 z-[70] flex justify-center px-4 pointer-events-none"
+                        >
+                            <div className="bg-zinc-900 dark:bg-white text-white dark:text-black rounded-3xl p-4 shadow-2xl flex flex-col gap-4 border border-white/10 dark:border-black/5 w-full max-w-lg pointer-events-auto">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-50">SEÇİLİ</span>
+                                        <span className="text-xl font-black tabular-nums tracking-tighter">{selectedIds.length} SİPARİŞ</span>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setSelectedIds([]);
+                                            setIsSelectionMode(false);
+                                        }}
+                                        className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 dark:hover:bg-black/5"
+                                    >
+                                        İPTAL
+                                    </Button>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    {isCourierOnly && (
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">TOPLU TEDARİKÇİ ATAMA (OPSİYONEL)</Label>
+                                            <Select value={bulkSupplierId} onValueChange={setBulkSupplierId}>
+                                                <SelectTrigger className="h-10 rounded-xl bg-white/5 dark:bg-black/5 border-white/10 dark:border-black/10 font-black text-[10px] uppercase">
+                                                    <SelectValue placeholder="TEDARİKÇİ SEÇ..." />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl">
+                                                    <SelectItem value="none" className="font-black text-[10px] uppercase">Seçilmedi</SelectItem>
+                                                    {suppliers.map((s: any) => (
+                                                        <SelectItem key={s.id} value={s.id} className="font-black text-[10px] uppercase">
+                                                            {s.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-2">
+                                        {isAdmin ? (
+                                            <Button
+                                                onClick={() => handleBulkDelete(selectedIds)}
+                                                className="flex-1 h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20"
+                                            >
+                                                HEPSİNİ SİL
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    onClick={handleBulkMarkNotFound}
+                                                    disabled={isBulkLoading}
+                                                    className="flex-1 h-12 bg-zinc-800 dark:bg-zinc-200 text-white dark:text-black border border-white/10 dark:border-black/10 rounded-2xl text-[10px] font-black uppercase tracking-widest"
+                                                >
+                                                    {isBulkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "BULUNMADI YAP"}
+                                                </Button>
+                                                <Button
+                                                    onClick={handleBulkMarkTaken}
+                                                    disabled={isBulkLoading}
+                                                    className="flex-1 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                                                >
+                                                    {isBulkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "ALINDI İŞARETLE"}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setSelectedIds([]);
-                                        setIsSelectionMode(false);
-                                    }}
-                                    className="h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 dark:hover:bg-black/5"
-                                >
-                                    İPTAL
-                                </Button>
-                                <Button
-                                    onClick={() => handleBulkDelete(selectedIds)}
-                                    className="h-12 px-6 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20"
-                                >
-                                    HEPSİNİ SİL
-                                </Button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
 
             <ApproveShortageModal
                 open={approveModalOpen}
@@ -1354,6 +1513,8 @@ export function CourierDashboardClient({
                 productId={approvingItem?.productId}
                 product={approvingItem?.product}
                 categories={categories}
+                suppliers={suppliers}
+                initialSupplierId={approvingItem?.supplierId || ""}
                 onApprove={(mode, paymentMethod, customPrice, currency, stockPayload, approvedQuantity) => {
                     if (approvingItem) {
                         handleApprove(approvingItem.id, approvedQuantity || approvingItem.quantity, mode, paymentMethod, customPrice, currency, stockPayload);
@@ -1440,6 +1601,6 @@ export function CourierDashboardClient({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

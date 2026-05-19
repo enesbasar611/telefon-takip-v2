@@ -306,7 +306,8 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
             quantity: data.stock,
             type: "PURCHASE",
             notes: "İlk stok kaydı.",
-            shopId
+            shopId,
+            supplierId: data.supplierId
           }
         } : undefined,
         inventoryLogs: data.stock > 0 ? {
@@ -520,7 +521,8 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
           quantity: diff,
           type: "ADJUSTMENT",
           notes: `Stok manuel güncellendi. (${oldProduct.stock} -> ${newStock})`,
-          shopId
+          shopId,
+          supplierId: data.supplierId || oldProduct.supplierId
         }
       });
       await prisma.inventoryLog.create({
@@ -602,7 +604,7 @@ export async function applyBulkAIUpdates(updates: any[]) {
   }
 }
 
-export async function addInventoryStock(productId: string, quantity: number, notes?: string) {
+export async function addInventoryStock(productId: string, quantity: number, notes?: string, supplierId?: string) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -618,7 +620,8 @@ export async function addInventoryStock(productId: string, quantity: number, not
           quantity,
           type: "PURCHASE",
           notes: notes || "Hızlı stok girişi",
-          shopId
+          shopId,
+          supplierId
         }
       }),
       prisma.inventoryLog.create({

@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit, Loader2, Package, Barcode, TrendingUp, AlertTriangle, MapPin, Settings2 } from "lucide-react";
+import { Edit, Loader2, Package, Barcode, TrendingUp, AlertTriangle, MapPin, Settings2, Truck } from "lucide-react";
 import { updateProduct } from "@/lib/actions/product-actions";
 import { resolveAIAlertsForProduct } from "@/lib/actions/stock-ai-actions";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ import { useDashboardData } from "@/lib/context/dashboard-data-context";
 const productSchema = z.object({
     name: z.string().min(2, "Ürün adı en az 2 karakter olmalıdır"),
     categoryId: z.string().min(1, "Kategori seçiniz"),
+    supplierId: z.string().optional(),
     buyPrice: z.string().min(1, "Alış fiyatı gereklidir"),
     buyPriceUsd: z.string().optional(),
     sellPrice: z.string().min(1, "Satış fiyatı gereklidir"),
@@ -50,14 +51,22 @@ type ProductFormValues = z.infer<typeof productSchema>;
 interface EditProductModalProps {
     product: any;
     categories: any[];
+    suppliers?: any[];
     isOpen: boolean;
     onClose: () => void;
     shop?: any;
 }
 
-export function EditProductModal({ product, categories, isOpen, onClose, shop }: EditProductModalProps) {
-    const { rates: exchangeRates } = useDashboardData();
+export function EditProductModal({ product, categories, suppliers = [], isOpen, onClose, shop }: EditProductModalProps) {
+    const { rates: exchangeRates, defaultCurrency } = useDashboardData();
     const [isPending, startTransition] = useTransition();
+    const [currency, setCurrency] = useState<"TRY" | "USD" | "EUR">(defaultCurrency);
+
+    useEffect(() => {
+        if (defaultCurrency) {
+            setCurrency(defaultCurrency as any);
+        }
+    }, [defaultCurrency]);
 
     const industryFields = getInventoryFormFields(shop);
 
@@ -86,25 +95,50 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                 criticalStock: product.criticalStock.toString(),
                 barcode: product.barcode || "",
                 location: product.location || "",
+                supplierId: product.supplierId || "none",
                 ...(product.attributes || {}),
             });
         }
     }, [product, reset]);
 
-    const handleUsdChange = (usdVal: number) => {
-        setValue("buyPriceUsd", String(usdVal));
-        if (usdVal > 0 && exchangeRates?.usd) {
-            const tlVal = Math.ceil(usdVal * exchangeRates.usd);
-            setValue("buyPrice", String(tlVal));
+    const handlePriceChange = (type: "buy" | "sell", value: number) => {
+        const rate = currency === "USD" ? (exchangeRates?.usd || 34) : currency === "EUR" ? (exchangeRates?.eur || 37) : 1;
+
+        if (type === "buy") {
+            if (currency === "TRY") {
+                setValue("buyPrice", String(value));
+                setValue("buyPriceUsd", (value / (exchangeRates?.usd || 34)).toFixed(2));
+            } else if (currency === "USD") {
+                setValue("buyPriceUsd", String(value));
+                setValue("buyPrice", Math.ceil(value * (exchangeRates?.usd || 34)).toString());
+            } else if (currency === "EUR") {
+                const tlVal = Math.ceil(value * (exchangeRates?.eur || 37));
+                setValue("buyPrice", String(tlVal));
+                setValue("buyPriceUsd", (tlVal / (exchangeRates?.usd || 34)).toFixed(2));
+            }
+        } else {
+            if (currency === "TRY") {
+                setValue("sellPrice", String(value));
+                setValue("sellPriceUsd", (value / (exchangeRates?.usd || 34)).toFixed(2));
+            } else if (currency === "USD") {
+                setValue("sellPriceUsd", String(value));
+                setValue("sellPrice", Math.ceil(value * (exchangeRates?.usd || 34)).toString());
+            } else if (currency === "EUR") {
+                const tlVal = Math.ceil(value * (exchangeRates?.eur || 37));
+                setValue("sellPrice", String(tlVal));
+                setValue("sellPriceUsd", (tlVal / (exchangeRates?.usd || 34)).toFixed(2));
+            }
         }
     };
 
-    const handleSellUsdChange = (usdVal: number) => {
-        setValue("sellPriceUsd", String(usdVal));
-        if (usdVal > 0 && exchangeRates?.usd) {
-            const tlVal = Math.ceil(usdVal * exchangeRates.usd);
-            setValue("sellPrice", String(tlVal));
-        }
+    const getDisplayPrice = (type: "buy" | "sell") => {
+        const val = watch(type === "buy" ? "buyPrice" : "sellPrice");
+        const valUsd = watch(type === "buy" ? "buyPriceUsd" : "sellPriceUsd");
+
+        if (currency === "TRY") return val;
+        if (currency === "USD") return valUsd || (Number(val) / (exchangeRates?.usd || 34)).toFixed(2);
+        if (currency === "EUR") return (Number(val) / (exchangeRates?.eur || 37)).toFixed(2);
+        return val;
     };
 
     const onSubmit = async (data: any) => {
@@ -114,6 +148,7 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
             const result = await updateProduct(product.id, {
                 name: name || data.name,
                 categoryId: data.categoryId,
+                supplierId: data.supplierId === "none" ? null : data.supplierId,
                 buyPrice: Number(data.buyPrice),
                 buyPriceUsd: data.buyPriceUsd ? Number(data.buyPriceUsd) : null,
                 sellPrice: Number(data.sellPrice),
@@ -199,49 +234,61 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-2.5">
-                                        <Label htmlFor="buyPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Alış (TL)</Label>
-                                        <PriceInput
-                                            id="buyPrice"
-                                            value={watch("buyPrice")}
-                                            onChange={(v) => setValue("buyPrice", String(v), { shouldValidate: true })}
-                                            className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
-                                        />
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label htmlFor="buyPriceUsd" className="font-bold text-[10px] text-blue-500/70 uppercase tracking-[0.2em] ml-1">Dollar ($)</Label>
-                                        <PriceInput
-                                            id="buyPriceUsd"
-                                            value={watch("buyPriceUsd")}
-                                            onChange={(v) => handleUsdChange(Number(v))}
-                                            prefix="$"
-                                            className="bg-blue-500/5 border-blue-500/20 rounded-2xl h-14 text-sm text-blue-500 font-bold"
-                                        />
+                            <div className="space-y-5 bg-muted/20 p-5 rounded-[2rem] border border-border/40">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                                    <h4 className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                                        <TrendingUp className="h-3 w-3 text-blue-500" /> Fiyatlandırma ({currency})
+                                    </h4>
+                                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border/50">
+                                        {(["TRY", "USD", "EUR"] as const).map((c) => (
+                                            <Button
+                                                key={c}
+                                                type="button"
+                                                size="sm"
+                                                variant={currency === c ? "default" : "ghost"}
+                                                onClick={() => setCurrency(c)}
+                                                className={`h-8 px-4 text-[10px] font-bold rounded-lg transition-all ${currency === c
+                                                    ? c === "TRY" ? "bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20"
+                                                        : c === "USD" ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
+                                                            : "bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/20"
+                                                    : "text-muted-foreground hover:text-foreground"}`}
+                                            >
+                                                {c === "TRY" ? "₺ TRY" : c === "USD" ? "$ USD" : "€ EUR"}
+                                            </Button>
+                                        ))}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2.5">
-                                        <Label htmlFor="sellPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                            <TrendingUp className="h-3 w-3 text-emerald-500" /> Satış (TL)
-                                        </Label>
+                                        <Label htmlFor="buyPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Alış Fiyatı</Label>
                                         <PriceInput
-                                            id="sellPrice"
-                                            value={watch("sellPrice")}
-                                            onChange={(v) => setValue("sellPrice", String(v), { shouldValidate: true })}
-                                            className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                            id="buyPrice"
+                                            value={getDisplayPrice("buy")}
+                                            onChange={(v) => handlePriceChange("buy", Number(v))}
+                                            prefix={currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
+                                            className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-semibold"
                                         />
+                                        {currency !== "TRY" && (
+                                            <p className="text-[10px] font-bold text-muted-foreground/60 px-2 italic">
+                                                ≈ {formatCurrency(Number(watch("buyPrice")))} TL
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="space-y-2.5">
-                                        <Label htmlFor="sellPriceUsd" className="font-bold text-[10px] text-emerald-500/70 uppercase tracking-[0.2em] ml-1">Dollar ($)</Label>
+                                        <Label htmlFor="sellPrice" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Satış Fiyatı</Label>
                                         <PriceInput
-                                            id="sellPriceUsd"
-                                            value={watch("sellPriceUsd")}
-                                            onChange={(v) => handleSellUsdChange(Number(v))}
-                                            prefix="$"
-                                            className="bg-emerald-500/5 border-emerald-500/20 rounded-2xl h-14 text-sm text-emerald-500 font-bold"
+                                            id="sellPrice"
+                                            value={getDisplayPrice("sell")}
+                                            onChange={(v) => handlePriceChange("sell", Number(v))}
+                                            prefix={currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€"}
+                                            className="bg-emerald-500/5 border-emerald-500/20 rounded-2xl h-14 text-sm text-emerald-600 font-bold"
                                         />
+                                        {currency !== "TRY" && (
+                                            <p className="text-[10px] font-bold text-emerald-600/60 px-2 italic">
+                                                ≈ {formatCurrency(Number(watch("sellPrice")))} TL
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -259,11 +306,29 @@ export function EditProductModal({ product, categories, isOpen, onClose, shop }:
                                 </div>
                             </div>
 
-                            <div className="space-y-2.5">
-                                <Label htmlFor="location" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">
-                                    <MapPin className="h-3.5 w-3.5 text-blue-500" /> Raf / Konum Bilgisi
-                                </Label>
-                                <Input id="location" {...register("location")} placeholder="Örn: A-12, Arka Depo" className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="location" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">
+                                        <MapPin className="h-3.5 w-3.5 text-blue-500" /> Raf / Konum Bilgisi
+                                    </Label>
+                                    <Input id="location" {...register("location")} placeholder="Örn: A-12, Arka Depo" className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                                </div>
+                                <div className="space-y-2.5">
+                                    <Label htmlFor="supplierId" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">
+                                        <Truck className="h-3.5 w-3.5 text-orange-400" /> Varsayılan Tedarikçi
+                                    </Label>
+                                    <Select onValueChange={(val) => setValue("supplierId", val)} value={watch("supplierId")}>
+                                        <SelectTrigger id="supplierId" className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium">
+                                            <SelectValue placeholder="Tedarikçi Seçin..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-popover border-border">
+                                            <SelectItem value="none" className="text-[13px]">Seçilmedi</SelectItem>
+                                            {suppliers.map((s) => (
+                                                <SelectItem key={s.id} value={s.id} className="text-[13px]">{s.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     </div>

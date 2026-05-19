@@ -24,6 +24,7 @@ type ShortageStockPayload = {
   buyPrice?: number;
   sellPrice?: number;
   priceCurrency?: StockApprovalCurrency;
+  supplierId?: string | null;
 };
 
 function normalizeStockCurrency(currency?: StockApprovalCurrency): "TRY" | "USD" | "EUR" {
@@ -139,7 +140,8 @@ export async function getShortageItems() {
       product: true,
       assignedTo: true,
       customer: true,
-      shop: true
+      shop: true,
+      supplier: true
     },
     orderBy: { createdAt: "desc" },
   });
@@ -148,62 +150,63 @@ export async function getShortageItems() {
 
 export async function getGlobalShortageList(dateStr?: string) {
   try {
-  const session = await auth();
-  const shopId = await getShopId(false);
-  if (!shopId) return [];
+    const session = await auth();
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
 
-  const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
 
-  let dateFilter = {};
-  if (dateStr) {
-    const range = getLocalDayRange(dateStr);
-    if (range) {
-      dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+    let dateFilter = {};
+    if (dateStr) {
+      const range = getLocalDayRange(dateStr);
+      if (range) {
+        dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+      }
     }
-  }
 
-  // Only SUPER_ADMIN without shopId sees everything across DB (though getShopId usually throws or returns a dummy for them)
-  // For safety, ALWAYS bind to shopId.
-  const baseWhere = { shopId, assignedToId: null, isResolved: false, ...dateFilter };
+    // Only SUPER_ADMIN without shopId sees everything across DB (though getShopId usually throws or returns a dummy for them)
+    // For safety, ALWAYS bind to shopId.
+    const baseWhere = { shopId, assignedToId: null, isResolved: false, ...dateFilter };
 
-  // 1. Get manual shortage entries
-  const manualItems = await prisma.shortageItem.findMany({
-    where: baseWhere,
-    include: {
-      product: true,
-      customer: true,
-      shop: { select: { name: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
-
-  // 2. Get low stock products
-  const lowStockProducts = await prisma.product.findMany({
-    where: { shopId, stock: { lte: prisma.product.fields.criticalStock } },
-    include: {
-      shortageItems: {
-        where: { isResolved: false }
+    // 1. Get manual shortage entries
+    const manualItems = await prisma.shortageItem.findMany({
+      where: baseWhere,
+      include: {
+        product: true,
+        customer: true,
+        shop: { select: { name: true } },
+        supplier: true
       },
-      shop: { select: { name: true } }
-    }
-  });
+      orderBy: { createdAt: "desc" }
+    });
 
-  // Filter out products that already have a manual shortage entry
-  const missingProductAlerts = lowStockProducts
-    .filter((p: any) => p.shortageItems.length === 0)
-    .map((p: any) => ({
-      id: `alert-${p.id}`,
-      name: p.name,
-      quantity: 1, // Default to 1 for alerts
-      notes: p.shop?.name ? `${p.shop.name.toUpperCase()} - STOK AZALDI/BİTTİ` : "STOK AZALDI/BİTTİ",
-      productId: p.id,
-      shopId: p.shopId,
-      shopName: p.shop?.name,
-      isAlert: true,
-      product: p
-    }));
+    // 2. Get low stock products
+    const lowStockProducts = await prisma.product.findMany({
+      where: { shopId, stock: { lte: prisma.product.fields.criticalStock } },
+      include: {
+        shortageItems: {
+          where: { isResolved: false }
+        },
+        shop: { select: { name: true } }
+      }
+    });
 
-  return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts]));
+    // Filter out products that already have a manual shortage entry
+    const missingProductAlerts = lowStockProducts
+      .filter((p: any) => p.shortageItems.length === 0)
+      .map((p: any) => ({
+        id: `alert-${p.id}`,
+        name: p.name,
+        quantity: 1, // Default to 1 for alerts
+        notes: p.shop?.name ? `${p.shop.name.toUpperCase()} - STOK AZALDI/BİTTİ` : "STOK AZALDI/BİTTİ",
+        productId: p.id,
+        shopId: p.shopId,
+        shopName: p.shop?.name,
+        isAlert: true,
+        product: p
+      }));
+
+    return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts]));
   } catch (error) {
     console.error("getGlobalShortageList error:", error);
     return [];
@@ -264,7 +267,7 @@ export async function assignShortageToCourier(id: string, courierId: string | nu
   }
 }
 
-export async function markShortageAsTaken(id: string, isTaken: boolean) {
+export async function markShortageAsTaken(id: string, isTaken: boolean, supplierId?: string | null) {
   try {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
@@ -273,14 +276,38 @@ export async function markShortageAsTaken(id: string, isTaken: boolean) {
       where: { id, shopId },
       data: {
         isTaken,
-        takenAt: isTaken ? new Date() : null
+        takenAt: isTaken ? new Date() : null,
+        supplierId: isTaken ? supplierId : null
       }
     });
+
     revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
     return { success: false, error: "İşlem başarısız." };
+  }
+}
+
+export async function bulkMarkShortageAsTaken(ids: string[], isTaken: boolean, supplierId?: string | null) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    await prisma.shortageItem.updateMany({
+      where: { id: { in: ids }, shopId },
+      data: {
+        isTaken,
+        takenAt: isTaken ? new Date() : null,
+        supplierId: isTaken ? supplierId : null
+      }
+    });
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Toplu işlem başarısız." };
   }
 }
 
@@ -309,11 +336,69 @@ export async function markShortageAsNotFound(id: string, isNotFound: boolean) {
         takenAt: null,
       }
     });
+
     revalidatePath("/");
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Bulunmadı durumu güncellenemedi." };
+  }
+}
+
+export async function bulkMarkShortageAsNotFound(ids: string[], isNotFound: boolean) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    if (isNotFound) {
+      // For bulk marking as not found, we need to update each note
+      // Since prisma.updateMany doesn't support string manipulation with existing fields easily,
+      // and we want it to be reliable, we'll do it for each if it's a reasonable count.
+      // But for bulk "Bulunmadı", we can just prepend the marker if it's not there.
+
+      // Simpler approach: updateMany to set isTaken=false, takenAt=null
+      // and then handle notes.
+      await prisma.$transaction(ids.map(id =>
+        prisma.shortageItem.update({
+          where: { id, shopId },
+          data: {
+            isTaken: false,
+            takenAt: null,
+            notes: {
+              set: undefined // We'll handle this in a real map if needed, but let's stick to updateMany for speed if notes don't matter as much for bulk
+            }
+          }
+        })
+      ));
+
+      // Actually, let's just loop for notes to be safe
+      for (const id of ids) {
+        const item = await prisma.shortageItem.findUnique({ where: { id, shopId }, select: { notes: true } });
+        if (item && !String(item.notes || "").includes(NOT_FOUND_MARKER)) {
+          await prisma.shortageItem.update({
+            where: { id, shopId },
+            data: { notes: `${NOT_FOUND_MARKER}${item.notes ? ` ${item.notes}` : ""}` }
+          });
+        }
+      }
+    } else {
+      for (const id of ids) {
+        const item = await prisma.shortageItem.findUnique({ where: { id, shopId }, select: { notes: true } });
+        if (item) {
+          const cleanNotes = String(item.notes || "").replace(NOT_FOUND_MARKER, "").trim();
+          await prisma.shortageItem.update({
+            where: { id, shopId },
+            data: { notes: cleanNotes || null }
+          });
+        }
+      }
+    }
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Toplu bulunmadı işlemi başarısız." };
   }
 }
 
@@ -346,7 +431,8 @@ export async function getCourierTasks(dateStr?: string) {
         product: true,
         customer: true,
         assignedTo: { select: { name: true, surname: true } },
-        shop: { select: { name: true, phone: true } }
+        shop: { select: { name: true, phone: true } },
+        supplier: true
       },
       orderBy: { createdAt: "desc" },
     });
@@ -551,6 +637,9 @@ export async function approveShortageItem(
             buyPriceUsd: hasStockForm ? (stockCurrency === "TRY" ? null : Number(stockPayload?.buyPrice || 0)) : undefined,
             sellPrice: sellPriceTry !== undefined ? sellPriceTry : undefined,
             sellPriceUsd: hasStockForm ? (stockCurrency === "TRY" ? null : Number(stockPayload?.sellPrice || 0)) : undefined,
+            supplierId: (stockPayload?.supplierId && stockPayload.supplierId !== "none")
+              ? stockPayload.supplierId
+              : (shortageItem.supplierId || undefined),
             attributes: stockAttributes as any,
             stock: { increment: safeQuantity },
             movements: {
@@ -558,7 +647,10 @@ export async function approveShortageItem(
                 quantity: safeQuantity,
                 type: "PURCHASE",
                 notes: `${shortageItem.name} (Kurye Teslimati)`,
-                shopId
+                shopId,
+                supplierId: (stockPayload?.supplierId && stockPayload.supplierId !== "none")
+                  ? stockPayload.supplierId
+                  : (shortageItem.supplierId || undefined)
               }
             }
           }
@@ -580,15 +672,21 @@ export async function approveShortageItem(
             sellPrice: sellPriceTry,
             sellPriceUsd: stockCurrency === "TRY" ? null : Number(stockPayload.sellPrice || 0),
             stock: safeQuantity,
-            criticalStock: 5,
+            criticalStock: 1,
             shopId,
+            supplierId: (stockPayload?.supplierId && stockPayload.supplierId !== "none")
+              ? stockPayload.supplierId
+              : (shortageItem.supplierId || null),
             attributes: { priceCurrency: stockCurrency } as any,
             movements: {
               create: {
                 quantity: safeQuantity,
                 type: "PURCHASE",
                 notes: `${shortageItem.name} (Kurye Teslimati)`,
-                shopId
+                shopId,
+                supplierId: (stockPayload?.supplierId && stockPayload.supplierId !== "none")
+                  ? stockPayload.supplierId
+                  : (shortageItem.supplierId || null)
               }
             },
             inventoryLogs: {
@@ -701,6 +799,7 @@ export async function approveShortageItem(
                 paymentMethod,
                 userId,
                 shopId,
+                supplierId: stockPayload?.supplierId || shortageItem.supplierId || undefined,
                 saleId: sale.id,
                 customerId: shortageItem.customerId,
                 financeAccountId: targetAccountId,
@@ -749,6 +848,7 @@ export async function approveShortageItem(
     revalidatePath("/stok");
     revalidatePath("/kurye");
     revalidatePath("/satis/kasa");
+    revalidatePath("/tedarikciler");
     revalidateTag(`staff-${shopId}`);
     return { success: true };
   } catch (error: any) {

@@ -31,7 +31,7 @@ export const productSchema = z.object({
     sellPrice: priceSchema,
     sellPriceUsd: z.coerce.number().optional().nullable(),
     stock: z.coerce.number().int().default(0),
-    criticalStock: z.coerce.number().int().default(5),
+    criticalStock: z.coerce.number().int().default(1),
     barcode: z.string().optional(),
     sku: z.string().optional(),
     location: z.string().optional(),

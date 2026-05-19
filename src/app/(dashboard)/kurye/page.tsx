@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { getSuppliers } from "@/lib/actions/supplier-actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,10 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
         queryClient.prefetchQuery({
             queryKey: ["staff"],
             queryFn: () => getStaff(),
+        }),
+        queryClient.prefetchQuery({
+            queryKey: ["suppliers"],
+            queryFn: () => getSuppliers(),
         }),
         ...(isAdmin ? [
             queryClient.prefetchQuery({

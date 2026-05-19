@@ -246,7 +246,7 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
                 <ShopTab shop={shop} />
               )}
               {activeTab === "forms" && (
-                <FormsTab shop={shop} />
+                <FormsTab shop={shop} formData={formData} />
               )}
               {activeTab === "modules" && (
                 <ModulesTab shop={shop} />

@@ -11,10 +11,12 @@ import { Label } from "@/components/ui/label";
 import {
     ArrowUpCircle,
     Banknote,
+    Building2,
     CheckCircle,
     CreditCard,
     Info,
     Package,
+    Search,
     ShoppingCart,
     Smartphone,
     Wallet
@@ -38,6 +40,7 @@ type StockPayload = {
     buyPrice: number;
     sellPrice: number;
     priceCurrency: PriceCurrency;
+    supplierId: string | null;
 };
 
 interface ApproveShortageModalProps {
@@ -58,6 +61,8 @@ interface ApproveShortageModalProps {
     productId?: string;
     product?: any;
     categories?: Category[];
+    suppliers?: any[];
+    initialSupplierId?: string;
 }
 
 const normalizeSearch = (value: string) =>
@@ -84,7 +89,9 @@ export function ApproveShortageModal({
     requesterName,
     isCustomer,
     product,
-    categories = []
+    categories = [],
+    suppliers = [],
+    initialSupplierId
 }: ApproveShortageModalProps) {
     const [step, setStep] = useState<"STOCK" | "CHOICE" | "PRICE" | "PAYMENT">("STOCK");
     const [selectedMode, setSelectedMode] = useState<"SALE" | "DEBT" | null>(null);
@@ -97,6 +104,8 @@ export function ApproveShortageModal({
     const [buyPrice, setBuyPrice] = useState<number>(0);
     const [sellPrice, setSellPrice] = useState<number>(0);
     const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>("TRY");
+    const [supplierId, setSupplierId] = useState<string>("");
+    const [supplierQuery, setSupplierQuery] = useState<string>("");
     const { rates, defaultCurrency } = useDashboardData();
 
     const categoryPathMap = useMemo(() => {
@@ -150,6 +159,14 @@ export function ApproveShortageModal({
             .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path, "tr"))
             .slice(0, 8);
     }, [categories, categoryPathMap, categoryQuery, itemName, productName]);
+
+    const filteredSuppliers = useMemo(() => {
+        const query = normalizeSearch(supplierQuery);
+        if (!query) return suppliers.slice(0, 5);
+        return suppliers
+            .filter((s) => normalizeSearch(s.name).includes(query))
+            .slice(0, 5);
+    }, [suppliers, supplierQuery]);
 
     const inferredCategoryId = useMemo(() => {
         if (product?.categoryId) return product.categoryId;
@@ -229,14 +246,17 @@ export function ApproveShortageModal({
         setSellPrice(sell);
         setCategoryId(inferredCategoryId);
         setCategoryQuery("");
-    }, [defaultCurrency, inferredCategoryId, isCustomer, itemName, open, product, quantity]);
+        setSupplierId(initialSupplierId || product?.supplierId || "");
+        setSupplierQuery("");
+    }, [defaultCurrency, inferredCategoryId, initialSupplierId, isCustomer, itemName, open, product, quantity]);
 
     const stockPayload: StockPayload = {
         productName: productName.trim(),
         categoryId: categoryId || null,
         buyPrice,
         sellPrice,
-        priceCurrency
+        priceCurrency,
+        supplierId: (supplierId && supplierId !== "none") ? supplierId : null
     };
 
     const canSaveStock = Boolean(stockPayload.productName && stockPayload.categoryId && stockQuantity > 0);
@@ -339,6 +359,58 @@ export function ApproveShortageModal({
                                         className="h-12 rounded-2xl font-black"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tedarikci (Istege Bagli)</Label>
+                                {supplierId && (
+                                    <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
+                                        <span className="text-[11px] font-black text-emerald-700 dark:text-emerald-300">
+                                            {suppliers.find(s => s.id === supplierId)?.name || "Tedarikci secildi"}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSupplierId("");
+                                                setSupplierQuery("");
+                                            }}
+                                            className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70 hover:text-emerald-900 dark:text-emerald-300/70 dark:hover:text-emerald-100"
+                                        >
+                                            Degistir
+                                        </button>
+                                    </div>
+                                )}
+                                {!supplierId && (
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            value={supplierQuery}
+                                            onChange={(e) => setSupplierQuery(e.target.value)}
+                                            placeholder="Tedarikci ara..."
+                                            className="h-12 rounded-2xl font-bold bg-zinc-100 dark:bg-white/5 pl-10"
+                                        />
+                                        {supplierQuery && filteredSuppliers.length > 0 && (
+                                            <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-2xl border border-zinc-200 bg-white p-1 shadow-xl dark:border-white/10 dark:bg-zinc-950">
+                                                {filteredSuppliers.map((s) => (
+                                                    <button
+                                                        key={s.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSupplierId(s.id);
+                                                            setSupplierQuery("");
+                                                        }}
+                                                        className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
+                                                    >
+                                                        <div className="h-6 w-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                                            <Building2 className="h-3.3 w-3.3 text-emerald-500" />
+                                                        </div>
+                                                        {s.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">

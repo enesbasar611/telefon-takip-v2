@@ -60,6 +60,7 @@ import { BarcodeLabelPrintDialog } from "@/components/barcode/barcode-label-prin
 export function StockListTable({
   products,
   categories,
+  suppliers = [],
   shop,
   totalCount = 0,
   pageSize = 20,
@@ -67,6 +68,7 @@ export function StockListTable({
 }: {
   products: any[],
   categories: any[],
+  suppliers?: any[],
   shop?: any,
   totalCount?: number,
   pageSize?: number,
@@ -713,6 +715,7 @@ export function StockListTable({
       <EditProductModal
         product={selectedProduct}
         categories={categories}
+        suppliers={suppliers}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         shop={shop}

@@ -705,7 +705,7 @@ export function CategoryManagementClient() {
                 sellPrice: sellPriceTry,
                 sellPriceUsd: priceCurrency === "TRY" ? null : newProductData.sellPrice,
                 stock: newProductData.stock, // Use value from UI
-                criticalStock: 5, // Default critical stock
+                criticalStock: 1, // Default critical stock
                 attributes: {
                     priceCurrency
                 }

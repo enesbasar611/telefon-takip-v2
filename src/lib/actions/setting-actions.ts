@@ -165,3 +165,32 @@ export async function saveAIIndustryConfig(serviceFields: any[], inventoryFields
     return { success: false, error: "AI yapılandırması kaydedilemedi." };
   }
 }
+
+export async function updateGlobalCriticalStock(level: number) {
+  try {
+    const shopId = await getShopId(false);
+    if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
+
+    await prisma.product.updateMany({
+      where: { shopId },
+      data: { criticalStock: level }
+    });
+
+    // Also save it as a setting for future reference/defaults
+    await prisma.setting.upsert({
+      where: { shopId_key: { shopId, key: "default_critical_stock" } },
+      update: { value: level.toString() },
+      create: { key: "default_critical_stock", value: level.toString(), shopId }
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/ayarlar");
+    revalidateTag("shop");
+    revalidateTag(`shop-${shopId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("updateGlobalCriticalStock error:", error);
+    return { success: false, error: "Kritik stok seviyesi güncellenemedi." };
+  }
+}

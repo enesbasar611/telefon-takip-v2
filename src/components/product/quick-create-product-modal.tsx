@@ -109,7 +109,7 @@ export function QuickCreateProductModal({
                 buyPriceUsd: buyPriceUsd,
                 sellPrice: finalSellPrice,
                 stock: 0, // Quick creation starts with 0 stock as per user intent
-                criticalStock: 5,
+                criticalStock: 1,
             });
 
             if (result.success) {

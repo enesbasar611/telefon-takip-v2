@@ -495,9 +495,13 @@ export function POSInterface({ initialSaleId }: {
   const content = (
     <div ref={containerRef} className={cn(
       "flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 bg-background h-full overflow-hidden p-2 sm:p-4 lg:p-6 relative transition-all duration-700",
-      isFullscreen && "fixed inset-0 z-[9998] p-4 lg:p-8 bg-background/95 backdrop-blur-xl",
+      isFullscreen && "fixed inset-0 z-[40] p-4 lg:p-8 bg-background/95 backdrop-blur-xl",
       showReceipt && "bg-emerald-950/20"
-    )}>
+    )} style={{ zIndex: isFullscreen ? 40 : undefined }}>
+      {/* Background decoration for fullscreen */}
+      {isFullscreen && (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background -z-10 pointer-events-none" />
+      )}
       {/* Success Pulse Background */}
       {showReceipt && (
         <div className="absolute inset-0 z-0 pointer-events-none animate-success-pulse bg-emerald-500/5 transition-all" />
@@ -617,10 +621,10 @@ export function POSInterface({ initialSaleId }: {
 
                       {/* Bottom Row: Price & Title */}
                       <div className="flex flex-col gap-0 z-10 w-full mt-auto">
-                        <div className="text-[10px] sm:text-[11px] font-bold text-muted-foreground/70 mb-[-2px]">
+                        <div className="text-[11px] sm:text-[13px] font-bold text-muted-foreground/80 mb-0">
                           {getEquivalentDisplay(product)}
                         </div>
-                        <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
+                        <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible drop-shadow-sm", priceSizeClass)}>
                           {getCartCurrencySymbol(product)}{priceStr}
                         </div>
                         <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em] mt-1">
@@ -665,7 +669,7 @@ export function POSInterface({ initialSaleId }: {
                     <UserPlus className="h-3 w-3" /> YENİ EKLE
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem] z-[10005]">
+                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
                   <div className="px-8 py-8 border-b border-border/40 flex flex-col gap-2 bg-muted/20">
                     <DialogTitle className="font-black text-xl uppercase tracking-tight">Hızlı Müşteri Kaydı</DialogTitle>
                     <DialogDescription className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
@@ -747,7 +751,7 @@ export function POSInterface({ initialSaleId }: {
                 </button>
               </PopoverTrigger>
               <PopoverContent
-                className="p-0 bg-card border border-border/60 rounded-[1.5rem] shadow-2xl z-[10005] overflow-hidden"
+                className="p-0 bg-card border border-border/60 rounded-[1.5rem] shadow-2xl overflow-hidden"
                 style={{ width: "var(--radix-popover-trigger-width)" }}
                 align="start"
                 sideOffset={6}
@@ -857,7 +861,7 @@ export function POSInterface({ initialSaleId }: {
                           />
                         </div>
                         <div className="flex flex-col leading-none">
-                          <span className="text-[10px] font-bold text-muted-foreground/60">
+                          <span className="text-[11px] font-bold text-muted-foreground/80">
                             {getEquivalentDisplay(item)}
                           </span>
                         </div>
@@ -949,11 +953,16 @@ export function POSInterface({ initialSaleId }: {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] sm:text-[11px] text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
-                <div className="flex flex-col items-end">
-                  {loyaltyDiscountAmount > 0 && (
-                    <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
-                  )}
-                  <span className="text-2xl sm:text-4xl text-foreground drop-shadow-sm font-bold">₺{formatCurrency(finalTotal)}</span>
+                <div className="flex flex-col items-end gap-0">
+                  <div className="flex items-center gap-2">
+                    {loyaltyDiscountAmount > 0 && (
+                      <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
+                    )}
+                    <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
+                      ({getEquivalentDisplay({ sellPrice: finalTotal })})
+                    </span>
+                  </div>
+                  <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">₺{formatCurrency(finalTotal)}</span>
                 </div>
               </div>
 

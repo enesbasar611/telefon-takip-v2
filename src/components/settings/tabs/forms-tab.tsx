@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { Plus, Trash2, GripVertical, Check, Wand2, Eye, Layout, Type, Hash, List, AlignLeft, AlertCircle, Zap, Pencil, X, Sparkles } from "lucide-react";
+import { Plus, Trash2, GripVertical, Check, Wand2, Eye, Layout, Type, Hash, List, AlignLeft, AlertCircle, Zap, Pencil, X, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { updateShop } from "@/lib/actions/setting-actions";
+import { updateShop, updateGlobalCriticalStock } from "@/lib/actions/setting-actions";
 import { updateShopThemeConfig } from "@/lib/actions/superadmin-actions";
 import { generateIndustryConfigWithAI } from "@/lib/actions/gemini-actions";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { getIndustryConfig } from "@/lib/industry-utils";
 
-export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: string }) {
+export function FormsTab({ shop, formData, adminShopId }: { shop: any, formData?: Record<string, string>, adminShopId?: string }) {
+    const [criticalStock, setCriticalStock] = useState(Number(formData?.default_critical_stock || 1));
     const [isPending, startTransition] = useTransition();
     const shopIndustry = shop?.industry || "GENERAL";
     const shopThemeConfig = shop?.themeConfig || {};
@@ -137,7 +138,19 @@ export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: strin
         });
     };
 
+    const handleSaveCriticalStock = () => {
+        startTransition(async () => {
+            const result = await updateGlobalCriticalStock(Number(criticalStock));
+            if (result.success) {
+                toast.success("Kritik stok seviyesi tüm ürünlere uygulandı.");
+            } else {
+                toast.error(result.error || "Hata oluştu.");
+            }
+        });
+    };
+
     const fields = activeSection === "accessories" ? [] : (themeConfig[activeSection] || []);
+
 
     // Filter default fields that are NOT already in the current config
     const availableDefaults = useMemo(() => {
@@ -153,6 +166,39 @@ export function FormsTab({ shop, adminShopId }: { shop: any, adminShopId?: strin
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             {/* Editor Side */}
             <div className="xl:col-span-8 space-y-8">
+                {/* Global Critical Stock Level */}
+                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl space-y-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 bg-amber-500/20 rounded-xl flex items-center justify-center border border-amber-500/20 text-amber-500">
+                                <AlertCircle className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold tracking-tight">Varsayılan Kritik Stok Seviyesi</h4>
+                                <p className="text-[10px] text-muted-foreground/80">Sistem geneli ve mevcut tüm ürünler için kritik stok alt sınırı.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Input
+                                type="number"
+                                value={criticalStock}
+                                onChange={(e) => setCriticalStock(Number(e.target.value))}
+                                className="w-20 h-11 rounded-xl font-bold text-center border-amber-500/20 focus:ring-amber-500/20 focus:border-amber-500/30 dark:bg-white/5"
+                                min={0}
+                            />
+                            <Button
+                                variant="outline"
+                                onClick={handleSaveCriticalStock}
+                                disabled={isPending}
+                                className="rounded-xl h-11 px-4 text-[10px] font-black uppercase tracking-widest border-amber-500/20 text-amber-600 hover:bg-amber-500/10 hover:border-amber-500/40 transition-all shadow-sm"
+                            >
+                                {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                TÜM ÜRÜNLERE UYGULA
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 p-6 rounded-3xl border border-slate-200 dark:border-white/10">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/20 text-indigo-400">

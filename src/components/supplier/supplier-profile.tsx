@@ -471,105 +471,49 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                     <TabsContent value="history" className="m-0">
                         <Card className="bg-card border-border/50 overflow-hidden">
                             <div className="p-6 border-b border-border/50 flex items-center justify-between">
-                                <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Tamamlanan Satın Almalar</h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-muted-foreground mr-2">GÜNLÜK GRUPLA</span>
-                                    <button
-                                        onClick={() => setIsGroupedByDay(!isGroupedByDay)}
-                                        className={cn(
-                                            "w-10 h-5 rounded-full transition-all relative border border-border",
-                                            isGroupedByDay ? "bg-blue-600 border-blue-500" : "bg-white/5"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white transition-all",
-                                            isGroupedByDay ? "left-[calc(100%-18px)]" : "left-1"
-                                        )} />
-                                    </button>
-                                </div>
+                                <h3 className="font-medium text-sm  text-foreground uppercase tracking-widest">Tedarikçi Alış Geçmişi</h3>
+                                <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest">
+                                    {supplier.inventoryMovements?.length || 0} Ürün
+                                </Badge>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-border/50 text-left bg-white/[0.01]">
-                                            {["Sipariş No", "Tarih", "Toplam", "Ödeme", "Durum", "İşlem"].map((h) => (
+                                            {["Tarih", "Ürün", "Miktar", "Tip", "Notlar"].map((h) => (
                                                 <th key={h} className="px-6 py-4 text-[10px]  text-muted-foreground uppercase tracking-widest">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {getGroupedOrders(supplier.purchases?.filter((p: any) => p.status === "COMPLETED") || []).length === 0 ? (
+                                        {(!supplier.inventoryMovements || supplier.inventoryMovements.length === 0) ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
-                                                    Henüz geçmiş işlem kaydı bulunmuyor.
+                                                <td colSpan={5} className="px-6 py-12 text-center text-sm font-medium text-muted-foreground">
+                                                    Henüz bu tedarikçiden ürün alımı kaydedilmemiş.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            getGroupedOrders(supplier.purchases?.filter((p: any) => p.status === "COMPLETED") || []).map((order: any) => (
-                                                <tr key={order.id} className="hover:bg-white/[0.01] transition-colors group">
-                                                    <td className="px-6 py-4 text-xs font-medium text-foreground group-hover:text-blue-400">
-                                                        {isGroupedByDay ? (
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <span className="font-black text-blue-500">{order.orders.length} SİPARİŞ</span>
-                                                                <span className="text-[9px] text-muted-foreground truncate w-40">
-                                                                    {order.items.slice(0, 3).map((i: any) => i.name).join(", ")}
-                                                                    {order.items.length > 3 && "..."}
-                                                                </span>
-                                                            </div>
-                                                        ) : (
-                                                            `#${order.orderNo}`
-                                                        )}
-                                                    </td>
+                                            supplier.inventoryMovements.map((movement: any) => (
+                                                <tr key={movement.id} className="hover:bg-white/[0.01] transition-colors group">
                                                     <td className="px-6 py-4 text-xs font-medium text-muted-foreground">
-                                                        {isGroupedByDay ? format(new Date(order.date), "dd MMMM yyyy", { locale: tr }) : format(new Date(order.createdAt), "dd MMMM yyyy", { locale: tr })}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-foreground">
-                                                        ₺{Math.round(Number(order.totalAmount)).toLocaleString("tr-TR")}
-                                                        {isGroupedByDay && (
-                                                            <div className="text-[10px] text-emerald-500 font-medium">
-                                                                Ödenen: ₺{Math.round(order.totalAmount - order.remainingAmount).toLocaleString("tr-TR")}
-                                                            </div>
-                                                        )}
+                                                        {format(new Date(movement.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <Badge className={cn(
-                                                            "text-[10px] border-none px-2 rounded-xl",
-                                                            order.paymentStatus === "PAID" ? "bg-emerald-500/10 text-emerald-500" :
-                                                                order.paymentStatus === "PARTIAL" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
-                                                        )}>
-                                                            {order.paymentStatus === "PAID" ? "ÖDENDİ" : order.paymentStatus === "PARTIAL" ? "KISMİ" : "BEKLİYOR"}
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold text-foreground uppercase">{movement.product?.name || "Bilinmeyen Ürün"}</span>
+                                                            <span className="text-[9px] text-muted-foreground font-mono">{movement.product?.sku}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs font-black text-blue-500">
+                                                        {movement.quantity} ADET
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[9px] font-black uppercase">
+                                                            {movement.type === "PURCHASE" ? "SATIN ALMA" : movement.type}
                                                         </Badge>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <Badge className="text-[10px] border-none px-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                                                            Tamamlandı
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {!isGroupedByDay && (
-                                                            <div className="flex items-center gap-2">
-                                                                <Button
-                                                                    onClick={() => {
-                                                                        setInitialPaymentOrderId(order.id);
-                                                                        setIsPaymentOpen(true);
-                                                                    }}
-                                                                    disabled={order.paymentStatus === "PAID"}
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-8 rounded-lg text-[10px] uppercase text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 border"
-                                                                >
-                                                                    {order.paymentStatus === "PAID" ? "Ödendi" : "Ödeme Yap"}
-                                                                </Button>
-                                                                <Button
-                                                                    onClick={() => handleDetail(order)}
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 rounded-lg text-[10px] uppercase text-muted-foreground hover:bg-white/5"
-                                                                >
-                                                                    Detay
-                                                                </Button>
-                                                            </div>
-                                                        )}
+                                                    <td className="px-6 py-4 text-xs text-muted-foreground italic truncate max-w-[200px]">
+                                                        {movement.notes || "-"}
                                                     </td>
                                                 </tr>
                                             ))
