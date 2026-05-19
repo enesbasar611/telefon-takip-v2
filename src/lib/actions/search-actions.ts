@@ -9,7 +9,7 @@ export async function globalSearchAction(query: string) {
 
   try {
     const shopId = await getShopId();
-    const [products, customers, suppliers, serviceTickets] = await Promise.all([
+    const [products, customers, suppliers, serviceTickets, settings] = await Promise.all([
       // Search Products
       prisma.product.findMany({
         where: {
@@ -19,9 +19,16 @@ export async function globalSearchAction(query: string) {
             { sku: { contains: query, mode: 'insensitive' } },
           ]
         },
+        select: {
+          id: true,
+          name: true,
+          stock: true,
+          sellPrice: true,
+          sellPriceUsd: true,
+        },
         take: 5
       }),
-      // Search Customers
+      // ... (other queries)
       prisma.customer.findMany({
         where: {
           shopId,
@@ -33,7 +40,6 @@ export async function globalSearchAction(query: string) {
         },
         take: 5
       }),
-      // Search Suppliers
       prisma.supplier.findMany({
         where: {
           shopId,
@@ -44,7 +50,6 @@ export async function globalSearchAction(query: string) {
         },
         take: 5
       }),
-      // Search Service Tickets (with customer included)
       prisma.serviceTicket.findMany({
         where: {
           shopId,
@@ -59,19 +64,44 @@ export async function globalSearchAction(query: string) {
         },
         include: { customer: true },
         take: 8
+      }),
+      // Fetch settings for currency
+      prisma.setting.findMany({
+        where: { shopId, key: { in: ['exchange_rate_usd', 'defaultCurrency'] } }
       })
     ]);
 
+    const usdRateSetting = settings.find(s => s.key === 'exchange_rate_usd');
+    const defaultCurrencySetting = settings.find(s => s.key === 'defaultCurrency');
+
+    const usdRate = parseFloat(usdRateSetting?.value || '34');
+    const isUsdDefault = (defaultCurrencySetting?.value || 'TRY') === 'USD';
+
     const results: any[] = [];
 
-    products.forEach((p: any) => results.push({
-      id: p.id,
-      title: p.name,
-      subtitle: `${p.stock} Adet • ₺${Number(p.sellPrice).toLocaleString("tr-TR")}`,
-      type: 'Ürün',
-      href: `/envanter?search=${encodeURIComponent(p.name)}`,
-      breadcrumb: 'Envanter > Ürünler'
-    }));
+    products.forEach((p: any) => {
+      const priceTl = Number(p.sellPrice);
+      const priceUsd = p.sellPriceUsd && Number(p.sellPriceUsd) > 0
+        ? Number(p.sellPriceUsd)
+        : priceTl / usdRate;
+
+      const tlStr = `₺${Math.round(priceTl).toLocaleString("tr-TR")}`;
+      const usdStr = `$${Math.round(priceUsd)}`;
+
+      // Varsayılan para birimine göre sıralama
+      const priceSubtitle = isUsdDefault
+        ? `${usdStr} (${tlStr})`
+        : `${tlStr} (${usdStr})`;
+
+      results.push({
+        id: p.id,
+        title: p.name,
+        subtitle: `${p.stock} Adet • ${priceSubtitle}`,
+        type: 'Ürün',
+        href: `/stok?q=${encodeURIComponent(p.name)}`,
+        breadcrumb: 'Envanter > Ürünler'
+      });
+    });
 
     customers.forEach((c: any) => results.push({
       id: c.id,

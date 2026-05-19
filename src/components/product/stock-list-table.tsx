@@ -76,11 +76,19 @@ export function StockListTable({
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [printProduct, setPrintProduct] = useState<any>(null);
   const [printProducts, setPrintProducts] = useState<any[]>([]);
+
+  // Sync searchTerm with URL query param
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null && q !== searchTerm) {
+      setSearchTerm(q);
+    }
+  }, [searchParams]);
 
   // Selection persistence across pages
   const [selectedIds, setSelectedIds] = useState<string[]>(() => {

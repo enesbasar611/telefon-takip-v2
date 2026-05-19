@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useTransition, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +34,10 @@ import {
   Tag,
   Package,
   UserPlus,
-  Loader2
+  Loader2,
+  ChevronDown,
+  Check,
+  X
 } from "lucide-react";
 import { createSale, getSaleById } from "@/lib/actions/sale-actions";
 import { getPOSInitialData } from "@/lib/actions/product-actions";
@@ -61,6 +59,10 @@ import { useDashboardData } from "@/lib/context/dashboard-data-context";
 export function POSInterface({ initialSaleId }: {
   initialSaleId?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const queryClient = useQueryClient();
 
   const { data: posData, isLoading: isPosLoading } = useQuery({
@@ -123,6 +125,11 @@ export function POSInterface({ initialSaleId }: {
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "" });
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
+  // Müşteri Combobox State
+  const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const customerSearchRef = useRef<HTMLInputElement>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -147,32 +154,31 @@ export function POSInterface({ initialSaleId }: {
     });
   }, [products, searchTerm, selectedCategory]);
 
+  // ?fullscreen=true paramını yakala ve state'i ayarla
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    // Auto-fullscreen from shortcut parameter
     if (searchParams.get("fullscreen") === "true") {
-      const triggerFs = () => {
-        if (!document.fullscreenElement) {
-          containerRef.current?.requestFullscreen().catch(() => { });
-        }
-      };
-      triggerFs();
-      // Browsers often block auto-fullscreen, so we try once on the first document click too
-      document.addEventListener("click", triggerFs, { once: true });
+      setIsFullscreen(true);
     }
-
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [searchParams]);
 
+  // ESC ile fullscreen'den çıkış
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+        // URL'deki fullscreen=true parametresini temizle (isteğe bağlı ama temizlik iyidir)
+        router.replace("/satis");
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen, router]);
+
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(() => { });
-    } else {
-      document.exitFullscreen().catch(() => { });
+    const next = !isFullscreen;
+    setIsFullscreen(next);
+    if (!next) {
+      router.replace("/satis");
     }
   };
 
@@ -234,6 +240,21 @@ export function POSInterface({ initialSaleId }: {
       ? Number(item.sellPrice || 0)
       : Number(item.sellPriceUsd || item.sellPrice || 0);
   }
+
+  const getEquivalentDisplay = useCallback((product: any) => {
+    const itemCurrency = getCartItemCurrency(product);
+    const usdRate = Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
+
+    if (itemCurrency === "USD") {
+      const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
+      const tlEquiv = Math.round(priceUsd * usdRate);
+      return `(₺${tlEquiv.toLocaleString("tr-TR")})`;
+    } else {
+      const priceTl = Number(product.sellPrice || 0);
+      const usdEquiv = Math.round(priceTl / usdRate);
+      return `($${usdEquiv})`;
+    }
+  }, [exchangeRates, settingsData]);
 
   const addToCart = useCallback((product: any) => {
     if (products.length === 0) return;
@@ -471,10 +492,10 @@ export function POSInterface({ initialSaleId }: {
     // The background query invalidation has already synced everything.
   };
 
-  return (
+  const content = (
     <div ref={containerRef} className={cn(
       "flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 bg-background h-full overflow-hidden p-2 sm:p-4 lg:p-6 relative transition-all duration-700",
-      isFullscreen && "fixed inset-0 z-50 p-4 lg:p-8",
+      isFullscreen && "fixed inset-0 z-[9998] p-4 lg:p-8 bg-background/95 backdrop-blur-xl",
       showReceipt && "bg-emerald-950/20"
     )}>
       {/* Success Pulse Background */}
@@ -595,16 +616,14 @@ export function POSInterface({ initialSaleId }: {
                       </div>
 
                       {/* Bottom Row: Price & Title */}
-                      <div className="flex flex-col gap-1 sm:gap-2 z-10 w-full mt-4">
+                      <div className="flex flex-col gap-0 z-10 w-full mt-auto">
+                        <div className="text-[10px] sm:text-[11px] font-bold text-muted-foreground/70 mb-[-2px]">
+                          {getEquivalentDisplay(product)}
+                        </div>
                         <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible", priceSizeClass)}>
                           {getCartCurrencySymbol(product)}{priceStr}
                         </div>
-                        {productCurrency !== "TRY" && (
-                          <div className="text-[10px] font-semibold text-muted-foreground">
-                            ₺{formatCurrency(product.sellPrice)}
-                          </div>
-                        )}
-                        <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em]">
+                        <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em] mt-1">
                           {product.name}
                         </div>
                       </div>
@@ -646,7 +665,7 @@ export function POSInterface({ initialSaleId }: {
                     <UserPlus className="h-3 w-3" /> YENİ EKLE
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
+                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem] z-[10005]">
                   <div className="px-8 py-8 border-b border-border/40 flex flex-col gap-2 bg-muted/20">
                     <DialogTitle className="font-black text-xl uppercase tracking-tight">Hızlı Müşteri Kaydı</DialogTitle>
                     <DialogDescription className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
@@ -689,24 +708,124 @@ export function POSInterface({ initialSaleId }: {
                 </DialogContent>
               </Dialog>
             </div>
-            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger className="bg-background border border-border/60 h-14 rounded-2xl text-[14px] font-medium text-foreground shadow-sm focus:ring-2 focus:ring-primary/10 px-6">
-                <SelectValue placeholder="Müşteri Seçiniz (Hızlı Satış)" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border border-border/60 text-foreground rounded-[1.5rem] shadow-2xl p-2 max-h-80">
-                <SelectItem value="null" className="text-[13px] font-medium py-3 rounded-xl hover:bg-muted transition-colors">Varsayılan (İsimsiz)</SelectItem>
-                {customers.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id} className="text-[13px]  py-4 rounded-xl hover:bg-primary/5 transition-all border-b border-border/10 last:border-none cursor-pointer">
-                    <div className="flex flex-col gap-1">
-                      <span className=" leading-none text-foreground/90">{c.name}</span>
-                      <span className="text-[10px] text-blue-500  leading-none mt-1">
-                        {formatPhone(c.phone)}
+            <Popover open={isCustomerOpen} onOpenChange={(open) => {
+              setIsCustomerOpen(open);
+              if (open) {
+                setCustomerSearch("");
+                setTimeout(() => customerSearchRef.current?.focus(), 50);
+              }
+            }}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between bg-background border border-border/60 h-14 rounded-2xl text-[14px] font-medium text-foreground shadow-sm hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 px-6 transition-all group"
+                >
+                  <span className={cn(
+                    "truncate",
+                    !selectedCustomerId || selectedCustomerId === "null"
+                      ? "text-muted-foreground text-[13px]"
+                      : "text-foreground"
+                  )}>
+                    {selectedCustomerId && selectedCustomerId !== "null"
+                      ? customers.find((c: any) => c.id === selectedCustomerId)?.name ?? "Müşteri Seçiniz (Hızlı Satış)"
+                      : "Müşteri Seçiniz (Hızlı Satış)"}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selectedCustomerId && selectedCustomerId !== "null" && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); setSelectedCustomerId(undefined); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); setSelectedCustomerId(undefined); } }}
+                        className="h-5 w-5 rounded-full bg-muted/60 hover:bg-rose-500/20 hover:text-rose-500 flex items-center justify-center transition-colors"
+                      >
+                        <X className="h-3 w-3" />
                       </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    )}
+                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", isCustomerOpen && "rotate-180")} />
+                  </div>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-0 bg-card border border-border/60 rounded-[1.5rem] shadow-2xl z-[10005] overflow-hidden"
+                style={{ width: "var(--radix-popover-trigger-width)" }}
+                align="start"
+                sideOffset={6}
+              >
+                {/* Arama Input */}
+                <div className="p-3 border-b border-border/40">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      ref={customerSearchRef}
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      placeholder="Müşteri adı veya telefon..."
+                      className="w-full bg-background border border-border/40 rounded-xl h-10 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+                    />
+                  </div>
+                </div>
+                {/* Liste */}
+                <div className="max-h-64 overflow-y-auto custom-scrollbar p-2">
+                  {/* Varsayılan seçenek */}
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedCustomerId("null"); setIsCustomerOpen(false); }}
+                    className={cn(
+                      "w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium transition-all hover:bg-muted/60",
+                      (!selectedCustomerId || selectedCustomerId === "null") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    {(!selectedCustomerId || selectedCustomerId === "null") && <Check className="h-3.5 w-3.5 shrink-0" />}
+                    <span className={(!selectedCustomerId || selectedCustomerId === "null") ? "" : "pl-5"}>Varsayılan (İsimsiz)</span>
+                  </button>
+                  {/* Filtrelenmiş müşteriler */}
+                  {customers
+                    .filter((c: any) => {
+                      if (!customerSearch) return true;
+                      const s = customerSearch.toLocaleLowerCase("tr-TR").trim();
+                      const nameMatch = c.name?.toLocaleLowerCase("tr-TR").includes(s);
+                      const phoneSearch = s.replace(/\D/g, "");
+                      const phoneValue = (c.phone || "").replace(/\D/g, "");
+                      const phoneMatch = phoneSearch && phoneValue.includes(phoneSearch);
+                      return nameMatch || phoneMatch;
+                    })
+                    .map((c: any) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => { setSelectedCustomerId(c.id); setIsCustomerOpen(false); }}
+                        className={cn(
+                          "w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] transition-all hover:bg-primary/5 border-b border-border/10 last:border-none",
+                          selectedCustomerId === c.id && "bg-primary/10"
+                        )}
+                      >
+                        {selectedCustomerId === c.id
+                          ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                          : <span className="w-3.5 shrink-0" />}
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="font-medium text-foreground/90 truncate">{c.name}</span>
+                          {c.phone && (
+                            <span className="text-[10px] text-blue-500 leading-none">{formatPhone(c.phone)}</span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  }
+                  {customers.filter((c: any) => {
+                    if (!customerSearch) return false;
+                    const s = customerSearch.toLowerCase();
+                    return (
+                      c.name?.toLowerCase().includes(s) ||
+                      c.phone?.replace(/\D/g, "").includes(s.replace(/\D/g, ""))
+                    );
+                  }).length === 0 && customerSearch && (
+                      <p className="text-center py-6 text-[11px] text-muted-foreground/60">Sonuç bulunamadı</p>
+                    )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
 
@@ -737,11 +856,11 @@ export function POSInterface({ initialSaleId }: {
                             title="Sepet fiyatı değiştirilebilir"
                           />
                         </div>
-                        {getCartItemCurrency(item) !== "TRY" && (
-                          <span className="text-[10px] font-semibold text-muted-foreground">
-                            ₺{formatCurrency(item.sellPrice)}
+                        <div className="flex flex-col leading-none">
+                          <span className="text-[10px] font-bold text-muted-foreground/60">
+                            {getEquivalentDisplay(item)}
                           </span>
-                        )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 flex-shrink-0">
@@ -892,4 +1011,11 @@ export function POSInterface({ initialSaleId }: {
       <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
     </div>
   );
+
+  if (!mounted) return null;
+  if (isFullscreen && typeof document !== "undefined") {
+    return createPortal(content, document.body);
+  }
+
+  return content;
 }
