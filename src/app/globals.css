@@ -50,15 +50,15 @@
 
   .dark {
     /* Nexus Dark Mode — Dynamic Modern (Navy/Slate) Base */
-    --background: 222 30% 15%;
-    /* Modern deep navy/slate, not pure black */
+    --background: 222 47% 11%;
+    /* #0f172a - Deep Slate Navy */
     --foreground: 214 32% 93%;
 
-    --card: 222 24% 19%;
-    /* Slightly lighter than background to stand out */
+    --card: 219 31% 15%;
+    /* #1a2231 - Slightly lighter than background */
     --card-foreground: 214 32% 93%;
 
-    --popover: 222 24% 18%;
+    --popover: 219 31% 16%;
     --popover-foreground: 214 32% 93%;
 
     --primary: 217.2 91.2% 59.8%;

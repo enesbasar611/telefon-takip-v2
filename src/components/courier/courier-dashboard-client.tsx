@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useTransition, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSocket } from "@/components/providers/socket-provider";
-import { useSession } from "next-auth/react";
 import {
     TrendingUp,
     MessageSquare,
@@ -60,6 +58,7 @@ import {
 import { getCategories } from "@/lib/actions/product-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
+import { processReturnOutcome } from "@/lib/actions/return-actions";
 import { Role } from "@prisma/client";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
@@ -239,28 +238,6 @@ export function CourierDashboardClient({
         setMounted(true);
     }, []);
 
-    // Socket for real-time cross-client sync
-    const { socket } = useSocket();
-    const { data: session } = useSession();
-    const shopId = (session?.user as any)?.shopId;
-
-    const emitShortageUpdate = () => {
-        if (socket && shopId) {
-            socket.emit("shortage_update", { roomId: shopId });
-        }
-    };
-
-    useEffect(() => {
-        if (!socket) return;
-        const handler = () => {
-            queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
-            queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
-            queryClient.invalidateQueries({ queryKey: ["courier-notifications"] });
-        };
-        socket.on("shortage_updated", handler);
-        return () => { socket.off("shortage_updated", handler); };
-    }, [socket, queryClient]);
-
     useEffect(() => {
         if (!isAdmin) {
             setShortcutCourierId(userId);
@@ -362,7 +339,6 @@ export function CourierDashboardClient({
             const res = await markShortageAsTaken(id, !currentStatus, supplierId);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün alındı." : "Geri alındı.");
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error("İşlem başarısız.");
@@ -411,7 +387,6 @@ export function CourierDashboardClient({
             const res = await approveShortageItem(id, quantity, mode, paymentMethod, customPrice, currency, stockPayload);
             if (res.success) {
                 toast.success(mode === "STOCK" ? "Ürün stoğa eklendi." : "Ürün stoğa eklendi ve işlem gerçekleştirildi.");
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "Onay başarısız.");
@@ -421,6 +396,24 @@ export function CourierDashboardClient({
         } finally {
             setLoadingId(null);
             setApprovingItem(null);
+        }
+    };
+
+    const handleReturnOutcome = async (id: string, outcome: "EXCHANGED" | "LOSS") => {
+        setLoadingId(id);
+        try {
+            const res = await processReturnOutcome(id, outcome);
+            if (res.success) {
+                toast.success(outcome === "EXCHANGED" ? "Ürün değiştirildi ve stoğa eklendi." : "İade değişmedi, zarar olarak kaydedildi.");
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+            }
+        } catch (err) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setLoadingId(null);
         }
     };
 
@@ -436,7 +429,6 @@ export function CourierDashboardClient({
             }
             if (res.success) {
                 toast.success("Sipariş silindi.");
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
                 queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
@@ -463,7 +455,6 @@ export function CourierDashboardClient({
                 if (selectedIds.length <= ids.length) setIsSelectionMode(false);
                 setSelectedIds(prev => prev.filter(sid => !ids.includes(sid)));
                 toast.success("Seçili siparişler silindi.");
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
                 queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
             } else {
@@ -530,7 +521,6 @@ export function CourierDashboardClient({
             });
             if (res.success) {
                 toast.success(`${finishingCourier.name} kuryesinin günü bitirildi.`);
-                emitShortageUpdate();
                 setIsTransferModalOpen(false);
                 setFinishPreview({ notTakenItems: [], takenWithoutStockItems: [] });
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
@@ -577,7 +567,6 @@ export function CourierDashboardClient({
             const res = await markShortageAsNotFound(id, !currentStatus);
             if (res.success) {
                 toast.success(!currentStatus ? "Ürün bulunmadı olarak işaretlendi." : "Bulunmadı işareti kaldırıldı.");
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "İşlem başarısız.");
@@ -599,7 +588,6 @@ export function CourierDashboardClient({
                 toast.success(`${selectedIds.length} ürün alındı olarak işaretlendi.`);
                 setSelectedIds([]);
                 setIsSelectionMode(false);
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "İşlem başarısız.");
@@ -621,7 +609,6 @@ export function CourierDashboardClient({
                 toast.success(`${selectedIds.length} ürün bulunmadı olarak işaretlendi.`);
                 setSelectedIds([]);
                 setIsSelectionMode(false);
-                emitShortageUpdate();
                 queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
             } else {
                 toast.error(res.error || "İşlem başarısız.");
@@ -1128,7 +1115,12 @@ export function CourierDashboardClient({
                                                                     "font-black text-sm tracking-tight truncate leading-none mb-1 uppercase",
                                                                     item.isTaken ? "text-muted-foreground line-through opacity-40" : "text-zinc-900 dark:text-zinc-100"
                                                                 )}>
-                                                                    {item.name}
+                                                                    {item.returnTicketId && (
+                                                                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20 text-[8px] px-2 py-0.5 font-black flex items-center gap-1 shadow-sm uppercase">
+                                                                            <ArrowUpCircle className="w-2 h-2" />
+                                                                            İADE GÖREVİ
+                                                                        </Badge>
+                                                                    )}
                                                                 </h4>
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     {item.isNotFound && (
@@ -1264,6 +1256,33 @@ export function CourierDashboardClient({
                                                                 <X className="w-3.5 h-3.5 mr-1.5" />
                                                                 {item.isNotFound ? "İşareti Kaldır" : "Bulunamadı"}
                                                             </Button>
+
+                                                            {item.returnTicketId && (
+                                                                <>
+                                                                    <Button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleReturnOutcome(item.id, "EXCHANGED");
+                                                                        }}
+                                                                        disabled={loadingId === item.id}
+                                                                        className="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-emerald-500/20"
+                                                                    >
+                                                                        <Check className="w-3.5 h-3.5 mr-1" />
+                                                                        DEĞİŞTİ
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleReturnOutcome(item.id, "LOSS");
+                                                                        }}
+                                                                        disabled={loadingId === item.id}
+                                                                        className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-red-500/20"
+                                                                    >
+                                                                        <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                                                                        DEĞİŞMEDİ
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}

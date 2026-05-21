@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { Suspense } from "react";
 import { getReturnTickets } from "@/lib/actions/return-actions";
+import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { ReturnsClient } from "@/components/stock/returns-client";
 import { Loader2, PackageX } from "lucide-react";
 
@@ -10,7 +11,10 @@ export const metadata = {
 };
 
 export default async function ReturnsPage() {
-    const initialTickets = await getReturnTickets();
+    const [initialTickets, suppliers] = await Promise.all([
+        getReturnTickets(),
+        getSuppliers()
+    ]);
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -26,7 +30,7 @@ export default async function ReturnsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             }>
-                <ReturnsClient initialData={initialTickets} />
+                <ReturnsClient initialData={initialTickets} suppliers={suppliers} />
             </Suspense>
         </div>
     );

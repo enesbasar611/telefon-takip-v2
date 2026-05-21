@@ -48,16 +48,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { formatCurrency } from "@/lib/utils";
 import { PriceInput } from "@/components/ui/price-input";
 
 const transactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
   amount: z.string().min(1, "Tutar gereklidir"),
-  description: z.string().min(3, "AÃ§Ä±klama en az 3 karakter olmalÄ±dÄ±r"),
+  description: z.string().min(3, "Açıklama en az 3 karakter olmalıdır"),
   paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]),
-  accountId: z.string().min(1, "Hesap seÃ§imi gereklidir"),
-  category: z.string().min(1, "Ä°ÅŸlem tÃ¼rÃ¼ gereklidir"),
+  accountId: z.string().min(1, "Hesap seçimi gereklidir"),
+  category: z.string().min(1, "İşlem türü gereklidir"),
   manualCategory: z.string().optional(),
   date: z.string().optional(),
 });
@@ -68,10 +67,25 @@ interface CreateTransactionModalProps {
   trigger?: React.ReactNode;
   initialAccounts?: any[];
   initialData?: any;
+  initialType?: "INCOME" | "EXPENSE";
+  initialCategory?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateTransactionModal({ trigger, initialAccounts, initialData }: CreateTransactionModalProps) {
-  const [open, setOpen] = useState(false);
+export function CreateTransactionModal({
+  trigger,
+  initialAccounts,
+  initialData,
+  initialType,
+  initialCategory,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: CreateTransactionModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -93,16 +107,22 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      type: initialData?.type || "INCOME",
+      type: initialType || initialData?.type || "INCOME",
       amount: initialData?.amount?.toString() || "",
       description: initialData?.description || "",
       paymentMethod: initialData?.paymentMethod || "CASH",
       accountId: initialData?.accountId || "",
-      category: initialData?.category || "GENEL",
+      category: initialCategory || initialData?.category || "GENEL",
       manualCategory: "",
       date: initialData?.createdAt ? new Date(initialData.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     }
   });
+
+  // Update default values when initialType or initialCategory changes (if modal is not open yet or is being reset)
+  useEffect(() => {
+    if (initialType) setValue("type", initialType);
+    if (initialCategory) setValue("category", initialCategory);
+  }, [initialType, initialCategory, setValue]);
 
   const transactionType = watch("type");
   const categoryValue = watch("category");
@@ -124,6 +144,15 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
     const expense = recentTransactions.filter((t: any) => t.type === "EXPENSE").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
     return { income, expense };
   }, [recentTransactions]);
+
+  const toTitleCase = (str: string) => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const transactionMutation = useMutation({
     mutationFn: async (data: TransactionFormValues) => {
       if (initialData) {
@@ -147,11 +176,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
         toast.error(result.error);
         return;
       }
-      if ("isFuture" in result && result.isFuture) {
-        toast.success("message" in result ? result.message : "Ã„Â°leri tarihli iÃ…Å¸lem, Randevu Merkezi'ne eklendi.");
-      } else {
-        toast.success(initialData ? "Ã„Â°Ã…Å¸lem gÃƒÂ¼ncellendi." : "Ã„Â°Ã…Å¸lem baÃ…Å¸arÃ„Â±yla kaydedildi.");
-      }
+      toast.success(initialData ? "İşlem güncellendi." : "İşlem başarıyla kaydedildi.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
         queryClient.invalidateQueries({ queryKey: ["finance-transactions"] }),
@@ -173,18 +198,10 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       setRemovedAttachmentIds([]);
     },
     onError: () => {
-      toast.error("Ã„Â°Ã…Å¸lem kaydedilemedi.");
+      toast.error("İşlem kaydedilemedi.");
     },
   });
   const isPending = transactionMutation.isPending;
-
-  const toTitleCase = (str: string) => {
-    return str
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
 
   // Auto-open from URL query param (e.g. from global search: ?action=add-income)
   useEffect(() => {
@@ -192,7 +209,6 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
     if (action === 'add-income') {
       setValue('type', 'INCOME');
       setOpen(true);
-      // Clean the param from URL
       const params = new URLSearchParams(searchParams.toString());
       params.delete('action');
       router.replace(`${pathname}${params.size > 0 ? '?' + params.toString() : ''}`);
@@ -230,12 +246,12 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       const data = await res.json();
       if (data.success) {
         setAttachments(prev => [...prev, ...data.attachments]);
-        toast.success(`${files.length} dosya yÃ¼klendi.`);
+        toast.success(`${files.length} dosya yüklendi.`);
       } else {
-        toast.error("Dosya yÃ¼klenemedi.");
+        toast.error("Dosya yüklenemedi.");
       }
     } catch (error) {
-      toast.error("Dosya yÃ¼kleme hatasÄ±.");
+      toast.error("Dosya yükleme hatası.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -248,6 +264,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
       setRemovedAttachmentIds(prev => [...prev, id]);
     }
   };
+
   const onSubmit = async (data: TransactionFormValues) => {
     transactionMutation.mutate(data);
   };
@@ -263,15 +280,17 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button className="rounded-xl shadow-lg shadow-blue-500/20 gap-2 h-10 px-5 text-xs  bg-blue-600 hover:bg-blue-700">
-            <PlusCircle className="h-4 w-4" />
-            <span>YENÄ° Ä°ÅLEM EKLE</span>
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-[1000px] border border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-white/95 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button className="rounded-xl shadow-lg shadow-blue-500/20 gap-2 h-10 px-5 text-xs bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="h-4 w-4" />
+              <span>YENİ İŞLEM EKLE</span>
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-w-[1000px] border border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-white/95 dark:bg-zinc-900/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
         {/* Header Gradient Stripe */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50 opacity-80" />
 
@@ -291,10 +310,10 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 }
               </div>
               <div>
-                <DialogTitle className="font-medium text-3xl  tracking-tight text-foreground">
-                  {initialData ? "Ä°ÅŸlem DÃ¼zenle" : "Kasa GiriÅŸ/Ã‡Ä±kÄ±ÅŸ Ä°ÅŸlemi"}
+                <DialogTitle className="font-medium text-3xl tracking-tight text-foreground">
+                  {initialData ? "İşlem Düzenle" : "Kasa Giriş/Çıkış İşlemi"}
                 </DialogTitle>
-                <p className="text-[11px]  text-muted-foreground mt-1 uppercase tracking-[0.2em] opacity-60">AtÃ¶lye finansal hareketlerini hassasiyetle kaydedin.</p>
+                <p className="text-[11px] text-muted-foreground mt-1 uppercase tracking-[0.2em] opacity-60">Atölye finansal hareketlerini hassasiyetle kaydedin.</p>
               </div>
             </div>
           </DialogHeader>
@@ -306,53 +325,53 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 type="button"
                 onClick={() => setValue("type", "INCOME")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs  transition-all duration-300",
+                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs transition-all duration-300",
                   transactionType === "INCOME"
                     ? "bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 scale-[1.02]"
                     : "text-muted-foreground hover:bg-emerald-500/5 hover:text-emerald-500"
                 )}
               >
                 <ArrowDownLeft className="h-4 w-4" />
-                GELÄ°R (GÄ°RÄ°Å)
+                GELİR (GİRİŞ)
               </button>
               <button
                 type="button"
                 onClick={() => setValue("type", "EXPENSE")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs  transition-all duration-300",
+                  "flex-1 flex items-center justify-center gap-3 h-14 rounded-[1.4rem] text-xs transition-all duration-300",
                   transactionType === "EXPENSE"
                     ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]"
                     : "text-muted-foreground hover:bg-rose-500/5 hover:text-rose-500"
                 )}
               >
                 <ArrowUpRight className="h-4 w-4" />
-                GÄ°DER (Ã‡IKIÅ)
+                GİDER (ÇIKIŞ)
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <PlusCircle className="h-3 w-3" /> Ä°ÅLEM TÃœRÃœ
+                <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <PlusCircle className="h-3 w-3" /> İŞLEM TÜRÜ
                 </Label>
-                <Select onValueChange={(val) => setValue("category", val)} defaultValue="GENEL">
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none hover:bg-zinc-100/80 transition-all font-medium">
-                    <SelectValue placeholder="SeÃ§iniz" />
+                <Select onValueChange={(val) => setValue("category", val)} defaultValue={watch("category") || "GENEL"}>
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-xs shadow-none hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-all font-medium text-foreground">
+                    <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 shadow-2xl">
-                    <SelectItem value="GENEL" className="text-xs  rounded-xl py-3">Genel Ä°ÅŸlem</SelectItem>
-                    <SelectItem value="KÄ°RA" className="text-xs  rounded-xl py-3">Kira / Gider</SelectItem>
-                    <SelectItem value="MAAÅ" className="text-xs  rounded-xl py-3">MaaÅŸ Ã–demesi</SelectItem>
-                    <SelectItem value="FATURA" className="text-xs  rounded-xl py-3">Fatura Ã–demesi</SelectItem>
-                    <SelectItem value="STOK" className="text-xs  rounded-xl py-3">Stok AlÄ±mÄ±</SelectItem>
-                    <SelectItem value="DÄ°ÄER" className="text-xs  rounded-xl py-3">DiÄŸer</SelectItem>
+                  <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2 shadow-2xl">
+                    <SelectItem value="GENEL" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Genel İşlem</SelectItem>
+                    <SelectItem value="KİRA" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Kira / Gider</SelectItem>
+                    <SelectItem value="MAAŞ" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Maaş Ödemesi</SelectItem>
+                    <SelectItem value="FATURA" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Fatura Ödemesi</SelectItem>
+                    <SelectItem value="STOK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Stok Alımı</SelectItem>
+                    <SelectItem value="DİĞER" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Diğer</SelectItem>
                   </SelectContent>
                 </Select>
-                {categoryValue === "DÄ°ÄER" && (
+                {categoryValue === "DİĞER" && (
                   <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
                     <Input
                       {...register("manualCategory")}
-                      placeholder="Ä°ÅŸlem tÃ¼rÃ¼nÃ¼ yazÄ±nÄ±z... (Ã–rn: KÄ±rtasiye Gideri)"
+                      placeholder="İşlem türünü yazınız... (Örn: Kırtasiye Gideri)"
                       className="h-12 rounded-[1rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs px-4"
                     />
                   </div>
@@ -360,7 +379,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="amount" className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Label htmlFor="amount" className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Landmark className="h-3 w-3" /> TUTAR
                 </Label>
                 <div className="relative group">
@@ -377,17 +396,17 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <CreditCard className="h-3 w-3" /> Ã–DEME YÃ–NTEMÄ°
+                <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <CreditCard className="h-3 w-3" /> ÖDEME YÖNTEMİ
                 </Label>
-                <Select onValueChange={(val) => setValue("paymentMethod", val as any)} defaultValue="CASH">
+                <Select onValueChange={(val) => setValue("paymentMethod", val as any)} defaultValue={watch("paymentMethod") || "CASH"}>
                   <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
-                    <SelectValue placeholder="SeÃ§iniz" />
+                    <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2">
-                    <SelectItem value="CASH" className="text-xs  rounded-xl py-3">NAKÄ°T</SelectItem>
-                    <SelectItem value="CARD" className="text-xs  rounded-xl py-3">KREDÄ° KARTI</SelectItem>
-                    <SelectItem value="TRANSFER" className="text-xs  rounded-xl py-3">HAVALE / EFT</SelectItem>
+                  <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2">
+                    <SelectItem value="CASH" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer uppercase">NAKİT</SelectItem>
+                    <SelectItem value="CARD" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer uppercase">KREDİ KARTI</SelectItem>
+                    <SelectItem value="TRANSFER" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer uppercase">HAVALE / EFT</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -395,7 +414,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Wallet className="h-3 w-3" /> KASA SEÃ‡Ä°MÄ°
+                    <Wallet className="h-3 w-3" /> KASA SEÇİMİ
                   </Label>
                   <CreateAccountModal trigger={
                     <button type="button" className="text-[10px] uppercase tracking-widest text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -405,11 +424,11 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                 </div>
                 <Select onValueChange={(val) => setValue("accountId", val)} value={watch("accountId")}>
                   <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
-                    <SelectValue placeholder="SeÃ§iniz" />
+                    <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[1.2rem] border-border/40 bg-background/95 backdrop-blur-xl p-2 min-w-[300px]">
+                  <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2 min-w-[300px]">
                     {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3">
+                      <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">
                         <div className="flex items-center justify-between w-full min-w-[240px]">
                           <div className="flex items-center gap-2">
                             {getAccountIcon(acc.type)}
@@ -419,7 +438,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                             "font-medium text-[10px] ml-4",
                             acc.balance >= 0 ? "text-emerald-500" : "text-rose-500"
                           )}>
-                            â‚º{Number(acc.balance).toLocaleString('tr-TR')}
+                            ₺{Number(acc.balance).toLocaleString('tr-TR')}
                           </span>
                         </div>
                       </SelectItem>
@@ -430,8 +449,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             </div>
 
             <div className="space-y-3">
-              <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar className="h-3 w-3" /> TARÄ°H VE SAAT
+              <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Calendar className="h-3 w-3" /> TARİH VE SAAT
               </Label>
               <Input
                 type="date"
@@ -441,22 +460,22 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="description" className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                <FileText className="h-3 w-3" /> AÃ‡IKLAMA / NOT
+              <Label htmlFor="description" className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <FileText className="h-3 w-3" /> AÇIKLAMA / NOT
               </Label>
               <Textarea
                 id="description"
                 {...register("description")}
-                placeholder="Ä°ÅŸlem detaylarÄ±nÄ± buraya yazÄ±n..."
+                placeholder="İşlem detaylarını buraya yazın..."
                 className="min-h-[100px] rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs p-5 shadow-none focus-visible:ring-primary/20 transition-all font-medium"
               />
-              {errors.description && <p className="text-[10px]  text-rose-500 ml-2 italic">{errors.description.message}</p>}
+              {errors.description && <p className="text-[10px] text-rose-500 ml-2 italic">{errors.description.message}</p>}
             </div>
 
             {/* Document Upload Area */}
             <div className="space-y-3">
-              <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Upload className="h-3 w-3" /> BELGE / FÄ°Å YÃœKLE
+              <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Upload className="h-3 w-3" /> BELGE / FİŞ YÜKLE
               </Label>
               <input
                 type="file"
@@ -477,8 +496,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                     <Upload className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
-                <p className="text-[11px]  text-muted-foreground uppercase">DosyayÄ± sÃ¼rÃ¼kleyin veya <span className="text-primary hover:underline">gÃ¶z atÄ±n</span></p>
-                <p className="text-[9px]  text-muted-foreground/50 mt-2">PNG, JPG, PDF (MAX. 10MB)</p>
+                <p className="text-[11px] text-muted-foreground uppercase">Dosyayı sürükleyin veya <span className="text-primary hover:underline">göz atın</span></p>
+                <p className="text-[9px] text-muted-foreground/50 mt-2">PNG, JPG, PDF (MAX. 10MB)</p>
               </div>
 
               {/* Uploaded Files List */}
@@ -495,8 +514,8 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px]  text-foreground truncate uppercase">{file.filename}</p>
-                          <p className="text-[9px]  text-muted-foreground/50">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-[10px] text-foreground truncate uppercase">{file.filename}</p>
+                          <p className="text-[9px] text-muted-foreground/50">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                       </div>
                       <Button
@@ -519,14 +538,14 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
 
             {/* Modal Actions */}
             <div className="flex gap-4 pt-4 sticky bottom-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md -mx-2 px-2 pb-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">Ä°PTAL</Button>
-              <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px]  uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px] uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">İPTAL</Button>
+              <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
                 {isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
                     <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-500" />
-                    {initialData ? 'GÃœNCELLE' : 'KAYDET VE EKLE'}
+                    {initialData ? 'GÜNCELLE' : 'KAYDET VE EKLE'}
                   </>
                 )}
               </Button>
@@ -537,12 +556,11 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
         {/* Right Side: Sidebar */}
         <div className="flex-[0.6] bg-zinc-50/50 dark:bg-zinc-900/30 border-l border-zinc-200 dark:border-zinc-800 p-8 md:p-10 flex flex-col h-full overflow-hidden">
           <div className="space-y-10 h-full overflow-y-auto custom-scrollbar pr-2">
-
             {/* Balances Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <Wallet className="h-3 w-3" /> GÃœNCEL KASA VARLIKLARI
+                <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Wallet className="h-3 w-3" /> GÜNCEL KASA VARLIKLARI
                 </Label>
               </div>
 
@@ -551,24 +569,24 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <div key={acc.id} className="p-5 rounded-[1.5rem] bg-background/50 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 transition-all group-hover:scale-110" />
                     <div className="relative z-10">
-                      <p className="text-[10px]  text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
                       <div className="flex items-end justify-between">
-                        <p className="text-xl  text-foreground tracking-tighter">
-                          â‚º{Number(acc.balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                        <p className="text-xl text-foreground tracking-tighter">
+                          ₺{Number(acc.balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                         </p>
                         <div className={cn(
-                          "px-3 py-1 rounded-full text-[9px]  uppercase flex items-center gap-1.5",
+                          "px-3 py-1 rounded-full text-[9px] uppercase flex items-center gap-1.5",
                           acc.balance >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                         )}>
                           {acc.balance >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                          {acc.balance >= 0 ? "+ %4.2 BUGÃœN" : "- %1.5 BUGÃœN"}
+                          {acc.balance >= 0 ? "+ %4.2 BUGÜN" : "- %1.5 BUGÜN"}
                         </div>
                       </div>
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center py-6 text-muted-foreground  text-xs italic">
-                    Hesap bulunamadÄ±
+                  <div className="text-center py-6 text-muted-foreground text-xs italic">
+                    Hesap bulunamadı
                   </div>
                 )}
               </div>
@@ -577,7 +595,7 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
             {/* Recent History Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <History className="h-3 w-3" /> SON HAREKETLER
                 </Label>
                 <button type="button" className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-all">
@@ -597,25 +615,24 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                       {tx.type === "INCOME" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px]  text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
-                      <p className="text-[10px]  text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
-                        {format(new Date(tx.createdAt), "HH:mm")} â€¢ {tx.account?.name || "Bilinmiyor"}
+                      <p className="text-[11px] text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
+                      <p className="text-[10px] text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
+                        {format(new Date(tx.createdAt), "HH:mm")} • {tx.account?.name || "Bilinmiyor"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className={cn(
-                        "text-xs  tracking-tighter",
+                        "text-xs tracking-tighter",
                         tx.type === "INCOME" ? "text-emerald-500" : "text-rose-500"
                       )}>
-                        {tx.type === "INCOME" ? "+" : "-"}â‚º{Number(tx.amount).toLocaleString('tr-TR')}
+                        {tx.type === "INCOME" ? "+" : "-"}₺{Number(tx.amount).toLocaleString('tr-TR')}
                       </p>
-                      <p className="text-[9px]  text-muted-foreground/40 uppercase tracking-widest">{tx.paymentMethod}</p>
+                      <p className="text-[9px] text-muted-foreground/40 uppercase tracking-widest">{tx.paymentMethod}</p>
                     </div>
                   </div>
                 ))}
-
-                <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-border/40 text-[10px]  uppercase tracking-widest hover:border-primary/40 transition-all mt-4">
-                  TÃœM HAREKETLERÄ° GÃ–R
+                <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-border/40 text-[10px] uppercase tracking-widest hover:border-primary/40 transition-all mt-4">
+                  TÜM HAREKETLERİ GÖR
                 </Button>
               </div>
             </div>
@@ -628,24 +645,16 @@ export function CreateTransactionModal({ trigger, initialAccounts, initialData }
                   <div className="h-8 w-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
                     <History className="h-4 w-4 text-indigo-500" />
                   </div>
-                  <h4 className="font-medium text-xs  text-foreground tracking-widest">FÄ°NANSAL Ã–ZET</h4>
+                  <h4 className="font-medium text-xs text-foreground tracking-widest">FİNANSAL ÖZET</h4>
                 </div>
-                <p className="text-[11px]  text-muted-foreground/70 leading-relaxed uppercase tracking-tighter">
-                  BU AY TOPLAM GELÄ°RÄ°NÄ°Z GÄ°DERLERÄ°NÄ°ZDEN <span className="text-emerald-500 font-extrabold tracking-normal">â‚º{(summary.income - summary.expense).toLocaleString('tr-TR')}</span> DAHA FAZLA. PERFORMANS %12 ARTIÅTA.
+                <p className="text-[11px] text-muted-foreground/70 leading-relaxed uppercase tracking-tighter">
+                  BU AY TOPLAM GELİRİNİZ GİDERLERİNİZDEN <span className="text-emerald-500 font-extrabold tracking-normal">₺{(summary.income - summary.expense).toLocaleString('tr-TR')}</span> DAHA FAZLA. PERFORMANS %12 ARTIŞTA.
                 </p>
               </div>
             </div>
-
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-
-
-
-
-
-

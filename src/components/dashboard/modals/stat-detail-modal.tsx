@@ -331,25 +331,36 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
 
                                     {type === "COLLECTIONS" && (
                                         <div className="space-y-3">
-                                            {data.map((item: any) => (
-                                                <div key={item.id} className="p-4 rounded-2xl bg-muted/20 border border-border/10 flex items-center justify-between group hover:bg-background/50 transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-sm">
-                                                            <Banknote className="h-5 w-5 text-amber-500" />
+                                            {data.map((item: any) => {
+                                                const customerName = item.customer?.name || item.sale?.customer?.name;
+                                                const supplierName = item.supplier?.name;
+                                                const displayName = customerName || supplierName || item.description || "Hızlı Satış";
+                                                const searchVal = customerName || supplierName || item.description;
+
+                                                return (
+                                                    <Link
+                                                        key={item.id}
+                                                        href={`/satis/kasa?search=${encodeURIComponent(searchVal || "")}`}
+                                                        className="p-4 rounded-2xl bg-muted/20 border border-border/10 flex items-center justify-between group hover:bg-background/50 hover:border-amber-500/30 transition-all cursor-pointer block"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-sm transition-transform group-hover:scale-105">
+                                                                {customerName ? <User className="h-5 w-5 text-amber-500" /> : <Banknote className="h-5 w-5 text-amber-500" />}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-medium text-sm  uppercase tracking-tight">{displayName}</h4>
+                                                                <p className="text-[10px]  text-muted-foreground opacity-60 uppercase tracking-tighter">
+                                                                    {item.createdAt ? format(new Date(item.createdAt), "HH:mm", { locale: tr }) : "00:00"} • {item.financeAccount?.name || "Kasa"}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <h4 className="font-medium text-sm  uppercase tracking-tight">{item.sale?.customer?.name || "Hızlı Satış"}</h4>
-                                                            <p className="text-[10px]  text-muted-foreground opacity-60 uppercase tracking-tighter">
-                                                                {item.createdAt ? format(new Date(item.createdAt), "HH:mm", { locale: tr }) : "00:00"} • {item.account?.name || "Kasa"}
-                                                            </p>
+                                                        <div className="text-right">
+                                                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
+                                                            <p className="text-base  text-emerald-500 tracking-tight">₺{Number(item.amount).toLocaleString('tr-TR')}</p>
                                                         </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
-                                                        <p className="text-base  text-emerald-500 tracking-tight">₺{Number(item.amount).toLocaleString('tr-TR')}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                    </Link>
+                                                );
+                                            })}
                                         </div>
                                     )}
 
@@ -420,12 +431,13 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                             {data.map((item: any, idx: number) => {
                                                 let title = item.customer?.name || item.name || (item.deviceBrand ? item.deviceBrand + " " + item.deviceModel : "Kayıt " + (idx + 1));
                                                 let subtitle = item.ticketNumber ? "#" + item.ticketNumber : item.description || (item.type ? item.type : "Detaylar");
-                                                const value = item.finalAmount || item.actualCost || (item.balance !== undefined ? item.balance : null);
+                                                const value = item.amount || item.finalAmount || item.actualCost || (item.balance !== undefined ? item.balance : null);
 
                                                 if (type === "DAILY_SALES") {
-                                                    title = item.saleNumber || `Satış #${idx + 1}`;
-                                                    const productNames = item.items?.map((i: any) => i.product?.name).join(', ') || "Ürün Yok";
-                                                    subtitle = `Satılan: ${productNames}`;
+                                                    title = item.sale?.saleNumber || item.description || `İşlem #${idx + 1}`;
+                                                    const productNames = item.sale?.items?.map((i: any) => i.product?.name).join(', ');
+                                                    subtitle = productNames ? `Ürünler: ${productNames}` : (item.category || "Hızlı Satış/Ödeme");
+                                                    if (item.customer?.name) subtitle = `${item.customer.name} - ${subtitle}`;
                                                 }
 
                                                 return (

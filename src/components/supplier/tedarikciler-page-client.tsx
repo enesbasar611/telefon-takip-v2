@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +39,6 @@ import {
     RefreshCcw
 } from "lucide-react";
 import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
-import { deletePendingOrdersForSupplierAction } from "@/lib/actions/purchase-actions";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -60,9 +59,20 @@ import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { SupplierPaymentModal } from "./supplier-payment-modal";
 import { Checkbox } from "@/components/ui/checkbox";
-import { deletePurchaseOrdersAction, getPurchaseOrders, getSuppliers, getCriticalAndOutOfStockProducts } from "@/lib/actions/purchase-actions";
+import {
+    createPurchaseOrderAction,
+    receivePurchaseOrderAction,
+    deletePurchaseOrdersAction,
+    deletePendingOrdersForSupplierAction
+} from "@/lib/actions/purchase-actions";
+import {
+    getSuppliers,
+    getPurchaseOrders,
+    getCriticalAndOutOfStockProducts
+} from "@/lib/actions/supplier-actions";
 import { getAIAlerts } from "@/lib/actions/stock-ai-actions";
 import { getShop } from "@/lib/actions/setting-actions";
+import { getStaff } from "@/lib/actions/staff-actions";
 
 interface TedarikcilerPageClientProps {
     suppliers?: any[];
@@ -91,6 +101,7 @@ export function TedarikcilerPageClient({
     criticalProducts: initialCriticalProducts,
     shop: initialShop
 }: TedarikcilerPageClientProps) {
+    const queryClient = useQueryClient();
     const { data: suppliersData } = useQuery({
         queryKey: ["suppliers"],
         queryFn: () => getSuppliers(),
@@ -123,6 +134,13 @@ export function TedarikcilerPageClient({
         queryKey: ["shop"],
         queryFn: () => getShop(),
         staleTime: 60 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const { data: staffData } = useQuery({
+        queryKey: ["staff"],
+        queryFn: () => getStaff(),
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
 
@@ -165,6 +183,10 @@ export function TedarikcilerPageClient({
 
     const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
 
+    const couriers = useMemo(() => {
+        return (staffData || []).filter((s: any) => s.role === "COURIER");
+    }, [staffData]);
+
     // If a supplier is selected, show the profile view
     if (selectedSupplierId && selectedSupplier) {
         return (
@@ -173,6 +195,7 @@ export function TedarikcilerPageClient({
                 onBack={() => setSelectedSupplierId(null)}
                 suppliers={suppliers}
                 shop={shop}
+                couriers={couriers}
             />
         );
     }
@@ -958,8 +981,8 @@ export function TedarikcilerPageClient({
                 onClose={() => setIsPurchaseFormOpen(false)}
                 suppliers={suppliers}
                 shop={shop}
-                onSuccess={(newOrder) => {
-                    setPurchaseOrders([newOrder, ...purchaseOrders]);
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
                 }}
             />
             <MalKabulModal

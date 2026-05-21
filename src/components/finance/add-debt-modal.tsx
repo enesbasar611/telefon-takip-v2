@@ -109,9 +109,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
         if (currency === "USD") {
             if (storedCurrency === "USD" && storedForeignPrice > 0) {
-                return Number(storedForeignPrice.toFixed(2));
+                return Math.round(Number(storedForeignPrice));
             }
-            return Number((sellPriceTry / usdRate).toFixed(2));
+            return Math.round(sellPriceTry / usdRate);
         }
 
         return sellPriceTry;
@@ -256,7 +256,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
         const quantity = Math.max(1, Math.floor(Number(itemQuantity) || 1));
         const unitAmount = Number(itemAmount);
         const totalAmount = unitAmount * quantity;
-        const converted = itemCurrency === "USD" ? totalAmount * usdRate : totalAmount;
+        const converted = itemCurrency === "USD" ? Math.round(totalAmount * usdRate) : totalAmount;
 
         const newItem: DebtDraftItem = {
             id: Math.random().toString(36).substr(2, 9),
@@ -338,10 +338,8 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                         const equivSymbol = isUSD ? '₺' : '$';
 
                         const originalAmt = item.amount;
-                        const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                        const equivFormatted = equivSymbol === '$'
-                            ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : Math.round(equivalentAmt).toLocaleString('tr-TR');
+                        const equivalentAmt = isUSD ? Math.round(originalAmt * usdRate) : Math.round(originalAmt / usdRate);
+                        const equivFormatted = equivalentAmt.toLocaleString('tr-TR');
 
                         message += `• ${item.title}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
                     });
@@ -548,7 +546,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                                 {itemCurrency === "USD" && rates && (
                                     <div className="text-[10px] text-muted-foreground italic flex justify-between items-center px-2">
                                         <span>Anlık Kur: 1$ = ₺{rates.usd}</span>
-                                        <span>Karşılığı: ₺{(Number(itemAmount) * Math.max(1, Math.floor(Number(itemQuantity) || 1)) * rates.usd).toLocaleString('tr-TR')}</span>
+                                        <span>Karşılığı: ₺{Math.round(Number(itemAmount) * Math.max(1, Math.floor(Number(itemQuantity) || 1)) * rates.usd).toLocaleString('tr-TR')}</span>
                                     </div>
                                 )}
                             </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, ArrowUpRight, ArrowDownRight, Paperclip, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { History, Search, ArrowUpRight, ArrowDownRight, Paperclip, Pencil, Trash2, AlertCircle, User, Building2 } from "lucide-react";
 import { CreateTransactionModal } from "./create-transaction-modal";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -17,8 +18,12 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { deleteTransaction, deleteTransactions } from "@/lib/actions/finance-actions";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { EditTransactionWrapper } from "./edit-transaction-wrapper";
 import {
     AlertDialog,
+
     AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
@@ -29,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function TransactionHistory({ transactions }: { transactions: any[] }) {
+    const searchParams = useSearchParams();
     const [search, setSearch] = useState("");
     const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -36,13 +42,37 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    useEffect(() => {
+        const querySearch = searchParams.get("search");
+        if (querySearch) {
+            setSearch(querySearch);
+        }
+    }, [searchParams]);
+
+
+    const { data: rates } = useQuery({
+        queryKey: ["exchange-rates"],
+        queryFn: () => getExchangeRates(null),
+    });
+    const usdRate = rates?.usd || 32.5;
+
     const filtered = transactions.filter((t) => {
+        // Only show transactions that actually impact cash/bank/card accounts
+        // Filter out DEBT (veresiye) rows as per user request
+        if (t.paymentMethod === "DEBT") return false;
+
         const matchSearch =
             t.description?.toLowerCase().includes(search.toLowerCase()) ||
             t.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-            t.account?.name?.toLowerCase().includes(search.toLowerCase());
+            t.account?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            t.customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            t.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            t.category?.toLowerCase().includes(search.toLowerCase());
+
+
         const matchPayment =
             paymentFilter === "ALL" || t.paymentMethod === paymentFilter;
+
         return matchSearch && matchPayment;
     });
 
@@ -204,7 +234,7 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                         <TableCell>
                                             <div className="flex flex-col gap-1.5">
                                                 <span className="text-[10px]  text-blue-500 flex items-center gap-1 uppercase tracking-wider">
-                                                    {t.account?.name || 'GENEL KASA'}
+                                                    {t.financeAccount?.name || 'GENEL KASA'}
                                                 </span>
                                                 <Badge variant="outline" className="w-fit text-[9px]  py-0.5 px-2 rounded-lg bg-muted/30 border-border/40 opacity-80 uppercase tracking-tighter">
                                                     {paymentLabels[t.paymentMethod] || t.paymentMethod}
@@ -212,9 +242,21 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col">
+                                            <div className="flex flex-col gap-0.5">
                                                 <span className="text-xs  text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{t.description}</span>
-                                                {t.category && <span className="text-[9px]  text-muted-foreground/40 uppercase tracking-widest mt-0.5">{t.category}</span>}
+                                                <div className="flex items-center gap-2">
+                                                    {t.customer && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                                                            <User className="h-3 w-3" /> {t.customer.name}
+                                                        </span>
+                                                    )}
+                                                    {t.supplier && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
+                                                            <Building2 className="h-3 w-3" /> {t.supplier.name}
+                                                        </span>
+                                                    )}
+                                                    {t.category && <span className="text-[9px]  text-muted-foreground/40 uppercase tracking-widest">{t.category}</span>}
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -228,29 +270,60 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                         <TableCell className="text-right pr-8">
                                             <div className="flex flex-col items-end">
                                                 <div className={cn("flex items-center gap-1.5 text-base  tracking-tighter font-semibold", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
-                                                    {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                                                    {t.type === 'INCOME' ? '+' : '-'}
+                                                    {t.currency === "USD" ? "$" : "₺"}
+                                                    {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
                                                     {t.type === 'INCOME' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                                                 </div>
+                                                {t.currency === "USD" && (
+                                                    <span className="text-[10px] text-muted-foreground/60 font-medium">
+                                                        ~₺{Math.round(Number(t.amount) * usdRate).toLocaleString('tr-TR')}
+                                                    </span>
+                                                )}
                                             </div>
                                         </TableCell>
+
                                         <TableCell className="text-right pr-10">
-                                            <div className="flex flex-col items-end">
-                                                <div className="text-[11px] font-medium text-foreground opacity-80 bg-muted/30 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                                                    ₺{Number(t.runningBalance || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                                </div>
-                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1">İŞLEM SONRASI</span>
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                {(() => {
+                                                    const balance = Number(t.runningBalance);
+                                                    const hasBalance = t.runningBalance !== null && t.runningBalance !== undefined;
+                                                    const isIncome = t.type === 'INCOME';
+                                                    if (!hasBalance) return (
+                                                        <span className="text-[10px] text-muted-foreground/40 italic">—</span>
+                                                    );
+                                                    return (
+                                                        <div className={cn(
+                                                            "flex items-center gap-1 text-[11px] font-semibold px-3 py-1 rounded-lg border",
+                                                            isIncome
+                                                                ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/8 border-emerald-500/20"
+                                                                : "text-rose-600 dark:text-rose-400 bg-rose-500/8 border-rose-500/20"
+                                                        )}>
+                                                            {isIncome
+                                                                ? <ArrowUpRight className="h-3 w-3" />
+                                                                : <ArrowDownRight className="h-3 w-3" />}
+                                                            {t.currency === "USD" ? "$" : "₺"}
+                                                            {balance.toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
+                                                        </div>
+                                                    );
+
+                                                })()}
+                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest">
+                                                    {t.financeAccount?.name || 'KASA'} BAKİYESİ
+                                                </span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="pr-10">
                                             <div className="flex items-center justify-end gap-1">
-                                                <CreateTransactionModal
-                                                    initialData={t}
+                                                <EditTransactionWrapper
+                                                    transaction={t}
                                                     trigger={
                                                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 transition-all opacity-0 group-hover:opacity-100">
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
                                                     }
                                                 />
+
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -283,18 +356,42 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                             {format(new Date(t.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
                                         </span>
                                         <span className="text-[10px] text-blue-500 font-medium uppercase mt-0.5">
-                                            {t.account?.name || 'GENEL KASA'}
+                                            {t.financeAccount?.name || 'GENEL KASA'}
                                         </span>
                                     </div>
-                                    <div className={cn("flex items-center gap-1.5 text-base font-bold tracking-tighter", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
-                                        {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
+                                    <div className={cn("flex flex-col items-end gap-0.5 font-bold tracking-tighter", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
+                                        <div className="flex items-center gap-1 text-base">
+                                            {t.type === 'INCOME' ? '+' : '-'}
+                                            {t.currency === "USD" ? "$" : "₺"}
+                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
+                                        </div>
+                                        {t.currency === "USD" && (
+                                            <span className="text-[10px] text-muted-foreground/60 font-medium">
+                                                ~₺{Math.round(Number(t.amount) * usdRate).toLocaleString('tr-TR')}
+                                            </span>
+                                        )}
                                     </div>
+
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
                                     <p className="text-xs text-foreground/90 font-medium leading-tight">
                                         {t.description || "Açıklama belirtilmemiş"}
                                     </p>
+                                    {(t.customer || t.supplier) && (
+                                        <div className="flex items-center gap-2">
+                                            {t.customer && (
+                                                <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                                                    <User className="h-3 w-3" /> {t.customer.name}
+                                                </span>
+                                            )}
+                                            {t.supplier && (
+                                                <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
+                                                    <Building2 className="h-3 w-3" /> {t.supplier.name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-2">
                                         <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 border-none rounded-lg uppercase tracking-widest", t.type === 'INCOME' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500')}>
                                             {t.type === 'INCOME' ? 'TAHSİLAT' : 'ÖDEME'}
@@ -313,14 +410,15 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                                         <span className="text-[9px] text-muted-foreground uppercase">{t.user?.name || 'SİSTEM'}</span>
                                     </div>
 
-                                    <CreateTransactionModal
-                                        initialData={t}
+                                    <EditTransactionWrapper
+                                        transaction={t}
                                         trigger={
                                             <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-muted-foreground gap-2">
                                                 <Pencil className="h-3 w-3" /> Düzenle
                                             </Button>
                                         }
                                     />
+
                                     <Button
                                         variant="ghost"
                                         size="sm"

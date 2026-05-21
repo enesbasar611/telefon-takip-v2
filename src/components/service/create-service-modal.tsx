@@ -31,10 +31,19 @@ import { Trash, CheckCircle2, Grid } from "lucide-react";
 interface CreateServiceModalProps {
   trigger?: ReactNode;
   shop?: any;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
-  const [open, setOpen] = useState(false);
+export function CreateServiceModal({
+  trigger,
+  shop,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: CreateServiceModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
   const [isPending, startTransition] = useTransition();
   const [isDiagnosticPending, setIsDiagnosticPending] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null);
@@ -219,14 +228,16 @@ export function CreateServiceModal({ trigger, shop }: CreateServiceModalProps) {
           if (!nextOpen) setShowMissingRequired(false);
         }}
       >
-        <DialogTrigger asChild>
-          {trigger || (
-            <Button className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              <span>Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı</span>
-            </Button>
-          )}
-        </DialogTrigger>
+        {controlledOpen === undefined && (
+          <DialogTrigger asChild>
+            {trigger || (
+              <Button className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                <span>Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı</span>
+              </Button>
+            )}
+          </DialogTrigger>
+        )}
 
         <DialogContent className="w-full md:max-w-[700px] h-full md:h-auto md:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl flex flex-col">
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">

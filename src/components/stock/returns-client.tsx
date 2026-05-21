@@ -13,10 +13,8 @@ import {
     User,
     ArrowLeftRight,
     AlertTriangle,
-    Eye,
     ChevronDown,
     Loader2,
-    MoreVertical,
     FileText,
     History,
     TrendingUp,
@@ -52,12 +50,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -79,9 +71,10 @@ import { cn } from "@/lib/utils";
 
 interface ReturnsClientProps {
     initialData: any[];
+    suppliers?: any[];
 }
 
-export function ReturnsClient({ initialData }: ReturnsClientProps) {
+export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProps) {
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -96,6 +89,7 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [isAddReturnOpen, setIsAddReturnOpen] = useState(false);
     const [rejectNotes, setRejectNotes] = useState("");
+    const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
     const [addReturnInitialData, setAddReturnInitialData] = useState<any>(undefined);
 
     // Auto-open modal from URL params (e.g. from veresiye page)
@@ -166,12 +160,19 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
 
     const handleApprove = async () => {
         if (!selectedTicket) return;
+
+        if (returnAction === "SENT_TO_SUPPLIER" && !selectedSupplierId) {
+            toast.error("Lütfen iadenin gönderileceği tedarikçiyi seçin.");
+            return;
+        }
+
         startTransition(async () => {
-            const res = await processReturn(selectedTicket.id, returnAction as any);
+            const res = await processReturn(selectedTicket.id, returnAction as any, undefined, selectedSupplierId);
             if (res.success) {
                 toast.success("İade onaylandı. İşlem başarıyla uygulandı.");
                 setIsApproveModalOpen(false);
                 setSelectedTicket(null);
+                setSelectedSupplierId("");
                 router.refresh();
             } else {
                 toast.error(res.error || "Onaylanırken hata oluştu.");
@@ -382,7 +383,10 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                                     <span className="text-[10px] font-medium text-primary uppercase tracking-tight">
                                                         {getSourceLabel(ticket.sourceType)}
                                                     </span>
-                                                    <span className="text-xs font-semibold">{ticket.product?.name || "Hizmet/Ürün Belirtilmemiş"}</span>
+                                                    <span className="text-xs font-semibold">
+                                                        {ticket.product?.name ||
+                                                            (ticket.serviceTicket ? `${ticket.serviceTicket.deviceBrand} ${ticket.serviceTicket.deviceModel}` : "Hizmet/Ürün Belirtilmemiş")}
+                                                    </span>
                                                     {ticket.quantity > 1 && (
                                                         <span className="text-[10px] text-muted-foreground">{ticket.quantity} Adet</span>
                                                     )}
@@ -415,46 +419,41 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                                 {getStatusBadge(ticket.returnStatus)}
                                             </TableCell>
                                             <TableCell className="pr-6">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48 rounded-xl border-none shadow-2xl p-1 bg-popover/90 backdrop-blur-sm">
-                                                        <DropdownMenuItem className="rounded-lg gap-2 text-xs" onClick={() => {
-                                                            setSelectedTicket(ticket);
-                                                            // Show a detailed detail view... (future work)
-                                                        }}>
-                                                            <Eye className="w-3.5 h-3.5" /> Detayları Gör
-                                                        </DropdownMenuItem>
-
-                                                        {ticket.returnStatus === "PENDING" && (
-                                                            <>
-                                                                <div className="h-px bg-muted my-1" />
-                                                                <DropdownMenuItem
-                                                                    className="rounded-lg gap-2 text-xs text-emerald-500 focus:text-emerald-500 focus:bg-emerald-500/10"
-                                                                    onClick={() => {
-                                                                        setSelectedTicket(ticket);
-                                                                        setReturnAction("RESTOCKED");
-                                                                        setIsApproveModalOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <CheckCircle2 className="w-3.5 h-3.5" /> İadeyi İşle
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    className="rounded-lg gap-2 text-xs text-rose-500 focus:text-rose-500 focus:bg-rose-500/10"
-                                                                    onClick={() => {
-                                                                        setSelectedTicket(ticket);
-                                                                        setIsRejectModalOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <XCircle className="w-3.5 h-3.5" /> Reddet
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {ticket.returnStatus === "PENDING" ? (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-3 rounded-lg gap-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 active:scale-95 transition-all"
+                                                                onClick={() => {
+                                                                    setSelectedTicket(ticket);
+                                                                    setReturnAction("RESTOCKED");
+                                                                    setIsApproveModalOpen(true);
+                                                                }}
+                                                            >
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                İADEYİ İŞLE
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 px-3 rounded-lg gap-1.5 text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 active:scale-95 transition-all"
+                                                                onClick={() => {
+                                                                    setSelectedTicket(ticket);
+                                                                    setIsRejectModalOpen(true);
+                                                                }}
+                                                            >
+                                                                <XCircle className="w-3.5 h-3.5" />
+                                                                REDDET
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest px-3 italic">
+                                                            İŞLEM TAMAMLANDI
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </motion.tr>
                                     ))
@@ -489,6 +488,22 @@ export function ReturnsClient({ initialData }: ReturnsClientProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {returnAction === "SENT_TO_SUPPLIER" && (
+                                <div className="mt-4 mb-4 space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">İade Gönderilecek Tedarikçi Seçin</label>
+                                    <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                                        <SelectTrigger className="w-full bg-muted/30 border-none rounded-xl h-12">
+                                            <SelectValue placeholder="Tedarikçi Seçin" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {suppliers.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.<br /></span>}
                             {returnAction === "EXCHANGED" && <span className="text-rose-500 font-medium">• {selectedTicket?.quantity} Adet sağlam ürün stoktan düşülecektir.<br /></span>}

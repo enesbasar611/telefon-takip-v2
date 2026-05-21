@@ -341,6 +341,7 @@ model ReturnTicket {
   shop            Shop           @relation(fields: [shopId], references: [id])
   supplier        Supplier?      @relation(fields: [supplierId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
+  shortageItems   ShortageItem[]
 
   @@unique([shopId, ticketNumber])
 }
@@ -415,11 +416,13 @@ model ShortageItem {
   requesterPhone String?
   takenAt        DateTime?
   supplierId     String?
-  assignedTo     User?     @relation("ShortageAssignment", fields: [assignedToId], references: [id])
-  customer       Customer? @relation(fields: [customerId], references: [id])
-  product        Product?  @relation(fields: [productId], references: [id])
-  shop           Shop      @relation(fields: [shopId], references: [id])
-  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+  returnTicketId String?
+  assignedTo     User?          @relation("ShortageAssignment", fields: [assignedToId], references: [id])
+  customer       Customer?      @relation(fields: [customerId], references: [id])
+  product        Product?       @relation(fields: [productId], references: [id])
+  shop           Shop           @relation(fields: [shopId], references: [id])
+  supplier       Supplier?      @relation(fields: [supplierId], references: [id])
+  returnTicket   ReturnTicket?  @relation(fields: [returnTicketId], references: [id])
 }
 
 model InventoryMovement {

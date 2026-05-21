@@ -146,6 +146,21 @@ export function SalesHistoryClient({
                                 />
                             </div>
                             <div className="flex gap-2">
+                                <Button
+                                    variant={searchParams.get("dateRange") === "TODAY" ? "default" : "outline"}
+                                    size="sm"
+                                    className={cn(
+                                        "h-10 rounded-xl px-4 text-[10px] tracking-widest uppercase transition-all",
+                                        searchParams.get("dateRange") === "TODAY" ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20" : "border-border/40"
+                                    )}
+                                    onClick={() => {
+                                        updateParams({ dateRange: searchParams.get("dateRange") === "TODAY" ? "ALL" : "TODAY", page: 1 });
+                                    }}
+                                >
+                                    <Calendar className="mr-2 h-3.5 w-3.5" />
+                                    BUGÜN
+                                </Button>
+                                <div className="w-[1px] h-8 bg-border/40 mx-1 self-center" />
                                 {(["ALL", "SALE", "DEBT", "PAYMENT"] as const).map((type) => (
                                     <Button
                                         key={type}

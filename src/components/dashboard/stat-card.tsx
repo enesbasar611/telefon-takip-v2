@@ -88,19 +88,24 @@ export function StatCard({
 
                     <div className="mt-4 relative">
                         <p className="text-[10px] mb-1.5 text-muted-foreground/60 tracking-[0.2em] uppercase font-semibold">{label}</p>
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline gap-3 flex-wrap">
                             {typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
-                                <RevealFinancial amount={displayValue} className={cn("text-3xl tracking-tight font-bold", colorClass)} />
+                                <RevealFinancial
+                                    amount={displayValue}
+                                    prefix={displayValue.startsWith('$') || displayValue.startsWith('₺') ? "" : "₺"}
+                                    className={cn("text-3xl tracking-tight font-bold", colorClass)}
+                                />
                             ) : (
                                 <h3 className={cn("text-4xl tracking-tighter font-black", colorClass)}>{displayValue}</h3>
                             )}
+
+                            {/* TL secondary value when USD mode is active - Moved next to value */}
+                            {showUSD && value && (
+                                <p className="text-[11px] text-muted-foreground/30 tracking-tight font-medium pb-1.5 italic">
+                                    ({value} TL)
+                                </p>
+                            )}
                         </div>
-                        {/* TL secondary value when USD mode is active */}
-                        {showUSD && value && (
-                            <p className="text-[min(2.5cqw,11px)] @min-w-[300px]:text-[11px] text-muted-foreground/40 mt-1.5 tracking-tight font-medium">
-                                {value} TL karşılığı
-                            </p>
-                        )}
                         {/* Normal subValue */}
                         {!showUSD && subValue && (
                             <p className="text-[min(2.5cqw,11px)] @min-w-[300px]:text-[11px] text-muted-foreground/50 mt-[1cqh] @min-w-[300px]:mt-2 tracking-tight">{subValue}</p>

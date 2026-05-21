@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { getShopId } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { startOfDay, endOfDay } from "date-fns";
 
 export type OperationType = 'SALE' | 'DEBT_DIRECT' | 'PAYMENT';
 
@@ -27,10 +28,11 @@ export async function getUnifiedHistory(options: {
     pageSize?: number;
     searchTerm?: string;
     typeFilter?: string;
+    dateRange?: 'TODAY' | 'ALL';
 } = {}) {
     try {
         const shopId = await getShopId();
-        const { page = 1, pageSize = 20, searchTerm = "", typeFilter = "ALL" } = options;
+        const { page = 1, pageSize = 20, searchTerm = "", typeFilter = "ALL", dateRange = "ALL" } = options;
         const skip = (page - 1) * pageSize;
 
         // We use transactions as the primary source of truth for "Activities"
@@ -44,6 +46,15 @@ export async function getUnifiedHistory(options: {
                 { customer: { phone: { contains: searchTerm } } }
             ] : undefined
         };
+
+        // Date filter
+        if (dateRange === "TODAY") {
+            const today = new Date();
+            where.createdAt = {
+                gte: startOfDay(today),
+                lte: endOfDay(today)
+            };
+        }
 
         // Filter by type if needed
         if (typeFilter !== "ALL") {

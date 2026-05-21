@@ -48,6 +48,7 @@ import { LayoutCustomizer } from "@/components/common/layout-customizer";
 import {
     getDebts,
     getThisMonthCollected,
+    getTodayCollected,
     getCustomerStatement,
     getDebtStatsDetails,
     collectGlobalCustomerPayment,
@@ -193,7 +194,7 @@ const getSafeDebtRemaining = (debt: any) => {
     const remaining = Number(debt?.remainingAmount);
     if (!Number.isFinite(amount) || amount <= 0) return 0;
     if (!Number.isFinite(remaining)) return 0;
-    return Math.min(Math.max(remaining, 0), amount);
+    return Math.round(Math.min(Math.max(remaining, 0), amount));
 };
 
 export function VeresiyeClient({
@@ -227,6 +228,11 @@ export function VeresiyeClient({
         queryFn: () => getThisMonthCollected()
     });
 
+    const { data: todayCollectedData } = useQuery({
+        queryKey: ["todayCollected", shopId],
+        queryFn: () => getTodayCollected()
+    });
+
     const { data: settingsData, isLoading: settingsLoading } = useQuery({
         queryKey: ["settings", shopId],
         queryFn: () => getSettings()
@@ -256,8 +262,11 @@ export function VeresiyeClient({
     // Payment States
     const [paymentAmount, setPaymentAmount] = useState("");
     const [paymentNotes, setPaymentNotes] = useState("");
+    const [paymentCurrency, setPaymentCurrency] = useState<"TRY" | "USD">("TRY");
+    const [ignoreBalance, setIgnoreBalance] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+    const [paymentCustomer, setPaymentCustomer] = useState<any>(null);
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
     const [whatsappCustomer, setWhatsappCustomer] = useState<any>(null);
     const [whatsappMessageContent, setWhatsappMessageContent] = useState<string>("");
@@ -288,6 +297,8 @@ export function VeresiyeClient({
     const [statsDates, setStatsDates] = useState<{ start?: string; end?: string }>({});
     const [editNotes, setEditNotes] = useState<string>("");
     const [editCurrency, setEditCurrency] = useState<string>("TRY");
+    const [statsSearchQuery, setStatsSearchQuery] = useState("");
+    const [statsViewMode, setStatsViewMode] = useState<'list' | 'grid'>('list');
 
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
 
@@ -304,6 +315,7 @@ export function VeresiyeClient({
         queryClient.invalidateQueries({ queryKey: ["accounts"] });
         queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
         queryClient.invalidateQueries({ queryKey: ["thisMonthCollected"] });
+        queryClient.invalidateQueries({ queryKey: ["todayCollected"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
     };
@@ -325,17 +337,22 @@ export function VeresiyeClient({
         enabled: !!statsModalType && statsModalOpen,
     });
 
-    const statsModalData = statsModalResults?.success ? statsModalResults.data : [];
+    const statsModalData = useMemo(() => {
+        const rawData = statsModalResults?.success ? statsModalResults.data : [];
+        if (!statsSearchQuery) return rawData;
+
+        const lowQuery = normalizeSearchText(statsSearchQuery);
+        return rawData.filter((item: any) =>
+            normalizeSearchText(item.customer?.name || "").includes(lowQuery) ||
+            normalizeSearchText(item.description || item.notes || "").includes(lowQuery)
+        );
+    }, [statsModalResults, statsSearchQuery]);
 
     const { data: portfolioData } = useQuery({
         queryKey: ["customer-portfolio", portfolioCustomer?.id || portfolioCustomer?.customerId],
         queryFn: () => getCustomerById(portfolioCustomer?.id || portfolioCustomer?.customerId),
         enabled: !!(portfolioCustomer?.id || portfolioCustomer?.customerId),
     });
-
-    // Global Payment State
-    const [paymentCustomer, setPaymentCustomer] = useState<any>(null);
-    const [paymentCurrency, setPaymentCurrency] = useState<"TRY" | "USD">("TRY");
 
     // Tracking Modal State
     const [trackingDebt, setTrackingDebt] = useState<Debt | null>(null);
@@ -388,7 +405,12 @@ export function VeresiyeClient({
         if (!editingTransaction || !editTxAmount) return;
 
         startTransition(async () => {
-            const res = await updateCustomerPayment(editingTransaction.id, Number(editTxAmount), editTxNotes);
+            const res = await updateCustomerPayment(
+                editingTransaction.id,
+                Math.round(Number(editTxAmount)),
+                editTxNotes,
+                rates?.usd || 32.5
+            );
             if (res.success) {
                 toast.success("Tahsilat güncellendi.");
                 setEditingTransaction(null);
@@ -582,9 +604,15 @@ export function VeresiyeClient({
         },
         {
             type: 'COLLECTED' as const,
-            title: "Bu Ay Tahsilat",
+            title: "Tahsilat Performansı",
             value: !mounted ? "--" : `₺${thisMonthCollected.toLocaleString('tr-TR')}`,
-            subValue: "Tahsil Edilen Tutar",
+            subValue: !mounted ? "--" : (
+                <div className="flex items-center gap-2">
+                    <span className="opacity-60 text-[9px]">BU AY</span>
+                    <div className="w-1 h-1 rounded-full bg-border" />
+                    <span className="text-emerald-500 font-black">BUGÜN: ₺{(todayCollectedData || 0).toLocaleString('tr-TR')}</span>
+                </div>
+            ),
             icon: CheckCircle2,
             color: "text-indigo-500",
             bg: "bg-indigo-500/10"
@@ -619,9 +647,25 @@ export function VeresiyeClient({
         };
     }, [debts, now, defaultCurrency, usdRate]);
 
+    const historyTotals = useMemo(() => {
+        if (!historyCustomer) return { try: 0, usd: 0 };
+        const custId = historyCustomer.customerId || historyCustomer.id;
+        const customerDebts = debts.filter((d: any) => d.customer.id === custId && !d.isPaid);
+
+        let tryDebt = 0;
+        let usdDebt = 0;
+        customerDebts.forEach((d: any) => {
+            const remaining = getSafeDebtRemaining(d);
+            if (d.currency === 'USD') usdDebt += remaining;
+            else tryDebt += remaining;
+        });
+        return { try: tryDebt, usd: usdDebt };
+    }, [debts, historyCustomer]);
+
     // --- Actions ---
     const handleCurrencySwitch = (newCurrency: "TRY" | "USD") => {
         if (paymentCurrency === newCurrency) return;
+        setIgnoreBalance(false);
 
         const usdRate = rates?.usd || 32.5;
         const currentAmount = Number(paymentAmount) || 0;
@@ -659,16 +703,17 @@ export function VeresiyeClient({
         startTransition(async () => {
             // Use our new global action
             const { collectGlobalCustomerPayment } = await import("@/lib/actions/debt-actions");
-            const res = await collectGlobalCustomerPayment(
-                paymentCustomer.customerId,
-                amount,
+            const res = await collectGlobalCustomerPayment({
+                customerId: paymentCustomer.customerId || paymentCustomer.id,
+                paymentAmount: amount,
                 paymentCurrency,
                 paymentMethod,
-                selectedAccountId || undefined,
-                rates?.usd || 45.5,
-                paymentNotes,
-                selectedDebtIds
-            );
+                accountId: selectedAccountId || undefined,
+                usdRate: rates?.usd || 32.5,
+                notes: paymentNotes,
+                debtIds: selectedDebtIds,
+                ignoreExcess: ignoreBalance
+            });
 
             if (res.success) {
                 toast.success("Ödeme başarıyla tahsil edildi.");
@@ -700,7 +745,7 @@ export function VeresiyeClient({
 
                     msg += `*🔴 Toplam Güncel Borç:*\n`;
                     if ((res.remainingTRY || 0) > 0) {
-                        msg += `₺${(res.remainingTRY ?? 0).toLocaleString('tr-TR')} (~$${((res.remainingTRY ?? 0) / (rates?.usd || 32.5)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                        msg += `₺${(res.remainingTRY ?? 0).toLocaleString('tr-TR')} (~$${Math.round((res.remainingTRY ?? 0) / (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
                     }
                     if ((res.remainingUSD || 0) > 0) {
                         msg += `$${(res.remainingUSD ?? 0).toLocaleString('tr-TR')} (~₺${Math.round((res.remainingUSD ?? 0) * (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
@@ -711,7 +756,7 @@ export function VeresiyeClient({
                     } else {
                         const total = (res.remainingTRY || 0) + ((res.remainingUSD || 0) * (rates?.usd || 32.5));
                         msg += `--------------------\n`;
-                        msg += `*Genel Toplam:* ₺${Math.ceil(total).toLocaleString('tr-TR')}\n`;
+                        msg += `*Genel Toplam:* ₺${Math.round(total).toLocaleString('tr-TR')}\n`;
                     }
 
                     msg += `\n_İyi çalışmalar._`;
@@ -868,11 +913,9 @@ export function VeresiyeClient({
                     const symbol = isUSD ? '$' : '₺';
                     const equivSymbol = isUSD ? '₺' : '$';
 
-                    const originalAmt = item.amount;
+                    const originalAmt = Math.round(item.amount);
                     const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                    const equivFormatted = equivSymbol === '$'
-                        ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        : Math.round(equivalentAmt).toLocaleString('tr-TR');
+                    const equivFormatted = Math.round(equivalentAmt).toLocaleString('tr-TR');
 
                     if (item.type === 'DEBT') {
                         message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
@@ -889,7 +932,7 @@ export function VeresiyeClient({
 
             if (totalTRY > 0) {
                 const equivUSD = totalTRY / usdRate;
-                message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${Math.round(equivUSD).toLocaleString('tr-TR')})\n`;
             }
             if (totalUSD > 0) {
                 const equivTRY = totalUSD * usdRate;
@@ -901,7 +944,7 @@ export function VeresiyeClient({
             } else {
                 const combinedTotal = totalTRY + (totalUSD * usdRate);
                 message += `--------------------\n`;
-                message += `*Genel Toplam:* ₺${Math.ceil(combinedTotal).toLocaleString('tr-TR')}\n`;
+                message += `*Genel Toplam:* ₺${Math.round(combinedTotal).toLocaleString('tr-TR')}\n`;
                 message += `\n_İyi çalışmalar._`;
             }
 
@@ -986,11 +1029,9 @@ export function VeresiyeClient({
                         const symbol = isUSD ? '$' : '₺';
                         const equivSymbol = isUSD ? '₺' : '$';
 
-                        const originalAmt = item.amount;
+                        const originalAmt = Math.round(item.amount);
                         const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                        const equivFormatted = equivSymbol === '$'
-                            ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : Math.round(equivalentAmt).toLocaleString('tr-TR');
+                        const equivFormatted = Math.round(equivalentAmt).toLocaleString('tr-TR');
 
                         if (item.type === 'DEBT') {
                             message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
@@ -1007,7 +1048,7 @@ export function VeresiyeClient({
 
                 if (totalTRY > 0) {
                     const equivUSD = totalTRY / usdRate;
-                    message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                    message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${Math.round(equivUSD).toLocaleString('tr-TR')})\n`;
                 }
                 if (totalUSD > 0) {
                     const equivTRY = totalUSD * usdRate;
@@ -1019,7 +1060,7 @@ export function VeresiyeClient({
                 } else {
                     const combinedTotal = totalTRY + (totalUSD * usdRate);
                     message += `--------------------\n`;
-                    message += `*Genel Toplam:* ₺${Math.ceil(combinedTotal).toLocaleString('tr-TR')}\n`;
+                    message += `*Genel Toplam:* ₺${Math.round(combinedTotal).toLocaleString('tr-TR')}\n`;
                     message += `\n_İyi çalışmalar._`;
                 }
 
@@ -1292,7 +1333,7 @@ export function VeresiyeClient({
                                         <div className="flex justify-between items-end">
                                             <span className="text-[10px]  text-muted-foreground/80 uppercase">{g.label}</span>
                                             <span className={cn("text-xs  tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>
-                                                {defaultCurrency === 'USD' ? '$' : '₺'}{g.amount.toLocaleString('tr-TR', { minimumFractionDigits: defaultCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
+                                                {defaultCurrency === 'USD' ? '$' : '₺'}{Math.round(g.amount).toLocaleString('tr-TR')}
                                             </span>
                                         </div>
                                         <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-[2px]">
@@ -1694,7 +1735,7 @@ export function VeresiyeClient({
             </div>
 
             {/* --- Payment Dialogs --- */}
-            < AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) { setPaymentCustomer(null); setPaymentAmount(""); setPaymentNotes(""); setPaymentMethod("CASH"); setSelectedAccountId(""); } }}>
+            < AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) { setPaymentCustomer(null); setPaymentAmount(""); setPaymentNotes(""); setPaymentMethod("CASH"); setSelectedAccountId(""); setIgnoreBalance(false); } }}>
                 <AlertDialogContent className="fixed z-[100] w-full max-w-[95vw] md:max-w-[600px] h-auto max-h-[95vh] bg-card border border-border/50 p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] shadow-2xl flex flex-col transition-all duration-500">
                     {/* Header */}
                     <div className="p-6 md:p-8 bg-gradient-to-br from-emerald-500/10 via-card to-card border-b border-border/50 relative overflow-hidden shrink-0">
@@ -1746,20 +1787,24 @@ export function VeresiyeClient({
                                 <Input
                                     type="number"
                                     value={paymentAmount}
-                                    onChange={(e) => setPaymentAmount(e.target.value)}
+                                    onChange={(e) => {
+                                        setPaymentAmount(e.target.value);
+                                        setIgnoreBalance(false);
+                                    }}
                                     placeholder="0.00"
                                     className="pl-16 pr-8 h-20 bg-transparent border-none text-3xl font-black focus-visible:ring-0 tabular-nums text-foreground"
                                 />
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
                                     <Button
-                                        variant="ghost"
+                                        variant="secondary"
                                         onClick={() => {
                                             const total = paymentCurrency === 'TRY'
                                                 ? (paymentCustomer?.totalRemainingTRY + (paymentCustomer?.totalRemainingUSD * (rates?.usd || 32.5)))
                                                 : (paymentCustomer?.totalRemainingUSD + (paymentCustomer?.totalRemainingTRY / (rates?.usd || 32.5)));
                                             setPaymentAmount(String(Math.ceil(total)));
+                                            setIgnoreBalance(true);
                                         }}
-                                        className="h-9 text-[9px] font-black text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-all uppercase tracking-wider"
+                                        className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[10px] font-black transition-all uppercase tracking-wider shadow-sm hover:shadow-emerald-500/20"
                                     >
                                         BORCU KAPAT
                                     </Button>
@@ -1920,162 +1965,132 @@ export function VeresiyeClient({
             </AlertDialog >
 
             <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); } }}>
-                <AlertDialogContent className="max-w-[800px] h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50">
-                    <div className="p-6 md:p-8 bg-muted/30 dark:bg-muted/10 border-b border-border/50 flex flex-wrap items-center justify-between gap-4 shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                <AlertDialogContent
+                    className="max-w-[800px] h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50"
+                >
+                    <div className="p-4 md:p-6 bg-muted/30 dark:bg-muted/10 border-b border-border/50 flex items-center justify-between gap-3 shrink-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
                                 <Users className="w-5 h-5" />
                             </div>
-                            <div>
-                                <h3 className="text-sm font-black text-foreground uppercase tracking-tight">{historyCustomer?.name}</h3>
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-black text-foreground uppercase tracking-tight truncate">{historyCustomer?.name}</h3>
                                 <p className="text-[10px] text-muted-foreground font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button
+                        {/* Icon-only action buttons with tooltips */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Yeni Borç Ekle */}
+                            {historyCustomer && (
+                                <AddDebtModal rates={rates as any} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
+                                    <button
+                                        title="Yeni Alacak Ekle"
+                                        className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
+                                    >
+                                        <PlusCircle className="w-4 h-4" />
+                                        <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Yeni Alacak Ekle</span>
+                                    </button>
+                                </AddDebtModal>
+                            )}
+                            {/* Excel */}
+                            <button
+                                title="Ekstre (Excel)"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const data = [
                                         ...statementData.debts.map((d: any) => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
                                         ...statementData.transactions.map((t: any) => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
                                     ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
-
                                     const XLSX = await import("xlsx");
                                     const ws = XLSX.utils.json_to_sheet(data);
                                     const wb = XLSX.utils.book_new();
                                     XLSX.utils.book_append_sheet(wb, ws, "Ekstre");
                                     XLSX.writeFile(wb, `${historyCustomer?.name}_Ekstre.xlsx`);
                                 }}
-                                variant="outline" className="rounded-xl h-10 px-4 text-[10px] font-bold border-border hover:bg-muted gap-2 text-foreground"
+                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-muted/60 text-foreground hover:bg-muted border border-border/50 transition-all"
                             >
-                                <Download className="w-3.5 h-3.5" /> EKSTRE (EXCEL)
-                            </Button>
-                            <Button
+                                <Download className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Ekstre (Excel)</span>
+                            </button>
+                            {/* WhatsApp */}
+                            <button
+                                title="WhatsApp Ekstre"
                                 onClick={() => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     let message = `*${historyCustomer?.name} - Hesap Özeti*\n\n`;
-
                                     const unpaidDebts = (statementData.debts || []).filter((d: any) => !d.isPaid);
-
                                     const earliestDate = unpaidDebts.length > 0
                                         ? new Date(unpaidDebts.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
                                         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
                                     const relevantTransactions = (statementData.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
-
                                     const combined = [
-                                        ...unpaidDebts.map((d: any) => ({
-                                            date: new Date(d.createdAt),
-                                            type: 'DEBT',
-                                            currency: d.currency || 'TRY',
-                                            amount: Number(d.amount),
-                                            notes: d.notes || 'Hizmet/Ürün'
-                                        })),
-                                        ...relevantTransactions.map((t: any) => ({
-                                            date: new Date(t.createdAt),
-                                            type: 'PAYMENT',
-                                            currency: t.currency || 'TRY',
-                                            amount: Number(t.amount),
-                                            notes: t.description || 'Tahsilat'
-                                        }))
+                                        ...unpaidDebts.map((d: any) => ({ date: new Date(d.createdAt), type: 'DEBT', currency: d.currency || 'TRY', amount: Number(d.amount), notes: d.notes || 'Hizmet/Ürün' })),
+                                        ...relevantTransactions.map((t: any) => ({ date: new Date(t.createdAt), type: 'PAYMENT', currency: t.currency || 'TRY', amount: Number(t.amount), notes: t.description || 'Tahsilat' }))
                                     ].sort((a, b) => a.date.getTime() - b.date.getTime());
-
-                                    // Group by date
                                     const dateGroups: { [key: string]: any[] } = {};
                                     const orderedUniqueDates: string[] = [];
                                     combined.forEach(item => {
                                         const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
-                                        if (!dateGroups[dateKey]) {
-                                            dateGroups[dateKey] = [];
-                                            orderedUniqueDates.push(dateKey);
-                                        }
+                                        if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; orderedUniqueDates.push(dateKey); }
                                         dateGroups[dateKey].push(item);
                                     });
-
                                     orderedUniqueDates.forEach(dateKey => {
                                         message += `*${dateKey}*\n`;
                                         dateGroups[dateKey].forEach(item => {
                                             const isUSD = item.currency === 'USD';
                                             const symbol = isUSD ? '$' : '₺';
                                             const equivSymbol = isUSD ? '₺' : '$';
-
                                             const originalAmt = item.amount;
                                             const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                                            const equivFormatted = equivSymbol === '$'
-                                                ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                : Math.round(equivalentAmt).toLocaleString('tr-TR');
-
-                                            if (item.type === 'DEBT') {
-                                                message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
-                                            } else {
-                                                message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
-                                            }
+                                            const equivFormatted = equivSymbol === '$' ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(equivalentAmt).toLocaleString('tr-TR');
+                                            if (item.type === 'DEBT') { message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`; }
+                                            else { message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`; }
                                         });
                                         message += `\n`;
                                     });
-
                                     message += `*Toplam Güncel Borç:*\n`;
-
                                     const totalTRY = historyCustomer?.totalRemainingTRY || 0;
                                     const totalUSD = historyCustomer?.totalRemainingUSD || 0;
-
-                                    if (totalTRY > 0) {
-                                        const equivUSD = totalTRY / usdRate;
-                                        message += `🔴 ₺${totalTRY.toLocaleString('tr-TR')} (~$${equivUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                                    }
-                                    if (totalUSD > 0) {
-                                        const equivTRY = totalUSD * usdRate;
-                                        message += `🔴 $${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
-                                    }
-
+                                    if (totalTRY > 0) { message += `🔴 ₺${totalTRY.toLocaleString('tr-TR')} (~$${(totalTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`; }
+                                    if (totalUSD > 0) { message += `🔴 $${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(totalUSD * usdRate).toLocaleString('tr-TR')})\n`; }
                                     if (Number(historyCustomer?.balance || 0) > 0) message += `🎁 TL Emanet: ₺${Number(historyCustomer.balance).toLocaleString('tr-TR')}\n`;
                                     if (Number(historyCustomer?.balanceUsd || 0) > 0) message += `🎁 USD Emanet: $${Number(historyCustomer.balanceUsd).toLocaleString('tr-TR')}\n`;
-
-                                    if (totalTRY <= 0 && totalUSD <= 0) {
-                                        message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`;
-                                    } else {
-                                        const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
-                                        message += `--------------------\n`;
-                                        message += `*Genel Toplam:* ₺${Math.ceil(combinedTotalTRY).toLocaleString('tr-TR')}\n`;
-                                        message += `\n_İyi çalışmalar._`;
-                                    }
-
+                                    if (totalTRY <= 0 && totalUSD <= 0) { message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`; }
+                                    else { const combinedTotalTRY = totalTRY + (totalUSD * usdRate); message += `--------------------\n*Genel Toplam:* ₺${Math.ceil(combinedTotalTRY).toLocaleString('tr-TR')}\n\n_İyi çalışmalar._`; }
                                     setWhatsappMessageContent(message);
                                     setWhatsappCustomer(historyCustomer);
                                     setWhatsappModalOpen(true);
                                 }}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-10 px-4 text-[10px] font-bold gap-2"
+                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 transition-all"
                             >
-                                <MessageCircle className="w-3.5 h-3.5" /> WHATSAPP EKSTRE
-                            </Button>
-                            <Button
+                                <MessageCircle className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">WhatsApp Ekstre</span>
+                            </button>
+                            {/* Fiş Yazdır */}
+                            <button
+                                title="Fiş Yazdır"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
                                     const combined = [
                                         ...(statementData.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({
-                                            ...t,
-                                            type: 'PAYMENT',
-                                            notes: t.description || 'Tahsilat / Ödeme',
-                                            amount: t.amount,
-                                            remainingAmount: t.amount
-                                        }))
+                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
-                                    setReceiptCustomer({
-                                        id: historyCustomer.customerId,
-                                        name: historyCustomer.name,
-                                        phone: historyCustomer.phone
-                                    });
+                                    setReceiptCustomer({ id: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
                                 }}
-                                variant="outline"
-                                className="rounded-xl h-10 px-4 text-[10px] font-bold border-indigo-500/20 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all gap-2"
+                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
                             >
-                                <Printer className="w-3.5 h-3.5" /> FİŞ YAZDIR
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setHistoryCustomer(null)} className="rounded-xl text-muted-foreground font-bold hover:bg-muted transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                            </Button>
+                                <Printer className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Fiş Yazdır</span>
+                            </button>
+                            {/* Kapat */}
+                            <button
+                                title="Kapat"
+                                onClick={() => { setHistoryCustomer(null); setSelectedDebtIds([]); }}
+                                className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50 transition-all ml-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                            </button>
                         </div>
                     </div>
                     <div className="px-6 md:px-8 py-4 overflow-y-auto flex-1 space-y-2 scrollbar-hide">
@@ -2286,46 +2301,56 @@ export function VeresiyeClient({
                             );
                         })()}
                     </div>
-                    <div className="p-4 md:p-6 bg-muted/10 border-t border-border/40 flex flex-wrap gap-2 items-center justify-between shrink-0">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">İŞLEM MERKEZİ</span>
-                            <div className="flex items-center gap-4 mt-0.5">
+                    <div className="p-4 md:p-5 bg-muted/10 border-t border-border/40 flex flex-wrap gap-2 items-center justify-between shrink-0">
+                        {/* Sol: seçili kalem + ödeme butonu */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex flex-col gap-0.5">
+                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">İŞLEM MERKEZİ</span>
                                 <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length} Kalem Seçili</span>
-                                {historyCustomer && (
-                                    <AddDebtModal rates={rates as any} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
-                                        <Button variant="ghost" className="h-8 px-3 rounded-lg bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all gap-2 text-[10px] font-black uppercase tracking-widest">
-                                            <PlusCircle className="w-3 h-3" />
-                                            YENİ BORÇ EKLE
-                                        </Button>
-                                    </AddDebtModal>
-                                )}
+                            </div>
+                            {selectedDebtIds.length > 0 && (
+                                <Button
+                                    onClick={() => {
+                                        let sumTRY = 0;
+                                        let sumUSD = 0;
+                                        (historyCustomer?.debtItems || []).forEach((d: any) => {
+                                            if (selectedDebtIds.includes(d.id)) {
+                                                if (d.currency === 'USD') sumUSD += getSafeDebtRemaining(d);
+                                                else sumTRY += getSafeDebtRemaining(d);
+                                            }
+                                        });
+                                        setPaymentCustomer(historyCustomer);
+                                        setPaymentCurrency("TRY");
+                                        setPaymentAmount(String(Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)))));
+                                        setHistoryCustomer(null);
+                                    }}
+                                    className="h-9 px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                                >
+                                    Seçilenleri Öde
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Sağ: Borç özeti */}
+                        <div className="flex items-center gap-4 px-4 py-2.5 bg-muted/30 rounded-2xl border border-border/40">
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">TL BORCU</span>
+                                <span className="text-sm font-black text-emerald-600 leading-none">₺{historyTotals.try.toLocaleString('tr-TR')}</span>
+                                <span className="text-[7px] font-bold text-muted-foreground/50 uppercase mt-0.5">~${Math.round(historyTotals.try / usdRate).toLocaleString('tr-TR')}</span>
+                            </div>
+                            <div className="flex flex-col items-end border-l border-border/40 pl-4">
+                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">USD BORCU</span>
+                                <span className="text-sm font-black text-blue-600 leading-none">${historyTotals.usd.toLocaleString('tr-TR')}</span>
+                                <span className="text-[7px] font-bold text-muted-foreground/50 uppercase mt-0.5">~₺{(historyTotals.usd * usdRate).toLocaleString('tr-TR')}</span>
+                            </div>
+                            <div className="h-8 w-px bg-border/40" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">GENEL TOPLAM</span>
+                                <span className="text-lg font-black text-indigo-600 tracking-tighter leading-none">
+                                    ₺{Math.round(historyTotals.try + (historyTotals.usd * usdRate)).toLocaleString('tr-TR')}
+                                </span>
                             </div>
                         </div>
-                        {selectedDebtIds.length > 0 && (
-                            <Button
-                                onClick={() => {
-                                    // Sum selected amounts
-                                    let sumTRY = 0;
-                                    let sumUSD = 0;
-                                    (historyCustomer?.debtItems || []).forEach((d: any) => {
-                                        if (selectedDebtIds.includes(d.id)) {
-                                            if (d.currency === 'USD') sumUSD += getSafeDebtRemaining(d);
-                                            else sumTRY += getSafeDebtRemaining(d);
-                                        }
-                                    });
-
-                                    setPaymentCustomer(historyCustomer);
-                                    setPaymentCurrency("TRY");
-                                    // Pre-fill with the total converted to TRY for easy payment
-                                    setPaymentAmount(String((sumTRY + (sumUSD * (rates?.usd || 32.5))).toFixed(2)));
-                                    setHistoryCustomer(null);
-                                }}
-                                className="h-11 px-6 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
-                            >
-                                Seçilenleri Öde
-                            </Button>
-                        )}
-                        <Button variant="ghost" onClick={() => setHistoryCustomer(null)} className="rounded-xl h-10 px-4 text-[10px] uppercase font-bold text-muted-foreground">Kapat</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -2372,8 +2397,18 @@ export function VeresiyeClient({
                     </AlertDialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">TAHSİLAT TUTARI (TL)</Label>
-                            <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-12 bg-muted/30 border-border/50 font-mono text-lg text-emerald-600" />
+                            <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">
+                                TAHSİLAT TUTARI ({editingTransaction?.currency === 'USD' ? 'USD' : 'TL'})
+                            </Label>
+                            <Input
+                                type="number"
+                                value={editTxAmount}
+                                onChange={(e) => setEditTxAmount(e.target.value)}
+                                className={cn(
+                                    "h-12 bg-muted/30 border-border/50 font-mono text-lg",
+                                    editingTransaction?.currency === 'USD' ? "text-blue-500" : "text-emerald-600"
+                                )}
+                            />
                             <p className="text-[10px] text-amber-500 italic">Dikkat: Tutar değişikliği borç bakiyesini otomatik olarak ayarlayacaktır.</p>
                         </div>
                         <div className="space-y-2">
@@ -2391,7 +2426,7 @@ export function VeresiyeClient({
             </AlertDialog>
 
             <AlertDialog open={!!portfolioCustomer} onOpenChange={(o) => { if (!o) setPortfolioCustomer(null); }}>
-                <AlertDialogContent className="max-w-[900px] h-[85vh] bg-background dark:bg-zinc-950 rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-[0_50px_200px_-50px_rgba(0,0,0,0.5)] border-none">
+                <AlertDialogContent className="max-w-[900px] h-[85vh] bg-background dark:bg-[#0f172a] rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-[0_50px_200px_-50px_rgba(0,0,0,0.5)] border-none">
                     <div className="px-10 py-12 bg-slate-900 border-b border-white/5 relative overflow-hidden shrink-0">
                         <div className="absolute top-0 right-0 p-12 opacity-10"><User className="w-32 h-32 rotate-12 text-white" /></div>
                         <div className="relative z-10 flex items-center gap-8">
@@ -2454,7 +2489,7 @@ export function VeresiyeClient({
                                         <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">TOPLAM ALACAK (₺ KARŞILIĞI)</span>
                                     </div>
                                     <span className="text-4xl font-black tabular-nums tracking-tighter">
-                                        ₺{((portfolioCustomer?.totalRemainingTRY || 0) + ((portfolioCustomer?.totalRemainingUSD || 0) * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
+                                        ₺{Math.round((portfolioCustomer?.totalRemainingTRY || 0) + ((portfolioCustomer?.totalRemainingUSD || 0) * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
                                     </span>
                                     <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
                                         <div className="flex flex-col">
@@ -2570,7 +2605,7 @@ export function VeresiyeClient({
                     setPaymentSummary(null);
                 }
             }}>
-                <AlertDialogContent className="max-w-[500px] bg-background dark:bg-zinc-950 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
+                <AlertDialogContent className="max-w-[500px] bg-background dark:bg-[#0f172a] rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
                     <div className="p-8 bg-emerald-500 text-white flex flex-col items-center gap-4 text-center">
                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
                             <CheckCircle2 className="w-10 h-10 text-white" />
@@ -2585,8 +2620,8 @@ export function VeresiyeClient({
                             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">ÖDEME YAPILAN KALEMLER</span>
                             <div className="space-y-1.5">
                                 {paymentSummary?.items.map((it, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                        <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
+                                        <FileText className="w-3.5 h-3.5 text-emerald-500" />
                                         {it}
                                     </div>
                                 ))}
@@ -2594,30 +2629,30 @@ export function VeresiyeClient({
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
-                                <span className="block text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Tahsil Edilen</span>
-                                <span className="text-lg font-black text-indigo-600 font-mono">
-                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{(paymentSummary?.paidAmount ?? 0).toLocaleString('tr-TR')}
+                            <div className="p-4 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white !text-white shadow-lg shadow-emerald-500/20">
+                                <span className="block text-[9px] font-black uppercase tracking-widest mb-1 opacity-80 !text-white">Tahsil Edilen</span>
+                                <span className="text-xl font-black font-mono !text-white">
+                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{Math.round(paymentSummary?.paidAmount ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kalan Bakiye (TRY)</span>
-                                <span className="text-lg font-black text-slate-900 font-mono">
-                                    ₺{(paymentSummary?.remainingTRY ?? 0).toLocaleString('tr-TR')}
+                            <div className="p-4 rounded-2xl bg-indigo-500 dark:bg-indigo-600 text-white !text-white shadow-lg shadow-indigo-500/20">
+                                <span className="block text-[9px] font-black uppercase tracking-widest mb-1 opacity-80 !text-white">Kalan Bakiye (TRY)</span>
+                                <span className="text-xl font-black font-mono !text-white">
+                                    ₺{Math.round(paymentSummary?.remainingTRY ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
                         </div>
 
                         {(paymentSummary?.remainingUSD ?? 0) > 0 && (
-                            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
-                                <span className="block text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1">Kalan Bakiye (USD)</span>
-                                <span className="text-lg font-black text-blue-600 font-mono">
-                                    ${(paymentSummary?.remainingUSD ?? 0).toLocaleString('tr-TR')}
+                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-500/20">
+                                <span className="block text-[9px] font-bold text-blue-400 dark:text-blue-300 uppercase tracking-widest mb-1">Kalan Bakiye (USD)</span>
+                                <span className="text-lg font-black text-blue-600 dark:text-blue-400 font-mono">
+                                    ${Math.round(paymentSummary?.remainingUSD ?? 0).toLocaleString('tr-TR')}
                                 </span>
                             </div>
                         )}
                     </div>
-                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                    <div className="p-6 bg-slate-50 dark:bg-[#1a2231] border-t border-slate-100 dark:border-white/5 flex gap-3">
                         <Button
                             variant="outline"
                             disabled={isPending}
@@ -2681,133 +2716,245 @@ export function VeresiyeClient({
                 )
             }
             {/* --- Stats Detail Modal --- */}
-            <AlertDialog open={statsModalOpen} onOpenChange={setStatsModalOpen}>
-                <AlertDialogContent className="max-w-[900px] w-[95vw] bg-background dark:bg-zinc-950 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none flex flex-col max-h-[85vh]">
-                    <div className="p-8 bg-indigo-600 text-white flex flex-col gap-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-10"><History className="w-48 h-48 rotate-12" /></div>
-                        <div className="flex justify-between items-start relative z-10">
-                            <div className="space-y-1">
-                                <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">
-                                    {statsModalType === 'RECEIVABLE_TRY' && "Türk Lirası Alacakları"}
-                                    {statsModalType === 'RECEIVABLE_USD' && "Dolar Alacakları"}
-                                    {statsModalType === 'OVERDUE' && "Vadesi Geçen Alacaklar"}
-                                    {statsModalType === 'COLLECTED' && "Tahsilat Detayları"}
-                                </AlertDialogTitle>
-                                <p className="text-indigo-100 opacity-90 text-sm italic">Filtrelenmiş detaylı döküm ve analiz</p>
-                            </div>
-                            <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="text-white hover:bg-white/10 rounded-full h-8 w-8 p-0 flex items-center justify-center font-bold text-xl">×</Button>
+            <AlertDialog open={statsModalOpen} onOpenChange={(o) => {
+                setStatsModalOpen(o);
+                if (!o) {
+                    setStatsSearchQuery("");
+                    setStatsDates({});
+                }
+            }}>
+                <AlertDialogContent className="max-w-[1000px] w-[95vw] bg-white/95 dark:bg-zinc-900/90 backdrop-blur-3xl rounded-[3rem] p-0 overflow-hidden shadow-[0_50px_200px_-50px_rgba(0,0,0,0.4)] border-border/50 border flex flex-col h-[90vh]">
+                    {/* Header Section */}
+                    <div className="bg-indigo-600 dark:bg-indigo-700 p-6 md:p-8 text-white relative overflow-hidden shrink-0">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                            <History className="w-48 h-48 rotate-12" />
                         </div>
 
-                        <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl backdrop-blur-sm relative z-10">
-                            <div className="flex-1 space-y-1">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-200 pl-1">Başlangıç</span>
-                                <Input
-                                    type="date"
-                                    value={statsDates.start || ''}
-                                    onChange={(e) => setStatsDates(d => ({ ...d, start: e.target.value }))}
-                                    className="bg-white/10 border-white/20 text-white h-10 rounded-xl"
-                                />
+                        <div className="flex justify-between items-start relative z-10 mb-6">
+                            <div className="space-y-1">
+                                <AlertDialogTitle className="text-2xl md:text-3xl font-black uppercase tracking-tight flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md">
+                                        {statsModalType === 'COLLECTED' ? <Wallet className="w-6 h-6" /> : <TrendingUp className="w-6 h-6" />}
+                                    </div>
+                                    {statsModalType === 'RECEIVABLE_TRY' && "TL Alacakları"}
+                                    {statsModalType === 'RECEIVABLE_USD' && "USD Alacakları"}
+                                    {statsModalType === 'OVERDUE' && "Vadesi Geçenler"}
+                                    {statsModalType === 'COLLECTED' && "Tahsilat Detayları"}
+                                </AlertDialogTitle>
+                                <p className="text-indigo-100/80 text-sm font-medium tracking-wide">
+                                    {statsModalData.length} Kayıt Listeleniyor • Detaylı Döküm ve Analiz
+                                </p>
                             </div>
-                            <div className="flex-1 space-y-1">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-200 pl-1">Bitiş</span>
-                                <Input
-                                    type="date"
-                                    value={statsDates.end || ''}
-                                    onChange={(e) => setStatsDates(d => ({ ...d, end: e.target.value }))}
-                                    className="bg-white/10 border-white/20 text-white h-10 rounded-xl"
-                                />
-                            </div>
-                            <Button
-                                onClick={() => setStatsDates(d => ({ ...d }))}
-                                className="mt-5 bg-background dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 hover:bg-muted h-10 rounded-xl px-6 font-bold text-xs uppercase"
-                            >
-                                Uygula
+                            <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="text-white hover:bg-white/10 rounded-2xl h-10 w-10 p-0 flex items-center justify-center font-bold text-2xl transition-all active:scale-90">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </Button>
+                        </div>
+
+                        {/* Controls Bar */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative z-10">
+                            {/* Search */}
+                            <div className="md:col-span-5 space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Kayıtlarda Ara</Label>
+                                <div className="relative group">
+                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-white transition-colors" />
+                                    <Input
+                                        placeholder="Müşteri adı veya açıklama ile ara..."
+                                        value={statsSearchQuery}
+                                        onChange={(e) => setStatsSearchQuery(e.target.value)}
+                                        className="h-12 pl-10 pr-4 bg-white/10 border-white/10 text-white placeholder:text-white/30 rounded-2xl focus:ring-2 focus:ring-white/20 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Date Picker Range */}
+                            <div className="md:col-span-1 border-white/10 h-10 hidden md:block" /> {/* Spacer */}
+
+                            <div className="md:col-span-4 grid grid-cols-2 gap-2">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Başlangıç</Label>
+                                    <Input
+                                        type="date"
+                                        value={statsDates.start || ''}
+                                        onChange={(e) => setStatsDates(d => ({ ...d, start: e.target.value }))}
+                                        className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Bitiş</Label>
+                                    <Input
+                                        type="date"
+                                        value={statsDates.end || ''}
+                                        onChange={(e) => setStatsDates(d => ({ ...d, end: e.target.value }))}
+                                        className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* View Toggle */}
+                            <div className="md:col-span-2 flex items-center justify-end gap-2 pb-1">
+                                <div className="bg-white/10 p-1.5 rounded-2xl flex gap-1 backdrop-blur-md">
+                                    <button
+                                        onClick={() => setStatsViewMode('list')}
+                                        className={cn(
+                                            "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+                                            statsViewMode === 'list' ? "bg-white text-indigo-600 shadow-xl" : "text-white/60 hover:text-white"
+                                        )}
+                                    >
+                                        <List className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setStatsViewMode('grid')}
+                                        className={cn(
+                                            "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+                                            statsViewMode === 'grid' ? "bg-white text-indigo-600 shadow-xl" : "text-white/60 hover:text-white"
+                                        )}
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
+                    {/* Content Scroll Area */}
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50 dark:bg-[#1a2231]/30 scrollbar-hide">
                         {statsIsLoading ? (
-                            <div className="flex flex-col items-center justify-center h-48 gap-4">
-                                <RefreshCcw className="w-8 h-8 text-indigo-500 animate-spin" />
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Veriler Yükleniyor...</span>
+                            <div className="flex flex-col items-center justify-center h-full gap-4">
+                                <div className="w-16 h-16 rounded-[2rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                                    <RefreshCcw className="w-8 h-8 text-indigo-500 animate-spin" />
+                                </div>
+                                <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Veriler İşleniyor...</span>
                             </div>
                         ) : statsModalData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-48 gap-4 opacity-40">
-                                <Users className="w-12 h-12 text-slate-300" />
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kayıt Bulunamadı</span>
+                            <div className="flex flex-col items-center justify-center h-full gap-5 opacity-40">
+                                <div className="w-20 h-20 rounded-[2.5rem] bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
+                                    <Search className="w-10 h-10 text-slate-400 dark:text-zinc-500" />
+                                </div>
+                                <div className="text-center">
+                                    <h4 className="text-sm font-black text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Kayıt Bulunamadı</h4>
+                                    <p className="text-xs font-medium text-slate-400 mt-1">Farklı bir tarih veya arama terimi deneyin.</p>
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-3">
-                                {(statsModalData || []).map((item: any, idx: number) => (
-                                    <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted/40 border border-border rounded-2xl hover:bg-muted/60 transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-background dark:bg-zinc-800 flex items-center justify-center shadow-sm text-indigo-600 font-bold text-xs border border-border">
-                                                {item.customer?.name?.[0] || '?'}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-foreground group-hover:text-indigo-600 transition-colors uppercase text-sm tracking-tight">{item.customer?.name || "Bilinmeyen Müşteri"}
-                                                    {(statsModalType === 'COLLECTED') && <Badge variant="secondary" className="ml-2 text-[8px] px-1.5 h-4">{item.paymentMethod}</Badge>}
+                            <div className={cn(
+                                "gap-3 md:gap-4",
+                                statsViewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2" : "flex flex-col"
+                            )}>
+                                {statsModalData.map((item: any, idx: number) => {
+                                    const isIncome = statsModalType === 'COLLECTED' || item.type === 'INCOME';
+                                    const amount = item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : Number(item.amount || 0);
+
+                                    return (
+                                        <div key={idx} className={cn(
+                                            "group flex items-center gap-3 p-2 md:p-2.5 bg-white/40 dark:bg-[#1a2231]/40 border border-border/40 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 rounded-[1.5rem] transition-all cursor-default relative overflow-hidden",
+                                            statsViewMode === 'grid' ? "w-full" : ""
+                                        )}>
+                                            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
+                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                                                    {item.customer?.name?.[0].toUpperCase()}
                                                 </span>
-                                                <div className="flex items-center gap-4 mt-1">
-                                                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                                                        <Calendar className="w-3 h-3" />
-                                                        {new Date(item.createdAt).toLocaleDateString('tr-TR')}
-                                                        <span className="opacity-40">{new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tight">{item.customer?.name}</span>
+                                                    {item.paymentMethod && (
+                                                        <Badge variant="secondary" className="text-[6px] h-3 px-1 font-black uppercase tracking-tighter bg-indigo-500/10 text-indigo-500 border-none">
+                                                            {item.paymentMethod}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[8px] font-bold text-muted-foreground/60 flex items-center gap-1 shrink-0">
+                                                        {format(new Date(item.createdAt), "dd.MM.yy", { locale: tr })}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400 italic font-medium">
-                                                        {item.description || item.notes || "Alacak Kaydı"}
+                                                    <div className="w-0.5 h-0.5 rounded-full bg-border" />
+                                                    <span className="text-[8px] font-medium text-muted-foreground/50 truncate max-w-[150px] italic">
+                                                        {item.description || item.notes || "İşlem"}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0 pr-1">
+                                                {/* Action Buttons - Now side by side with amount in a flex container */}
+                                                {statsModalType === 'COLLECTED' && (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                                                        <Button
+                                                            variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                                            onClick={(e) => { e.stopPropagation(); setEditingTransaction(item); setEditTxAmount(item.amount.toString()); setEditTxNotes(item.description || ""); }}
+                                                        >
+                                                            <Pencil className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(item.id); }}
+                                                        >
+                                                            <RotateCcw className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                )}
+
+                                                <div className="text-right">
+                                                    <span className={cn(
+                                                        "text-xs font-black tabular-nums tracking-tighter",
+                                                        isIncome ? "text-emerald-600" : "text-rose-600"
+                                                    )}>
+                                                        {item.currency === 'USD' ? '$' : '₺'}{amount.toLocaleString('tr-TR')}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4 mt-3 md:mt-0 justify-between md:justify-end border-t md:border-none pt-2 md:pt-0 border-slate-200">
-                                            <div className="flex flex-col items-end">
-                                                <span className={cn(
-                                                    "text-lg font-black font-mono",
-                                                    (statsModalType === 'COLLECTED' || item.type === 'INCOME') ? "text-emerald-600" : "text-rose-600"
-                                                )}>
-                                                    {item.currency === 'USD' ? '$' : '₺'}{(item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : Number(item.amount || 0)).toLocaleString('tr-TR')}
-                                                </span>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    {(statsModalType === 'COLLECTED' || item.type === 'INCOME') ? "Tahsil Edildi" : "Kalan Borç"}
-                                                </span>
-                                            </div>
-                                            {statsModalType === 'COLLECTED' && (
-                                                <div className="flex gap-2 ml-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-full"
-                                                        onClick={() => {
-                                                            setEditingTransaction(item);
-                                                            setEditTxAmount(item.amount.toString());
-                                                            setEditTxNotes(item.description || "");
-                                                        }}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-100 rounded-full"
-                                                        onClick={() => handleDeleteTransaction(item.id)}
-                                                    >
-                                                        <RotateCcw className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
 
-                    <div className="p-8 border-t border-slate-100 flex justify-end bg-slate-50 border-b">
-                        <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">
-                            Kapat
-                        </Button>
+                    {/* Footer / Summary Info */}
+                    <div className="p-6 md:p-8 border-t border-border/50 bg-white dark:bg-[#0f172a] flex flex-wrap items-center justify-between gap-4 shrink-0">
+                        <div className="flex items-center gap-6">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Toplam Kayıt</span>
+                                <span className="text-xl font-black text-foreground">{statsModalData.length} Adet</span>
+                            </div>
+                            <div className="w-px h-10 bg-border/50" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Dönem Toplamı (TRY)</span>
+                                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    ₺{statsModalData.reduce((acc: number, curr: any) => acc + (curr.currency === 'USD' ? 0 : (curr.remainingAmount !== undefined ? getSafeDebtRemaining(curr) : Number(curr.amount))), 0).toLocaleString('tr-TR')}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    // Excel Export for stats
+                                    const XLSX = await import("xlsx");
+                                    const data = statsModalData.map((item: any) => ({
+                                        Müşteri: item.customer?.name,
+                                        Tarih: format(new Date(item.createdAt), "dd.MM.yyyy HH:mm"),
+                                        İşlem: item.description || item.notes || "-",
+                                        ÖdemeYöntemi: item.paymentMethod || "-",
+                                        Tutar: item.amount || 0,
+                                        Döviz: item.currency || "TRY"
+                                    }));
+                                    const ws = XLSX.utils.json_to_sheet(data);
+                                    const wb = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wb, ws, "Detayli_Liste");
+                                    XLSX.writeFile(wb, `Filtrelenmiş_Döküm_${format(new Date(), "dd_MM_yyyy")}.xlsx`);
+                                }}
+                                className="h-12 px-6 rounded-2xl border-border text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-muted"
+                            >
+                                <Download className="w-4 h-4" /> Excel
+                            </Button>
+                            <Button
+                                onClick={() => setStatsModalOpen(false)}
+                                className="h-12 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                            >
+                                Kapat
+                            </Button>
+                        </div>
                     </div>
                 </AlertDialogContent >
             </AlertDialog >

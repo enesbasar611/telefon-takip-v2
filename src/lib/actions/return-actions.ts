@@ -137,7 +137,7 @@ export async function createReturnTicket(data: {
   }
 }
 
-export async function processReturn(id: string, action: any, extraNotes?: string) {
+export async function processReturn(id: string, action: any, extraNotes?: string, supplierId?: string) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -151,10 +151,13 @@ export async function processReturn(id: string, action: any, extraNotes?: string
     if (ticket.returnStatus !== "PENDING") return { success: false, error: "Bu iade zaten işlem görmüş." };
 
     await prisma.$transaction(async (tx) => {
+      const targetSupplierId = (supplierId && supplierId.trim() !== "") ? supplierId : ticket.supplierId;
+
       await tx.returnTicket.update({
         where: { id },
         data: {
           returnStatus: action,
+          supplierId: targetSupplierId,
           notes: extraNotes ? `${ticket.notes ? ticket.notes + ' | ' : ''}${extraNotes}` : ticket.notes
         },
       });
@@ -194,6 +197,40 @@ export async function processReturn(id: string, action: any, extraNotes?: string
               shopId,
             },
           });
+
+          // If it's a customer return, create a new debt/sale record to make it visible
+          if (ticket.customerId) {
+            await tx.debt.create({
+              data: {
+                customerId: ticket.customerId,
+                amount: ticket.refundAmount || 0,
+                remainingAmount: ticket.refundAmount || 0,
+                notes: `İade Değişimi: ${ticket.product?.name || 'Ürün'} (Kaynak: ${ticket.ticketNumber})`,
+                shopId,
+                isPaid: false,
+                isTracking: true,
+              }
+            });
+          }
+        }
+      } else if (action === "SENT_TO_SUPPLIER") {
+        if (ticket.productId) {
+          // Decrement stock as it leaves the shop to the supplier
+          await tx.product.update({
+            where: { id: ticket.productId },
+            data: { stock: { decrement: ticket.quantity } },
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              productId: ticket.productId,
+              quantity: ticket.quantity,
+              type: "OUT",
+              notes: `Tedarikçiye İade Gönderildi: ${ticket.ticketNumber}`,
+              shopId,
+              supplierId: targetSupplierId
+            },
+          });
         }
       }
 
@@ -228,6 +265,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
+    revalidatePath("/tedarikciler");
     return { success: true };
   } catch (error) {
     console.error("processReturn error:", error);
@@ -361,5 +399,132 @@ export async function createMultipleReturnTickets(tickets: {
       success: false,
       error: error instanceof Error ? error.message : "İade kayıtları oluşturulamadı.",
     };
+  }
+}
+
+export async function assignReturnToCourier(ticketId: string, courierId: string) {
+  try {
+    const shopId = await getShopId();
+
+    const ticket = await prisma.returnTicket.findUnique({
+      where: { id: ticketId, shopId },
+      include: { product: true }
+    });
+
+    if (!ticket) return { success: false, error: "İade kaydı bulunamadı." };
+
+    await prisma.$transaction([
+      prisma.shortageItem.create({
+        data: {
+          name: ticket.product?.name || "Bilinmeyen Ürün",
+          productId: ticket.productId,
+          quantity: ticket.quantity,
+          shopId,
+          assignedToId: courierId,
+          supplierId: ticket.supplierId,
+          returnTicketId: ticket.id,
+          notes: `İADE GÖREVİ: ${ticket.ticketNumber} | Değişim için tedarikçiye gidecek.`
+        }
+      }),
+      prisma.returnTicket.update({
+        where: { id: ticketId },
+        data: { returnStatus: "SENT_TO_SUPPLIER" }
+      })
+    ]);
+
+    revalidatePath("/tedarikciler");
+    revalidatePath("/kurye");
+
+    return { success: true };
+  } catch (error) {
+    console.error("assignReturnToCourier error:", error);
+    return { success: false, error: "Kurye ataması başarısız." };
+  }
+}
+
+export async function processReturnOutcome(shortageItemId: string, outcome: "EXCHANGED" | "LOSS") {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    const shortageItem = await prisma.shortageItem.findUnique({
+      where: { id: shortageItemId, shopId },
+      include: { returnTicket: { include: { product: true } } }
+    });
+
+    if (!shortageItem || !shortageItem.returnTicket) {
+      return { success: false, error: "Görev veya bağlı iade kaydı bulunamadı." };
+    }
+
+    const ticket = shortageItem.returnTicket;
+
+    await prisma.$transaction(async (tx) => {
+      if (outcome === "EXCHANGED") {
+        // Stoğa geri ekle
+        if (ticket.productId) {
+          await tx.product.update({
+            where: { id: ticket.productId },
+            data: {
+              stock: { increment: ticket.quantity }
+            }
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              productId: ticket.productId,
+              quantity: ticket.quantity,
+              type: "IN",
+              notes: `İade Değişimi Tamamlandı: ${ticket.ticketNumber}`,
+              shopId,
+              supplierId: ticket.supplierId
+            }
+          });
+        }
+
+        await tx.returnTicket.update({
+          where: { id: ticket.id },
+          data: { returnStatus: "EXCHANGED" }
+        });
+      } else {
+        // Zarar olarak işle
+        const lossAmount = ticket.product
+          ? Number(ticket.product.buyPrice) * ticket.quantity
+          : (Number(ticket.refundAmount) || 0);
+
+        await tx.transaction.create({
+          data: {
+            type: "EXPENSE",
+            amount: lossAmount,
+            description: `İade Değişmedi (Zarar): ${ticket.ticketNumber} - ${ticket.product?.name}`,
+            category: "İade Zararı",
+            userId,
+            shopId,
+          }
+        });
+
+        await tx.returnTicket.update({
+          where: { id: ticket.id },
+          data: {
+            returnStatus: "REJECTED",
+            notes: `${ticket.notes ? ticket.notes + ' | ' : ''}Değişim yapılamadı, zarar yazıldı.`
+          }
+        });
+      }
+
+      // Kurye görevini kapat
+      await tx.shortageItem.update({
+        where: { id: shortageItemId },
+        data: { isResolved: true }
+      });
+    });
+
+    revalidatePath("/tedarikciler");
+    revalidatePath("/kurye");
+    revalidatePath("/stok/iade");
+
+    return { success: true };
+  } catch (error) {
+    console.error("processReturnOutcome error:", error);
+    return { success: false, error: "İşlem tamamlanamadı." };
   }
 }

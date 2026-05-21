@@ -238,3 +238,78 @@ export async function getDashboardInit(shopId: string | null) {
 
   return { stats, rates, settings: serializePrisma(settings) };
 }
+
+export const getDashboardFinancialSummary = async (shopId: string | null) => {
+  if (!shopId) return null;
+  return unstable_cache(
+    async () => {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const [todayTransactions, yesterdayTransactions, currencySetting, ratesData] = await Promise.all([
+          prisma.transaction.findMany({
+            where: {
+              shopId,
+              createdAt: { gte: today, lt: tomorrow },
+              paymentMethod: { not: "DEBT" }
+            },
+            select: { amount: true, type: true, currency: true }
+          }),
+          prisma.transaction.findMany({
+            where: {
+              shopId,
+              createdAt: { gte: yesterday, lt: today },
+              paymentMethod: { not: "DEBT" }
+            },
+            select: { amount: true, type: true, currency: true }
+          }),
+          prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "defaultCurrency" } } }),
+          getExchangeRates(shopId),
+        ]);
+
+        const defaultCurrency = currencySetting?.value || "TRY";
+        const usdRate = ratesData?.usd || 34;
+
+        const calculateTotal = (txs: any[]) => {
+          let income = 0;
+          let expense = 0;
+          txs.forEach(t => {
+            let val = Number(t.amount);
+            // Convert to base currency if mismatch
+            if (defaultCurrency === "TRY" && t.currency === "USD") {
+              val *= usdRate;
+            } else if (defaultCurrency === "USD" && t.currency === "TRY") {
+              val /= usdRate;
+            }
+
+            if (t.type === "INCOME") {
+              income += val;
+            } else {
+              expense += val;
+            }
+          });
+          return { income, expense };
+        };
+
+        return {
+          today: calculateTotal(todayTransactions),
+          yesterday: calculateTotal(yesterdayTransactions),
+          currency: defaultCurrency,
+        };
+      } catch (error) {
+        console.error("Error fetching financial summary:", error);
+        return null;
+      }
+    },
+    [`financial-summary-${shopId}`],
+    { tags: [`dashboard-${shopId}`, `transactions-${shopId}`], revalidate: 60 }
+  )();
+};
+

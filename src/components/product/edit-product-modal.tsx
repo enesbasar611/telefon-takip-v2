@@ -110,9 +110,9 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                 setValue("buyPriceUsd", (value / (exchangeRates?.usd || 34)).toFixed(2));
             } else if (currency === "USD") {
                 setValue("buyPriceUsd", String(value));
-                setValue("buyPrice", Math.ceil(value * (exchangeRates?.usd || 34)).toString());
+                setValue("buyPrice", Math.round(value * (exchangeRates?.usd || 34)).toString());
             } else if (currency === "EUR") {
-                const tlVal = Math.ceil(value * (exchangeRates?.eur || 37));
+                const tlVal = Math.round(value * (exchangeRates?.eur || 37));
                 setValue("buyPrice", String(tlVal));
                 setValue("buyPriceUsd", (tlVal / (exchangeRates?.usd || 34)).toFixed(2));
             }
@@ -122,9 +122,9 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                 setValue("sellPriceUsd", (value / (exchangeRates?.usd || 34)).toFixed(2));
             } else if (currency === "USD") {
                 setValue("sellPriceUsd", String(value));
-                setValue("sellPrice", Math.ceil(value * (exchangeRates?.usd || 34)).toString());
+                setValue("sellPrice", Math.round(value * (exchangeRates?.usd || 34)).toString());
             } else if (currency === "EUR") {
-                const tlVal = Math.ceil(value * (exchangeRates?.eur || 37));
+                const tlVal = Math.round(value * (exchangeRates?.eur || 37));
                 setValue("sellPrice", String(tlVal));
                 setValue("sellPriceUsd", (tlVal / (exchangeRates?.usd || 34)).toFixed(2));
             }

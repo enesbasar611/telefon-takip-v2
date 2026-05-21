@@ -45,6 +45,8 @@ export async function getCollectionDetails() {
                 }
             },
             include: {
+                customer: true,
+                supplier: true,
                 sale: {
                     include: { customer: true }
                 },
@@ -64,9 +66,11 @@ export async function getDailySalesDetails() {
     try {
         const shopId = await getShopId();
         const today = new Date();
-        const sales = await prisma.sale.findMany({
+        const transactions = await prisma.transaction.findMany({
             where: {
                 shopId,
+                type: "INCOME",
+                paymentMethod: { not: "DEBT" },
                 createdAt: {
                     gte: startOfDay(today),
                     lte: endOfDay(today)
@@ -74,14 +78,18 @@ export async function getDailySalesDetails() {
             },
             include: {
                 customer: true,
-                items: {
-                    include: { product: true }
+                sale: {
+                    include: {
+                        items: {
+                            include: { product: true }
+                        }
+                    }
                 }
             },
             orderBy: { createdAt: "desc" }
         });
 
-        return serializePrisma(sales);
+        return serializePrisma(transactions);
     } catch (error) {
         console.error("Error fetching daily sales details:", error);
         return [];

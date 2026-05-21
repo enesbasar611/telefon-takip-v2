@@ -3,6 +3,8 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect } from "react";
 
+import { useState } from "react";
+
 function AuthStatusWatcher() {
     const { status } = useSession();
 
@@ -21,10 +23,24 @@ function AuthStatusWatcher() {
 }
 
 export function NextAuthProvider({ children }: { children: React.ReactNode }) {
+    const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? window.navigator.onLine : true);
+
+    useEffect(() => {
+        const handleStatus = () => setIsOnline(window.navigator.onLine);
+        window.addEventListener("online", handleStatus);
+        window.addEventListener("offline", handleStatus);
+        return () => {
+            window.removeEventListener("online", handleStatus);
+            window.removeEventListener("offline", handleStatus);
+        };
+    }, []);
+
     return (
         <SessionProvider
-            refetchInterval={30} // Check session every 30 seconds
-            refetchOnWindowFocus={true} // Revalidate when user returns to the tab
+            // Disable background refresh when offline to prevent console errors
+            refetchInterval={isOnline ? 120 : 0}
+            // Only refetch on focus if online and with a delay
+            refetchOnWindowFocus={isOnline}
         >
             <AuthStatusWatcher />
             {children}

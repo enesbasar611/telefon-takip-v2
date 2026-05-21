@@ -23,6 +23,7 @@ import { getShopId } from "@/lib/auth";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import { DashboardOnboardingClient } from "@/components/setup/dashboard-onboarding-client";
 import { getCategories } from "@/lib/actions/product-actions";
+import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { getSalesReport, getServiceMetrics } from "@/lib/actions/report-actions";
 import { getProfitMatrix } from "@/lib/actions/analytics-actions";
 import { getRecentTransactions } from "@/lib/actions/dashboard-actions";
@@ -48,10 +49,11 @@ import {
 async function DashboardContentData() {
   const queryClient = new QueryClient();
 
-  const [shopId, shop, categories, profile, settings] = await Promise.all([
+  const [shopId, shop, categories, suppliers, profile, settings] = await Promise.all([
     getShopId(false),
     getShop(),
     getCategories(),
+    getSuppliers(),
     getProfile(),
     getSettings(),
   ]);
@@ -104,7 +106,6 @@ async function DashboardContentData() {
   ]);
 
   const industryConf = getIndustryConfig(shop?.industry);
-  const showService = isModuleEnabled(shop, "SERVICE");
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const defaultCurrency = (settings as any[])?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
@@ -160,7 +161,7 @@ async function DashboardContentData() {
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <DashboardOnboardingClient categories={categories} shop={shop} />
-      <div className="hidden md:flex min-h-[1100px] flex-col space-y-12 selection:bg-primary/20 relative z-10 opacity-100 transition-opacity duration-200">
+      <div className="hidden md:flex min-h-[1100px] flex-col space-y-6 selection:bg-primary/20 relative z-10 opacity-100 transition-opacity duration-200">
         <PageHeader
           title={shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "YÖNETİM PANELİ"}
           description={
@@ -172,7 +173,7 @@ async function DashboardContentData() {
           icon={LayoutDashboard}
           actions={
             <div className="flex items-center gap-3">
-              <QuickShortcuts />
+              <QuickShortcuts shop={shop} categories={categories} suppliers={suppliers} />
               <DashboardEditButton />
             </div>
           }
@@ -202,7 +203,7 @@ async function DashboardContentData() {
           shopId={shopId || ""}
         />
       </div>
-      <div className="md:hidden flex min-h-screen flex-col space-y-6 pt-2 pb-10 transition-opacity duration-200">
+      <div className="md:hidden flex min-h screen flex-col space-y-6 pt-2 pb-10 transition-opacity duration-200">
         <MobileDashboard />
       </div>
     </HydrationBoundary>

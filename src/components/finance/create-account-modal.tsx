@@ -120,8 +120,8 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
                         DÜZENLE
                     </Button>
                 ) : (
-                    <Button size="sm" className="h-10 text-[11px] rounded-xl gap-2 shadow-lg shadow-blue-500/10 uppercase tracking-widest px-4 transition-all hover:scale-[1.02] active:scale-95">
-                        <Plus className="h-4 w-4" /> YENİ HESAP EKLE
+                    <Button className="h-12 rounded-xl px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-xs tracking-widest gap-2 group transition-all">
+                        <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-500" /> YENİ HESAP EKLE
                     </Button>
                 )}
             </DialogTrigger>

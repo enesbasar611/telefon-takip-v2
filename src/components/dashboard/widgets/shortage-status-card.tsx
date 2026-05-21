@@ -101,32 +101,32 @@ export function ShortageStatusCard() {
 
     return (
         <>
-            <Card className="h-full bg-white/70 dark:bg-zinc-900/40 backdrop-blur-xl border-border/50 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 opacity-30" />
-
-                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-lg shadow-blue-500/5">
+            <Card className="h-full flex flex-col border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in">
+                <CardHeader className={cn(
+                    "flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 p-8 pb-6"
+                )}>
+                    <div className="flex items-center gap-4">
+                        <div className="h-11 w-11 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
                             <Truck className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                            <CardTitle className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
-                                Kurye Sipariş Durumu
+                            <CardTitle className="font-medium text-lg tracking-tight font-sans uppercase flex items-center gap-3">
+                                <span>Kurye Sipariş Durumu</span>
                                 {items.length > 0 && (
-                                    <Badge className="bg-blue-500 text-black text-[10px] font-black h-5 px-1.5 animate-pulse">
+                                    <Badge className="bg-blue-500 text-black text-[10px] font-black h-5 px-2 rounded-full animate-pulse border-none">
                                         {items.length}
                                     </Badge>
                                 )}
                             </CardTitle>
-                            <p className="text-[10px] text-muted-foreground font-bold tracking-tight mt-0.5">Siparişlerin kurye sürecini anlık takip edin</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Siparişlerin kurye sürecini anlık takip edin</p>
                         </div>
                     </div>
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         onClick={() => refreshData(true)}
                         disabled={isBackgroundFetching}
-                        className="h-9 w-9 rounded-xl hover:bg-blue-500/10 hover:text-blue-500 transition-all active:scale-95"
+                        className="h-9 w-9 rounded-xl border-border/40 hover:bg-blue-500/5 hover:text-blue-500 transition-all active:scale-95"
                     >
                         <RefreshCcw className={cn("w-4 h-4", isBackgroundFetching && "animate-spin")} />
                     </Button>
@@ -140,19 +140,19 @@ export function ShortageStatusCard() {
                     )}
 
                     {isLoading ? (
-                        <div className="py-12 flex flex-col items-center justify-center space-y-3">
-                            <RefreshCcw className="w-8 h-8 text-blue-500/20 animate-spin" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Siparişler Getiriliyor...</p>
+                        <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                            <RefreshCcw className="w-10 h-10 text-blue-500/20 animate-spin" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Sipariş verileri yükleniyor...</p>
                         </div>
                     ) : groupList.length === 0 ? (
-                        <div className="py-12 flex flex-col items-center justify-center space-y-3 opacity-30 grayscale">
-                            <div className="h-16 w-16 rounded-full border-4 border-dashed border-muted-foreground/30 flex items-center justify-center animate-spin-slow">
-                                <CircleDashed className="w-8 h-8 text-muted-foreground" />
+                        <div className="py-20 flex flex-col items-center justify-center space-y-6 opacity-30">
+                            <div className="h-20 w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                                <Truck className="w-8 h-8 text-muted-foreground" />
                             </div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-center">Aktif kurye siparişi bulunamadı</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-center">Aktif kurye siparişi bulunamadı</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-2 relative">
+                        <div className="grid grid-cols-1 gap-3 p-6 pb-2">
                             {groupList.slice(0, VISIBLE_LIMIT).map((group) => (
                                 <button
                                     key={group.id}
@@ -160,60 +160,61 @@ export function ShortageStatusCard() {
                                         setSelectedGroup(group);
                                         setModalOpen(true);
                                     }}
-                                    className="flex items-center justify-between p-3 rounded-2xl bg-zinc-500/5 dark:bg-white/[0.02] border border-zinc-500/10 dark:border-white/[0.03] hover:bg-blue-500/5 hover:border-blue-500/20 transition-all group/item overflow-hidden relative"
+                                    className="flex items-center justify-between p-4 rounded-[1.5rem] bg-muted/10 border border-border/20 hover:bg-blue-500/5 hover:border-blue-500/20 transition-all group/item overflow-hidden relative shadow-sm hover:shadow-md"
                                 >
-                                    <div className="flex items-center gap-3 relative z-10">
+                                    <div className="flex items-center gap-4 relative z-10">
                                         <div className={cn(
-                                            "h-10 w-10 rounded-xl flex items-center justify-center border text-white font-black text-xs shadow-lg uppercase",
+                                            "h-12 w-12 rounded-2xl flex items-center justify-center border text-white font-black text-xs shadow-lg uppercase transition-transform group-hover/item:scale-110",
                                             getDeterministicColor(group.label)
                                         )}>
                                             {getInitials(group.label)}
                                         </div>
                                         <div className="text-left flex-1 min-w-0">
-                                            <p className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{group.label}</p>
+                                            <p className="text-sm font-medium tracking-tight truncate max-w-[200px] uppercase font-sans">{group.label}</p>
 
                                             {/* Phone & Courier Grid */}
                                             {(group.phone || group.courierData) && (
-                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 mb-1.5">
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 mb-2">
                                                     {group.phone && (
-                                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                                            <Phone className="w-3 h-3 text-amber-500" />
-                                                            <span className="truncate max-w-[80px]">{group.phone}</span>
+                                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                                                            <Phone className="w-3 h-3 text-amber-500/60" />
+                                                            <span className="truncate">{group.phone}</span>
                                                         </div>
                                                     )}
                                                     {group.courierData && (
-                                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
-                                                            <Truck className="w-3 h-3 text-blue-500" />
-                                                            <span className="truncate max-w-[80px]">{group.courierData.name}</span>
+                                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium truncate">
+                                                            <div className="h-1 w-1 rounded-full bg-border" />
+                                                            <Truck className="w-3 h-3 text-blue-500/60" />
+                                                            <span className="truncate">{group.courierData.name}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <Badge variant="outline" className="bg-zinc-100 dark:bg-white/5 text-muted-foreground border-zinc-200 dark:border-white/5 text-[9px] px-1.5 py-0 font-bold h-4">
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Badge variant="outline" className="bg-background/50 text-muted-foreground border-border/40 text-[9px] px-2 py-0.5 font-bold rounded-lg border-none">
                                                     {group.totalCount} KALEM
                                                 </Badge>
                                                 {group.takenCount === group.totalCount ? (
-                                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 text-[8px] font-black h-4 px-1.5 border-none">TAMAMI ALINDI</Badge>
+                                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[8px] font-black px-2 py-0.5 rounded-lg border-none underline-none">TAMAMI ALINDI</Badge>
                                                 ) : group.takenCount > 0 ? (
-                                                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[8px] font-black h-4 px-1.5 border-none">{group.takenCount} ALINMIŞ</Badge>
+                                                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[8px] font-black px-2 py-0.5 rounded-lg border-none">KISMİ ALINDI</Badge>
                                                 ) : (
-                                                    <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-500 text-[8px] font-black h-4 px-1.5 border-none">BEKLİYOR</Badge>
+                                                    <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[8px] font-black px-2 py-0.5 rounded-lg border-none">BEKLİYOR</Badge>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 relative z-10">
-                                        <div className="h-8 w-8 rounded-lg bg-card/40 border border-border/50 flex items-center justify-center group-hover/item:bg-blue-500 group-hover/item:text-black group-hover/item:border-blue-500 transition-all translate-x-2 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100">
-                                            <ChevronRight className="w-4 h-4" />
+                                        <div className="h-10 w-10 rounded-2xl bg-background border border-border/50 flex items-center justify-center group-hover/item:bg-blue-500 group-hover/item:text-black group-hover/item:border-blue-500 transition-all translate-x-4 opacity-0 group-hover/item:translate-x-0 group-hover/item:opacity-100 shadow-sm">
+                                            <ChevronRight className="w-5 h-5" />
                                         </div>
                                     </div>
 
                                     {/* Progress background bar */}
-                                    <div className="absolute bottom-0 left-0 h-1 bg-blue-500/10 w-full">
+                                    <div className="absolute bottom-0 left-0 h-1 bg-blue-500/5 w-full">
                                         <div
-                                            className="h-full bg-blue-500/40 transition-all duration-1000"
+                                            className="h-full bg-blue-500/30 transition-all duration-1000"
                                             style={{ width: `${(group.takenCount / group.totalCount) * 100}%` }}
                                         />
                                     </div>
@@ -239,11 +240,11 @@ export function ShortageStatusCard() {
                 </CardContent>
 
                 {groupList.length > 0 && (
-                    <div className="p-4 pt-0">
+                    <div className="p-6 pt-0">
                         <Link href="/kurye">
-                            <Button className="w-full h-11 bg-zinc-900 dark:bg-white/5 hover:bg-blue-600 hover:text-black font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl group/btn transition-all gap-2">
-                                <ArrowRightCircle className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
-                                TÜM DETAYLAR VE YÖNETİM
+                            <Button className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-black font-extrabold text-[10px] uppercase tracking-[0.2em] rounded-2xl group/btn transition-all gap-4 shadow-lg shadow-blue-500/10">
+                                <span>Kurye Yönetim Paneli</span>
+                                <ArrowRightCircle className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
                             </Button>
                         </Link>
                     </div>
@@ -251,40 +252,40 @@ export function ShortageStatusCard() {
             </Card>
 
             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-                <DialogContent className="max-w-2xl bg-background border-none rounded-[2.5rem] shadow-2xl p-0 overflow-hidden">
+                <DialogContent className="max-w-2xl bg-card border border-border/40 rounded-[2.5rem] shadow-2xl p-0 overflow-hidden backdrop-blur-xl">
                     {selectedGroup && (
                         <>
-                            <DialogHeader className="p-8 pb-4 flex flex-row items-center justify-between">
-                                <div className="flex items-center gap-4">
+                            <DialogHeader className="p-10 pb-6 flex flex-row items-center justify-between border-b border-border/40">
+                                <div className="flex items-center gap-6">
                                     <div className={cn(
-                                        "h-14 w-14 rounded-2xl flex items-center justify-center border-4 border-white dark:border-zinc-900 text-white font-black text-xl shadow-2xl uppercase",
+                                        "h-16 w-16 rounded-[1.5rem] flex items-center justify-center border-4 border-background text-white font-black text-2xl shadow-xl uppercase",
                                         getDeterministicColor(selectedGroup.label)
                                     )}>
                                         {getInitials(selectedGroup.label)}
                                     </div>
                                     <div>
-                                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter">{selectedGroup.label}</DialogTitle>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[10px] font-black uppercase">
+                                        <DialogTitle className="text-2xl font-bold uppercase tracking-tight text-foreground font-sans">{selectedGroup.label}</DialogTitle>
+                                        <div className="flex items-center gap-3 mt-1.5">
+                                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[10px] font-black uppercase rounded-lg border-none">
                                                 {selectedGroup.type === 'SHOP' ? 'BAYİ SİPARİŞİ' : 'MÜŞTERİ SİPARİŞİ'}
                                             </Badge>
-                                            <span className="text-[10px] text-muted-foreground font-bold">•</span>
-                                            <span className="text-[10px] text-muted-foreground font-bold uppercase">{selectedGroup.totalCount} KALEM ÜRÜN</span>
+                                            <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{selectedGroup.totalCount} KALEM ÜRÜN</span>
                                         </div>
                                     </div>
                                 </div>
                                 <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
                                     onClick={() => refreshData(true)}
                                     disabled={isBackgroundFetching}
-                                    className="h-12 w-12 rounded-2xl bg-zinc-100 dark:bg-white/5 hover:bg-blue-500/10 hover:text-blue-500 transition-all border border-transparent hover:border-blue-500/20"
+                                    className="h-12 w-12 rounded-2xl border-border/40 hover:bg-blue-500/10 hover:text-blue-500 transition-all active:scale-95 shadow-sm"
                                 >
                                     <RefreshCcw className={cn("w-5 h-5", isBackgroundFetching && "animate-spin")} />
                                 </Button>
                             </DialogHeader>
 
-                            <div className="p-8 max-h-[60vh] overflow-y-auto space-y-4">
+                            <div className="p-10 max-h-[55vh] overflow-y-auto space-y-4 custom-scrollbar">
                                 <AnimatePresence mode="popLayout">
                                     {selectedGroup.items.map((item, idx) => (
                                         <motion.div
@@ -293,38 +294,38 @@ export function ShortageStatusCard() {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.05 }}
                                             className={cn(
-                                                "p-4 rounded-3xl border transition-all flex items-center justify-between gap-4",
+                                                "p-5 rounded-[1.5rem] border transition-all flex items-center justify-between gap-6",
                                                 item.isTaken
-                                                    ? "bg-emerald-500/5 border-emerald-500/20 shadow-inner"
-                                                    : "bg-white dark:bg-zinc-900 border-border/50 shadow-sm"
+                                                    ? "bg-emerald-500/5 border-emerald-500/10"
+                                                    : "bg-muted/10 border-border/40 hover:bg-muted/20"
                                             )}
                                         >
-                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className="flex items-center gap-5 flex-1 min-w-0">
                                                 <div className={cn(
-                                                    "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0",
-                                                    item.isTaken ? "bg-emerald-500 text-white" : "bg-zinc-100 dark:bg-white/5 text-muted-foreground"
+                                                    "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner",
+                                                    item.isTaken ? "bg-emerald-500 text-white" : "bg-card border border-border/40 text-muted-foreground"
                                                 )}>
                                                     {item.isTaken ? <CheckCircle2 className="w-6 h-6" /> : <Package className="w-6 h-6" />}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
                                                     <p className={cn(
-                                                        "text-sm font-black uppercase tracking-tight truncate",
-                                                        item.isTaken && "text-muted-foreground line-through opacity-60"
+                                                        "text-sm font-bold uppercase tracking-tight truncate font-sans",
+                                                        item.isTaken ? "text-muted-foreground/50 line-through" : "text-foreground"
                                                     )}>
                                                         {item.name}
                                                     </p>
-                                                    <div className="flex items-center gap-3 mt-1">
-                                                        <Badge className="bg-blue-500/10 text-blue-500 border-none text-[9px] font-black h-4 px-1.5">
+                                                    <div className="flex items-center gap-4 mt-1.5">
+                                                        <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-none text-[9px] font-black h-4 px-2 rounded-lg">
                                                             {item.quantity} ADET
                                                         </Badge>
                                                         {item.assignedTo && (
-                                                            <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-black uppercase">
-                                                                <Truck className="w-3 h-3" />
+                                                            <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tight">
+                                                                <Truck className="w-3.5 h-3.5 text-blue-500/60" />
                                                                 {item.assignedTo.name}
                                                             </div>
                                                         )}
-                                                        <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-black uppercase">
-                                                            <Clock className="w-3 h-3" />
+                                                        <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-tight">
+                                                            <Clock className="w-3.5 h-3.5 text-orange-500/60" />
                                                             {new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
                                                     </div>
@@ -350,27 +351,27 @@ export function ShortageStatusCard() {
                                 </AnimatePresence>
                             </div>
 
-                            <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border-t border-border/40 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-10 bg-muted/20 border-t border-border/40 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Courier Contact */}
-                                    <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-border/50 shadow-sm flex items-center justify-between group/card hover:border-blue-500/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                                                <Truck className="w-5 h-5 text-blue-600 dark:text-blue-500" />
+                                    <div className="p-5 rounded-[1.5rem] bg-card border border-border/40 shadow-sm flex items-center justify-between group/card hover:border-blue-500/30 transition-all hover:shadow-md">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shadow-inner">
+                                                <Truck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                             </div>
                                             <div>
-                                                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest block">Kuryeye Sor</span>
-                                                <p className="text-xs font-black tracking-tight text-foreground">
+                                                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest block">Kurye Rehbari</span>
+                                                <p className="text-sm font-bold tracking-tight text-foreground uppercase truncate max-w-[120px]">
                                                     {selectedGroup.items.find(i => i.assignedTo)?.assignedTo?.name || "ATANMADI"}
                                                 </p>
-                                                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-500 mt-0.5">
+                                                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-0.5 tracking-tighter">
                                                     {selectedGroup.items.find(i => i.assignedTo)?.assignedTo?.phone || "+90 (---) --- -- --"}
                                                 </p>
                                             </div>
                                         </div>
                                         {selectedGroup.items.find(i => i.assignedTo)?.assignedTo?.phone && (
                                             <div className="flex gap-2">
-                                                <a href={`tel:${selectedGroup.items.find(i => i.assignedTo)?.assignedTo?.phone}`} className="h-9 w-9 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/20">
+                                                <a href={`tel:${selectedGroup.items.find(i => i.assignedTo)?.assignedTo?.phone}`} className="h-10 w-10 rounded-xl bg-blue-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/20">
                                                     <Phone className="w-4 h-4" />
                                                 </a>
                                             </div>
@@ -378,22 +379,22 @@ export function ShortageStatusCard() {
                                     </div>
 
                                     {/* Requester/Shop Contact */}
-                                    <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-border/50 shadow-sm flex items-center justify-between group/card hover:border-amber-500/30 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                                                <Store className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                                    <div className="p-5 rounded-[1.5rem] bg-card border border-border/40 shadow-sm flex items-center justify-between group/card hover:border-amber-500/30 transition-all hover:shadow-md">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shadow-inner">
+                                                <Store className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                                             </div>
                                             <div>
-                                                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest block">İrtibat No</span>
-                                                <p className="text-xs font-black tracking-tight truncate max-w-[120px] text-foreground">{selectedGroup.label}</p>
-                                                <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 mt-0.5">
+                                                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest block">İrtibat Bilgisi</span>
+                                                <p className="text-sm font-bold tracking-tight truncate max-w-[120px] text-foreground uppercase">{selectedGroup.label}</p>
+                                                <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 tracking-tighter">
                                                     {selectedGroup.phone || "+90 (---) --- -- --"}
                                                 </p>
                                             </div>
                                         </div>
                                         {selectedGroup.phone && (
                                             <div className="flex gap-2">
-                                                <a href={`tel:${selectedGroup.phone}`} className="h-9 w-9 rounded-xl bg-amber-500 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20">
+                                                <a href={`tel:${selectedGroup.phone}`} className="h-10 w-10 rounded-xl bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20">
                                                     <Phone className="w-4 h-4" />
                                                 </a>
                                             </div>
@@ -406,13 +407,13 @@ export function ShortageStatusCard() {
                                     <span className="shrink-0 text-[10px] font-black tracking-widest text-muted-foreground uppercase flex items-center gap-1.5"><Truck className="w-3 h-3" /> Bilgi</span>
                                     <div className="flex-1 h-px bg-border/50" />
                                 </div>
-                                <div className="flex items-center justify-between gap-4">
-                                    <p className="text-[10px] text-muted-foreground font-medium max-w-[300px]">
-                                        * Kurye siparişi aldığında buradan anlık olarak görebilirsiniz. Diğer tüm işlemler için kurye sayfasına gidin.
+                                <div className="flex items-center justify-between gap-6">
+                                    <p className="text-[11px] text-muted-foreground font-medium max-w-[340px] leading-relaxed">
+                                        * Kurye siparişi aldığında buradan anlık olarak görebilirsiniz. Detaylı kurye yönetimi için lütfen ilgili sayfayı ziyaret edin.
                                     </p>
                                     <Button
                                         onClick={() => setModalOpen(false)}
-                                        className="bg-zinc-900 dark:bg-white text-white dark:text-black font-black text-[10px] uppercase tracking-widest rounded-2xl h-12 px-10 hover:opacity-90 transition-all shadow-xl shadow-zinc-900/10"
+                                        className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] uppercase tracking-[0.2em] rounded-2xl h-12 px-10 transition-all shadow-lg shadow-rose-500/10 active:scale-95"
                                     >
                                         Kapat
                                     </Button>

@@ -413,7 +413,8 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                     if (!saleItem.product) return null;
                                                     const alreadyAdded = items.find(i => i.productId === saleItem.productId && (i as any).saleId === sale.id);
                                                     const isVeresiye = sale._fromDebt || sale.paymentMethod === 'DEBT';
-                                                    const saleCurrency = sale._debtCurrency || "TRY";
+                                                    // Priority: debt currency > sale transaction currency > TRY
+                                                    const saleCurrency = sale._debtCurrency || sale.transaction?.currency || "TRY";
                                                     const returnAlreadyActive = activeReturns.some((returnTicket: any) =>
                                                         returnTicket.productId === saleItem.productId &&
                                                         returnTicket.saleId === sale.id &&

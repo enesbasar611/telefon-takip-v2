@@ -8,17 +8,19 @@ export const dynamic = 'force-dynamic';
 export default async function SalesHistoryPage({
     searchParams
 }: {
-    searchParams: { page?: string, search?: string, type?: string }
+    searchParams: { page?: string, search?: string, type?: string, dateRange?: string }
 }) {
     const page = Number(searchParams.page) || 1;
     const searchTerm = searchParams.search || "";
     const typeFilter = searchParams.type || "ALL";
+    const dateRange = (searchParams.dateRange as "TODAY" | "ALL") || "ALL";
 
     const historyData = await getUnifiedHistory({
         page,
         pageSize: 30,
         searchTerm,
-        typeFilter
+        typeFilter,
+        dateRange
     });
 
     return (

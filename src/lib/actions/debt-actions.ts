@@ -9,7 +9,7 @@ import { tr } from "date-fns/locale";
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
-  return Number(amount.toFixed(2));
+  return Math.round(amount);
 };
 
 const clampRemainingAmount = (remaining: unknown, amount: unknown) => {
@@ -68,6 +68,29 @@ export async function getThisMonthCollected() {
   }
 }
 
+export async function getTodayCollected() {
+  try {
+    const shopId = await getShopId();
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        shopId,
+        type: "INCOME",
+        OR: [
+          { description: { contains: "Borç Tahsilatı" } },
+          { description: { startsWith: "Yapılan Ödeme" } },
+          { category: "Tahsilat" }
+        ],
+        createdAt: { gte: startOfDay }
+      }
+    });
+    return transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function createDebt(data: {
   customerId: string;
   amount: number;
@@ -102,7 +125,7 @@ export async function createDebt(data: {
       let initialRemaining = debtAmount;
       const currency = data.currency || "TRY";
       const balanceField = currency === "USD" ? "balanceUsd" : "balance";
-      const currentBalance = Number(customer?.[balanceField] || 0);
+      const currentBalance = normalizeMoney(customer?.[balanceField] || 0);
 
       if (currentBalance > 0) {
         const amountFromBalance = Math.min(currentBalance, initialRemaining);
@@ -385,17 +408,31 @@ export async function startTrackingDebt(debtId: string, dueDate: Date) {
     return { success: false, error: "Takip başlatılamadı." };
   }
 }
-export async function collectGlobalCustomerPayment(
-  customerId: string,
-  paymentAmount: number,
-  paymentCurrency: string = "TRY",
-  paymentMethod: "CASH" | "CARD" | "TRANSFER" = "CASH",
-  accountId?: string,
-  usdRate: number = 32.5,
-  notes?: string,
-  debtIds?: string[]
-) {
+
+export async function collectGlobalCustomerPayment(data: {
+  customerId: string;
+  paymentAmount: number;
+  paymentCurrency: string;
+  paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
+  accountId?: string;
+  usdRate?: number;
+  notes?: string;
+  ignoreExcess?: boolean;
+  debtIds?: string[];
+}) {
   try {
+    const {
+      customerId,
+      paymentAmount,
+      paymentCurrency = "TRY",
+      paymentMethod = "CASH",
+      accountId,
+      usdRate: initialUsdRate = 32.5,
+      notes,
+      ignoreExcess = false,
+      debtIds,
+    } = data;
+
     const shopId = await getShopId();
     const userId = await getUserId();
 
@@ -415,10 +452,7 @@ export async function collectGlobalCustomerPayment(
       return { success: false, error: "Geçerli bir ödeme tutarı giriniz." };
     }
 
-    if (isNaN(usdRate) || usdRate <= 0) {
-      usdRate = 32.5; // Fallback to a safe default if rate is invalid
-    }
-
+    const usdRate = initialUsdRate || 32.5;
     let remainingPayment = paymentAmount;
 
     // Pre-fetch customer info to avoid complex logic inside transaction
@@ -441,15 +475,15 @@ export async function collectGlobalCustomerPayment(
         }
         // Case 2: Paying TRY for USD debt
         else if (debt.currency === "USD" && paymentCurrency === "TRY") {
-          const debtRemainingInTRY = debtRemaining * usdRate;
+          const debtRemainingInTRY = Math.round(debtRemaining * usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInTRY);
-          amountToReduceFromDebt = amountToApplyFromPayment / usdRate;
+          amountToReduceFromDebt = Math.round(amountToApplyFromPayment / usdRate);
         }
         // Case 3: Paying USD for TRY debt
         else if (debt.currency === "TRY" && paymentCurrency === "USD") {
-          const debtRemainingInUSD = debtRemaining / usdRate;
+          const debtRemainingInUSD = Math.round(debtRemaining / usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInUSD);
-          amountToReduceFromDebt = amountToApplyFromPayment * usdRate;
+          amountToReduceFromDebt = Math.round(amountToApplyFromPayment * usdRate);
         }
 
         if (amountToReduceFromDebt > 0.001) { // Only update if significant
@@ -466,7 +500,7 @@ export async function collectGlobalCustomerPayment(
       }
 
       // 1.5 Handle excess payment (Emanet/Bakiye)
-      if (remainingPayment > 0.01) {
+      if (remainingPayment > 0.01 && !ignoreExcess) {
         const balanceField = paymentCurrency === "USD" ? "balanceUsd" : "balance";
         await tx.customer.update({
           where: { id: customerId },
@@ -525,8 +559,8 @@ export async function collectGlobalCustomerPayment(
 
     return {
       success: true,
-      remainingTRY: Number(totalRemainingTRY.toFixed(2)),
-      remainingUSD: Number(totalRemainingUSD.toFixed(2))
+      remainingTRY: Math.round(totalRemainingTRY),
+      remainingUSD: Math.round(totalRemainingUSD)
     };
   } catch (error: any) {
     console.error("collectGlobalCustomerPayment error:", error);
@@ -572,6 +606,9 @@ export async function getCustomerStatement(customerId: string) {
           include: {
             product: true
           }
+        },
+        transaction: {
+          select: { currency: true }
         }
       },
       orderBy: { createdAt: "desc" }
@@ -716,9 +753,19 @@ export async function deleteCustomerPayment(transactionId: string) {
         amountToRestore -= restoreForThisDebt;
       }
 
-      // 1.5 Handle Excess Balance Restoration (Remove credit that was added by this payment)
-      if (amountToRestore > 0.01) {
-        const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+      // 1.5 Handle Balance Restoration
+      const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+      const isBalancePayment = !financeAccountId && (transaction.description?.includes("Bakiye") || transaction.description?.includes("Emanet"));
+
+      if (isBalancePayment) {
+        // If this was a payment FROM balance, deleting it should return the money TO balance
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { [balanceField]: { increment: amount } }
+        });
+      } else if (amountToRestore > 0.01) {
+        // If this was a normal payment, any excess was added to balance as credit.
+        // Restoring the payment means we must remove that added credit.
         await tx.customer.update({
           where: { id: customerId },
           data: { [balanceField]: { decrement: amountToRestore } }
@@ -750,7 +797,12 @@ export async function deleteCustomerPayment(transactionId: string) {
   }
 }
 
-export async function updateCustomerPayment(transactionId: string, newAmount: number, description?: string) {
+export async function updateCustomerPayment(
+  transactionId: string,
+  newAmount: number,
+  description?: string,
+  usdRate: number = 32.5
+) {
   try {
     const shopId = await getShopId();
     const transaction = await prisma.transaction.findUnique({
@@ -759,72 +811,206 @@ export async function updateCustomerPayment(transactionId: string, newAmount: nu
 
     if (!transaction || !transaction.customerId) return { success: false, error: "İşlem bulunamadı." };
 
+    const customer = await prisma.customer.findUnique({ where: { id: transaction.customerId } });
     const oldAmount = Number(transaction.amount);
-    const diff = newAmount - oldAmount; // Positive = more money paid, Negative = less money paid
+    const diff = newAmount - oldAmount; // Change in the payment currency
+    const txCurrency = transaction.currency || "TRY";
 
     await prisma.$transaction(async (tx) => {
-      if (diff > 0) {
-        // More money paid: reduce more debt
-        let remainingDiff = diff;
-        const unpaidDebts = await tx.debt.findMany({
-          where: { customerId: transaction.customerId!, shopId, isPaid: false },
-          orderBy: { createdAt: "asc" }
+      const isBalancePayment = !transaction.financeAccountId && (transaction.description?.includes("Bakiye") || transaction.description?.includes("Emanet"));
+      const balanceField = txCurrency === "USD" ? "balanceUsd" : "balance";
+
+      if (isBalancePayment) {
+        // This is a usage of balance. Any change in 'amount' directly affects balance in reverse.
+        // If amount increases (diff > 0), customer used more from balance -> decrement balance.
+        // If amount decreases (diff < 0), customer used less from balance -> increment balance.
+        await tx.customer.update({
+          where: { id: transaction.customerId! },
+          data: { [balanceField]: { decrement: diff } }
         });
 
-        for (const debt of unpaidDebts) {
-          if (remainingDiff <= 0.001) break;
-          const canPay = Number(debt.remainingAmount);
-          const toPay = Math.min(remainingDiff, canPay);
+        // Now handle the debt change
+        if (diff > 0) {
+          let remainingDiff = diff;
+          const unpaidDebts = await tx.debt.findMany({
+            where: { customerId: transaction.customerId!, shopId, isPaid: false },
+            orderBy: { createdAt: "asc" }
+          });
 
-          await tx.debt.update({
-            where: { id: debt.id },
-            data: {
-              remainingAmount: { decrement: toPay },
-              isPaid: (canPay - toPay) <= 0.01
+          for (const debt of unpaidDebts) {
+            if (remainingDiff <= 0.001) break;
+            const debtRemaining = Number(debt.remainingAmount);
+            let toReduce = 0;
+            let toApply = 0;
+
+            if (debt.currency === txCurrency) {
+              toApply = Math.min(remainingDiff, debtRemaining);
+              toReduce = toApply;
+            } else if (debt.currency === "USD" && txCurrency === "TRY") {
+              const inTRY = Math.round(debtRemaining * usdRate);
+              toApply = Math.min(remainingDiff, inTRY);
+              toReduce = Math.round(toApply / usdRate);
+            } else if (debt.currency === "TRY" && txCurrency === "USD") {
+              const inUSD = Math.round(debtRemaining / usdRate);
+              toApply = Math.min(remainingDiff, inUSD);
+              toReduce = Math.round(toApply * usdRate);
             }
-          });
-          remainingDiff -= toPay;
-        }
 
-        // If even after paying all debts there is still money left from the increase
-        if (remainingDiff > 0.01) {
-          const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
-          await tx.customer.update({
-            where: { id: transaction.customerId! },
-            data: { [balanceField]: { increment: remainingDiff } }
-          });
-        }
-      } else if (diff < 0) {
-        // Less money paid: restore some debt (using absolute diff)
-        let remainingRestore = Math.abs(diff);
-        const partiallyPaidDebts = await tx.debt.findMany({
-          where: { customerId: transaction.customerId!, shopId },
-          orderBy: { updatedAt: "desc" }
-        });
-
-        for (const debt of partiallyPaidDebts) {
-          if (remainingRestore <= 0.001) break;
-          const paidAmt = Number(debt.amount) - Number(debt.remainingAmount);
-          if (paidAmt <= 0) continue;
-
-          const restore = Math.min(remainingRestore, paidAmt);
-          await tx.debt.update({
-            where: { id: debt.id },
-            data: {
-              remainingAmount: { increment: restore },
-              isPaid: false
+            if (toReduce > 0.001) {
+              await tx.debt.update({
+                where: { id: debt.id },
+                data: { remainingAmount: { decrement: toReduce }, isPaid: (debtRemaining - toReduce) <= 0.01 }
+              });
+              remainingDiff -= toApply;
             }
+          }
+        } else if (diff < 0) {
+          let remainingRestore = Math.abs(diff);
+          const partiallyPaidDebts = await tx.debt.findMany({
+            where: { customerId: transaction.customerId!, shopId },
+            orderBy: { updatedAt: "desc" }
           });
-          remainingRestore -= restore;
-        }
 
-        // If we still need to restore amount but no paid debts left, it must have come from balance
-        if (remainingRestore > 0.01) {
-          const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
-          await tx.customer.update({
-            where: { id: transaction.customerId! },
-            data: { [balanceField]: { decrement: remainingRestore } }
+          for (const debt of partiallyPaidDebts) {
+            if (remainingRestore <= 0.001) break;
+            const paidamt = Number(debt.amount) - Number(debt.remainingAmount);
+            if (paidamt <= 0) continue;
+            let toRestore = 0;
+            let toGap = 0;
+
+            if (debt.currency === txCurrency) {
+              toGap = Math.min(remainingRestore, paidamt);
+              toRestore = toGap;
+            } else if (debt.currency === "USD" && txCurrency === "TRY") {
+              const inTRY = Math.round(paidamt * usdRate);
+              toGap = Math.min(remainingRestore, inTRY);
+              toRestore = Math.round(toGap / usdRate);
+            } else if (debt.currency === "TRY" && txCurrency === "USD") {
+              const inUSD = Math.round(paidamt / usdRate);
+              toGap = Math.min(remainingRestore, inUSD);
+              toRestore = Math.round(toGap * usdRate);
+            }
+
+            if (toRestore > 0.001) {
+              await tx.debt.update({
+                where: { id: debt.id },
+                data: { remainingAmount: { increment: toRestore }, isPaid: false }
+              });
+              remainingRestore -= toGap;
+            }
+          }
+        }
+      } else {
+        // Normal Payment (Income)
+        if (diff > 0) {
+          // More money paid: reduce more debt
+          let remainingDiff = diff;
+          const unpaidDebts = await tx.debt.findMany({
+            where: { customerId: transaction.customerId!, shopId, isPaid: false },
+            orderBy: { createdAt: "asc" }
           });
+
+          for (const debt of unpaidDebts) {
+            if (remainingDiff <= 0.001) break;
+
+            let amountToApplyFromDiff = 0;
+            let amountToReduceFromDebt = 0;
+            const debtRemaining = Number(debt.remainingAmount);
+
+            if (debt.currency === txCurrency) {
+              amountToApplyFromDiff = Math.min(remainingDiff, debtRemaining);
+              amountToReduceFromDebt = amountToApplyFromDiff;
+            } else if (debt.currency === "USD" && txCurrency === "TRY") {
+              const debtRemainingInTRY = Math.round(debtRemaining * usdRate);
+              amountToApplyFromDiff = Math.min(remainingDiff, debtRemainingInTRY);
+              amountToReduceFromDebt = Math.round(amountToApplyFromDiff / usdRate);
+            } else if (debt.currency === "TRY" && txCurrency === "USD") {
+              const debtRemainingInUSD = Math.round(debtRemaining / usdRate);
+              amountToApplyFromDiff = Math.min(remainingDiff, debtRemainingInUSD);
+              amountToReduceFromDebt = Math.round(amountToApplyFromDiff * usdRate);
+            }
+
+            if (amountToReduceFromDebt > 0.001) {
+              const newRemaining = Math.max(0, debtRemaining - amountToReduceFromDebt);
+              await tx.debt.update({
+                where: { id: debt.id },
+                data: {
+                  remainingAmount: newRemaining,
+                  isPaid: newRemaining <= 0.01
+                }
+              });
+              remainingDiff -= amountToApplyFromDiff;
+            }
+          }
+
+          // If still money left, add to balance
+          if (remainingDiff > 0.01) {
+            await tx.customer.update({
+              where: { id: transaction.customerId! },
+              data: { [balanceField]: { increment: remainingDiff } }
+            });
+          }
+        } else if (diff < 0) {
+          // Less money paid: reduce from balance first (if there was excess), then restore debt
+          let remainingRestore = Math.abs(diff);
+          const currentBalance = Number(customer?.[balanceField] || 0);
+
+          if (currentBalance > 0) {
+            const reductionFromBalance = Math.min(remainingRestore, currentBalance);
+            await tx.customer.update({
+              where: { id: transaction.customerId! },
+              data: { [balanceField]: { decrement: reductionFromBalance } }
+            });
+            remainingRestore -= reductionFromBalance;
+          }
+
+          if (remainingRestore > 0.001) {
+            const partiallyPaidDebts = await tx.debt.findMany({
+              where: { customerId: transaction.customerId!, shopId },
+              orderBy: { updatedAt: "desc" }
+            });
+
+            for (const debt of partiallyPaidDebts) {
+              if (remainingRestore <= 0.001) break;
+
+              const paidAmtOnDebt = Number(debt.amount) - Number(debt.remainingAmount);
+              if (paidAmtOnDebt <= 0) continue;
+
+              let amountToRestoreFromGap = 0;
+              let amountToIncreaseOnDebt = 0;
+
+              if (debt.currency === txCurrency) {
+                amountToRestoreFromGap = Math.min(remainingRestore, paidAmtOnDebt);
+                amountToIncreaseOnDebt = amountToRestoreFromGap;
+              } else if (debt.currency === "USD" && txCurrency === "TRY") {
+                const paidAmtInTRY = Math.round(paidAmtOnDebt * usdRate);
+                amountToRestoreFromGap = Math.min(remainingRestore, paidAmtInTRY);
+                amountToIncreaseOnDebt = Math.round(amountToRestoreFromGap / usdRate);
+              } else if (debt.currency === "TRY" && txCurrency === "USD") {
+                const paidAmtInUSD = Math.round(paidAmtOnDebt / usdRate);
+                amountToRestoreFromGap = Math.min(remainingRestore, paidAmtInUSD);
+                amountToIncreaseOnDebt = Math.round(amountToRestoreFromGap * usdRate);
+              }
+
+              if (amountToIncreaseOnDebt > 0.001) {
+                await tx.debt.update({
+                  where: { id: debt.id },
+                  data: {
+                    remainingAmount: { increment: amountToIncreaseOnDebt },
+                    isPaid: false
+                  }
+                });
+                remainingRestore -= amountToRestoreFromGap;
+              }
+            }
+          }
+
+          if (remainingRestore > 0.01) {
+            await tx.customer.update({
+              where: { id: transaction.customerId! },
+              data: { [balanceField]: { decrement: remainingRestore } }
+            });
+          }
         }
       }
 

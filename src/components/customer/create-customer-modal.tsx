@@ -35,8 +35,19 @@ const customerSchema = z.object({
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
-export function CreateCustomerModal() {
-  const [open, setOpen] = useState(false);
+interface CreateCustomerModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function CreateCustomerModal({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: CreateCustomerModalProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
   const [isPending, startTransition] = useTransition();
   const [phoneValue, setPhoneValue] = useState("");
   const { toast } = useToast();
@@ -75,12 +86,14 @@ export function CreateCustomerModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          <span>Yeni Müşteri Ekle</span>
-        </Button>
-      </DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <PlusCircle className="h-4 w-4" />
+            <span>Yeni Müşteri Ekle</span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px] bg-background border-border/50 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-8 bg-card/50 border-b border-border/50">

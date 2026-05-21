@@ -141,7 +141,13 @@ export async function getShortageItems() {
       assignedTo: true,
       customer: true,
       shop: true,
-      supplier: true
+      supplier: true,
+      returnTicket: {
+        include: {
+          product: true,
+          customer: true
+        }
+      }
     },
     orderBy: { createdAt: "desc" },
   });
@@ -175,7 +181,13 @@ export async function getGlobalShortageList(dateStr?: string) {
         product: true,
         customer: true,
         shop: { select: { name: true } },
-        supplier: true
+        supplier: true,
+        returnTicket: {
+          include: {
+            product: true,
+            customer: true
+          }
+        }
       },
       orderBy: { createdAt: "desc" }
     });
@@ -432,7 +444,13 @@ export async function getCourierTasks(dateStr?: string) {
         customer: true,
         assignedTo: { select: { name: true, surname: true } },
         shop: { select: { name: true, phone: true } },
-        supplier: true
+        supplier: true,
+        returnTicket: {
+          include: {
+            product: true,
+            customer: true
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     });

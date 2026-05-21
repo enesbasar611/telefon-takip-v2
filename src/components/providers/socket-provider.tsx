@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import io from "socket.io-client";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 interface SocketContextType {
     socket: any | null;
@@ -21,16 +22,21 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: session, status } = useSession();
+    const pathname = usePathname();
     const [socket, setSocket] = useState<any | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
         if (status === "loading") return;
 
-        // Sadece giriş yapılmışsa ve shopId varsa bağlan
-        if (status !== "authenticated" || !session?.user?.shopId) {
+        // Skip socket connection on courier panel as requested - it causes 
+        // connection errors on unstable mobile networks and isn't needed there.
+        const isCourierPage = pathname?.startsWith("/kurye");
+
+        // Sadece giriş yapılmışsa, shopId varsa ve kurye sayfasında değilsek bağlan
+        if (status !== "authenticated" || !session?.user?.shopId || isCourierPage) {
             if (socket) {
-                console.log("[SOCKET] Oturum kapalı veya shopId eksik, bağlantı kesiliyor");
+                console.log("[SOCKET] Oturum kapalı, shopId eksik veya kurye sayfası, bağlantı kesiliyor");
                 socket.disconnect();
                 setSocket(null);
                 setIsConnected(false);

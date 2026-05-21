@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { cn, serializePrisma } from "@/lib/utils";
-import { getRecentTransactions } from "@/lib/actions/dashboard-actions";
+import { cn, serializePrisma, formatCurrency } from "@/lib/utils";
+import { getRecentTransactions, getDashboardFinancialSummary } from "@/lib/actions/dashboard-actions";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols?: number, rows?: number, shopId?: string }) {
     const isVerySmall = cols < 8;
@@ -26,6 +27,13 @@ export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
+    });
+
+    const { data: summary } = useQuery({
+        queryKey: ["dashboard-financial-summary", shopId || ""],
+        queryFn: () => getDashboardFinancialSummary(shopId || ""),
+        enabled: !!shopId,
+        staleTime: 60 * 1000,
     });
 
     if (isLoading) return <Card className="h-full border border-border/40 bg-card rounded-[2rem] animate-pulse" />;
@@ -48,9 +56,45 @@ export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols
                     </div>
                     <div>
                         <CardTitle className={cn(
-                            "font-medium tracking-tight font-sans uppercase",
+                            "font-medium tracking-tight font-sans uppercase flex items-center gap-6",
                             isVerySmall || isShort ? "text-sm" : "text-lg"
-                        )}>Finansal Kayıtlar</CardTitle>
+                        )}>
+                            <span>Finansal Kayıtlar</span>
+
+                            {summary && !isVerySmall && (
+                                <div className="flex items-center gap-6 normal-case font-normal border-l border-border/40 pl-6 h-10">
+                                    {/* Yesterday */}
+                                    <div className="flex flex-col gap-0.5 opacity-40 hover:opacity-100 transition-opacity">
+                                        <span className="text-[9px] uppercase tracking-tighter text-muted-foreground font-bold">DÜN</span>
+                                        <div className="flex items-center gap-3 text-[11px]">
+                                            <div className="flex items-center gap-1 text-emerald-500 font-semibold">
+                                                <ArrowUpRight className="h-3 w-3" />
+                                                <span>{summary.currency === 'USD' ? '$' : '₺'}{formatCurrency(summary.yesterday.income)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-rose-500 font-semibold">
+                                                <ArrowDownLeft className="h-3 w-3" />
+                                                <span>{summary.currency === 'USD' ? '$' : '₺'}{formatCurrency(summary.yesterday.expense)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Today */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[9px] uppercase tracking-tighter text-blue-500 font-bold">BUGÜN</span>
+                                        <div className="flex items-center gap-3 text-[11px]">
+                                            <div className="flex items-center gap-1 text-emerald-500 font-bold">
+                                                <ArrowUpRight className="h-3 w-3" />
+                                                <span>{summary.currency === 'USD' ? '$' : '₺'}{formatCurrency(summary.today.income)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-rose-500 font-bold">
+                                                <ArrowDownLeft className="h-3 w-3" />
+                                                <span>{summary.currency === 'USD' ? '$' : '₺'}{formatCurrency(summary.today.expense)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </CardTitle>
                         {!isVerySmall && !isShort && <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Son İşlemler</p>}
                     </div>
                 </div>

@@ -10,12 +10,11 @@ export function DashboardEditButton() {
 
     if (isEditMode) {
         return (
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-2">
                 {hasChanges ? (
                     <Button
                         onClick={() => setIsEditMode(false)}
-                        size="sm"
-                        className="h-9 px-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all gap-2 text-[11px] font-bold uppercase tracking-widest"
+                        className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all gap-2 text-[10px] font-bold uppercase tracking-widest"
                         disabled={isPending}
                     >
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -24,9 +23,8 @@ export function DashboardEditButton() {
                 ) : (
                     <Button
                         onClick={() => setIsEditMode(false)}
-                        size="sm"
                         variant="secondary"
-                        className="h-9 px-6 rounded-full shadow-lg transition-all gap-2 text-[11px] font-bold uppercase tracking-widest border-none"
+                        className="h-10 px-4 rounded-xl shadow-lg transition-all gap-2 text-[10px] font-bold uppercase tracking-widest border border-border/40 bg-card/40 backdrop-blur-md"
                     >
                         <X className="h-4 w-4" />
                         DÜZENLEMEYİ BİTİR
@@ -39,11 +37,10 @@ export function DashboardEditButton() {
     return (
         <Button
             onClick={() => setIsEditMode(true)}
-            size="sm"
             variant="outline"
-            className="h-9 px-6 rounded-full bg-primary text-primary-foreground border-none shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:bg-primary/90 transition-all gap-2 text-[11px] font-bold uppercase tracking-widest ml-2"
+            className="h-10 px-4 gap-2 border-border/40 bg-card/40 backdrop-blur-md hover:bg-primary/10 hover:text-primary hover:border-primary/40 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm group"
         >
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className="h-4 w-4 group-hover:rotate-90 transition-transform" />
             PANELİ DÜZENLE
         </Button>
     );

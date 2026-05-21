@@ -30,12 +30,53 @@ export async function getTransactions(options: {
         user: true,
         sale: true,
         financeAccount: true,
-        dailySession: true
+        dailySession: true,
+        customer: true,
+        supplier: true
       },
       orderBy: { createdAt: "desc" },
       skip,
       take: pageSize
     });
+
+    // If runningBalance is null for any transaction, compute it from account balances.
+    const hasNulls = transactions.some(t => t.runningBalance === null);
+    if (hasNulls) {
+      // Collect current account balances (after all transactions)
+      const accountBalances: Record<string, number> = {};
+      for (const t of transactions) {
+        if (t.financeAccountId && !(t.financeAccountId in accountBalances)) {
+          accountBalances[t.financeAccountId] = Number(t.financeAccount?.balance ?? 0);
+        }
+      }
+
+      // Undo all shown transactions to find balance BEFORE oldest shown transaction
+      const perAccountRunning: Record<string, number> = {};
+      for (const accId in accountBalances) {
+        let balance = accountBalances[accId];
+        for (const t of transactions) {
+          if (t.financeAccountId === accId) {
+            if (t.type === 'INCOME') balance -= Number(t.amount);
+            else balance += Number(t.amount);
+          }
+        }
+        perAccountRunning[accId] = balance;
+      }
+
+      // Walk oldest-first, apply each transaction and record post-balance
+      const withBalance: (typeof transactions[0] & { runningBalance: number })[] = [];
+      for (const t of [...transactions].reverse()) {
+        const accId = t.financeAccountId ?? '__none__';
+        const prev = perAccountRunning[accId] ?? 0;
+        const amount = Number(t.amount);
+        const after = t.type === 'INCOME' ? prev + amount : prev - amount;
+        perAccountRunning[accId] = after;
+        withBalance.push({ ...t, runningBalance: after } as any);
+      }
+      // Re-reverse to newest-first
+      return serializePrisma(withBalance.reverse());
+    }
+
     return serializePrisma(transactions);
   } catch (error) {
     console.error("Error fetching transactions:", error);
@@ -214,6 +255,23 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
         }
       });
 
+      // IMPORTANT: If this is a historical transaction (past date), 
+      // we MUST update the runningBalance of ALL subsequent transactions for this account.
+      const txAmount = Number(data.amount);
+      const balanceImpact = data.type === 'INCOME' ? txAmount : -txAmount;
+
+      await tx.transaction.updateMany({
+        where: {
+          financeAccountId: targetAccountId,
+          createdAt: { gt: t.createdAt },
+          shopId,
+          id: { not: t.id }
+        },
+        data: {
+          runningBalance: { increment: balanceImpact }
+        }
+      });
+
       return t;
     });
 
@@ -331,6 +389,45 @@ export async function updateManualTransaction(
               where: { id: t.id },
               data: { runningBalance: newBalance }
             });
+
+            // IMPORTANT: Since balance changed, we MUST recalculate ALL subsequent transactions' running balances
+            // A simple way is to find the net change and updateMany.
+            // But if it was moved between accounts, it's more complex.
+            // For now, let's just trigger a full account-level re-sync for all transactions after the edited one if we are serious.
+            // Or simple: If account stayed the same, just apply the delta.
+            if (oldTx.financeAccountId === targetAccountId) {
+              const oldImpact = oldTx.type === 'INCOME' ? Number(oldTx.amount) : -Number(oldTx.amount);
+              const newImpact = (data.type || oldTx.type) === 'INCOME' ? (data.amount || Number(oldTx.amount)) : -(data.amount || Number(oldTx.amount));
+              const delta = newImpact - oldImpact;
+
+              if (delta !== 0) {
+                await tx.transaction.updateMany({
+                  where: {
+                    financeAccountId: targetAccountId,
+                    createdAt: { gt: t.createdAt },
+                    shopId,
+                    id: { not: t.id }
+                  },
+                  data: { runningBalance: { increment: delta } }
+                });
+              }
+            } else {
+              // Account changed. This is trickier. 
+              // We'd need to update subseq rows in OLD account (subtract old impact)
+              // and subseq rows in NEW account (add new impact).
+              const oldImpact = oldTx.type === 'INCOME' ? Number(oldTx.amount) : -Number(oldTx.amount);
+              if (oldTx.financeAccountId) {
+                await tx.transaction.updateMany({
+                  where: { financeAccountId: oldTx.financeAccountId, createdAt: { gt: oldTx.createdAt }, shopId },
+                  data: { runningBalance: { decrement: oldImpact } }
+                });
+              }
+              const newImpact = (data.type || oldTx.type) === 'INCOME' ? (data.amount || Number(oldTx.amount)) : -(data.amount || Number(oldTx.amount));
+              await tx.transaction.updateMany({
+                where: { financeAccountId: targetAccountId, createdAt: { gt: t.createdAt }, shopId, id: { not: t.id } },
+                data: { runningBalance: { increment: newImpact } }
+              });
+            }
           }
         }
       }
@@ -914,6 +1011,23 @@ export async function deleteTransaction(id: string) {
       await tx.transaction.delete({
         where: { id, shopId }
       });
+
+      // IMPORTANT: Update subsequent transactions' running balances
+      if (transaction.financeAccountId) {
+        const amount = Number(transaction.amount);
+        const balanceChange = transaction.type === 'INCOME' ? -amount : amount;
+
+        await tx.transaction.updateMany({
+          where: {
+            financeAccountId: transaction.financeAccountId,
+            createdAt: { gt: transaction.createdAt },
+            shopId
+          },
+          data: {
+            runningBalance: { increment: balanceChange }
+          }
+        });
+      }
     });
 
     revalidatePath("/satis/kasa");

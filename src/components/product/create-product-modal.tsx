@@ -72,11 +72,24 @@ interface CreateProductModalProps {
   suppliers?: Supplier[];
   shop?: any;
   autoOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateProductModal({ categories, suppliers = [], shop, autoOpen = false }: CreateProductModalProps) {
+export function CreateProductModal({
+  categories,
+  suppliers = [],
+  shop,
+  autoOpen = false,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: CreateProductModalProps) {
   const { rates: exchangeRates, defaultCurrency } = useDashboardData();
-  const [open, setOpen] = useState(autoOpen);
+  const [internalOpen, setInternalOpen] = useState(autoOpen);
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
   const [isPending, startTransition] = useTransition();
   const [isAIPending, startAITransition] = useTransition();
   const [currency, setCurrency] = useState<"TRY" | "USD" | "EUR">(defaultCurrency);
@@ -193,8 +206,8 @@ export function CreateProductModal({ categories, suppliers = [], shop, autoOpen 
       const buyInput = Number(data.buyPrice) || 0;
       const sellInput = Number(data.sellPrice) || 0;
       const rate = getCurrencyRate(currency);
-      const buyPriceTry = currency === "TRY" ? buyInput : Math.ceil(buyInput * rate);
-      const sellPriceTry = currency === "TRY" ? sellInput : Math.ceil(sellInput * rate);
+      const buyPriceTry = currency === "TRY" ? buyInput : Math.round(buyInput * rate);
+      const sellPriceTry = currency === "TRY" ? sellInput : Math.round(sellInput * rate);
 
       const result = await createProduct({
         name: name || data.name,
@@ -258,12 +271,14 @@ export function CreateProductModal({ categories, suppliers = [], shop, autoOpen 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2 h-10 px-6 bg-blue-500 text-black font-semibold rounded-xl hover:bg-blue-400 transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-          <PlusCircle className="h-4 w-4" />
-          <span>Yeni Ürün Ekle</span>
-        </Button>
-      </DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button className="gap-2 h-10 px-6 bg-blue-500 text-black font-semibold rounded-xl hover:bg-blue-400 transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+            <PlusCircle className="h-4 w-4" />
+            <span>Yeni Ürün Ekle</span>
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent className="sm:max-w-[820px] bg-background border border-border text-foreground p-0 overflow-hidden shadow-2xl shadow-foreground/10">
         <form onSubmit={handleSubmit(onSubmit)}>
