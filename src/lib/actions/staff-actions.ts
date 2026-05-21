@@ -10,36 +10,30 @@ import { getDefaultStaffPermissions } from "@/lib/staff-permissions";
 
 export const getStaff = async (shopId?: string) => {
     const finalShopId = shopId || await getShopId();
-    return unstable_cache(
-        async () => {
-            try {
-                const staff = await prisma.user.findMany({
-                    where: { shopId: finalShopId },
-                    include: {
-                        assignedTickets: {
-                            where: { status: "DELIVERED", shopId: finalShopId }
-                        },
-                        sales: {
-                            where: { shopId: finalShopId }
-                        },
-                        shortageTasks: {
-                            where: { shopId: finalShopId }
-                        },
-                        leaves: {
-                            where: { shopId: finalShopId }
-                        }
-                    },
-                    orderBy: { createdAt: "desc" }
-                });
-                return serializePrisma(staff);
-            } catch (error) {
-                console.error("Error fetching staff:", error);
-                return [];
-            }
-        },
-        [`staff-list-${finalShopId}`],
-        { tags: [`staff-${finalShopId}`], revalidate: 3600 }
-    )();
+    try {
+        const staff = await prisma.user.findMany({
+            where: { shopId: finalShopId },
+            include: {
+                assignedTickets: {
+                    where: { status: "DELIVERED", shopId: finalShopId }
+                },
+                sales: {
+                    where: { shopId: finalShopId }
+                },
+                shortageTasks: {
+                    where: { shopId: finalShopId }
+                },
+                leaves: {
+                    where: { shopId: finalShopId }
+                }
+            },
+            orderBy: { createdAt: "desc" }
+        });
+        return serializePrisma(staff);
+    } catch (error) {
+        console.error("Error fetching staff:", error);
+        return [];
+    }
 };
 
 export const getStaffShell = async (shopId?: string) => {

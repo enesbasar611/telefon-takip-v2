@@ -229,7 +229,7 @@ export async function getCouriers() {
   const shopId = await getShopId(false);
   if (!shopId) return [];
   const couriers = await prisma.user.findMany({
-    where: { shopId, role: "COURIER", isApproved: true },
+    where: { shopId, role: "COURIER" },
     select: { id: true, name: true, surname: true, role: true }
   });
   return serializePrisma(couriers);
@@ -433,9 +433,21 @@ export async function getCourierTasks(dateStr?: string) {
       }
     }
 
+    const isHistory = dateStr !== "" && dateStr !== undefined;
+
     const whereClause: any = isAdmin
-      ? { shopId, assignedToId: { not: null }, isResolved: false, ...dateFilter }
-      : { shopId, assignedToId: userId, isResolved: false, ...dateFilter };
+      ? {
+        shopId,
+        assignedToId: { not: null },
+        ...(isHistory ? {} : { isResolved: false }),
+        ...dateFilter
+      }
+      : {
+        shopId,
+        assignedToId: userId,
+        ...(isHistory ? {} : { isResolved: false }),
+        ...dateFilter
+      };
 
     const items = await prisma.shortageItem.findMany({
       where: whereClause,

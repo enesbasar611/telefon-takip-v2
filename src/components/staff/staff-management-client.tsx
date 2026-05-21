@@ -56,6 +56,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CreateStaffModal } from "./create-staff-modal";
 import { StaffDeleteModal } from "./staff-delete-modal";
 import {
+    getStaff,
     getStaffLogs,
     updateRoleTemplate,
     getRoleTemplates,
@@ -648,7 +649,16 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
             const matchesSearch = (member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 member.surname?.toLowerCase().includes(searchTerm.toLowerCase()));
-            const matchesTab = filter === "all" || (member.role as string) === filter;
+
+            let matchesTab = filter === "all";
+            if (!matchesTab) {
+                if (filter === "MANAGER") {
+                    matchesTab = member.role === "MANAGER" || member.role === "SHOP_MANAGER";
+                } else {
+                    matchesTab = (member.role as string) === filter;
+                }
+            }
+
             return matchesSearch && matchesTab;
         });
     }, [localStaff, searchTerm, filter]);
@@ -793,7 +803,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                             </TableHeader>
                             <TableBody>
                                 <AnimatePresence>
-                                    {filteredStaff.map((member, idx) => (
+                                    {filteredStaff.map((member: any, idx: number) => (
                                         <motion.tr
                                             key={member.id}
                                             initial={{ opacity: 0, y: 10 }}
@@ -812,7 +822,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                                                         <Avatar className="relative h-14 w-14 rounded-2xl border-2 border-white dark:border-border shadow-md transition-transform group-hover:scale-105">
                                                             <AvatarImage src={member.image || ""} />
                                                             <AvatarFallback className="bg-slate-100 dark:bg-muted text-slate-900 dark:text-white text-sm font-black">
-                                                                {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || "U"}
+                                                                {member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || "U"}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </div>
@@ -822,7 +832,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                                                         </span>
                                                         <div className="flex items-center gap-2">
                                                             <RoleBadge role={member.role} />
-                                                            {member.leaves?.some(l => new Date(l.startDate) <= new Date() && new Date(l.endDate) >= new Date()) && (
+                                                            {member.leaves?.some((l: any) => new Date(l.startDate) <= new Date() && new Date(l.endDate) >= new Date()) && (
                                                                 <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] font-black tracking-widest px-1.5 py-0">İZİNLİ</Badge>
                                                             )}
                                                             {member.email && (
@@ -973,7 +983,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                     </CardHeader>
                     <CardContent className="p-8 pt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {initialStaff.map((member) => {
+                            {localStaff.map((member: any) => {
                                 const currentMonthLeaves = member.leaves?.filter((l: any) => {
                                     const start = new Date(l.startDate);
                                     const now = new Date();
@@ -1020,7 +1030,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                                     </div>
                                 );
                             })}
-                            {initialStaff.every((m: any) => !m.leaves?.some((l: any) => {
+                            {localStaff.every((m: any) => !m.leaves?.some((l: any) => {
                                 const start = new Date(l.startDate);
                                 const now = new Date();
                                 return start.getMonth() === now.getMonth() && start.getFullYear() === now.getFullYear();
@@ -1078,7 +1088,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                         </div>
                     )}
                     <div className="divide-y divide-border/5">
-                        {logs.map((log, i) => (
+                        {logs.map((log: any, i: number) => (
                             <div key={i} className="p-6 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className={cn(
@@ -1172,7 +1182,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                 isOpen={deleteModalOpen}
                 onClose={() => setDeleteModalOpen(false)}
                 member={selectedMember}
-                otherStaff={localStaff.filter(s => s.id !== selectedMember?.id)}
+                otherStaff={localStaff.filter((s: any) => s.id !== selectedMember?.id)}
                 onDeleted={() => router.refresh()}
             />
             <RoleTemplateModal

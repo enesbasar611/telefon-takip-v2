@@ -175,8 +175,16 @@ export const authOptions: NextAuthOptions = {
                     effectiveUser = await ensureShopOwnerUser(user.id, user.role);
                 }
 
+                // Kullanıcı şifreyle (yönetici tarafından oluşturulmuş hesapla) giriyorsa
+                // onay koduna gerek yoktur.
                 if (!isSuperAdmin && !effectiveUser.isApproved) {
-                    throw new Error("AccountNotApproved");
+                    // Veritabanında onaylı değil görünüyorsa bile, credentials ile girildiği için onaylı sayıyoruz.
+                    // Eski kayıtlar için DB'yi güncelleyelim.
+                    await prisma.user.update({
+                        where: { id: effectiveUser.id },
+                        data: { isApproved: true }
+                    });
+                    effectiveUser.isApproved = true;
                 }
 
                 if (!isSuperAdmin && !effectiveUser.shopId) {

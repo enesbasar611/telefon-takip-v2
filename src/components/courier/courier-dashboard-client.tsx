@@ -132,6 +132,9 @@ const cleanCourierNote = (notes?: string | null) =>
         .replace(/\[ONCELIK:(ACIL|YUKSEK|NORMAL)\]/gi, "")
         .trim();
 
+const getCourierItemDisplayName = (item: any) =>
+    String(item?.name || item?.product?.name || item?.returnTicket?.product?.name || "Isimsiz urun").trim();
+
 export function CourierDashboardClient({
     initialItems = EMPTY_ARRAY,
     initialAllShortages = EMPTY_ARRAY,
@@ -293,13 +296,17 @@ export function CourierDashboardClient({
         queryClient.setQueryData(["courier-tasks-prev-count"], items.length);
     }, [items, isAdmin, queryClient]);
 
-    const filteredItems = useMemo(() => sortByCourierPriority(items.filter((item: any) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.shop?.name && item.shop.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.customer?.name && item.customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.requesterName && item.requesterName.toLowerCase().includes(searchTerm.toLowerCase()))
-    )), [items, searchTerm]);
+    const filteredItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => {
+        const query = searchTerm.toLowerCase();
+        const displayName = getCourierItemDisplayName(item).toLowerCase();
+        return (
+            displayName.includes(query) ||
+            (item.notes && item.notes.toLowerCase().includes(query)) ||
+            (item.shop?.name && item.shop.name.toLowerCase().includes(query)) ||
+            (item.customer?.name && item.customer.name.toLowerCase().includes(query)) ||
+            (item.requesterName && item.requesterName.toLowerCase().includes(query))
+        );
+    })), [items, searchTerm]);
 
     const pendingShortages = useMemo(() => sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId)), [allShortages]);
     const nextRouteItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3), [items]);
@@ -1121,6 +1128,7 @@ export function CourierDashboardClient({
                                                                             İADE GÖREVİ
                                                                         </Badge>
                                                                     )}
+                                                                    {getCourierItemDisplayName(item)}
                                                                 </h4>
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     {item.isNotFound && (
@@ -1525,7 +1533,7 @@ export function CourierDashboardClient({
             <ApproveShortageModal
                 open={approveModalOpen}
                 onOpenChange={setApproveModalOpen}
-                itemName={approvingItem?.name || ""}
+                itemName={approvingItem ? getCourierItemDisplayName(approvingItem) : ""}
                 quantity={approvingItem?.quantity || 1}
                 requesterName={approvingItem?.customer?.name || approvingItem?.requesterName || ""}
                 isCustomer={!!approvingItem?.customerId}
