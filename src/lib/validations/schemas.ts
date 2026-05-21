@@ -76,6 +76,7 @@ export const transactionSchema = z.object({
     amount: priceSchema,
     description: z.string().min(3, "Açıklama en az 3 karakter olmalıdır"),
     paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]),
+    currency: z.enum(["TRY", "USD", "EUR"]).optional().default("TRY"),
     accountId: z.string().optional(),
     category: z.string().optional(),
     date: z.string().optional(),

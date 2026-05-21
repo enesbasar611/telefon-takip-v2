@@ -89,3 +89,8 @@ export const getExchangeRates = async (shopId: string | null) => {
     { tags: [`rates-${shopId}`, "rates"], revalidate: 1800 } // 30 dakika
   )();
 };
+
+export async function getCurrentExchangeRates() {
+  const shopId = await getShopId(false);
+  return getExchangeRates(shopId);
+}

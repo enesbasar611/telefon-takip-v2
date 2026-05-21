@@ -63,6 +63,7 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
                     amount,
                     description: description || "Hizli Bakiye Girisi",
                     paymentMethod: selectedAccount.type === "CASH" ? "CASH" : "TRANSFER",
+                    currency: "TRY",
                     accountId: selectedAccount.id,
                     category: "HIZLI EKLE",
                     date: new Date().toISOString()

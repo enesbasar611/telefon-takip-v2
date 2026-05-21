@@ -17,7 +17,8 @@ const authMiddleware = withAuth(
 
             // 1. ACCESS VERIFICATION (CRITICAL FIRST STEP)
             // If not approved and not super admin, must be on /verify
-            if (!isApproved && !isSuperAdmin) {
+            // EXCEPT: COURIER role does not require approval
+            if (!isApproved && !isSuperAdmin && role !== "COURIER") {
                 if (!isVerifyPage) {
                     return NextResponse.redirect(new URL("/verify", req.url));
                 }

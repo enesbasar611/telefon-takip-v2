@@ -350,7 +350,13 @@ export async function finishOnboarding() {
             where: { id: shopId },
             data: { isFirstLogin: false } as any
         });
+
+        // Clear cache tags to ensure DashboardLayout sees the update
+        const { revalidateTag } = await import("next/cache");
+        revalidateTag("shop");
+        revalidateTag(`shop-${shopId}`);
         revalidatePath("/");
+
         return { success: true };
     } catch (error) {
         return { success: false, error: "Onboarding bitirilemedi." };

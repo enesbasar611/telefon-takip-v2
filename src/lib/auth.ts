@@ -52,8 +52,7 @@ function isShopOwnerRole(role?: Role | string | null): role is Role {
 function getShopManagerPermissions() {
     return {
         role: "SHOP_MANAGER" as Role,
-        isApproved: true,
-        verificationCode: null,
+        // isApproved is intentionally NOT set here to prevent auto-bypass
         canSell: true,
         canService: true,
         canStock: true,
@@ -89,7 +88,9 @@ function needsFullAccessSync(user: {
     canDelete?: boolean | null;
     canEdit?: boolean | null;
 }) {
-    return !user.isApproved || !user.canSell || !user.canService || !user.canStock || !user.canFinance || !user.canDelete || !user.canEdit;
+    // Only check functional permissions, NOT isApproved here 
+    // to avoid auto-approval loop in ensureShopOwnerUser
+    return !user.canSell || !user.canService || !user.canStock || !user.canFinance || !user.canDelete || !user.canEdit;
 }
 
 async function createShopForGoogleUser(user: { id: string; email?: string | null; name?: string | null }) {
@@ -116,6 +117,7 @@ async function createShopForGoogleUser(user: { id: string; email?: string | null
         where: { id: user.id },
         data: {
             ...getShopManagerPermissions(),
+            isApproved: false, // New Google shops ALWAYS start unapproved
             shopId: shop.id
         }
     });
@@ -216,16 +218,22 @@ export const authOptions: NextAuthOptions = {
                             id: true,
                             role: true,
                             shopId: true,
-                            isApproved: true,
-                            canSell: true,
-                            canService: true,
-                            canStock: true,
-                            canFinance: true,
-                            canEdit: true,
-                            canDelete: true
+                            isApproved: true
                         }
                     })
                     : null;
+
+                // PROTECT AGAINST COURIERS LOGGING IN VIA OAUTH
+                // User requirement: No OAuth accounts should be COURIER.
+                if (dbUser && dbUser.role === "COURIER") {
+                    // Update role to SHOP_MANAGER or handle as per user request (force shop manager)
+                    await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: { role: "SHOP_MANAGER" }
+                    });
+                    // Refresh local record for the rest of the logic
+                    dbUser.role = "SHOP_MANAGER";
+                }
 
                 if (dbUser && !dbUser.shopId && dbUser.role === "STAFF") {
                     await createShopForGoogleUser({ id: dbUser.id, email: user.email, name: user.name });
@@ -240,14 +248,14 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 if (dbUser && !dbUser.isApproved) {
-                    return "/login?error=AccountNotApproved";
+                    return "/verify"; // Redirect strictly to verify if not approved
                 }
 
                 return true;
             }
 
-            if (!user.isApproved) {
-                return "/login?error=AccountNotApproved";
+            if (user.role !== "COURIER" && !user.isApproved) {
+                return "/verify";
             }
 
             return true;
@@ -366,13 +374,13 @@ export const authOptions: NextAuthOptions = {
                         }
                     }
 
-                    token.isApproved = isSuperAdmin ? true : effectiveUser.isApproved;
-                    token.canSell = isSuperAdmin ? true : effectiveUser.canSell;
-                    token.canService = isSuperAdmin ? true : effectiveUser.canService;
-                    token.canStock = isSuperAdmin ? true : effectiveUser.canStock;
-                    token.canFinance = isSuperAdmin ? true : effectiveUser.canFinance;
-                    token.canEdit = isSuperAdmin ? true : effectiveUser.canEdit;
-                    token.canDelete = isSuperAdmin ? true : effectiveUser.canDelete;
+                    token.isApproved = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.isApproved;
+                    token.canSell = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canSell;
+                    token.canService = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canService;
+                    token.canStock = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canStock;
+                    token.canFinance = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canFinance;
+                    token.canEdit = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canEdit;
+                    token.canDelete = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canDelete;
                     token.isShopActive = (dbUser as any).shop?.isActive ?? true;
 
                     // Impersonation detection: If Super Admin is NOT in their home shop (BAŞAR)
@@ -416,19 +424,33 @@ export const authOptions: NextAuthOptions = {
     },
     events: {
         async signIn({ user }) {
-            if (isSuperAdminEmail(user.email)) {
+            const email = user.email?.toLowerCase();
+            const isSuperAdmin = isSuperAdminEmail(email);
+
+            if (isSuperAdmin && user.id) {
                 await ensureSuperAdminUser(user.id);
             } else {
-                const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: user.id },
+                    select: { id: true, isApproved: true, verificationCode: true, role: true }
+                });
+
+                // Sync basic Role permissions if they are a shop owner, but don't auto-approve
                 if (dbUser && isShopOwnerRole(dbUser.role)) {
-                    await ensureShopOwnerUser(dbUser.id, dbUser.role);
-                    return;
+                    if (needsFullAccessSync(dbUser as any)) {
+                        await ensureShopOwnerUser(dbUser.id, dbUser.role);
+                    }
                 }
+
+                // If not approved and no code exists, generate and send one
                 if (dbUser && !dbUser.isApproved && !dbUser.verificationCode) {
                     const code = generateVerificationCode();
                     await prisma.user.update({
                         where: { id: user.id },
-                        data: { verificationCode: code }
+                        data: {
+                            verificationCode: code,
+                            isApproved: false // Ensure it's false
+                        }
                     });
                     await sendApprovalCodeToAdmin(user.email!, code);
                 }

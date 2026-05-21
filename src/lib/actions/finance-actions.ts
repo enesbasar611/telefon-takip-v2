@@ -7,6 +7,7 @@ import { tr } from "date-fns/locale";
 import { getShopId, getUserId } from "@/lib/auth";
 import { transactionSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { buildTransactionSearchWhere } from "@/lib/finance/transaction-search";
 import { z } from "zod";
 
 export async function getTransactions(options: {
@@ -14,8 +15,9 @@ export async function getTransactions(options: {
   dailySessionId?: string;
   page?: number;
   pageSize?: number;
+  search?: string;
 } = {}) {
-  const { accountId, dailySessionId, page = 1, pageSize = 50 } = options;
+  const { accountId, dailySessionId, page = 1, pageSize = 50, search } = options;
   const skip = (page - 1) * pageSize;
 
   try {
@@ -25,6 +27,7 @@ export async function getTransactions(options: {
         shopId,
         ...(accountId ? { financeAccountId: accountId } : {}),
         ...(dailySessionId ? { dailySessionId } : {}),
+        ...buildTransactionSearchWhere(search),
       },
       include: {
         user: true,
@@ -225,6 +228,7 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
         data: {
           type: data.type,
           amount: data.amount,
+          currency: data.currency || "TRY",
           description: data.description,
           paymentMethod: data.paymentMethod,
           financeAccountId: targetAccountId,
@@ -339,6 +343,7 @@ export async function updateManualTransaction(
         data: {
           type: data.type,
           amount: data.amount,
+          currency: data.currency,
           description: data.description,
           paymentMethod: data.paymentMethod,
           financeAccountId: data.accountId,

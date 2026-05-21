@@ -131,10 +131,21 @@ export default function VerifyPage() {
                         <p className="text-[14px] text-[#86868b] leading-relaxed max-w-[280px] mx-auto">
                             {success
                                 ? "Sisteme yönlendiriliyorsunuz..."
-                                : "Yöneticiniz tarafından size iletilen 6 haneli kodu girin."
+                                : "Lütfen yöneticinizden onay kodu alın ve aşağıdaki alana girin."
                             }
                         </p>
                     </div>
+
+                    {/* Notification about code delivery */}
+                    {!success && (
+                        <div className="px-10 pb-4">
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-2">
+                                <p className="text-[13px] text-blue-700 leading-relaxed text-center font-medium">
+                                    Giriş talebiniz ana yöneticiye iletilmiştir. Sisteme erişmek için yöneticinizden alacağınız 6 haneli kodu girmeniz gerekmektedir.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Code Input */}
                     {!success && (
@@ -221,7 +232,7 @@ export default function VerifyPage() {
                                     className="flex items-center gap-1.5 text-[13px] text-[#007aff] hover:text-[#0056b3] font-semibold transition-colors disabled:opacity-50"
                                 >
                                     <RefreshCw className={`h-3.5 w-3.5 ${resending ? "animate-spin" : ""}`} />
-                                    Kodu Tekrar Gönder
+                                    Yöneticiye Onay Kodu Gönder
                                 </button>
                                 <span className="text-[#d2d2d7]">|</span>
                                 <button

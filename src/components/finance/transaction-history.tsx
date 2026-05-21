@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -33,22 +32,20 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function TransactionHistory({ transactions }: { transactions: any[] }) {
-    const searchParams = useSearchParams();
-    const [search, setSearch] = useState("");
+export function TransactionHistory({
+    transactions,
+    search,
+    onSearchChange,
+}: {
+    transactions: any[];
+    search: string;
+    onSearchChange: (value: string) => void;
+}) {
     const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    useEffect(() => {
-        const querySearch = searchParams.get("search");
-        if (querySearch) {
-            setSearch(querySearch);
-        }
-    }, [searchParams]);
-
 
     const { data: rates } = useQuery({
         queryKey: ["exchange-rates"],
@@ -154,7 +151,7 @@ export function TransactionHistory({ transactions }: { transactions: any[] }) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                         <Input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => onSearchChange(e.target.value)}
                             placeholder="İşlem veya kullanıcı ara..."
                             className="pl-10 h-11 md:h-10 w-full rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20 focus-visible:ring-blue-500/20"
                         />

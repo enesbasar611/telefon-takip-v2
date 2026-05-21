@@ -1,14 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { TransactionHistory } from "../transaction-history";
 import { getTransactions } from "@/lib/actions/finance-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function TransactionListStream() {
+export function TransactionListStream({ initialSearch = "" }: { initialSearch?: string }) {
+    const [search, setSearch] = useState(initialSearch);
+    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedSearch(search.trim());
+        }, 250);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [search]);
+
     const { data: transactions, isPending } = useQuery({
-        queryKey: ["finance-transactions", 1, ""], // page 1, no search
-        queryFn: () => getTransactions({ page: 1, pageSize: 50 }),
+        queryKey: ["finance-transactions", 1, debouncedSearch],
+        queryFn: () => getTransactions({ page: 1, pageSize: 50, search: debouncedSearch }),
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
@@ -24,5 +36,11 @@ export function TransactionListStream() {
         );
     }
 
-    return <TransactionHistory transactions={transactions} />;
+    return (
+        <TransactionHistory
+            transactions={transactions ?? []}
+            search={search}
+            onSearchChange={setSearch}
+        />
+    );
 }

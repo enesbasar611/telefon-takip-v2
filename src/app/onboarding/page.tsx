@@ -263,15 +263,16 @@ export default function OnboardingPage() {
         setLoading(true);
         try {
             await updateSession();
+            router.refresh(); // Clear client-side router cache
             router.push("/dashboard");
         } catch (error) {
+            router.refresh();
             router.push("/dashboard");
         }
     };
 
     return (
         <div className="onboarding-page min-h-screen bg-[#050505] text-white flex flex-col items-center lg:justify-center p-4 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-10 pb-20 lg:py-10">
-            {/* API Guide Modal */}
             {showApiGuide && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#111] border border-white/10 p-6 sm:p-8 rounded-[2rem] max-w-sm sm:max-w-md w-full space-y-4 shadow-2xl">

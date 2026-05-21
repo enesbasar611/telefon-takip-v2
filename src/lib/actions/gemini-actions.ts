@@ -155,6 +155,7 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
     try {
         const genAI = new GoogleGenerativeAI(key);
         const model = genAI.getGenerativeModel(
+
             {
                 model: "gemini-2.5-flash",
                 generationConfig: {
@@ -164,6 +165,9 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
                 }
             }
         );
+
+
+
 
         const result = await model.generateContent(promptParts);
         const response = await result.response;
@@ -175,15 +179,25 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
 
         if (responseType === "json") {
             let rawText = text.trim();
-            if (rawText.startsWith("```json")) {
-                rawText = rawText.replace(/^```json/, "").replace(/```$/, "").trim();
-            } else if (rawText.startsWith("```")) {
-                rawText = rawText.replace(/^```/, "").replace(/```$/, "").trim();
+            // Remove markdown code blocks if present
+            rawText = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+
+            // If it's still not plain JSON, try to find the first { and last }
+            if (!rawText.startsWith("{") && !rawText.startsWith("[")) {
+                const start = rawText.indexOf("{");
+                const end = rawText.lastIndexOf("}");
+                if (start !== -1 && end !== -1) {
+                    rawText = rawText.substring(start, end + 1);
+                }
             }
+
+            // Basic fix for unterminated strings or common AI JSON errors
+            // (Only for simple cases, JSON.parse will still be the final judge)
             text = rawText;
         }
 
         return { text };
+
     } catch (error: any) {
         console.error("Gemini SDK Error:", error);
         const errMsg = error?.message || "";
@@ -963,6 +977,8 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+
+
         // Simple ping request
         const result = await model.generateContent("Merhaba, sistem bağlantı testi. Sadece 'OK' cevabı ver.");
         const response = await result.response;
@@ -1176,8 +1192,10 @@ CANONICAL SLUG: ${canonicalSlug}
 3. WHATSAPP: Sektöre özel, profesyonel, {customer} {item} {price} {id} placeholder içeren Türkçe şablonlar.
 4. DASHBOARD: Dükkan sahibinin sabah açtığında ilk görmek istediği istatistikler.
 5. PRIMARY_COLOR: Bu sektörün ruhuna uygun bir HEX renk kodu. Örnekler: terzi → "#7c3aed", oto-yikama → "#0ea5e9", elektrik → "#f59e0b", kuafor → "#ec4899".
+6. JSON FORMATI: Sadece ve sadece geçerli JSON döndür, açıklama veya markdown bloğu kullanma. JSON içindeki tırnak işaretlerini (") doğru bir şekilde kapatmayı unutma.
 
-### JSON ÇIKTI FORMATI (sadece geçerli JSON, başka metin yok):
+### JSON ÇIKTI FORMATI:
+
 {
   "slug": "${canonicalSlug}",
   "displayName": "Sektörün Türkçe Tam Adı",

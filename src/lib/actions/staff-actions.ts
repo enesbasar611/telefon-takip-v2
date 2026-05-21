@@ -172,7 +172,7 @@ export async function createStaff(data: {
                 canFinance: data.canFinance ?? defaults.canFinance,
                 canDelete: data.canDelete ?? defaults.canDelete,
                 canEdit: data.canEdit ?? defaults.canEdit,
-                isApproved: true,
+                isApproved: true, // Staff created by managers/admins are auto-approved
                 shopId
             }
         });

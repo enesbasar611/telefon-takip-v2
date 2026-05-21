@@ -38,8 +38,13 @@ function HistorySkeleton() {
     );
 }
 
-export default async function KasaRaporuPage() {
+export default async function KasaRaporuPage({
+    searchParams,
+}: {
+    searchParams?: { search?: string };
+}) {
     const queryClient = new QueryClient();
+    const initialSearch = searchParams?.search?.trim() || "";
 
     // Parallel prefetching
     await Promise.all([
@@ -48,8 +53,8 @@ export default async function KasaRaporuPage() {
             queryFn: getDailySummary
         }),
         queryClient.prefetchQuery({
-            queryKey: ["finance-transactions", 1, ""],
-            queryFn: () => getTransactions({ page: 1, pageSize: 50 })
+            queryKey: ["finance-transactions", 1, initialSearch],
+            queryFn: () => getTransactions({ page: 1, pageSize: 50, search: initialSearch })
         }),
         queryClient.prefetchQuery({
             queryKey: ["daily-session"],
@@ -97,7 +102,7 @@ export default async function KasaRaporuPage() {
                             ))}
                         </div>
                     }>
-                        <TransactionListStream />
+                        <TransactionListStream initialSearch={initialSearch} />
                     </Suspense>
                 </div>
             </div>

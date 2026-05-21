@@ -40,15 +40,24 @@ import {
   TrendingDown,
   TrendingUp,
   History,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from "lucide-react";
 import { createManualTransaction, updateManualTransaction, getAccounts, getTransactions } from "@/lib/actions/finance-actions";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
+import { getSettings } from "@/lib/actions/setting-actions";
 import { CreateAccountModal } from "./create-account-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PriceInput } from "@/components/ui/price-input";
+import {
+  convertTransactionAmount,
+  getCurrencySymbol,
+  resolveInitialTransactionCurrency,
+  type TransactionCurrency,
+} from "@/lib/finance/transaction-currency";
 
 const transactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
@@ -57,6 +66,7 @@ const transactionSchema = z.object({
   paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]),
   accountId: z.string().min(1, "Hesap seçimi gereklidir"),
   category: z.string().min(1, "İşlem türü gereklidir"),
+  currency: z.enum(["TRY", "USD", "EUR"]),
   manualCategory: z.string().optional(),
   date: z.string().optional(),
 });
@@ -113,6 +123,7 @@ export function CreateTransactionModal({
       paymentMethod: initialData?.paymentMethod || "CASH",
       accountId: initialData?.accountId || "",
       category: initialCategory || initialData?.category || "GENEL",
+      currency: initialData?.currency || "TRY",
       manualCategory: "",
       date: initialData?.createdAt ? new Date(initialData.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     }
@@ -126,6 +137,24 @@ export function CreateTransactionModal({
 
   const transactionType = watch("type");
   const categoryValue = watch("category");
+  const selectedCurrency = watch("currency") as TransactionCurrency;
+  const amountValue = Number(watch("amount")) || 0;
+
+  const { data: settings = [] } = useQuery<any[]>({
+    queryKey: ["settings"],
+    queryFn: getSettings,
+    enabled: open,
+    placeholderData: keepPreviousData,
+  });
+  const defaultCurrency = useMemo(() => {
+    return settings.find((setting: any) => setting.key === "defaultCurrency")?.value || "TRY";
+  }, [settings]);
+  const { data: rates } = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: getCurrentExchangeRates,
+    enabled: open,
+    placeholderData: keepPreviousData,
+  });
   const { data: accounts = initialAccounts || [] } = useQuery<any[]>({
     queryKey: ["finance-accounts"],
     queryFn: getAccounts,
@@ -144,6 +173,26 @@ export function CreateTransactionModal({
     const expense = recentTransactions.filter((t: any) => t.type === "EXPENSE").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
     return { income, expense };
   }, [recentTransactions]);
+
+  const convertedAmounts = useMemo(() => {
+    return convertTransactionAmount(amountValue, selectedCurrency || "TRY", {
+      usd: rates?.usd,
+      eur: rates?.eur,
+    });
+  }, [amountValue, selectedCurrency, rates?.usd, rates?.eur]);
+
+  useEffect(() => {
+    if (!open || initialData?.currency) return;
+    const savedCurrency = typeof window !== "undefined"
+      ? window.localStorage.getItem("transaction_currency")
+      : null;
+    setValue("currency", resolveInitialTransactionCurrency(savedCurrency, defaultCurrency));
+  }, [open, initialData?.currency, defaultCurrency, setValue]);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined" || !selectedCurrency) return;
+    window.localStorage.setItem("transaction_currency", selectedCurrency);
+  }, [open, selectedCurrency]);
 
   const toTitleCase = (str: string) => {
     return str
@@ -278,6 +327,26 @@ export function CreateTransactionModal({
     }
   };
 
+  const currencyOptions: { value: TransactionCurrency; label: string; helper: string }[] = [
+    { value: "TRY", label: "TL", helper: "Turk lirasi" },
+    { value: "USD", label: "USD", helper: "Dolar" },
+    { value: "EUR", label: "EUR", helper: "Euro" },
+  ];
+
+  const formatMoney = (value: number, currency: TransactionCurrency) => {
+    return `${getCurrencySymbol(currency)}${Number(value || 0).toLocaleString("tr-TR", {
+      minimumFractionDigits: currency === "TRY" ? 2 : 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const getAccountLabel = (type: string) => {
+    if (type === "BANK") return "Banka";
+    if (type === "POS") return "POS / Kart";
+    if (type === "CREDIT_CARD") return "Kredi karti";
+    return "Nakit kasa";
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {controlledOpen === undefined && (
@@ -290,16 +359,16 @@ export function CreateTransactionModal({
           )}
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-[1000px] border border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden bg-white/95 dark:bg-zinc-900/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-auto max-h-[850px]">
+      <DialogContent className="max-w-[1040px] border border-border/70 p-0 overflow-hidden bg-background text-foreground rounded-3xl shadow-2xl flex flex-col lg:flex-row h-[92vh] lg:h-auto max-h-[880px]">
         {/* Header Gradient Stripe */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50 opacity-80" />
 
         {/* Left Side: Form */}
-        <div className="flex-[1.4] p-8 md:p-12 overflow-y-auto custom-scrollbar">
-          <DialogHeader className="mb-10 text-left">
+        <div className="flex-[1.45] p-6 md:p-8 lg:p-10 overflow-y-auto custom-scrollbar bg-background">
+          <DialogHeader className="mb-8 text-left">
             <div className="flex items-center gap-5">
               <div className={cn(
-                "h-16 w-16 rounded-[1.5rem] flex items-center justify-center border transition-all duration-500 shadow-2xl",
+                "h-14 w-14 rounded-2xl flex items-center justify-center border transition-all duration-300",
                 transactionType === "INCOME"
                   ? "bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/10"
                   : "bg-rose-500/10 border-rose-500/20 shadow-rose-500/10"
@@ -310,7 +379,7 @@ export function CreateTransactionModal({
                 }
               </div>
               <div>
-                <DialogTitle className="font-medium text-3xl tracking-tight text-foreground">
+                <DialogTitle className="font-semibold text-2xl md:text-3xl tracking-tight text-foreground">
                   {initialData ? "İşlem Düzenle" : "Kasa Giriş/Çıkış İşlemi"}
                 </DialogTitle>
                 <p className="text-[11px] text-muted-foreground mt-1 uppercase tracking-[0.2em] opacity-60">Atölye finansal hareketlerini hassasiyetle kaydedin.</p>
@@ -318,7 +387,7 @@ export function CreateTransactionModal({
             </div>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
             {/* Type Toggles */}
             <div className="flex gap-4 p-1.5 bg-muted/40 rounded-[1.8rem] border border-border/10 backdrop-blur-md">
               <button
@@ -382,14 +451,44 @@ export function CreateTransactionModal({
                 <Label htmlFor="amount" className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <Landmark className="h-3 w-3" /> TUTAR
                 </Label>
-                <div className="relative group">
-                  <PriceInput
-                    id="amount"
-                    value={watch("amount")}
-                    onChange={(v) => setValue("amount", String(v), { shouldValidate: true })}
-                    placeholder="0,00"
-                    className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-2xl pl-12 shadow-none group-hover:bg-zinc-100/80 transition-all font-bold tracking-tighter"
-                  />
+                <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/50 p-1">
+                    {currencyOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setValue("currency", option.value, { shouldValidate: true })}
+                        className={cn(
+                          "h-10 rounded-lg text-[11px] font-semibold transition-all",
+                          selectedCurrency === option.value
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <PriceInput
+                      id="amount"
+                      prefix={getCurrencySymbol(selectedCurrency || "TRY")}
+                      value={watch("amount")}
+                      onChange={(v) => setValue("amount", String(v), { shouldValidate: true })}
+                      placeholder="0,00"
+                      className="h-14 rounded-xl bg-background border-border text-xl font-semibold tracking-tight shadow-none"
+                    />
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {currencyOptions
+                      .filter((option) => option.value !== selectedCurrency)
+                      .map((option) => (
+                        <div key={option.value} className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2">
+                          <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{option.label} karşılığı</p>
+                          <p className="text-sm font-semibold text-foreground">{formatMoney(convertedAmounts[option.value], option.value)}</p>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -400,7 +499,7 @@ export function CreateTransactionModal({
                   <CreditCard className="h-3 w-3" /> ÖDEME YÖNTEMİ
                 </Label>
                 <Select onValueChange={(val) => setValue("paymentMethod", val as any)} defaultValue={watch("paymentMethod") || "CASH"}>
-                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
+                  <SelectTrigger className="h-14 rounded-[1.2rem] bg-card border-border text-xs shadow-none">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2">
@@ -422,21 +521,30 @@ export function CreateTransactionModal({
                     </button>
                   } />
                 </div>
-                <Select onValueChange={(val) => setValue("accountId", val)} value={watch("accountId")}>
+                <Select onValueChange={(val) => setValue("accountId", val, { shouldValidate: true })} value={watch("accountId")}>
                   <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2 min-w-[300px]">
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">
-                        <div className="flex items-center justify-between w-full min-w-[240px]">
-                          <div className="flex items-center gap-2">
-                            {getAccountIcon(acc.type)}
-                            <span>{acc.name}</span>
+                  <SelectContent className="rounded-2xl border-border bg-popover p-2 min-w-[320px]">
+                    {accounts.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                        Kasa bulunamadi. Hizli ekle ile yeni kasa olusturun.
+                      </div>
+                    ) : accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3 pr-8 text-foreground font-medium cursor-pointer">
+                        <div className="flex items-center justify-between w-full min-w-[260px] gap-4">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+                              {getAccountIcon(acc.type)}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate font-semibold text-foreground">{acc.name}</span>
+                              <span className="block text-[9px] uppercase tracking-widest text-muted-foreground">{getAccountLabel(acc.type)}</span>
+                            </span>
                           </div>
                           <span className={cn(
-                            "font-medium text-[10px] ml-4",
-                            acc.balance >= 0 ? "text-emerald-500" : "text-rose-500"
+                            "shrink-0 font-semibold text-[11px]",
+                            Number(acc.balance) >= 0 ? "text-emerald-500" : "text-rose-500"
                           )}>
                             ₺{Number(acc.balance).toLocaleString('tr-TR')}
                           </span>
@@ -445,6 +553,7 @@ export function CreateTransactionModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.accountId && <p className="text-[10px] text-rose-500 ml-2">{errors.accountId.message}</p>}
               </div>
             </div>
 
@@ -537,15 +646,18 @@ export function CreateTransactionModal({
             </div>
 
             {/* Modal Actions */}
-            <div className="flex gap-4 pt-4 sticky bottom-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md -mx-2 px-2 pb-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-16 rounded-[1.5rem] text-[10px] uppercase tracking-widest border border-border/40 hover:bg-muted transition-all">İPTAL</Button>
-              <Button type="submit" disabled={isPending} className="flex-[2] h-16 rounded-[1.5rem] text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 transition-all text-white gap-3 group">
+            <div className="sticky bottom-0 -mx-2 flex gap-3 border-t border-border/70 bg-background/90 px-2 pb-2 pt-4 backdrop-blur-xl">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="h-12 flex-1 rounded-xl text-[11px] font-semibold uppercase tracking-widest">Iptal</Button>
+              <Button type="submit" disabled={isPending} className={cn(
+                "h-12 flex-[1.6] rounded-xl text-[11px] font-semibold uppercase tracking-widest text-white gap-2 shadow-lg",
+                transactionType === "INCOME" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
+              )}>
                 {isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-500" />
-                    {initialData ? 'GÜNCELLE' : 'KAYDET VE EKLE'}
+                    <CheckCircle2 className="h-4 w-4" />
+                    {initialData ? 'Guncelle' : transactionType === "INCOME" ? 'Gelir Kaydet' : 'Gider Kaydet'}
                   </>
                 )}
               </Button>
@@ -617,7 +729,7 @@ export function CreateTransactionModal({
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
                       <p className="text-[10px] text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
-                        {format(new Date(tx.createdAt), "HH:mm")} • {tx.account?.name || "Bilinmiyor"}
+                        {format(new Date(tx.createdAt), "HH:mm")} • {tx.financeAccount?.name || "Bilinmiyor"}
                       </p>
                     </div>
                     <div className="text-right">
