@@ -14,12 +14,12 @@ async function checkStockAndAddShortage(productId: string, productName: string) 
   const shopId = await getShopId();
   if (!shopId) return;
   const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
-  if (product && product.stock <= 0) {
+  if (product && product.stock <= product.criticalStock) {
     await addShortageItem({
       productId: productId,
       name: productName,
       quantity: 1,
-      notes: "Otomatik: Stok tükendi."
+      notes: product.stock <= 0 ? "Otomatik: Stok tükendi." : `Otomatik: Kritik stok seviyesine ulaşıldı (${product.stock} adet kaldı).`
     });
   }
 }
@@ -106,16 +106,23 @@ export const getProducts = cache(async function getProducts(options: {
 
     // Critical stock filter
     if (isCritical) {
-      where.stock = {
-        lte: prisma.product.fields.criticalStock
-      };
+      where.OR = [
+        { stock: { lte: prisma.product.fields.criticalStock } },
+        { stock: 0 }
+      ];
     }
 
     // Fetch products and total count in parallel
     const [products, totalCount] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true },
+        include: {
+          category: true,
+          shortageItems: {
+            where: { isResolved: false },
+            include: { assignedTo: true }
+          }
+        },
         orderBy: { updatedAt: "desc" },
         ...(pageSize ? { take: pageSize } : {}),
         ...(page && pageSize ? { skip: (page - 1) * pageSize } : {}),
@@ -866,7 +873,7 @@ export async function getProductMovements(productId: string) {
 export async function getInventoryStats() {
   try {
     const shopId = await getShopId();
-    const [products, criticalCount] = await Promise.all([
+    const [products, criticalCount, outOfStockCount] = await Promise.all([
       prisma.product.findMany({
         where: { shopId },
         select: {
@@ -878,23 +885,33 @@ export async function getInventoryStats() {
       prisma.product.count({
         where: {
           shopId,
-          stock: { lte: prisma.product.fields.criticalStock }
+          stock: {
+            lte: prisma.product.fields.criticalStock,
+            gt: 0
+          }
+        }
+      }),
+      prisma.product.count({
+        where: {
+          shopId,
+          stock: { lte: 0 }
         }
       })
     ]);
 
     const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
     const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
-    const totalItems = products.reduce((acc, p) => acc + p.stock, 0);
+    const totalItems = products.reduce((acc, p) => acc + (p.stock > 0 ? p.stock : 0), 0);
 
     return {
       totalValue,
       potentialProfit,
       criticalCount,
+      outOfStockCount,
       totalItems
     };
   } catch (error) {
-    return { totalValue: 0, potentialProfit: 0, criticalCount: 0, totalItems: 0 };
+    return { totalValue: 0, potentialProfit: 0, criticalCount: 0, outOfStockCount: 0, totalItems: 0 };
   }
 }
 

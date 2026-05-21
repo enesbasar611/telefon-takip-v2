@@ -22,6 +22,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   approveShortageItem,
@@ -45,6 +51,8 @@ import {
   UserPlus,
   Store,
   Phone,
+  Eraser,
+  RefreshCw,
   ChevronDown as ChevronDownIcon
 } from "lucide-react";
 import { useShortage } from "@/lib/context/shortage-context";
@@ -52,7 +60,8 @@ import { useShortage } from "@/lib/context/shortage-context";
 type Tab = "main" | string; // "main" = Ana Eksik Liste, supplierId = supplier tab
 
 export function ShortageList() {
-  const { items = [], loading, addShortage, removeShortage, updateQty: updateShortageQty } = useShortage();
+  const { items = [], loading, refresh, addShortage, removeShortage, updateQty: updateShortageQty, clearShortages, syncZeroStock } = useShortage();
+  const [isOpen, setIsOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -223,7 +232,7 @@ export function ShortageList() {
     const res = await assignShortageToCourier(shortageId, courierId);
     if (res.success) {
       toast.success(courierId ? "Kuryeye atandı." : "Atama kaldırıldı.");
-      // The context will handle the refresh due to revalidatePath
+      refresh();
     } else {
       toast.error(res.error);
     }
@@ -286,23 +295,49 @@ export function ShortageList() {
   };
 
 
+  const clearAllFlow = async () => {
+    await clearShortages();
+    await syncZeroStock();
+  };
+
   const safeItems = items || [];
   const totalBadge = safeItems.length + totalItemCount;
 
   return (
     <>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl bg-card/40 border border-border/10 text-muted-foreground/80 hover:text-blue-500 transition-all">
-            <ClipboardList className={cn("h-5 w-5", totalBadge > 0 && "text-red-600 fill-red-600/10")} />
-            {totalBadge > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px]  text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
-                {totalBadge}
-              </span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-96 bg-card border-2 border-red-600 p-0 shadow-none animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+      <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)} className="relative h-10 w-10 rounded-xl bg-card/40 border border-border/10 text-muted-foreground/80 hover:text-blue-500 transition-all">
+        <ClipboardList className={cn("h-5 w-5", totalBadge > 0 && "text-red-600 fill-red-600/10")} />
+        {totalBadge > 0 && (
+          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-600 text-[10px]  text-white flex items-center justify-center border-2 border-[#020617] animate-pulse">
+            {totalBadge}
+          </span>
+        )}
+      </Button>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-3xl w-full bg-card border border-border/40 rounded-[2rem] p-0 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+          <DialogHeader className="p-5 border-b border-border/50 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-blue-500" /> Eksik Ürün Listesi
+              </DialogTitle>
+              {activeTab === "main" && items.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (confirm("Tüm listeyi temizleyip stokta olmayanları otomatik eklemek istediğinize emin misiniz?")) {
+                        await clearAllFlow();
+                      }
+                    }}
+                    className="h-8 text-[10px] font-bold border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-black gap-2"
+                  >
+                    <Eraser className="h-3 w-3" /> Listeyi Temizle & Yenile
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
           {/* Tabs */}
           <div className="flex overflow-x-auto border-b border-border/50 bg-white/[0.01]">
             <button
@@ -346,7 +381,7 @@ export function ShortageList() {
 
           {/* Tab: Main Shortage List */}
           {activeTab === "main" && (
-            <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
               <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-3 rounded-xl mb-4">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -454,7 +489,7 @@ export function ShortageList() {
                 )}
               </div>
 
-              <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
                 {loading ? (
                   <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
                 ) : items.length === 0 ? (
@@ -625,7 +660,7 @@ export function ShortageList() {
             const list = orders[activeTab];
             const supplierId = activeTab;
             return (
-              <div className="p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-xs  text-emerald-400">{list.supplierName}</h3>
@@ -633,7 +668,7 @@ export function ShortageList() {
                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-2 flex-1">
                   {list.items.length === 0 ? (
                     <p className="text-[10px] text-center text-gray-600 py-4">Bu tedarikçiye ürün eklenmedi.</p>
                   ) : (
@@ -670,8 +705,7 @@ export function ShortageList() {
                 </div>
 
                 {list.items.length > 0 && (
-                  <>
-                    <Separator className="my-2 bg-white/5" />
+                  <div className="sticky bottom-0 bg-card pt-4 pb-2 border-t border-border/50">
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => handleWhatsAppClick(supplierId)}
@@ -703,13 +737,13 @@ export function ShortageList() {
                         )}
                       </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             );
           })()}
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
 
       <StockReceiptModal
         isOpen={showPrintModal}

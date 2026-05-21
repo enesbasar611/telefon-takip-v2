@@ -117,7 +117,7 @@ async function DashboardContentData() {
     { id: "stat_collections", type: "COLLECTIONS", label: "Tahsilatlar", value: s.collectedPayments || "0", iconId: "Banknote", colorClass: "text-amber-500", bgClass: "bg-amber-500/10", usdValue: s.collectedPaymentsUSD },
     { id: "stat_pending", type: "PENDING_SERVICES", label: `Bekleyen ${serviceLabel || 'Servis'}ler`, value: s.pendingServices || "0", iconId: "Clock", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { id: "stat_ready", type: "READY_DEVICES", label: `Hazır ${assetLabel || 'Cihaz'}lar`, value: s.readyDevices || "0", iconId: "CheckCircle2", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
-    { id: "stat_stock", type: "CRITICAL_STOCK", label: "Kritik stok", value: s.criticalStock || "0", iconId: "AlertTriangle", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
+    { id: "stat_stock", type: "CRITICAL_STOCK", label: "Kritik stok", value: s.criticalStock || "0", outOfStockCount: s.outOfStockCount || "0", iconId: "AlertTriangle", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik" },
     { id: "stat_debts", type: "TOTAL_DEBTS", label: "Toplam borçlar", value: s.totalDebts || "0", iconId: "ArrowDownCircle", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", usdValue: s.totalDebtsUSD },
     { id: "stat_accounts", type: "CASH_BALANCE", label: "Satış Hacmi", value: s.todaySales || "0", subValue: "Bugünkü ciro", iconId: "ShoppingCart", colorClass: "text-primary", bgClass: "bg-primary/10", usdValue: s.todaySalesUSD },
   ];

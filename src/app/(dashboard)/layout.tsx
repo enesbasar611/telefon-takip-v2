@@ -124,51 +124,53 @@ export default async function DashboardLayout({
 
                                 {!isCourier && <GlobalSearch />}
 
-                                {isSuperAdmin && (session.user as any).isImpersonating && (
-                                    <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
-                                )}
-
-                                {shop?.industry && <IndustryBackground industry={shop.industry} />}
-
-                                <div className={`flex h-screen bg-background/20 text-foreground font-sans overflow-hidden relative z-0 ${isCourier ? 'flex-col' : ''}`}>
-                                    {!isCourier && (
-                                        <Sidebar
-                                            className="hidden lg:flex"
-                                            user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
-                                            shop={shop}
-                                        />
+                                <div className="flex flex-col h-screen overflow-hidden">
+                                    {isSuperAdmin && (session.user as any).isImpersonating && (
+                                        <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
                                     )}
 
-                                    <DashboardContent className={isCourier ? "p-0" : ""}>
-                                        {!isCourier && <Navbar shop={shop} />}
-                                        <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
-                                            <div className={isCourier
-                                                ? "w-full min-h-screen pb-20 relative z-10"
-                                                : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300"
-                                            }>
-                                                <style dangerouslySetInnerHTML={{
-                                                    __html: `
-                                                        :root {
-                                                            --brand-color: ${brandColor};
-                                                            --brand-color-muted: ${brandColor}1a;
-                                                            --primary: ${primaryHsl};
-                                                            --ring: ${primaryHsl};
-                                                            --app-font: '${appFont}', system-ui, -apple-system, sans-serif;
-                                                            --app-font-weight: ${appFontWeight};
-                                                            --radius: ${radius};
-                                                        }
-                                                        body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select {
-                                                            font-family: var(--app-font);
-                                                            font-weight: var(--app-font-weight) !important;
-                                                        }
-                                                    `
-                                                }} />
-                                                {children}
-                                            </div>
-                                        </main>
-                                    </DashboardContent>
+                                    {shop?.industry && <IndustryBackground industry={shop.industry} />}
 
-                                    {!isCourier && <BottomNav />}
+                                    <div className={`flex flex-1 bg-background/20 text-foreground font-sans overflow-hidden relative z-0 ${isCourier ? 'flex-col' : ''}`}>
+                                        {!isCourier && (
+                                            <Sidebar
+                                                className="hidden lg:flex"
+                                                user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
+                                                shop={shop}
+                                            />
+                                        )}
+
+                                        <DashboardContent className={isCourier ? "p-0" : ""}>
+                                            {!isCourier && <Navbar shop={shop} />}
+                                            <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
+                                                <div className={isCourier
+                                                    ? "w-full min-h-screen pb-20 relative z-10"
+                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300"
+                                                }>
+                                                    <style dangerouslySetInnerHTML={{
+                                                        __html: `
+                                                            :root {
+                                                                --brand-color: ${brandColor};
+                                                                --brand-color-muted: ${brandColor}1a;
+                                                                --primary: ${primaryHsl};
+                                                                --ring: ${primaryHsl};
+                                                                --app-font: '${appFont}', system-ui, -apple-system, sans-serif;
+                                                                --app-font-weight: ${appFontWeight};
+                                                                --radius: ${radius};
+                                                            }
+                                                            body, h1, h2, h3, h4, h5, h6, button, label, span, p, div, input, textarea, select {
+                                                                font-family: var(--app-font);
+                                                                font-weight: var(--app-font-weight) !important;
+                                                            }
+                                                        `
+                                                    }} />
+                                                    {children}
+                                                </div>
+                                            </main>
+                                        </DashboardContent>
+
+                                        {!isCourier && <BottomNav />}
+                                    </div>
                                 </div>
                             </ShortageProvider>
                         </SupplierOrderProvider>

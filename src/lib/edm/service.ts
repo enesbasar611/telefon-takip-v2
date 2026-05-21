@@ -63,6 +63,7 @@ export type EdmSendInvoiceResult = {
     uuid: string | null;
     sessionId: string;
     response: unknown;
+    rawResponse: string;
     requestUuid: string;
     requestId: string;
 };
@@ -144,9 +145,60 @@ function getInvoiceTotals(lines: EdmInvoiceLine[]) {
     };
 }
 
+function amountToWords(amount: number, currency: string = "TRY"): string {
+    const units = ["", "BİR", "İKİ", "ÜÇ", "DÖRT", "BEŞ", "ALTI", "YEDİ", "SEKİZ", "DOKUZ"];
+    const tens = ["", "ON", "YİRMİ", "OTUZ", "KIRK", "ELLİ", "ALTMIŞ", "YETMİŞ", "SEKSEN", "DOKSAN"];
+    const orders = ["", "BİN", "MİLYON", "MİLYAR"];
+
+    const convertGroup = (n: number) => {
+        let res = "";
+        const h = Math.floor(n / 100);
+        const t = Math.floor((n % 100) / 10);
+        const u = n % 10;
+
+        if (h > 0) res += (h === 1 ? "" : units[h]) + "YÜZ";
+        if (t > 0) res += tens[t];
+        if (u > 0) res += (u === 1 && h === 0 && t === 0 ? "BİR" : units[u]);
+        return res;
+    };
+
+    const convertOrdered = (n: number, orderIdx: number) => {
+        if (n === 0) return "";
+        let group = convertGroup(n);
+        if (orderIdx === 1 && n === 1) group = ""; // "Bir Bin" -> "Bin"
+        return group + orders[orderIdx];
+    };
+
+    const integerPart = Math.floor(amount);
+    const decimalPart = Math.round((amount - integerPart) * 100);
+
+    let result = "";
+    let temp = integerPart;
+    let orderIdx = 0;
+
+    if (temp === 0) result = "SIFIR";
+    while (temp > 0) {
+        const group = temp % 1000;
+        result = convertOrdered(group, orderIdx) + result;
+        temp = Math.floor(temp / 1000);
+        orderIdx++;
+    }
+
+    let currencyName = "TÜRK LİRASI";
+    let subCurrencyName = "KURUŞ";
+    if (currency === "USD") { currencyName = "DOLAR"; subCurrencyName = "SENT"; }
+    else if (currency === "EUR") { currencyName = "EURO"; subCurrencyName = "SENT"; }
+
+    result = "YALNIZ " + result + " " + currencyName;
+
+    if (decimalPart > 0) {
+        result += " " + convertGroup(decimalPart) + " " + subCurrencyName;
+    }
+
+    return result.trim();
+}
+
 function getEdmCurrencyCode(currency: EdmInvoiceInput["currency"]) {
-    // Swagger exposes EDM currency codes as integer enum values without names.
-    // 0 is accepted by model binding and keeps the UBL XML as the source of truth for TRY/USD/EUR.
     return 0;
 }
 
@@ -157,13 +209,14 @@ function getInvoiceId(issueDate: Date, invoiceId?: string) {
     return `TST${datePart}${randomPart}`;
 }
 
-function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string) {
+function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string, isEInvoice: boolean) {
     const currency = input.currency || "TRY";
     const issueDate = input.issueDate || new Date();
     const customerIdentifier = getCustomerIdentifier(input.customer);
     const senderVkn = process.env.EDM_SENDER_VKN || process.env.EDM_USERNAME || "1111111111";
     const senderName = process.env.EDM_SENDER_NAME || DEFAULT_SENDER_NAME;
     const totals = getInvoiceTotals(input.lines);
+    const profileId = isEInvoice ? "TEMELFATURA" : "EARSIVFATURA";
 
     const invoiceLines = input.lines.map((line, index) => {
         const vatRate = line.vatRate ?? 20;
@@ -171,47 +224,58 @@ function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string
         const lineTax = roundMoney(lineAmount * vatRate / 100);
 
         return `
-  <cac:InvoiceLine>
-    <cbc:ID>${index + 1}</cbc:ID>
-    <cbc:InvoicedQuantity unitCode="${xmlEscape(line.unitCode || "C62")}">${line.quantity}</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID="${currency}">${lineAmount.toFixed(2)}</cbc:LineExtensionAmount>
-    <cac:TaxTotal>
-      <cbc:TaxAmount currencyID="${currency}">${lineTax.toFixed(2)}</cbc:TaxAmount>
-      <cac:TaxSubtotal>
-        <cbc:TaxableAmount currencyID="${currency}">${lineAmount.toFixed(2)}</cbc:TaxableAmount>
+    <cac:InvoiceLine>
+      <cbc:ID>${index + 1}</cbc:ID>
+      <cbc:InvoicedQuantity unitCode="${xmlEscape(line.unitCode || "C62")}">${line.quantity}</cbc:InvoicedQuantity>
+      <cbc:LineExtensionAmount currencyID="${currency}">${lineAmount.toFixed(2)}</cbc:LineExtensionAmount>
+      <cac:TaxTotal>
         <cbc:TaxAmount currencyID="${currency}">${lineTax.toFixed(2)}</cbc:TaxAmount>
-        <cbc:Percent>${vatRate}</cbc:Percent>
-        <cac:TaxCategory>
-          <cac:TaxScheme>
-            <cbc:Name>KDV</cbc:Name>
-            <cbc:TaxTypeCode>0015</cbc:TaxTypeCode>
-          </cac:TaxScheme>
-        </cac:TaxCategory>
-      </cac:TaxSubtotal>
-    </cac:TaxTotal>
-    <cac:Item>
-      <cbc:Name>${xmlEscape(line.name)}</cbc:Name>
-    </cac:Item>
-    <cac:Price>
-      <cbc:PriceAmount currencyID="${currency}">${roundMoney(line.unitPrice).toFixed(2)}</cbc:PriceAmount>
-    </cac:Price>
-  </cac:InvoiceLine>`;
+        <cac:TaxSubtotal>
+          <cbc:TaxableAmount currencyID="${currency}">${lineAmount.toFixed(2)}</cbc:TaxableAmount>
+          <cbc:TaxAmount currencyID="${currency}">${lineTax.toFixed(2)}</cbc:TaxAmount>
+          <cbc:Percent>${vatRate}</cbc:Percent>
+          <cac:TaxCategory>
+            <cac:TaxScheme>
+              <cbc:Name>KDV</cbc:Name>
+              <cbc:TaxTypeCode>0015</cbc:TaxTypeCode>
+            </cac:TaxScheme>
+          </cac:TaxCategory>
+        </cac:TaxSubtotal>
+      </cac:TaxTotal>
+      <cac:Item>
+        <cbc:Name>${xmlEscape(line.name)}</cbc:Name>
+      </cac:Item>
+      <cac:Price>
+        <cbc:PriceAmount currencyID="${currency}">${roundMoney(line.unitPrice).toFixed(2)}</cbc:PriceAmount>
+      </cac:Price>
+    </cac:InvoiceLine>`;
     }).join("");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
          xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
-         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
+         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+         xmlns:xades="http://uri.etsi.org/01903/v1.3.2#"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2 UBL-Invoice-2.1.xsd">
+  <ext:UBLExtensions>
+    <ext:UBLExtension>
+      <ext:ExtensionContent />
+    </ext:UBLExtension>
+  </ext:UBLExtensions>
   <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
   <cbc:CustomizationID>TR1.2</cbc:CustomizationID>
-  <cbc:ProfileID>EARSIVFATURA</cbc:ProfileID>
+  <cbc:ProfileID>${profileId}</cbc:ProfileID>
   <cbc:ID>${xmlEscape(invoiceId)}</cbc:ID>
   <cbc:CopyIndicator>false</cbc:CopyIndicator>
   <cbc:UUID>${xmlEscape(uuid)}</cbc:UUID>
   <cbc:IssueDate>${issueDate.toISOString().slice(0, 10)}</cbc:IssueDate>
   <cbc:IssueTime>${issueDate.toISOString().slice(11, 19)}</cbc:IssueTime>
   <cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>
-  <cbc:Note>${xmlEscape(input.note || "Test fatura")}</cbc:Note>
+  <cbc:Note>${xmlEscape(amountToWords(totals.payableAmount, currency))}</cbc:Note>
+  ${input.note ? `<cbc:Note>${xmlEscape(input.note)}</cbc:Note>` : ""}
   <cbc:DocumentCurrencyCode>${currency}</cbc:DocumentCurrencyCode>
   <cbc:LineCountNumeric>${input.lines.length}</cbc:LineCountNumeric>
   <cac:AccountingSupplierParty>
@@ -222,6 +286,12 @@ function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string
       <cac:PartyName>
         <cbc:Name>${xmlEscape(senderName)}</cbc:Name>
       </cac:PartyName>
+      <cac:PostalAddress>
+        <cbc:CityName>İSTANBUL</cbc:CityName>
+        <cac:Country>
+          <cbc:Name>TÜRKİYE</cbc:Name>
+        </cac:Country>
+      </cac:PostalAddress>
     </cac:Party>
   </cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty>
@@ -235,19 +305,25 @@ function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string
       <cac:PostalAddress>
         <cbc:StreetName>${xmlEscape(input.customer.address || "Test Adres")}</cbc:StreetName>
         <cbc:CitySubdivisionName>${xmlEscape(input.customer.district || "Merkez")}</cbc:CitySubdivisionName>
-        <cbc:CityName>${xmlEscape(input.customer.city || "Istanbul")}</cbc:CityName>
+        <cbc:CityName>${xmlEscape(input.customer.city || "İSTANBUL")}</cbc:CityName>
         <cac:Country>
-          <cbc:Name>Türkiye</cbc:Name>
+          <cbc:Name>TÜRKİYE</cbc:Name>
         </cac:Country>
       </cac:PostalAddress>
-      <cac:Person>
-        <cbc:FirstName>${xmlEscape(input.customer.name.split(" ")[0] || input.customer.name)}</cbc:FirstName>
-        <cbc:FamilyName>${xmlEscape(input.customer.name.split(" ").slice(1).join(" ") || "Musteri")}</cbc:FamilyName>
-      </cac:Person>
     </cac:Party>
   </cac:AccountingCustomerParty>
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID="${currency}">${totals.taxTotal.toFixed(2)}</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="${currency}">${totals.subtotal.toFixed(2)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="${currency}">${totals.taxTotal.toFixed(2)}</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cac:TaxScheme>
+          <cbc:Name>KDV</cbc:Name>
+          <cbc:TaxTypeCode>0015</cbc:TaxTypeCode>
+        </cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="${currency}">${totals.subtotal.toFixed(2)}</cbc:LineExtensionAmount>
@@ -265,23 +341,26 @@ function toBase64(value: string) {
 function extractInvoiceUuid(value: unknown): string | null {
     if (!value || typeof value !== "object") return null;
 
-    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
-        if (/uuid/i.test(key) && typeof nestedValue === "string" && nestedValue.trim()) {
-            return nestedValue.trim();
-        }
+    const walk = (node: any): string | null => {
+        if (!node || typeof node !== "object") return null;
+        if (node.UUID && typeof node.UUID === "string") return node.UUID;
+        if (node.uuid && typeof node.uuid === "string") return node.uuid;
 
-        if (Array.isArray(nestedValue)) {
-            for (const item of nestedValue) {
-                const uuid = extractInvoiceUuid(item);
-                if (uuid) return uuid;
+        for (const val of Object.values(node)) {
+            if (Array.isArray(val)) {
+                for (const item of val) {
+                    const res = walk(item);
+                    if (res) return res;
+                }
+            } else if (val && typeof val === "object") {
+                const res = walk(val);
+                if (res) return res;
             }
-        } else if (nestedValue && typeof nestedValue === "object") {
-            const uuid = extractInvoiceUuid(nestedValue);
-            if (uuid) return uuid;
         }
-    }
+        return null;
+    };
 
-    return null;
+    return walk(value);
 }
 
 function extractEdmError(value: unknown): string | null {
@@ -355,6 +434,24 @@ export class EdmService {
         return token;
     }
 
+    static async checkUser(vknTckn: string, options: EdmRequestOptions = {}): Promise<{ isEInvoice: boolean, alias?: string }> {
+        const config = getEdmConfig(options);
+        const sessionId = await this.login(options);
+
+        const response = await fetch(`${config.baseUrl}/api/CheckUser/${vknTckn}`, {
+            headers: { "Authorization": `Bearer ${sessionId}` }
+        });
+
+        if (!response.ok) return { isEInvoice: false };
+
+        const data = await response.json().catch(() => null);
+        if (data && Array.isArray(data) && data.length > 0) {
+            return { isEInvoice: true, alias: data[0].Alias };
+        }
+
+        return { isEInvoice: false };
+    }
+
     static async sendInvoice(input: EdmInvoiceInput, options: EdmRequestOptions = {}): Promise<EdmSendInvoiceResult> {
         if (!input.lines.length) {
             throw new Error("EDM fatura gönderimi için en az bir kalem gereklidir.");
@@ -366,45 +463,49 @@ export class EdmService {
             throw new Error("EDM login token alınamadığı için fatura gönderilemedi.");
         }
 
+        const customerId = getCustomerIdentifier(input.customer);
+        const userStatus = await this.checkUser(customerId, options);
+
+        const isEInvoice = userStatus.isEInvoice;
+        const profileId = isEInvoice ? "TEMELFATURA" : "EARSIVFATURA";
+        const endpoint = isEInvoice ? "/api/Invoice/SetInvoiceRequest" : "/api/SetArchiveInvoiceRequest";
+
         const issueDate = input.issueDate || new Date();
         const requestUuid = input.uuid || crypto.randomUUID();
         const requestId = getInvoiceId(issueDate, input.invoiceId);
-        const invoiceXml = buildInvoiceXml({ ...input, issueDate }, requestId, requestUuid);
+        const invoiceXml = buildInvoiceXml({ ...input, issueDate }, requestId, requestUuid, isEInvoice);
         const totals = getInvoiceTotals(input.lines);
-        const customerIdentifier = getCustomerIdentifier(input.customer);
 
         const payload = {
-            requesT_HEADER: buildRequestHeader(sessionId, "SetArchiveInvoiceRequest"),
+            requesT_HEADER: buildRequestHeader(sessionId, isEInvoice ? "SetInvoiceRequest" : "SetArchiveInvoiceRequest"),
             invoice: [
                 {
                     header: {
                         sender: process.env.EDM_SENDER_VKN || process.env.EDM_USERNAME,
-                        receiver: customerIdentifier,
+                        receiver: customerId,
                         supplier: process.env.EDM_SENDER_NAME || DEFAULT_SENDER_NAME,
                         customer: input.customer.name,
                         issuE_DATE: issueDate.toISOString(),
-                        issuE_DATESpecified: true,
                         payablE_AMOUNT: {
-                            currencyID: getEdmCurrencyCode(input.currency),
+                            currencyID: 0,
                             value: totals.payableAmount,
                         },
-                        profileid: "EARSIVFATURA",
-                        earchive: true,
+                        profileid: profileId,
+                        earchive: !isEInvoice,
                         invoicE_TYPE: "SATIS",
-                        invoicE_SEND_TYPE: "ELEKTRONIK",
+                        ...(isEInvoice ? { receiveraliaS: userStatus.alias } : { invoicE_SEND_TYPE: "ELEKTRONIK" }),
                     },
                     content: {
                         contentType: "application/xml",
                         value: toBase64(invoiceXml),
                     },
-                    trxid: Date.now(),
                     uuid: requestUuid,
                     id: requestId,
                 },
             ],
         };
 
-        const response = await fetch(`${config.baseUrl}/api/SetArchiveInvoiceRequest`, {
+        const response = await fetch(`${config.baseUrl}${endpoint}`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
@@ -415,16 +516,19 @@ export class EdmService {
         });
 
         const responseText = await response.text();
-        let data: unknown = null;
+        let data: any = null;
+
+        console.log(`[EDM] sendInvoice HTTP ${response.status} - raw body (${responseText.length} chars):`, responseText.slice(0, 500));
 
         try {
             data = responseText ? JSON.parse(responseText) : null;
         } catch {
-            throw new Error(`EDM fatura JSON yanıtı okunamadı. HTTP ${response.status}`);
+            // Non-JSON response - not fatal if status is ok
+            console.warn(`[EDM] sendInvoice response is not JSON. Raw: ${responseText.slice(0, 200)}`);
         }
 
         if (!response.ok) {
-            const detail = extractEdmError(data);
+            const detail = extractEdmError(data) || responseText.slice(0, 500);
             throw new Error(`EDM fatura gönderim HTTP hatası: ${response.status}${detail ? ` - ${detail}` : ""}`);
         }
 
@@ -433,6 +537,7 @@ export class EdmService {
             uuid: extractInvoiceUuid(data) || requestUuid,
             sessionId,
             response: data,
+            rawResponse: responseText,
             requestUuid,
             requestId,
         };
@@ -445,50 +550,16 @@ export class EdmService {
     ): Promise<Buffer> {
         const config = getEdmConfig(options);
         const sessionId = await this.login(options);
-        if (!sessionId) {
-            throw new Error("EDM login token alınamadığı için fatura belgesi indirilemedi.");
+
+        const response = await fetch(`${config.baseUrl}/api/Invoice/Get${format.toUpperCase()}/${uuid}`, {
+            headers: { "Authorization": `Bearer ${sessionId}` }
+        });
+
+        if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            return Buffer.from(arrayBuffer);
         }
 
-        // EDM endpoint'ini dene - birden fazla format olabilir
-        const endpoints = [
-            `${config.baseUrl}/api/Invoice/Get${format === "pdf" ? "Pdf" : "Html"}/${encodeURIComponent(uuid)}`,
-            `${config.baseUrl}/api/Document/Get${format === "pdf" ? "Pdf" : "Html"}/${encodeURIComponent(uuid)}`,
-            `${config.baseUrl}/api/Document/${encodeURIComponent(uuid)}?format=${format}`,
-            `${config.baseUrl}/api/Invoice/${encodeURIComponent(uuid)}/download?format=${format}`,
-        ];
-
-        let lastError: Error | null = null;
-
-        for (const endpointUrl of endpoints) {
-            try {
-                const response = await fetch(endpointUrl, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${sessionId}`,
-                        "Accept": format === "pdf" ? "application/pdf" : "text/html",
-                    },
-                });
-
-                if (response.ok) {
-                    const arrayBuffer = await response.arrayBuffer();
-                    return Buffer.from(arrayBuffer);
-                }
-
-                // Log attempt
-                if (response.status === 404) {
-                    console.warn(`EDM endpoint not found: ${endpointUrl}`);
-                } else {
-                    console.warn(`EDM endpoint error (${response.status}): ${endpointUrl}`);
-                }
-            } catch (error) {
-                console.warn(`EDM endpoint fetch error: ${endpointUrl}`, error);
-                lastError = error instanceof Error ? error : new Error(String(error));
-            }
-        }
-
-        // Tüm endpoint'ler başarısız olduysa hata dön
-        throw new Error(
-            `EDM fatura belgesi indirimi başarısız. Denenen ${endpoints.length} endpoint'in tümü başarısız oldu. Son hata: ${lastError?.message || "Bilinmiyor"}`
-        );
+        throw new Error(`Fatura belgesi indirilemedi (${response.status})`);
     }
 }

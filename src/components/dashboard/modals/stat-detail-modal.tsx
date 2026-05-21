@@ -24,6 +24,15 @@ import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { useShortage } from "@/lib/context/shortage-context";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getCouriers, bulkAssignProductsToCourier } from "@/lib/actions/shortage-actions";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export type StatType =
     | "DAILY_SALES"
@@ -43,12 +52,16 @@ interface StatDetailModalProps {
 }
 
 export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetailModalProps) {
-    const { addShortage } = useShortage();
+    const { addShortage, refresh } = useShortage();
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
     const [paymentAmount, setPaymentAmount] = useState<string>("");
     const [paymentDescription, setPaymentDescription] = useState<string>("");
     const [addingToShortage, setAddingToShortage] = useState<string | null>(null);
+    const [showZeroOnly, setShowZeroOnly] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedCourierId, setSelectedCourierId] = useState<string>("");
+    const [isBulkProcessing, setIsBulkProcessing] = useState(false);
     const queryClient = useQueryClient();
 
     const detailQuery = useQuery<any[]>({
@@ -80,6 +93,14 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
+    });
+
+    const couriersQuery = useQuery<any[]>({
+        queryKey: ["couriers-list"],
+        queryFn: getCouriers,
+        enabled: type === "CRITICAL_STOCK" && isOpen,
+        refetchOnMount: true,
+        staleTime: 0,
     });
     const payDebtMutation = useMutation({
         mutationFn: async () => {
@@ -139,6 +160,26 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         payDebtMutation.mutate();
     };
 
+    const handleBulkAction = async (courierId: string | null) => {
+        if (selectedIds.length === 0) return;
+        setIsBulkProcessing(true);
+        try {
+            const res = await bulkAssignProductsToCourier(selectedIds, courierId);
+            if (res.success) {
+                toast.success(courierId ? `${res.count} ürün kuryeye atandı.` : `${res.count} ürün eksik listesine eklendi.`);
+                setSelectedIds([]);
+                refresh();
+                queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] });
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+            }
+        } catch (error) {
+            toast.error("İşlem sırasında hata oluştu.");
+        } finally {
+            setIsBulkProcessing(false);
+        }
+    };
+
     const getModalConfig = () => {
         switch (type) {
             case "DAILY_SALES": return { title: "KASA HAREKETLERİ", icon: ShoppingCart, color: "text-primary", route: "/satis/gecmis" };
@@ -168,7 +209,10 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[600px] border-border/40 p-0 overflow-hidden bg-background/80 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+            <DialogContent className={cn(
+                "border-border/40 p-0 overflow-hidden bg-background/80 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl transition-all",
+                type === "CRITICAL_STOCK" ? "sm:max-w-[800px]" : "sm:max-w-[600px]"
+            )}>
                 <div className={cn("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r",
                     type === "TOTAL_DEBTS" ? "from-indigo-500 to-purple-600" :
                         type === "COLLECTIONS" ? "from-amber-500 to-orange-600" :
@@ -365,45 +409,146 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                     )}
 
                                     {type === "CRITICAL_STOCK" && (
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {data.map((product: any) => (
-                                                <div key={product.id} className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex items-center justify-between group hover:bg-rose-500/10 transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="h-12 w-12 rounded-xl bg-background border border-border/40 flex items-center justify-center shadow-sm relative overflow-hidden shrink-0">
-                                                            <Package className={cn("h-6 w-6", product.stock === 0 ? "text-rose-500" : "text-amber-500")} />
-                                                            {product.stock === 0 && <div className="absolute inset-0 bg-rose-500/10 animate-pulse" />}
+                                        <div className="space-y-4">
+                                            {/* Filters & Bulk Controls */}
+                                            <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/20 border border-border/40 rounded-2xl">
+                                                <div className="flex items-center gap-4">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowZeroOnly(!showZeroOnly)}
+                                                        className={cn(
+                                                            "h-8 text-[10px] uppercase tracking-widest px-3 rounded-lg",
+                                                            showZeroOnly ? "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20" : "text-muted-foreground hover:bg-muted"
+                                                        )}
+                                                    >
+                                                        {showZeroOnly ? "TÜMÜNÜ GÖSTER" : `BİTENLER (${data.filter(p => p.stock <= 0).length})`}
+                                                    </Button>
+
+                                                    {data.length > 0 && (
+                                                        <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                                                            <Checkbox
+                                                                checked={selectedIds.length === (showZeroOnly ? data.filter(p => p.stock <= 0).length : data.length)}
+                                                                onCheckedChange={(checked) => {
+                                                                    if (checked) {
+                                                                        const visible = showZeroOnly ? data.filter(p => p.stock <= 0) : data;
+                                                                        setSelectedIds(visible.map(p => p.id));
+                                                                    } else {
+                                                                        setSelectedIds([]);
+                                                                    }
+                                                                }}
+                                                            />
+                                                            TÜMÜNÜ SEÇ
                                                         </div>
-                                                        <div className="min-w-0">
-                                                            <h4 className="font-medium text-sm  uppercase tracking-tight line-clamp-1">{product.name}</h4>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <Badge variant="outline" className="text-[8px]  border-rose-500/30 text-rose-500 px-2 py-0">KRİTİK</Badge>
-                                                                <span className="text-[10px]  text-muted-foreground/60 uppercase truncate">{product.category?.name}</span>
+                                                    )}
+                                                </div>
+
+                                                {selectedIds.length > 0 && (
+                                                    <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
+                                                        <div className="relative">
+                                                            <select
+                                                                value={selectedCourierId}
+                                                                onChange={(e) => setSelectedCourierId(e.target.value)}
+                                                                className="w-[160px] h-8 px-3 pr-8 text-[10px] rounded-lg border border-border/40 bg-background text-foreground uppercase outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer disabled:opacity-50"
+                                                                disabled={couriersQuery.isPending}
+                                                            >
+                                                                <option value="" disabled>
+                                                                    {couriersQuery.isPending ? "YÜKLENİYOR..." : "KURYE SEÇ..."}
+                                                                </option>
+                                                                {(!couriersQuery.isPending && (!couriersQuery.data || couriersQuery.data.length === 0)) ? (
+                                                                    <option value="" disabled>PERSONEL BULUNAMADI</option>
+                                                                ) : couriersQuery.data?.map(c => (
+                                                                    <option key={c.id} value={c.id} className="text-foreground bg-background">
+                                                                        {c.name} {c.surname}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-4 shrink-0 px-2">
-                                                        <div className="text-right hidden sm:block">
-                                                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">STOK</p>
-                                                            <p className={cn("text-base  tracking-tight", product.stock === 0 ? "text-rose-600" : "text-amber-600")}>
-                                                                {product.stock} {product.unit || 'ADET'}
-                                                            </p>
-                                                        </div>
+
                                                         <Button
                                                             size="sm"
-                                                            onClick={() => handleAddShortage(product)}
-                                                            disabled={addingToShortage === product.id}
-                                                            className="h-9 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 shadow-none transition-all flex items-center gap-2  text-[10px] uppercase tracking-widest"
+                                                            disabled={isBulkProcessing || !selectedCourierId}
+                                                            onClick={() => handleBulkAction(selectedCourierId)}
+                                                            className="h-8 rounded-lg text-[9px] uppercase tracking-tight bg-primary text-primary-foreground hover:opacity-90"
                                                         >
-                                                            {addingToShortage === product.id ? (
-                                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                            ) : (
-                                                                <Plus className="h-3.5 w-3.5" />
-                                                            )}
-                                                            <span className="hidden xs:inline">Eksiğe Ekle</span>
+                                                            {isBulkProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "ATAMA YAP"}
+                                                        </Button>
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled={isBulkProcessing}
+                                                            onClick={() => handleBulkAction(null)}
+                                                            className="h-8 rounded-lg text-[9px] uppercase tracking-tight border-border/40 hover:bg-muted"
+                                                        >
+                                                            {isBulkProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "EKSİĞE EKLE"}
                                                         </Button>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {data
+                                                    .filter(p => !showZeroOnly || p.stock <= 0)
+                                                    .map((product: any) => (
+                                                        <div key={product.id} className={cn(
+                                                            "p-4 rounded-2xl border transition-all flex items-center justify-between group",
+                                                            selectedIds.includes(product.id) ? "bg-primary/5 border-primary/30" : "bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10"
+                                                        )}>
+                                                            <div className="flex items-center gap-4">
+                                                                <Checkbox
+                                                                    checked={selectedIds.includes(product.id)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        if (checked) {
+                                                                            setSelectedIds([...selectedIds, product.id]);
+                                                                        } else {
+                                                                            setSelectedIds(selectedIds.filter(id => id !== product.id));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <div className="h-12 w-12 rounded-xl bg-background border border-border/40 flex items-center justify-center shadow-sm relative overflow-hidden shrink-0">
+                                                                    <Package className={cn("h-6 w-6", product.stock <= 0 ? "text-rose-500" : "text-amber-500")} />
+                                                                    {product.stock <= 0 && <div className="absolute inset-0 bg-rose-500/10 animate-pulse" />}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <h4 className="font-medium text-sm  uppercase tracking-tight line-clamp-1">{product.name}</h4>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        {product.stock <= 0 ? (
+                                                                            <Badge variant="destructive" className="text-[8px] px-2 py-0 bg-rose-600">STOK YOK</Badge>
+                                                                        ) : (
+                                                                            <Badge variant="outline" className="text-[8px] border-rose-500/30 text-rose-500 px-2 py-0">KRİTİK</Badge>
+                                                                        )}
+                                                                        <span className="text-[10px]  text-muted-foreground/60 uppercase truncate">{product.category?.name}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-4 shrink-0 px-2">
+                                                                <div className="text-right hidden sm:block">
+                                                                    <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">STOK</p>
+                                                                    <p className={cn("text-base tracking-tight font-medium", product.stock <= 0 ? "text-rose-600" : "text-amber-600")}>
+                                                                        {product.stock} {product.unit || 'ADET'}
+                                                                    </p>
+                                                                </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => handleAddShortage(product)}
+                                                                    disabled={addingToShortage === product.id}
+                                                                    className="h-9 w-9 p-0 rounded-full hover:bg-rose-500/20 text-rose-600 transition-all shadow-none shrink-0"
+                                                                >
+                                                                    {addingToShortage === product.id ? (
+                                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    ) : (
+                                                                        <Plus className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
                                         </div>
                                     )}
 

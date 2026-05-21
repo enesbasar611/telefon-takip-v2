@@ -46,8 +46,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { addShortageItem } from "@/lib/actions/shortage-actions";
+import { addShortageItem, getCouriers, bulkAssignProductsToCourier } from "@/lib/actions/shortage-actions";
 import { quickSellProduct, deleteProduct, ensureProductBarcode, regenerateProductBarcodes, adjustStockById } from "@/lib/actions/product-actions";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "./product-detail-drawer";
 import { EditProductModal } from "./edit-product-modal";
@@ -110,6 +119,9 @@ export function StockListTable({
 
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
+  const [selectedCourierId, setSelectedCourierId] = useState<string>("");
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const { initializeScannerRoom, sendSuccessFeedback } = useScanner(
     (barcode: string) => {
@@ -139,10 +151,16 @@ export function StockListTable({
         (p.category?.name && p.category.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
+      const matchesStockFilter = !showOutOfStockOnly || p.stock <= 0;
 
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && matchesStockFilter;
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [products, searchTerm, selectedCategory, showOutOfStockOnly]);
+
+  const couriersQuery = useQuery<any[]>({
+    queryKey: ["couriers-list"],
+    queryFn: getCouriers,
+  });
 
   // Debounced search update for URL
   useEffect(() => {
@@ -164,6 +182,21 @@ export function StockListTable({
     () => sortedData.filter((product: any) => selectedIds.includes(product.id)),
     [sortedData, selectedIds]
   );
+
+  // Auto-select courier if existing shortage items have one assigned
+  useEffect(() => {
+    if (selectedProducts.length > 0) {
+      const assignedCouriers = selectedProducts.flatMap(p =>
+        (p.shortageItems || [])
+          .filter((si: any) => !si.isResolved && si.assignedToId)
+          .map((si: any) => si.assignedToId)
+      );
+
+      if (assignedCouriers.length > 0 && !selectedCourierId) {
+        setSelectedCourierId(assignedCouriers[0]);
+      }
+    }
+  }, [selectedProducts, selectedCourierId]);
   const allVisibleSelected = sortedData.length > 0 && sortedData.every((product: any) => selectedIds.includes(product.id));
 
   const toggleProductSelection = (productId: string) => {
@@ -179,6 +212,25 @@ export function StockListTable({
     }
 
     setSelectedIds((current) => Array.from(new Set([...current, ...sortedData.map((product: any) => product.id)])));
+  };
+
+  const handleBulkAssign = async (courierId: string | null) => {
+    if (selectedIds.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const res = await bulkAssignProductsToCourier(selectedIds, courierId);
+      if (res.success) {
+        toast.success(courierId ? `${res.count} ürün kuryeye atandı.` : `${res.count} ürün eksik listesine eklendi.`);
+        setSelectedIds([]);
+        router.refresh();
+      } else {
+        toast.error(res.error || "İşlem başarısız.");
+      }
+    } catch (error) {
+      toast.error("İşlem sırasında hata oluştu.");
+    } finally {
+      setIsBulkProcessing(false);
+    }
   };
 
   const handleExport = () => {
@@ -391,20 +443,70 @@ export function StockListTable({
             <Download className="h-3.5 w-3.5 mr-2 text-muted-foreground" /> Dışa Aktar
           </Button>
           {selectedProducts.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="h-10 rounded-xl px-3">
+            <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
+              <Badge variant="secondary" className="h-10 rounded-xl px-3 whitespace-nowrap">
                 {selectedProducts.length} seçili
               </Badge>
+
+              <Select value={selectedCourierId} onValueChange={setSelectedCourierId}>
+                <SelectTrigger className="w-[180px] h-10 text-[12px] rounded-xl border-border bg-muted/30">
+                  <SelectValue placeholder={couriersQuery.isPending ? "YÜKLENİYOR..." : "KURYE SEÇ..."} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border z-[110]">
+                  {couriersQuery.isPending ? (
+                    <div className="p-4 text-center">
+                      <Loader2 className="h-4 w-4 animate-spin mx-auto text-primary" />
+                    </div>
+                  ) : couriersQuery.data?.length === 0 ? (
+                    <div className="p-4 text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+                      PERSONEL BULUNAMADI
+                    </div>
+                  ) : (
+                    couriersQuery.data?.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">
+                        {c.name} {c.surname} ({c.role})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Button
+                disabled={isBulkProcessing || !selectedCourierId}
+                onClick={() => handleBulkAssign(selectedCourierId)}
+                className="h-10 rounded-xl px-4 text-[12px] font-medium bg-primary text-primary-foreground hover:opacity-90"
+              >
+                {isBulkProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "ATAMA YAP"}
+              </Button>
+
+              <Button
+                variant="outline"
+                disabled={isBulkProcessing}
+                onClick={() => handleBulkAssign(null)}
+                className="h-10 rounded-xl px-4 text-[12px] font-medium bg-muted/30 border-border"
+              >
+                {isBulkProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "EKSİK LİSTESİ"}
+              </Button>
+
               <Button onClick={() => handleBulkPrint(false)} variant="outline" className="h-10 px-4 text-[12px] font-medium bg-muted/30 border-border rounded-xl gap-2">
                 <BarcodeIcon className="h-3.5 w-3.5" />
                 Seçilenleri Yazdır
               </Button>
-              <Button onClick={() => handleBulkPrint(true)} variant="outline" className="h-10 px-4 text-[12px] font-medium bg-muted/30 border-border rounded-xl gap-2">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Barkodları Yenile
-              </Button>
             </div>
           )}
+
+          <Button
+            variant="ghost"
+            onClick={() => setShowOutOfStockOnly(!showOutOfStockOnly)}
+            className={cn(
+              "h-10 px-4 text-[12px] font-medium rounded-xl transition-all",
+              showOutOfStockOnly
+                ? "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20"
+                : "bg-muted/30 text-muted-foreground hover:bg-muted border border-border"
+            )}
+          >
+            Stoğu Bitenler ({products.filter(p => p.stock <= 0).length})
+          </Button>
         </div>
       </div>
 

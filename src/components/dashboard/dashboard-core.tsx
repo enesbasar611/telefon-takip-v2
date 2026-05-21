@@ -83,7 +83,7 @@ export function DashboardCore({
     { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", icon: Banknote, accent: "tertiary", colorClass: "text-amber-500", bgClass: "bg-amber-500/10" },
     { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, accent: "primary", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, accent: "secondary", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
-    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik", type: "CRITICAL_STOCK" },
+    { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik", type: "CRITICAL_STOCK", outOfStockCount: statsData?.outOfStockCount || "0" },
     { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", type: "TOTAL_DEBTS" },
     { label: "Kasa & Hesaplar", value: statsData?.cashBalance || "₺0", icon: Wallet, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", type: "CASH_BALANCE" },
   ];
@@ -174,6 +174,18 @@ export function DashboardCore({
                 <div className="flex items-baseline gap-2">
                   {typeof stat.value === 'string' && stat.value.includes('₺') ? (
                     <RevealFinancial amount={stat.value} className={cn("text-4xl  tracking-tight", stat.colorClass)} />
+                  ) : stat.outOfStockCount !== undefined ? (
+                    <div className="flex items-baseline gap-3">
+                      <div className="flex flex-col items-center">
+                        <h3 className="text-5xl  tracking-tighter text-amber-500">{stat.value}</h3>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 mt-1">Kritik</span>
+                      </div>
+                      <div className="h-10 w-px bg-border/60 mx-1" />
+                      <div className="flex flex-col items-center">
+                        <h3 className="text-5xl  tracking-tighter text-rose-500">{stat.outOfStockCount}</h3>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-rose-500 mt-1">Biten</span>
+                      </div>
+                    </div>
                   ) : (
                     <h3 className={cn("text-5xl  tracking-tighter", stat.colorClass)}>{stat.value}</h3>
                   )}

@@ -21,6 +21,8 @@ interface ShortageContextType {
     addShortageBulk: (items: any[]) => Promise<void>;
     removeShortage: (id: string, silent?: boolean) => Promise<void>;
     updateQty: (id: string, qty: number) => Promise<void>;
+    clearShortages: () => Promise<void>;
+    syncZeroStock: () => Promise<void>;
 }
 
 const ShortageContext = createContext<ShortageContextType | undefined>(undefined);
@@ -85,8 +87,38 @@ export function ShortageProvider({ children }: { children: React.ReactNode }) {
         refresh();
     };
 
+    const clearShortages = async () => {
+        try {
+            const res = await (await import('@/lib/actions/shortage-actions')).clearAllShortages();
+            if (res.success) {
+                toast.success("Eksik listesi temizlendi.");
+                await refresh();
+            } else {
+                toast.error(res.error || "Temizleme başarısız.");
+            }
+        } catch (err) {
+            toast.error("Bir hata oluştu.");
+        }
+    };
+
+    const syncZeroStock = async () => {
+        try {
+            const res = await (await import('@/lib/actions/shortage-actions')).syncZeroStockShortages();
+            if (res.success) {
+                if (res.count && res.count > 0) {
+                    toast.success(`${res.count} ürün otomatik olarak eklendi.`);
+                } else {
+                    toast.info("Eklenecek yeni stoksuz ürün bulunamadı.");
+                }
+                await refresh();
+            }
+        } catch (err) {
+            console.error("sync error", err);
+        }
+    };
+
     return (
-        <ShortageContext.Provider value={{ items, loading, refresh, addShortage, addShortageBulk, removeShortage, updateQty }}>
+        <ShortageContext.Provider value={{ items, loading, refresh, addShortage, addShortageBulk, removeShortage, updateQty, clearShortages, syncZeroStock }}>
             {children}
         </ShortageContext.Provider>
     );

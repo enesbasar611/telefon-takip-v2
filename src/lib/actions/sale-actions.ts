@@ -111,12 +111,14 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
           },
         });
 
-        if (updatedProduct.stock <= 0) {
+        if (updatedProduct.stock <= updatedProduct.criticalStock) {
           await addShortageItem({
             productId: item.productId,
             name: updatedProduct.name,
             quantity: 1,
-            notes: `Satış sonucu stok tükendi: ${newSale.saleNumber}`
+            notes: updatedProduct.stock <= 0
+              ? `Satış sonucu stok tükendi: ${newSale.saleNumber}`
+              : `Satış sonucu kritik stok seviyesine ulaşıldı (${updatedProduct.stock} adet kaldı): ${newSale.saleNumber}`
           });
         }
       }

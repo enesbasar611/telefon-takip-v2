@@ -13,7 +13,7 @@ export const getDashboardStats = async (shopId: string | null) => {
       todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
       kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
       collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
-      criticalStock: "0", totalDebts: "₺0", cashBalance: "₺0",
+      criticalStock: "0", outOfStockCount: "0", totalDebts: "₺0", cashBalance: "₺0",
       pendingProcurementCount: "0", deadStockCount: "0",
       totalDevices: "0",
     });
@@ -88,6 +88,7 @@ export const getDashboardStats = async (shopId: string | null) => {
         ] = res;
 
         const lowStockCount = productsList.filter(p => p.stock <= p.criticalStock).length;
+        const outOfStockCount = productsList.filter(p => p.stock <= 0).length;
         const kasaBalance = Number(kasaAccountObject.balance) || 0;
         const todaySalesAmount = Number(todaySalesAggResult._sum.finalAmount) || 0;
         const collectedToday = Number(todayTransactionsResult._sum.amount) || 0;
@@ -115,6 +116,7 @@ export const getDashboardStats = async (shopId: string | null) => {
           pendingServices: pendingServicesValue.toString(),
           readyDevices: readyDevicesValue.toString(),
           criticalStock: lowStockCount.toString(),
+          outOfStockCount: outOfStockCount.toString(),
           totalDebts: `₺${formatCurrency(totalDebtsAmount)}`,
           totalDebtsUSD: totalDebtsAmount / usdRate,
           cashBalance: `₺${formatCurrency(kasaBalance)}`,
@@ -129,7 +131,7 @@ export const getDashboardStats = async (shopId: string | null) => {
           todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
           kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
           collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
-          criticalStock: "0", totalDebts: "₺0", cashBalance: "₺0",
+          criticalStock: "0", outOfStockCount: "0", totalDebts: "₺0", cashBalance: "₺0",
           pendingProcurementCount: "0", deadStockCount: "0",
         });
       }

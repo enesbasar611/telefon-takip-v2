@@ -152,6 +152,27 @@ export function CreateProductModal({
     return "₺";
   };
 
+  const handleCurrencyChange = (newCurrency: "TRY" | "USD" | "EUR") => {
+    if (newCurrency === currency) return;
+
+    const buyVal = parseFloat(watch("buyPrice")) || 0;
+    const sellVal = parseFloat(watch("sellPrice")) || 0;
+
+    const oldRate = currency === "USD" ? (exchangeRates?.usd || 34) : currency === "EUR" ? (exchangeRates?.eur || 37) : 1;
+    const newRate = newCurrency === "USD" ? (exchangeRates?.usd || 34) : newCurrency === "EUR" ? (exchangeRates?.eur || 37) : 1;
+
+    if (buyVal > 0) {
+      const tryVal = buyVal * oldRate;
+      setValue("buyPrice", (tryVal / newRate).toFixed(2));
+    }
+    if (sellVal > 0) {
+      const tryVal = sellVal * oldRate;
+      setValue("sellPrice", (tryVal / newRate).toFixed(2));
+    }
+
+    setCurrency(newCurrency);
+  };
+
   const getCurrencyRate = (selectedCurrency = currency) => {
     if (selectedCurrency === "USD") return exchangeRates?.usd || 34;
     if (selectedCurrency === "EUR") return exchangeRates?.eur || 37;
@@ -472,7 +493,7 @@ export function CreateProductModal({
                   <div className="flex bg-muted/50 p-1 rounded-xl border border-border/50">
                     {(["TRY", "USD", "EUR"] as const).map((c) => (
                       <Button key={c} type="button" size="sm" variant={currency === c ? "default" : "ghost"}
-                        onClick={() => setCurrency(c)}
+                        onClick={() => handleCurrencyChange(c)}
                         className={`h-8 px-4 text-[12px]  rounded-lg transition-colors ${currency === c
                           ? c === "TRY" ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                             : c === "USD" ? "bg-emerald-500 hover:bg-emerald-400 text-black"

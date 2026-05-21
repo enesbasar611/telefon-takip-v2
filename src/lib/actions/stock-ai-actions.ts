@@ -110,6 +110,8 @@ export async function triggerAIAnalysis() {
         // Cleanup old ones for these products first to avoid clutter? 
         // For simplicity, we just add.
 
+        // Create new ones
+        let createdCount = 0;
         if (newAlerts.length > 0) {
             // First cleanup expired for hygiene
             await (prisma as any).stockAIAlert.deleteMany({
@@ -121,7 +123,6 @@ export async function triggerAIAnalysis() {
                 },
             });
 
-            // Create new ones
             for (const alert of newAlerts) {
                 // Check if a similar alert exists in the last 12 hours for this product to avoid spam
                 const existing = await (prisma as any).stockAIAlert.findFirst({
@@ -130,7 +131,7 @@ export async function triggerAIAnalysis() {
                         type: alert.type,
                         shopId,
                         createdAt: {
-                            gt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+                            gt: new Date(Date.now() - 12 * 60 * 60 * 1000),
                         }
                     }
                 });
@@ -139,12 +140,16 @@ export async function triggerAIAnalysis() {
                     await (prisma as any).stockAIAlert.create({
                         data: alert
                     });
+                    createdCount++;
                 }
             }
         }
 
+        // Also cleanup negative stocks as requested
+        await cleanupNegativeStocks();
+
         revalidatePath("/stok/stok-ai");
-        return { success: true, count: newAlerts.length };
+        return { success: true, count: createdCount };
     } catch (error) {
         console.error("AI Analysis error:", error);
         return { success: false, error: String(error) };
@@ -188,5 +193,31 @@ export async function resolveAIAlertsForProduct(productId: string) {
     } catch (error) {
         console.error("Resolve AI Alerts error:", error);
         return { success: false };
+    }
+}
+/**
+ * Ensures no negative stock exists by resetting all negative values to zero.
+ */
+export async function cleanupNegativeStocks() {
+    try {
+        const shopId = await getShopId();
+        if (!shopId) return { success: false, error: "Yetkisiz işlem." };
+
+        const result = await (prisma as any).product.updateMany({
+            where: {
+                shopId,
+                stock: {
+                    lt: 0
+                }
+            },
+            data: {
+                stock: 0
+            }
+        });
+
+        return { success: true, count: result.count };
+    } catch (error) {
+        console.error("Negative stock cleanup error:", error);
+        return { success: false, error: "Stok temizleme işlemi başarısız oldu." };
     }
 }

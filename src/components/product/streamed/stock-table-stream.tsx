@@ -21,6 +21,7 @@ export async function StockTableStream({ searchParams, shop }: { searchParams?: 
             page: currentPage,
             pageSize: pageSize,
             search: searchParams?.q,
+            isCritical: searchParams?.isCritical === "true",
             ...aiFilters
         }),
         getCategories(),

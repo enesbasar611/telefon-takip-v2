@@ -557,12 +557,14 @@ export async function addPartToService(ticketId: string, productId: string, quan
       return { part, updatedProduct };
     });
 
-    if (result.updatedProduct.stock <= 0) {
+    if (result.updatedProduct.stock <= result.updatedProduct.criticalStock) {
       await addShortageItem({
         productId: productId,
         name: product.name,
         quantity: 1,
-        notes: `Servis kullanımı sonucu stok tükendi: ${ticketId}`
+        notes: result.updatedProduct.stock <= 0
+          ? `Servis kullanımı sonucu stok tükendi: ${ticketId}`
+          : `Servis kullanımı sonucu kritik stok seviyesine ulaşıldı (${result.updatedProduct.stock} adet kaldı): ${ticketId}`
       });
     }
 

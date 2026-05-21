@@ -31,6 +31,7 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency }: StatW
     let value = stat.value || "0";
     let subValue = stat.subValue;
     let usdValue = stat.usdValue;
+    let outOfStockCount = stat.outOfStockCount;
 
     if (!isLoading && !isError && dashboardInit?.stats) {
         const s = dashboardInit.stats;
@@ -57,6 +58,7 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency }: StatW
                 break;
             case "CRITICAL_STOCK":
                 value = s.criticalStock || value;
+                outOfStockCount = s.outOfStockCount || outOfStockCount;
                 break;
             case "TOTAL_DEBTS":
                 value = s.totalDebts || value;
@@ -77,6 +79,7 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency }: StatW
                 value={isLoading && !stat.value ? "Yükleniyor..." : value}
                 subValue={subValue}
                 usdValue={usdValue}
+                outOfStockCount={outOfStockCount}
                 defaultCurrency={defaultCurrency}
                 onClick={() => setIsOpen(true)}
             />

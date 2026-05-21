@@ -53,7 +53,9 @@ import {
     getCourierTasks,
     getGlobalShortageList,
     bulkMarkShortageAsTaken,
-    bulkMarkShortageAsNotFound
+    bulkMarkShortageAsNotFound,
+    updateShortageQuantity,
+    bulkUpdateShortageQuantity
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
@@ -164,6 +166,8 @@ export function CourierDashboardClient({
     const [selectedSuppliers, setSelectedSuppliers] = useState<Record<string, string>>({});
     const [bulkSupplierId, setBulkSupplierId] = useState<string>("none");
     const [isBulkLoading, setIsBulkLoading] = useState(false);
+    const [bulkQtyAdd, setBulkQtyAdd] = useState<number>(1);
+    const [pendingFilter, setPendingFilter] = useState<"all" | "critical" | "outOfStock">("all");
 
     // React Query for Tasks
     const { data: tasksData, isLoading: isTasksLoading } = useQuery({
@@ -308,7 +312,33 @@ export function CourierDashboardClient({
         );
     })), [items, searchTerm]);
 
-    const pendingShortages = useMemo(() => sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId)), [allShortages]);
+    const { pendingShortages, pendingCounts } = useMemo(() => {
+        const unassigned = sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId));
+
+        const counts = {
+            all: unassigned.length,
+            critical: unassigned.filter((s: any) => {
+                const stock = s.product?.stock ?? s.stock ?? 0;
+                const critical = s.product?.criticalStock ?? s.criticalStock ?? 0;
+                return stock > 0 && stock <= critical;
+            }).length,
+            outOfStock: unassigned.filter((s: any) => {
+                const stock = s.product?.stock ?? s.stock ?? 0;
+                return stock <= 0;
+            }).length
+        };
+
+        const filtered = unassigned.filter((s: any) => {
+            if (pendingFilter === "all") return true;
+            const stock = s.product?.stock ?? s.stock ?? 0;
+            const critical = s.product?.criticalStock ?? s.criticalStock ?? 0;
+            if (pendingFilter === "critical") return stock > 0 && stock <= critical;
+            if (pendingFilter === "outOfStock") return stock <= 0;
+            return true;
+        });
+
+        return { pendingShortages: filtered, pendingCounts: counts };
+    }, [allShortages, pendingFilter]);
     const nextRouteItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3), [items]);
     const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
 
@@ -351,6 +381,24 @@ export function CourierDashboardClient({
                 toast.error("İşlem başarısız.");
             }
         } catch (error) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setLoadingId(null);
+        }
+    };
+
+    const handleUpdateQuantity = async (id: string, nextQty: number) => {
+        setLoadingId(id);
+        try {
+            const res = await updateShortageQuantity(id, nextQty);
+            if (res.success) {
+                setItemAdjustedQty(prev => ({ ...prev, [id]: nextQty }));
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+            } else {
+                toast.error(res.error || "Miktar güncellenemedi.");
+            }
+        } catch (err) {
             toast.error("Hata oluştu.");
         } finally {
             setLoadingId(null);
@@ -582,6 +630,27 @@ export function CourierDashboardClient({
             toast.error("Hata oluştu.");
         } finally {
             setLoadingId(null);
+        }
+    };
+
+    const handleBulkAddQuantity = async () => {
+        if (selectedIds.length === 0 || bulkQtyAdd <= 0) return;
+        setIsBulkLoading(true);
+        try {
+            const res = await bulkUpdateShortageQuantity(selectedIds, bulkQtyAdd);
+            if (res.success) {
+                toast.success(`${selectedIds.length} ürüne +${bulkQtyAdd} miktar eklendi.`);
+                setSelectedIds([]);
+                setIsSelectionMode(false);
+                queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+            } else {
+                toast.error(res.error || "Toplu güncelleme başarısız.");
+            }
+        } catch (error) {
+            toast.error("Hata oluştu.");
+        } finally {
+            setIsBulkLoading(false);
         }
     };
 
@@ -1069,8 +1138,8 @@ export function CourierDashboardClient({
                                                     selectedIds.includes(item.id) && "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5"
                                                 )}
                                             >
-                                                {isSelectionMode && (
-                                                    <div className="absolute top-3 right-3 z-10">
+                                                <div className={cn("flex items-center gap-4", isAdmin ? "flex-1" : "w-full mb-auto")}>
+                                                    {isSelectionMode && (
                                                         <div
                                                             className={cn(
                                                                 "h-6 w-6 rounded-lg flex items-center justify-center transition-all border shrink-0",
@@ -1081,9 +1150,7 @@ export function CourierDashboardClient({
                                                         >
                                                             {selectedIds.includes(item.id) && <Check className="h-4 w-4" />}
                                                         </div>
-                                                    </div>
-                                                )}
-                                                <div className={cn("flex items-center gap-4", isAdmin ? "flex-1" : "w-full mb-auto")}>
+                                                    )}
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -1164,44 +1231,43 @@ export function CourierDashboardClient({
                                                                             {cleanCourierNote(item.notes)}
                                                                         </div>
                                                                     )}
+                                                                    <div
+                                                                        className="flex items-center bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden h-8"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleUpdateQuantity(item.id, getAdjustedQty(item) - 1); }}
+                                                                            disabled={loadingId === item.id}
+                                                                            className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
+                                                                        >−</button>
+                                                                        <span className="h-8 min-w-[2rem] px-1 flex items-center justify-center font-black text-sm border-x border-zinc-200 dark:border-white/10">
+                                                                            {loadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : getAdjustedQty(item)}
+                                                                        </span>
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleUpdateQuantity(item.id, getAdjustedQty(item) + 1); }}
+                                                                            disabled={loadingId === item.id}
+                                                                            className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
+                                                                        >+</button>
+                                                                    </div>
                                                                     {item.isTaken && (
-                                                                        <>
-                                                                            {/* Quantity adjuster */}
-                                                                            <div
-                                                                                className="flex items-center bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden h-8"
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                            >
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); adjustQty(item.id, getAdjustedQty(item), -1); }}
-                                                                                    className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
-                                                                                >−</button>
-                                                                                <span className="h-8 min-w-[2rem] px-1 flex items-center justify-center font-black text-sm border-x border-zinc-200 dark:border-white/10">
-                                                                                    {getAdjustedQty(item)}
-                                                                                </span>
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); adjustQty(item.id, getAdjustedQty(item), 1); }}
-                                                                                    className="h-8 w-7 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
-                                                                                >+</button>
-                                                                            </div>
-                                                                            <Button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setApprovingItem({ ...item, quantity: getAdjustedQty(item) });
-                                                                                    setApproveModalOpen(true);
-                                                                                }}
-                                                                                disabled={loadingId === item.id}
-                                                                                className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] tracking-widest rounded-lg h-8 px-4 shadow-lg shadow-emerald-500/20 gap-2 uppercase group"
-                                                                            >
-                                                                                {loadingId === item.id ? (
-                                                                                    <Clock className="w-3 h-3 animate-spin" />
-                                                                                ) : (
-                                                                                    <>
-                                                                                        <ArrowUpCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                                                                                        STOK ONAY
-                                                                                    </>
-                                                                                )}
-                                                                            </Button>
-                                                                        </>
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setApprovingItem({ ...item, quantity: getAdjustedQty(item) });
+                                                                                setApproveModalOpen(true);
+                                                                            }}
+                                                                            disabled={loadingId === item.id}
+                                                                            className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] tracking-widest rounded-lg h-8 px-4 shadow-lg shadow-emerald-500/20 gap-2 uppercase group"
+                                                                        >
+                                                                            {loadingId === item.id ? (
+                                                                                <Clock className="w-3 h-3 animate-spin" />
+                                                                            ) : (
+                                                                                <>
+                                                                                    <ArrowUpCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                                                                    STOK ONAY
+                                                                                </>
+                                                                            )}
+                                                                        </Button>
                                                                     )}
                                                                     {!item.isTaken && (
                                                                         <Button
@@ -1311,31 +1377,86 @@ export function CourierDashboardClient({
 
                 {/* Atanmamış Eksikler - Collapsible at Bottom */}
                 <Card className="rounded-3xl border-none bg-card/80 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-hidden border border-zinc-200 dark:border-white/5">
-                    <button
-                        onClick={() => setIsUnassignedOpen(!isUnassignedOpen)}
-                        className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-colors group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                                <Package className="w-5 h-5 text-orange-500" />
+                    <div className="w-full">
+                        <button
+                            onClick={() => setIsUnassignedOpen(!isUnassignedOpen)}
+                            className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                                    <Package className="w-5 h-5 text-orange-500" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+                                        Atanmamış Eksikler
+                                        {pendingCounts.all > 0 && (
+                                            <Badge className="bg-orange-500 text-black text-[10px] h-5 px-1.5 font-black">{pendingCounts.all}</Badge>
+                                        )}
+                                    </h3>
+                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HEMEN ALABİLECEĞİNİZ ÜRÜNLER</p>
+                                </div>
                             </div>
-                            <div className="text-left">
-                                <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
-                                    Atanmamış Eksikler
-                                    {pendingShortages.length > 0 && (
-                                        <Badge className="bg-orange-500 text-black text-[10px] h-5 px-1.5 font-black">{pendingShortages.length}</Badge>
+                            <div className="flex items-center gap-3">
+                                {isUnassignedOpen && (
+                                    <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl hidden sm:flex border border-white/5" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            onClick={() => setPendingFilter("all")}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                pendingFilter === "all" ? "bg-orange-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
+                                            )}
+                                        >TÜMÜ ({pendingCounts.all})</button>
+                                        <button
+                                            onClick={() => setPendingFilter("critical")}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                pendingFilter === "critical" ? "bg-amber-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
+                                            )}
+                                        >KRİTİK ({pendingCounts.critical})</button>
+                                        <button
+                                            onClick={() => setPendingFilter("outOfStock")}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                pendingFilter === "outOfStock" ? "bg-red-500 text-white shadow-lg" : "text-muted-foreground hover:text-white"
+                                            )}
+                                        >BİTENLER ({pendingCounts.outOfStock})</button>
+                                    </div>
+                                )}
+                                <div className={cn(
+                                    "h-10 w-10 rounded-full bg-white/5 flex items-center justify-center transition-transform duration-300",
+                                    isUnassignedOpen && "rotate-180"
+                                )}>
+                                    <ChevronDown className="h-5 w-5" />
+                                </div>
+                            </div>
+                        </button>
+
+                        {isUnassignedOpen && (
+                            <div className="px-6 pb-2 flex sm:hidden overflow-x-auto gap-2 no-scrollbar" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    onClick={() => setPendingFilter("all")}
+                                    className={cn(
+                                        "px-4 py-2 shrink-0 rounded-xl text-[10px] font-black transition-all uppercase border",
+                                        pendingFilter === "all" ? "bg-orange-500 text-black border-orange-500" : "bg-white/5 border-white/5 text-muted-foreground"
                                     )}
-                                </h3>
-                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HEMEN ALABİLECEĞİNİZ ÜRÜNLER</p>
+                                >TÜMÜ ({pendingCounts.all})</button>
+                                <button
+                                    onClick={() => setPendingFilter("critical")}
+                                    className={cn(
+                                        "px-4 py-2 shrink-0 rounded-xl text-[10px] font-black transition-all uppercase border",
+                                        pendingFilter === "critical" ? "bg-amber-500 text-black border-amber-500" : "bg-white/5 border-white/5 text-muted-foreground"
+                                    )}
+                                >KRİTİK ({pendingCounts.critical})</button>
+                                <button
+                                    onClick={() => setPendingFilter("outOfStock")}
+                                    className={cn(
+                                        "px-4 py-2 shrink-0 rounded-xl text-[10px] font-black transition-all uppercase border",
+                                        pendingFilter === "outOfStock" ? "bg-red-500 text-white border-red-500" : "bg-white/5 border-white/5 text-muted-foreground"
+                                    )}
+                                >BİTENLER ({pendingCounts.outOfStock})</button>
                             </div>
-                        </div>
-                        <div className={cn(
-                            "h-10 w-10 rounded-full bg-white/5 flex items-center justify-center transition-transform duration-300",
-                            isUnassignedOpen && "rotate-180"
-                        )}>
-                            <ChevronDown className="h-5 w-5" />
-                        </div>
-                    </button>
+                        )}
+                    </div>
 
                     <motion.div
                         initial={false}
@@ -1377,9 +1498,17 @@ export function CourierDashboardClient({
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Badge className={cn(
                                                         "px-2 py-0.5 text-[8px] font-black",
-                                                        s.isAlert ? "bg-red-500" : "bg-orange-500 text-black"
+                                                        (s.product?.stock ?? s.stock ?? 0) <= 0
+                                                            ? "bg-red-500 text-white"
+                                                            : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
+                                                                ? "bg-amber-500 text-black"
+                                                                : "bg-orange-500 text-black"
                                                     )}>
-                                                        {s.isAlert ? "KRİTİK" : "EKSİK"}
+                                                        {(s.product?.stock ?? s.stock ?? 0) <= 0
+                                                            ? "BİTTİ"
+                                                            : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
+                                                                ? "KRİTİK"
+                                                                : "EKSİK"}
                                                     </Badge>
                                                     <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 font-black border", getPriorityClassName(s.courierPriorityLabel))}>
                                                         {getPriorityLabel(s.courierPriorityLabel)}
@@ -1457,7 +1586,7 @@ export function CourierDashboardClient({
                             exit={{ y: 100, opacity: 0 }}
                             className="fixed bottom-8 inset-x-0 z-[70] flex justify-center px-4 pointer-events-none"
                         >
-                            <div className="bg-zinc-900 dark:bg-white text-white dark:text-black rounded-3xl p-4 shadow-2xl flex flex-col gap-4 border border-white/10 dark:border-black/5 w-full max-w-lg pointer-events-auto">
+                            <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl text-zinc-900 dark:text-white rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col gap-5 border border-zinc-200 dark:border-white/10 w-full max-w-lg pointer-events-auto">
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-black uppercase tracking-widest opacity-50">SEÇİLİ</span>
@@ -1498,12 +1627,48 @@ export function CourierDashboardClient({
 
                                     <div className="flex gap-2">
                                         {isAdmin ? (
-                                            <Button
-                                                onClick={() => handleBulkDelete(selectedIds)}
-                                                className="flex-1 h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20"
-                                            >
-                                                HEPSİNİ SİL
-                                            </Button>
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-2 bg-white/10 dark:bg-black/5 p-1.5 rounded-2xl border border-white/10 dark:border-black/10">
+                                                    <div className="flex items-center gap-1 flex-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setBulkQtyAdd(Math.max(1, bulkQtyAdd - 1))}
+                                                            className="h-9 w-9 rounded-xl text-white dark:text-black hover:bg-white/10 dark:hover:bg-black/10"
+                                                        >
+                                                            <Minus className="h-4 w-4" />
+                                                        </Button>
+                                                        <Input
+                                                            type="number"
+                                                            value={bulkQtyAdd}
+                                                            onChange={(e) => setBulkQtyAdd(Math.max(1, parseInt(e.target.value) || 1))}
+                                                            className="h-9 bg-transparent border-none text-center font-black text-sm w-12 p-0 focus-visible:ring-0 text-white dark:text-black"
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setBulkQtyAdd(bulkQtyAdd + 1)}
+                                                            className="h-9 w-9 rounded-xl text-white dark:text-black hover:bg-white/10 dark:hover:bg-black/10"
+                                                        >
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                    <Button
+                                                        onClick={handleBulkAddQuantity}
+                                                        disabled={isBulkLoading}
+                                                        className="h-9 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                                    >
+                                                        {isBulkLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                                                        STOK EKLE
+                                                    </Button>
+                                                </div>
+                                                <Button
+                                                    onClick={() => handleBulkDelete(selectedIds)}
+                                                    className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20"
+                                                >
+                                                    HEPSİNİ SİL
+                                                </Button>
+                                            </div>
                                         ) : (
                                             <>
                                                 <Button

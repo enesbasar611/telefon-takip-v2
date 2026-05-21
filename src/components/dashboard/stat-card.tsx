@@ -37,6 +37,7 @@ export function StatCard({
     onClick,
     usdValue,
     defaultCurrency,
+    outOfStockCount,
 }: any) {
     const Icon = IconMap[iconId] || ShoppingCart;
     const showUSD = defaultCurrency === "USD" && usdValue !== undefined && usdValue !== null;
@@ -89,7 +90,19 @@ export function StatCard({
                     <div className="mt-4 relative">
                         <p className="text-[10px] mb-1.5 text-muted-foreground/60 tracking-[0.2em] uppercase font-semibold">{label}</p>
                         <div className="flex items-baseline gap-3 flex-wrap">
-                            {typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
+                            {outOfStockCount !== undefined ? (
+                                <div className="flex items-baseline gap-4">
+                                    <div className="flex flex-col items-center">
+                                        <h3 className="text-4xl tracking-tighter font-black text-amber-500">{value}</h3>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 mt-1">Kritik</span>
+                                    </div>
+                                    <div className="h-10 w-px bg-border/60 mx-1" />
+                                    <div className="flex flex-col items-center">
+                                        <h3 className="text-4xl tracking-tighter font-black text-rose-500">{outOfStockCount}</h3>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-rose-500 mt-1">Biten</span>
+                                    </div>
+                                </div>
+                            ) : typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
                                 <RevealFinancial
                                     amount={displayValue}
                                     prefix={displayValue.startsWith('$') || displayValue.startsWith('₺') ? "" : "₺"}

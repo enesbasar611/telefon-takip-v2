@@ -7,6 +7,7 @@ import { getShopId, getUserId, auth } from "@/lib/auth";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { generateProductBarcode } from "@/lib/barcode-utils";
 import { formatTitleCase } from "@/lib/formatters";
+import { Role } from "@prisma/client";
 
 type ShortagePriority = {
   courierPriorityScore: number;
@@ -226,13 +227,29 @@ export async function getGlobalShortageList(dateStr?: string) {
 }
 
 export async function getCouriers() {
-  const shopId = await getShopId(false);
-  if (!shopId) return [];
-  const couriers = await prisma.user.findMany({
-    where: { shopId, role: "COURIER" },
-    select: { id: true, name: true, surname: true, role: true }
-  });
-  return serializePrisma(couriers);
+  try {
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
+
+    // Tüm iç personellerin (USER/Müşteri hariç) kurye olarak atanabilmesi için filtreleme genişletildi.
+    // SUPER_ADMIN'ler shopId'den bağımsız olarak listede görünsün.
+    const couriers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { shopId: shopId },
+          { role: Role.SUPER_ADMIN }
+        ],
+        role: { not: Role.USER }
+      },
+      select: { id: true, name: true, surname: true, role: true }
+    });
+
+    console.log(`Found ${couriers.length} couriers for shop ${shopId}`);
+    return serializePrisma(couriers);
+  } catch (error) {
+    console.error("getCouriers error:", error);
+    return [];
+  }
 }
 
 export async function assignShortageToCourier(id: string, courierId: string | null, customQuantity?: number) {
@@ -575,9 +592,36 @@ export async function updateShortageQuantity(id: string, quantity: number) {
       data: { quantity }
     });
     revalidatePath("/");
+    revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Güncelleme başarısız." };
+  }
+}
+
+export async function bulkUpdateShortageQuantity(ids: string[], delta: number) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    // Update each item to ensure we handle relative incrementing correctly if we want,
+    // or use a single updateMany for literal setting.
+    // The user wants to "add" quantity, so increment is better.
+    await prisma.shortageItem.updateMany({
+      where: {
+        id: { in: ids },
+        shopId
+      },
+      data: {
+        quantity: { increment: delta }
+      }
+    });
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Toplu güncelleme başarısız." };
   }
 }
 
@@ -1193,5 +1237,119 @@ export async function assignShortageBulkToCourier(ids: string[], courierId: stri
   } catch (error) {
     console.error("Bulk assignment error:", error);
     return { success: false, error: "Toplu atama hatası" };
+  }
+}
+
+export async function bulkAssignProductsToCourier(productIds: string[], courierId: string | null) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, shopId }
+    });
+
+    const results = await prisma.$transaction(
+      products.map(product =>
+        prisma.shortageItem.create({
+          data: {
+            name: product.name,
+            productId: product.id,
+            quantity: 1,
+            shopId: product.shopId,
+            assignedToId: courierId,
+            requesterName: "Dükkan",
+            notes: courierId ? "TOPLU KURYE ATAMASI" : "TOPLU EKSİK LİSTESİ"
+          }
+        })
+      )
+    );
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    revalidatePath("/stok");
+    return { success: true, count: results.length };
+  } catch (error) {
+    console.error("Bulk product assignment error:", error);
+    return { success: false, error: "Toplu atama başarısız." };
+  }
+}
+
+export async function clearAllShortages() {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    // Delete all unresolved and not taken items
+    await prisma.shortageItem.deleteMany({
+      where: {
+        shopId,
+        isResolved: false,
+        isTaken: false
+      }
+    });
+
+    // Auto-sync zero stock products after cleanup as requested
+    await syncZeroStockShortages();
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true };
+  } catch (error) {
+    console.error("clearAllShortages error:", error);
+    return { success: false, error: "Liste temizlenemedi." };
+  }
+}
+
+export async function syncZeroStockShortages() {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    // Fetch products with stock <= 0
+    const zeroStockProducts = await prisma.product.findMany({
+      where: {
+        shopId,
+        stock: { lte: 0 }
+      }
+    });
+
+    if (zeroStockProducts.length === 0) return { success: true, count: 0 };
+
+    // Check existing shortages to avoid duplicates
+    const existingShortages = await prisma.shortageItem.findMany({
+      where: {
+        shopId,
+        isResolved: false
+      },
+      select: { productId: true }
+    });
+
+    // Use a set for efficient lookup
+    const existingProductIds = new Set(existingShortages.map(s => s.productId).filter(Boolean));
+
+    // Filter products that aren't already in the shortage list
+    const productsToCreate = zeroStockProducts.filter(p => !existingProductIds.has(p.id));
+
+    if (productsToCreate.length > 0) {
+      // Use createMany for efficiency
+      await prisma.shortageItem.createMany({
+        data: productsToCreate.map(p => ({
+          name: p.name,
+          productId: p.id,
+          quantity: 1,
+          shopId,
+          requesterName: "Sistem",
+          notes: "OTOMATIK EKLEME (STOK SIFIRLANDI)"
+        }))
+      });
+    }
+
+    revalidatePath("/");
+    revalidatePath("/kurye");
+    return { success: true, count: productsToCreate.length };
+  } catch (error) {
+    console.error("syncZeroStockShortages error:", error);
+    return { success: false, error: "Senkronizasyon hatası." };
   }
 }
