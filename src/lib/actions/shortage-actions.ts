@@ -167,7 +167,13 @@ export async function getGlobalShortageList(dateStr?: string) {
     if (dateStr) {
       const range = getLocalDayRange(dateStr);
       if (range) {
-        dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+        // Show items created on the selected date OR unresolved items from earlier dates
+        dateFilter = {
+          OR: [
+            { createdAt: { gte: range.startOfDay, lte: range.endOfDay } },
+            { createdAt: { lt: range.startOfDay }, isResolved: false }
+          ]
+        };
       }
     }
 
@@ -446,7 +452,13 @@ export async function getCourierTasks(dateStr?: string) {
     if (dateStr) {
       const range = getLocalDayRange(dateStr);
       if (range) {
-        dateFilter = { createdAt: { gte: range.startOfDay, lte: range.endOfDay } };
+        // Show items created on the selected date OR unresolved items from earlier dates
+        dateFilter = {
+          OR: [
+            { createdAt: { gte: range.startOfDay, lte: range.endOfDay } },
+            { createdAt: { lt: range.startOfDay }, isResolved: false }
+          ]
+        };
       }
     }
 

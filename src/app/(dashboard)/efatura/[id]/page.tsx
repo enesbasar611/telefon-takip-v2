@@ -14,6 +14,7 @@ import {
     CheckCircle2,
     Clock,
     XCircle,
+    Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -172,6 +173,15 @@ export default function EfaturaDetayPage() {
                     Geri
                 </Button>
                 <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/api/edm/invoice/${params.id}/render`, "_blank")}
+                        className="rounded-xl"
+                    >
+                        <Eye className="mr-2 h-4 w-4" />
+                        HTML Goruntule
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"

@@ -1,5 +1,4 @@
 import https from "https";
-import { writeFileSync } from "fs";
 
 export type EdmLoginRequest = {
     requesT_HEADER: {
@@ -262,6 +261,7 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
       <cac:TaxTotal>
         <cbc:TaxAmount currencyID="${currency}">${lineTax.toFixed(2)}</cbc:TaxAmount>
         <cac:TaxSubtotal>
+          <cbc:CalculationSequenceNumeric>1</cbc:CalculationSequenceNumeric>
           <cbc:TaxableAmount currencyID="${currency}">${lineAmount.toFixed(2)}</cbc:TaxableAmount>
           <cbc:TaxAmount currencyID="${currency}">${lineTax.toFixed(2)}</cbc:TaxAmount>
           <cbc:Percent>${vatRate}</cbc:Percent>
@@ -299,11 +299,11 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
   <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
   <cbc:CustomizationID>TR1.2</cbc:CustomizationID>
   <cbc:ProfileID>${profileId}</cbc:ProfileID>
-  <cbc:ID>${xmlEscape(invoiceId)}</cbc:ID>
+  <cbc:ID />
   <cbc:CopyIndicator>false</cbc:CopyIndicator>
   <cbc:UUID>${xmlEscape(uuid)}</cbc:UUID>
   <cbc:IssueDate>${issueDateStr}</cbc:IssueDate>
-  <cbc:IssueTime>${issueTimeStr}</cbc:IssueTime>
+  <cbc:IssueTime />
   <cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>
   <cbc:Note>${xmlEscape(amountToWords(totals.payableAmount, currency))}</cbc:Note>
   ${input.note ? `<cbc:Note>${xmlEscape(input.note)}</cbc:Note>` : ""}
@@ -320,9 +320,15 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
       <cac:PostalAddress>
         <cbc:CityName>İSTANBUL</cbc:CityName>
         <cac:Country>
+          <cbc:IdentificationCode>TR</cbc:IdentificationCode>
           <cbc:Name>TÜRKİYE</cbc:Name>
         </cac:Country>
       </cac:PostalAddress>
+      <cac:PartyTaxScheme>
+        <cac:TaxScheme>
+          <cbc:Name>Mecidiyeköy</cbc:Name>
+        </cac:TaxScheme>
+      </cac:PartyTaxScheme>
     </cac:Party>
   </cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty>
@@ -338,6 +344,7 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
         <cbc:CitySubdivisionName>${xmlEscape(input.customer.district || "Merkez")}</cbc:CitySubdivisionName>
         <cbc:CityName>${xmlEscape(input.customer.city || "İSTANBUL")}</cbc:CityName>
         <cac:Country>
+          <cbc:IdentificationCode>TR</cbc:IdentificationCode>
           <cbc:Name>TÜRKİYE</cbc:Name>
         </cac:Country>
       </cac:PostalAddress>
@@ -346,6 +353,7 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID="${currency}">${totals.taxTotal.toFixed(2)}</cbc:TaxAmount>
     <cac:TaxSubtotal>
+      <cbc:CalculationSequenceNumeric>1</cbc:CalculationSequenceNumeric>
       <cbc:TaxableAmount currencyID="${currency}">${totals.subtotal.toFixed(2)}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="${currency}">${totals.taxTotal.toFixed(2)}</cbc:TaxAmount>
       <cac:TaxCategory>
@@ -561,7 +569,7 @@ export class EdmService {
                     },
                     CONTENT: {
                         contentType: "application/xml",
-                        value: toBase64(invoiceXml),
+                        Value: toBase64(invoiceXml),
                     },
                     UUID: requestUuid,
                     ID: requestId,
@@ -582,30 +590,10 @@ export class EdmService {
         const sendInvoiceAgent = getFetchAgent(sendInvoiceUrl);
         if (sendInvoiceAgent) sendInvoiceOptions.agent = sendInvoiceAgent;
 
-        console.log(`[EDM] sendInvoice başlıyor. URL: ${sendInvoiceUrl}, isEInvoice: ${isEInvoice}`);
-        try {
-            writeFileSync("C:\\Users\\PC\\.verdent\\workspace\\base\\edm_payload.json", JSON.stringify(payload, null, 2), "utf8");
-        } catch (e) {
-            console.error("[EDM] Payload yazma hatası:", e);
-        }
-        if (payload.invoice && Array.isArray(payload.invoice)) {
-            console.log(`[EDM] payload.invoice[0] keys:`, Object.keys(payload.invoice[0]));
-            if (payload.invoice[0].HEADER) {
-                console.log(`[EDM] payload.invoice[0].HEADER keys:`, Object.keys(payload.invoice[0].HEADER));
-            }
-        }
-
         const response = await fetch(sendInvoiceUrl, sendInvoiceOptions);
 
         const responseText = await response.text();
         let data: any = null;
-
-        console.log(`[EDM] sendInvoice HTTP ${response.status} - Content-Length: ${responseText.length} chars`);
-        try {
-            writeFileSync("C:\\Users\\PC\\.verdent\\workspace\\base\\edm_response.json", JSON.stringify({ status: response.status, body: responseText }, null, 2), "utf8");
-        } catch (e) {
-            console.error("[EDM] Response yazma hatası:", e);
-        }
 
         try {
             data = responseText ? JSON.parse(responseText) : null;
@@ -904,6 +892,47 @@ export class EdmService {
         if (!response.ok) {
             const detail = extractEdmError(data) || text.slice(0, 500);
             throw new Error(`EDM fatura iptal hatası: ${response.status}${detail ? ` - ${detail}` : ""}`);
+        }
+
+        return data;
+    }
+
+    static async getCompany(options: EdmRequestOptions = {}): Promise<any> {
+        const config = getEdmConfig(options);
+        const sessionId = await this.login(options);
+
+        const payload = {
+            requesT_HEADER: buildRequestHeader(sessionId, "GetCompanyRequest"),
+            useR_NAME: config.username,
+            password: config.password,
+            taxnumber: process.env.EDM_SENDER_VKN || config.username,
+        };
+
+        const url = `${config.baseUrl}/api/GetCompanyRequest`;
+        const requestOptions: any = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const agent = getFetchAgent(url);
+        if (agent) requestOptions.agent = agent;
+
+        const response = await fetch(url, requestOptions);
+        const text = await response.text();
+        let data: any = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch {
+            data = null;
+        }
+
+        if (!response.ok) {
+            const detail = extractEdmError(data) || text.slice(0, 500);
+            throw new Error(`EDM firma bilgisi sorgulama hatasi: ${response.status}${detail ? ` - ${detail}` : ""}`);
         }
 
         return data;

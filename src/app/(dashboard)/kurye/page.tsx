@@ -25,7 +25,8 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
         redirect("/");
     }
 
-    const selectedDate = searchParams.date || "";
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const selectedDate = searchParams.date || todayStr;
     const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session.user.role);
     const queryClient = new QueryClient();
 

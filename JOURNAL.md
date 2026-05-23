@@ -2,22 +2,22 @@
 
 ## Genel Proje Durumu
 
-- Tarih: 2026-05-22
-- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM BiliÅŸim e-Fatura REST API tam entegrasyonu (Faz 1-6) tamamlandi.
-- Graphify durumu: `graphify-out/GRAPH_REPORT.md` guncel kabul ediliyor. Rapor `84c324a2` commitinden uretilmis; mevcut HEAD `84c324a2`.
+- Tarih: 2026-05-23
+- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM BiliÅŸim e-Fatura REST API tam entegrasyonu (Faz 1-6) tamamlandi ve commitlendi.
+- Graphify durumu: `graphify-out/GRAPH_REPORT.md` guncel kabul ediliyor. Rapor `84c324a2` commitinden uretilmis; mevcut HEAD `83ff6703`.
 - Graphify ozeti: 453 dosya, 2056 node, 7225 edge, 156 community. En kritik ortak baglanti noktalarindan bazilari `getShopId()`, `cn()`, `Button`. EDM ile ilgili onemli topluluklar: Community 11 (fatura XML builder, EDM tipleri), Community 13 (ayarlar/settings), Community 46 (cron, server), Community 55 (fatura HTML/PDF uretimi), Community 69 (middleware/auth), Community 75 (Prisma), Community 93 (UI context), Community 94 (JWT/Session/User).
 - Rapor sonrasi temizlik: 13 dead-code dosyasi temizlendi; buna ek olarak daha once 3 temp/debug dosyasi silindi.
-- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti.
-- Calisma agaci notu: EDM entegrasyonu, dead-code silmeleri, Graphify ciktilari ve son tip duzeltmeleri henuz commitlenmemis durumda.
+- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti. `npm run build` basarili.
+- Calisma agaci notu: EDM entegrasyonu, POS tip guvenligi ve customer-debt-panel imza guncellemesi commitlendi (`83ff6703`).
 
 ## To-Do List (Backlog)
 
 - [x] Continuous Work Protocol baslatildi. `JOURNAL.md` olusturuldu; proje durumu ve backlog kayit altina alindi.
 - [x] Graphify raporu incelendi. Stok, kurye, finans, raporlama ve tedarik topluluklari yeni ozellik onerileri icin ana baglam olarak belirlendi.
-- [ ] Ozellik 4: EDM Biliºim e-Fatura Entegrasyonu (Tamamlandi, test asamasinda)
+- [x] Ozellik 4: EDM Biliºim e-Fatura Entegrasyonu (Tamamlandi, test asamasinda)
   - Graphify baglamlari: Community 11 (`buildInvoiceXml`, `amountToWords`, `buildRequestHeader`, EDM tipleri), Community 13 (`getSettings`, `getShop`, `updateSetting`, `AyarlarPage`), Community 46 (`cron`, `getLocalIps`, `getPreferredIp`, `httpServer`, `io`), Community 55 (`generateInvoiceHTML`, `generateInvoicePDF`, `formatInvoiceMoney`, `formatDateTR`), Community 69 (`middleware`, `authMiddleware`, `config`, `role`), Community 75 (`prisma`, `PrismaClient`, `SUPER_ADMIN_EMAILS`), Community 93 (`UIContext`, `UIProvider`), Community 94 (`JWT`, `Session`, `User`).
   - Amac: EDM Biliºim e-Fatura/e-Arºiv servisini kendi sistem üzerinden tam entegre etmek; yeni fatura oluºturma, gönderme, gelen fatura alma, HTML/PDF indirme, iptal ve ayar yönetimi. EDM sitesine yönlendirme yok.
-  - Durum: Faz 1-6 tamamlandi (Prisma schema, EDM client, API routes, UI sayfalari, cron senkronizasyonu, sidebar/menu, modul aktivasyonu, otomasyon ayarlari). Test credentials ile login basarili. End-to-end fatura gonderimi test edilecek.
+  - Durum: Faz 1-6 tamamlandi (Prisma schema, EDM client, API routes, UI sayfalari, cron senkronizasyonu, sidebar/menu, modul aktivasyonu, otomasyon ayarlari). Test credentials ile login basarili. Payload key'leri EDM REST API beklenen buyuk harf formatina cevrildi (HEADER, CONTENT, SENDER, RECEIVER, ISSUE_DATE, PAYABLE_AMOUNT, PROFILEID, EARCHIVE, INVOICE_TYPE, RECEIVER_ALIAS, INVOICE_SEND_TYPE, UUID, ID). CONTENT.Value base64 string olarak guncellendi (EDM REST API byte array bekliyordu, base64 string kabul ediyor). XSLT sablonlari public/xslt/ altina eklendi. TenantSettings ve Invoices Prisma modelleri eklendi. Encryption servisi (AES-256) yazildi. Registration servisi (initializeParameter, createCustomerPortal, getTenantBalanceAndStatus, loadCredit) yazildi. Debug/test endpoint'leri temizlendi. Build ve tip kontrolu basarili.
 
 - [ ] Ozellik 1: Akilli Stok Yenileme ve Tedarik Planlama
   - Graphify baglamlari: Community 9 (`addShortageItem`, shortage flow), Community 32 (`SupplierOrderContext`, supplier order lists), Community 33 (`AI alerts`, purchase orders), Community 67 (`getCriticalProducts`, stock movements).

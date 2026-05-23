@@ -22,11 +22,11 @@ export async function PUT(request: Request) {
         const {
             senderVkn,
             senderName,
-            companyAddress,
-            companyCity,
-            companyDistrict,
-            taxOffice,
-            defaultCurrency,
+            username,
+            passwordEncrypted,
+            apiUrl,
+            registrationUrl,
+            environment,
             isActive,
         } = body;
 
@@ -42,22 +42,22 @@ export async function PUT(request: Request) {
             update: {
                 senderVkn,
                 senderName,
-                companyAddress,
-                companyCity,
-                companyDistrict,
-                taxOffice,
-                defaultCurrency: defaultCurrency || "TRY",
+                username,
+                passwordEncrypted,
+                apiUrl,
+                registrationUrl,
+                environment: environment || "TEST",
                 isActive: isActive ?? false,
             },
             create: {
                 shopId,
                 senderVkn,
                 senderName,
-                companyAddress,
-                companyCity,
-                companyDistrict,
-                taxOffice,
-                defaultCurrency: defaultCurrency || "TRY",
+                username,
+                passwordEncrypted,
+                apiUrl,
+                registrationUrl,
+                environment: environment || "TEST",
                 isActive: isActive ?? false,
             },
         });
@@ -68,10 +68,6 @@ export async function PUT(request: Request) {
             data: {
                 taxNumber: senderVkn,
                 companyName: senderName,
-                companyAddress,
-                companyCity,
-                companyDistrict,
-                taxOffice,
             },
         });
 

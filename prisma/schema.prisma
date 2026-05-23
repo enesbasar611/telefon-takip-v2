@@ -53,10 +53,10 @@ model Shop {
   serviceTickets       ServiceTicket[]
   serviceUsedParts     ServiceUsedPart[]
   settings             Setting[]
+  edmSettings          EDMSettings?
   edmInvoices          EDMInvoice[]
   edmInvoiceLines      EDMInvoiceLine[]
   edmIncomingInvoices  EDMIncomingInvoice[]
-  edmSettings          EDMSettings?
   shortageItems        ShortageItem[]
   stockAIAlerts        StockAIAlert[]
   suppliers            Supplier[]
@@ -989,18 +989,52 @@ model EDMIncomingInvoice {
 }
 
 model EDMSettings {
+  id                String   @id @default(cuid())
+  shopId            String   @unique
+  environment       String   @default("TEST") // TEST or PRODUCTION
+  senderVkn         String?
+  senderName        String?
+  username          String?
+  passwordEncrypted String?  @db.Text
+  apiUrl            String?
+  registrationUrl   String?
+  isActive          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model TenantSettings {
+  id                   String   @id @default(cuid())
+  tenant_id            String   @unique
+  company_vkn          String
+  edm_username         String
+  edm_password_encrypted String
+  integration_code     String?
+  integration_company_id Int?
+  xslt_path_satim      String?
+  xslt_path_alim       String?
+  is_active            Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Invoices {
   id              String   @id @default(cuid())
-  shopId          String   @unique
-  senderVkn       String
-  senderName      String
-  companyAddress  String?
-  companyCity     String? @default("İSTANBUL")
-  companyDistrict String?
-  taxOffice       String?
-  defaultCurrency String   @default("TRY")
-  isActive        Boolean  @default(false)
+  tenant_id       String
+  direction       String   // INBOUND or OUTBOUND
+  invoice_number  String?
+  ettn            String
+  receiver_title  String?
+  receiver_vkn    String?
+  invoice_date    DateTime?
+  payable_amount  Decimal  @db.Decimal(12, 2)
+  status          String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  shop Shop @relation(fields: [shopId], references: [id])
+  @@index([tenant_id, direction])
+  @@index([tenant_id, ettn])
+  @@index([tenant_id, invoice_date])
 }
