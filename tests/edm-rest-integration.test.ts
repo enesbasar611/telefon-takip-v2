@@ -16,8 +16,8 @@ async function testGetInvoicePdf() {
         const pdfBuffer = await EdmService.getInvoiceDocument(uuid, "pdf");
         
         console.log(`✅ PDF başarılı! Boyut: ${pdfBuffer.length} bytes`);
-        console.log(`📄 URL: http://localhost:5000/api/test/edm-view/${uuid}`);
-        console.log(`📄 URL (HTML): http://localhost:5000/api/test/edm-view/${uuid}?format=html`);
+        console.log(`📄 URL: http://localhost:5000/api/test/edm-view-document?uuid=${uuid}&format=pdf&method=get-document`);
+        console.log(`📄 URL (HTML): http://localhost:5000/api/test/edm-view-document?uuid=${uuid}&format=html&method=get-document`);
         
         return pdfBuffer;
     } catch (error) {
@@ -47,10 +47,10 @@ async function testGetInvoiceHtml() {
 
 // Tarayıcıda Test:
 // 1. PDF önizlemesi:
-//    http://localhost:5000/api/test/edm-view/3694852c-47a6-4297-baf2-f5eacad032e9
+//    http://localhost:5000/api/test/edm-view-document?uuid=3694852c-47a6-4297-baf2-f5eacad032e9&format=pdf&method=get-document
 //
 // 2. HTML önizlemesi:
-//    http://localhost:5000/api/test/edm-view/3694852c-47a6-4297-baf2-f5eacad032e9?format=html
+//    http://localhost:5000/api/test/edm-view-document?uuid=3694852c-47a6-4297-baf2-f5eacad032e9&format=html&method=get-document
 
 if (require.main === module) {
     // Node.js'den doğrudan çalıştırıldıysa

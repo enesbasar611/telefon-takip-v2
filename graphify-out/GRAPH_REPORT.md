@@ -1,16 +1,16 @@
-# Graph Report - telefon-takip-v2  (2026-05-18)
+# Graph Report - telefon-takip-v2  (2026-05-22)
 
 ## Corpus Check
-- 406 files · ~335,805 words
+- 453 files · ~359,951 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1829 nodes · 6817 edges · 112 communities (88 shown, 24 thin omitted)
+- 2056 nodes · 7225 edges · 156 communities (106 shown, 50 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 22 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `83d4502e`
+- Built from commit: `84c324a2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -99,296 +99,397 @@
 - [[_COMMUNITY_Community 81|Community 81]]
 - [[_COMMUNITY_Community 82|Community 82]]
 - [[_COMMUNITY_Community 83|Community 83]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
 - [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 121|Community 121]]
+- [[_COMMUNITY_Community 122|Community 122]]
+- [[_COMMUNITY_Community 123|Community 123]]
+- [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 151|Community 151]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `getShopId()` - 294 edges
-2. `cn()` - 227 edges
-3. `serializePrisma()` - 186 edges
-4. `Button` - 145 edges
-5. `DialogContent` - 85 edges
-6. `Input` - 82 edges
-7. `DialogHeader()` - 79 edges
-8. `DialogTitle` - 79 edges
-9. `Badge()` - 77 edges
-10. `Label` - 69 edges
+1. `getShopId()` - 306 edges
+2. `cn()` - 232 edges
+3. `serializePrisma()` - 187 edges
+4. `Button` - 147 edges
+5. `DialogContent` - 86 edges
+6. `Input` - 83 edges
+7. `DialogHeader()` - 80 edges
+8. `DialogTitle` - 80 edges
+9. `Badge()` - 78 edges
+10. `Label` - 70 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `MobileScannerSettingsPage()` --calls--> `useScanner()`  [EXTRACTED]
-  src/app/(dashboard)/ayarlar/moduller/page.tsx → src/hooks/use-scanner.ts
 - `CourierPage()` --calls--> `getStaff()`  [INFERRED]
   src/app/(dashboard)/kurye/page.tsx → src/lib/actions/staff-actions.ts
-- `GET()` --calls--> `getShopId()`  [EXTRACTED]
-  src/app/api/whatsapp/config/route.ts → src/lib/auth.ts
-- `POST()` --calls--> `getShopId()`  [EXTRACTED]
-  src/app/api/whatsapp/config/route.ts → src/lib/auth.ts
-- `OnboardingPage()` --calls--> `cn()`  [EXTRACTED]
-  src/app/onboarding/page.tsx → src/lib/utils.ts
+- `VeresiyePage()` --calls--> `getShopId()`  [EXTRACTED]
+  src/app/(dashboard)/veresiye/page.tsx → src/lib/auth.ts
+- `SortableItem()` --calls--> `cn()`  [EXTRACTED]
+  src/components/dashboard/dashboard-client.tsx → src/lib/utils.ts
+- `TreeItem()` --calls--> `cn()`  [EXTRACTED]
+  src/components/product/category-management-client.tsx → src/lib/utils.ts
+- `RootDropZone()` --calls--> `cn()`  [EXTRACTED]
+  src/components/product/category-management-client.tsx → src/lib/utils.ts
 
-## Communities (112 total, 24 thin omitted)
+## Communities (156 total, 50 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
-Nodes (105): deleteCustomer(), deleteProduct(), globalSearchAction(), deleteServiceTicket(), deleteSupplier(), AdminFormsEditor(), ShopForm(), BarcodeLabelPrintDialog() (+97 more)
+Nodes (71): getCustomerById(), getRecentTransactions(), SalesTrendChart(), SalesTrendChartProps, ServiceStatusChart(), ServiceStatusChartProps, CustomerDebtPanel(), CustomerDebtPanelProps (+63 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
-Nodes (50): backupToDriveAction(), ensureGoogleDriveFolderAction(), ExportCategory, fullResetAction(), getExportData(), importData(), softResetAction(), transactionResetAction() (+42 more)
+Nodes (49): getAccountAnalytics(), validateGeminiKeyAction(), getProductMovements(), MobileSidebar(), CustomerInfo, DeviceExpertInfo, DeviceReceiptModal(), DeviceReceiptModalProps (+41 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.05
-Nodes (52): clearCategoryProducts(), createCategory(), CreateCategoryData, deleteCategory(), getAllCategories, reorderCategories(), updateCategory(), UpdateCategoryData (+44 more)
+Cohesion: 0.1
+Nodes (40): getAccounts(), bulkCreateProducts(), updateShop(), INDUSTRIES, FormFactoryProps, EditCustomerClientProps, REQUIRED_FIELDS, DeviceListClientProps (+32 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.06
-Nodes (52): getCustomersPaginated(), getDeadStockCount(), approveShortageItem(), assignShortageBulkToCourier(), assignShortageToCourier(), deleteShortageItem(), deleteShortageItems(), finishCourierDay() (+44 more)
+Cohesion: 0.07
+Nodes (39): findCustomerByName(), findCustomerByPhone(), FormFactory(), WhatsAppConfirmModalProps, AddDebtModalProps, DebtDraftItem, extractCoreAndAttributes(), getIndustryAccessories() (+31 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.1
-Nodes (34): findCustomerByName(), findCustomerByPhone(), INDUSTRIES, BarcodeLabelPrintDialogProps, AIReport, CustomerFormValues, customerSchema, REQUIRED_FIELDS (+26 more)
+Cohesion: 0.07
+Nodes (44): getWhatsAppStatusAction(), clampRemainingAmount(), collectDebtPayment(), collectGlobalCustomerPayment(), createDebt(), deleteCustomerPayment(), deleteDebt(), getCustomerStatement() (+36 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.06
-Nodes (42): getProductMovements(), MobileSidebar(), useSupplierOrders(), CustomerInfo, DeviceExpertInfo, DeviceReceiptModal(), DeviceReceiptModalProps, FormType (+34 more)
+Nodes (29): AIProductResult, AIReport, DeviceAiStockAdviceModalProps, ExpiringWarrantiesModalProps, CurrencyConverterModalProps, BulkAddProductModal(), BulkAddProductModalProps, Category (+21 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.05
-Nodes (18): CreateDeviceModal, DeviceAiStockAdviceModal, DeviceHubDataProps, DeviceImportModal, DeviceMonthlySalesModal, ExpiringWarrantiesModal, DeviceAiStockAdviceModal(), DeviceAiStockAdviceModalProps (+10 more)
+Cohesion: 0.08
+Nodes (43): createCustomer(), createCustomerMuted(), deleteCustomer(), getCustomers(), resolveCustomerForDebt(), updateCustomer(), closeDailySession(), createAccount() (+35 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.09
-Nodes (29): CreateEventModalProps, DayDetailsModalProps, AddCustomerDialogProps, EditCustomerClientProps, DailySession, ReminderManagementProps, BulkAddProductModalProps, Category (+21 more)
+Cohesion: 0.07
+Nodes (41): addShortageItem(), addShortageItems(), approveShortageItem(), assignShortageBulkToCourier(), assignShortageToCourier(), bulkAssignProductsToCourier(), bulkMarkShortageAsNotFound(), bulkMarkShortageAsTaken() (+33 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.07
-Nodes (33): createDeviceEntry(), searchProducts, CustomerDebtPanelProps, Condition, CreateDeviceModal(), DeviceFormValues, deviceSchema, POPULAR_BRANDS (+25 more)
+Nodes (31): getCashflowReport(), getDashboardStats(), getDetailedExportData(), getDeviceBrandDistribution(), getSalesReport(), getServiceMetrics(), getTopProductsReport(), CashflowChart() (+23 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.08
-Nodes (36): sendWhatsAppAction(), updateManualTransaction(), getPOSInitialData(), createSale(), deleteSale(), deleteSales(), getSaleById(), addPartToService() (+28 more)
+Cohesion: 0.09
+Nodes (34): getProfitabilityByModel(), getProfitMatrix(), getReturnAnalytics(), getTopRepairedModels(), getCurrentExchangeRates(), getExchangeRates(), syncAllRates(), getDashboardFinancialSummary() (+26 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.1
-Nodes (32): getProfitabilityByModel(), getProfitMatrix(), getReturnAnalytics(), getTopRepairedModels(), getAccountBalanceDetails(), getCollectionDetails(), getCriticalStockDetails(), getDailySalesDetails() (+24 more)
+Cohesion: 0.09
+Nodes (35): clearCategoryProducts(), createCategory(), CreateCategoryData, deleteCategory(), getAllCategories, reorderCategories(), updateCategory(), UpdateCategoryData (+27 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.06
-Nodes (27): CashflowChart(), CashflowChartProps, COLORS, DeviceBrandChart(), DeviceBrandChartProps, SalesTrendChart(), SalesTrendChartProps, ServiceStatusChart() (+19 more)
-
-### Community 12 - "Community 12"
 Cohesion: 0.09
-Nodes (25): getLiveActivity(), DashboardClient(), DashboardClientProps, SortableItem(), WidgetConfig, DashboardContext, DashboardContextType, DashboardProvider() (+17 more)
+Nodes (22): amountToWords(), buildInvoiceXml(), buildRequestHeader(), EdmInvoiceCustomer, EdmInvoiceInput, EdmInvoiceLine, EdmLoginRequest, EdmLoginResponse (+14 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.11
-Nodes (32): getDebts(), getThisMonthCollected(), closeDailySession(), createAccount(), createManualTransaction(), deleteAccount(), deleteAttachment(), deleteTransaction() (+24 more)
+Cohesion: 0.09
+Nodes (25): getDebts(), getThisMonthCollected(), getAllReceiptSettings(), bulkUpdateSettings(), getSettings, getShop, updateSetting(), AyarlarPage() (+17 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.09
-Nodes (29): collectDebtPayment(), collectGlobalCustomerPayment(), createDebt(), deleteCustomerPayment(), deleteDebt(), getCustomerStatement(), getDebtStatsDetails(), startTrackingDebt() (+21 more)
+Nodes (29): ensureProductBarcode(), Barcode(), BarcodeComponent, BarcodeProps, BarcodeLabelPrintDialog(), BarcodeLabelPrintDialogProps, BarcodeCopiesMode, BarcodeLabelSettings (+21 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.15
-Nodes (16): getCustomerById(), CustomerDetailPage(), getLoyaltyTier(), MobileScannerSettingsPage(), Notification, ServiceStatsProps, statusConfig, statusColors (+8 more)
+Cohesion: 0.1
+Nodes (30): sendWhatsAppAction(), addPartToService(), addServiceLogWithNote(), assignTechnician(), createServiceTicket(), deleteServiceTicket(), getServiceTicketById(), orderAndAddPartToService() (+22 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.1
-Nodes (23): getTopProducts(), CustomerDebtPanel(), DashboardContent(), DebtReceiptModal(), DebtReceiptModalProps, TransferModal(), cn(), parseCurrency() (+15 more)
+Cohesion: 0.11
+Nodes (23): getProfile(), updateDashboardLayout(), DashboardClient(), DashboardClientProps, SortableItem(), WidgetConfig, DashboardContext, DashboardContextType (+15 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.1
-Nodes (24): CreateAccountModal(), CreateTransactionModalProps, TransactionFormValues, transactionSchema, formatCurrency(), Category, QuickCreateProductModalProps, QuickProductFormValues (+16 more)
+Nodes (29): receivePurchaseOrderAction(), useShortage(), useSupplierOrders(), AccountDetailModal(), TransferModal(), cn(), ShortageList(), OnboardingPage() (+21 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.08
-Nodes (20): metadata, BottomNav(), GlobalSearch(), ThemeProvider(), SupplierOrderContext, SupplierOrderContextType, SupplierOrderItem, SupplierOrderList (+12 more)
+Cohesion: 0.14
+Nodes (24): deleteIndustryTemplate(), getHexColor(), getIndustryTemplates(), seedIndustryTemplates(), updateIndustryTemplate(), adminCreateShop(), checkSuperAdmin(), deleteShop() (+16 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.09
-Nodes (28): CreateCustomerModal(), Action, ActionType, actionTypes, addToRemoveQueue(), dispatch(), genId(), listeners (+20 more)
+Cohesion: 0.08
+Nodes (23): getDeviceList(), getExpiringDevices(), CreateDeviceModal, DeviceAiStockAdviceModal, DeviceHubData(), DeviceHubDataProps, DeviceImportModal, DeviceMonthlySalesModal (+15 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.11
-Nodes (19): getDashboardInit(), getDashboardStats(), getRecentSales(), MobileStatsHeader(), MobileStatsHeaderProps, SmartInsights(), IconMap, StatCard() (+11 more)
+Cohesion: 0.16
+Nodes (22): cn(), CustomerListClient(), Props, DeviceActionsColumn(), DeviceActionsColumnProps, Account, CreateTransactionModal(), EditCustomerPaymentModal() (+14 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.1
-Nodes (24): ensureProductBarcode(), BarcodeCopiesMode, BarcodeLabelSettings, BarcodeLabelSize, BarcodePrintItem, BarcodeProductInput, buildBarcodePrintQueue(), clampInteger() (+16 more)
+Cohesion: 0.14
+Nodes (15): statusColors, today, Debt, VeresiyeClientProps, ServiceTabsControllerProps, CriticalStockDialogProps, Table, TableBody (+7 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.16
-Nodes (25): getExchangeRates(), syncAllRates(), AIDiagnosticResult, AIIntentClarification, AIProductResult, AISearchFilters, AIUpdateOperation, AIUpdateResponse (+17 more)
+Cohesion: 0.11
+Nodes (18): CHECKLIST_ITEMS, Tab, StockReceiptModal(), StockReceiptModalProps, ServiceAIModal(), ServiceAIModalProps, ServiceDetailsModal(), ServiceDetailsModalProps (+10 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.13
-Nodes (20): bulkDeleteAgendaEventsAction(), clearMonthAgendaEventsAction(), completeAgendaEventAction(), createAgendaEventAction(), createRecurringAgendaEventsAction(), deleteAgendaEventAction(), getCalendarEventsAction(), realizeAgendaEventAction() (+12 more)
+Cohesion: 0.15
+Nodes (27): AIDiagnosticResult, AIIntentClarification, AISearchFilters, AIUpdateOperation, AIUpdateResponse, buildCategoryContext(), buildProductContext(), buildSystemPrompt() (+19 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.12
-Nodes (19): getReceiptSettings(), getServiceTicketById(), Barcode(), BarcodeComponent, BarcodeProps, ServiceDetailPage(), statusColors, statusLabels (+11 more)
+Cohesion: 0.1
+Nodes (14): CreateEventModalProps, AddCustomerDialogProps, ServiceStatusModalProps, statusConfig, CATEGORIES, SupplierFormValues, supplierSchema, CATEGORIES (+6 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.12
-Nodes (19): DashboardDataContext, DashboardDataContextType, DashboardDataProvider(), DashboardSetting, useDashboardData(), DeviceDateRangeSelector(), DeviceDateRangeSelectorProps, AddDebtModal() (+11 more)
+Cohesion: 0.15
+Nodes (19): getStaffShell(), ImpersonationBanner(), DashboardContent(), DashboardLayout(), defaultAppearanceSettings, fontFamilies, getRadiusForButtonStyle(), getSafeBrandColor() (+11 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.16
-Nodes (22): createCustomer(), createCustomerMuted(), getCustomers(), resolveCustomerForDebt(), updateCustomer(), deleteDevice(), ensureDeviceCategory(), getDeviceList() (+14 more)
+Cohesion: 0.19
+Nodes (15): deleteProduct(), ModeToggle(), CurrencyTicker(), NotificationDropdown(), ProductTableProps, SalesHistoryClientProps, statusMap, Checkbox (+7 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.11
-Nodes (19): createStaff(), getAllLogs(), getRoleTemplates(), getStaffLogs(), updateRoleTemplate(), getDefaultStaffPermissions(), STAFF_PERMISSION_FIELDS, STAFF_ROLE_DEFAULT_PERMISSIONS (+11 more)
+Nodes (23): Action, ActionType, actionTypes, addToRemoveQueue(), dispatch(), genId(), listeners, memoryState (+15 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.13
-Nodes (20): adjustStockById(), applyBulkAIUpdates(), bulkCreateProducts(), checkStockAndAddShortage(), createCategory(), fixAllBarcodes(), getAllInventoryMovements(), getCriticalProducts() (+12 more)
+Cohesion: 0.19
+Nodes (18): backupToDriveAction(), ensureGoogleDriveFolderAction(), ExportCategory, fullResetAction(), getExportData(), softResetAction(), transactionResetAction(), GET() (+10 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.12
-Nodes (18): FormFactory(), FormFactoryProps, extractCoreAndAttributes(), Category, CreateProductModalProps, ProductFormValues, productSchema, EditProductModalProps (+10 more)
+Cohesion: 0.16
+Nodes (15): getReturnTickets(), getServiceTickets(), getWarrantyStats(), metadata, ReturnsPage(), getIndustryLabel(), ServiceTabsController(), ServiceTabsHeader() (+7 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.18
-Nodes (17): getStaffShell(), DashboardLayout(), defaultAppearanceSettings, fontFamilies, getRadiusForButtonStyle(), getSafeBrandColor(), getSafeFontFamily(), getSafeFontImport() (+9 more)
+Cohesion: 0.12
+Nodes (13): resendApprovalCode(), verifyApprovalCode(), authOptions, createShopForGoogleUser(), ensureShopOwnerUser(), ensureSuperAdminUser(), getShopManagerPermissions(), getSuperAdminPermissions() (+5 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.19
-Nodes (15): dismissNotificationAction(), getSystemNotifications(), markAllNotificationsAsReadAction(), markNotificationAsReadAction(), NotificationCategory, NotificationType, SystemNotification, getServiceCounts() (+7 more)
+Cohesion: 0.16
+Nodes (16): getCategories, getProductsForCategorySummary, getCourierTasks(), getGlobalShortageList(), getLocalDayRange(), withCourierPriority(), getSuppliers(), CourierPage() (+8 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.18
-Nodes (13): COLOR_HOVER, COLOR_MAP, QUICK_COMMANDS, useScanner(), POSCompact(), POSInterface(), ReceiptModal(), ReceiptModalProps (+5 more)
+Cohesion: 0.12
+Nodes (17): assignStaffLeave(), checkStaffDeletion(), createStaff(), deleteStaffLeave(), getAllLogs(), getRoleTemplates(), getStaff(), getStaffLogs() (+9 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.15
-Nodes (18): getWhatsAppStatusAction(), generateAndCacheIndustryTemplate(), generateIndustryConfigWithAI(), onboardingAISectorAnalysis(), createShopOnboarding(), finishOnboarding(), getOnboardingAIAnalysis(), getWhatsAppStatusOnboarding() (+10 more)
+Cohesion: 0.13
+Nodes (11): metadata, BottomNav(), ThemeProvider(), ShortageProvider(), ProgressBarProvider(), NextAuthProvider(), SocketContext, SocketContextType (+3 more)
 
 ### Community 34 - "Community 34"
+Cohesion: 0.2
+Nodes (14): useScanner(), MobileScannerSettingsPage(), POSInterface(), ReceiptModal(), ReceiptModalProps, Category, CreateProductModalProps, ProductFormValues (+6 more)
+
+### Community 35 - "Community 35"
 Cohesion: 0.1
 Nodes (19): 1️⃣ Document Metadata, 2️⃣ Requirement Validation Summary, 3️⃣ Coverage & Matching Metrics, 4️⃣ Key Gaps / Risks, Test TC001 Log in and land on the dashboard, Test TC002 Create a new repair ticket and see it in the device list, Test TC003 Complete an end-to-end sale and record a transaction, Test TC004 Update a device ticket status to REPAIRING and see it reflected in the list (+11 more)
 
-### Community 35 - "Community 35"
+### Community 36 - "Community 36"
+Cohesion: 0.15
+Nodes (16): AIAnalyzeModal(), AISearchModal(), AIUpdateModal(), LayoutCustomizer(), LayoutCustomizerProps, Navbar(), getMenuItems(), Sidebar() (+8 more)
+
+### Community 37 - "Community 37"
 Cohesion: 0.18
 Nodes (13): updateShopModules(), IndustryBackground(), IndustryBackgroundProps, FieldDef, FieldType, industries, IndustryConfig, IndustryType (+5 more)
 
-### Community 36 - "Community 36"
-Cohesion: 0.15
-Nodes (10): authOptions, createShopForGoogleUser(), ensureShopOwnerUser(), ensureSuperAdminUser(), getSession, getShopManagerPermissions(), getSuperAdminPermissions(), isShopOwnerRole() (+2 more)
-
-### Community 37 - "Community 37"
-Cohesion: 0.16
-Nodes (14): orderAndAddPartToService(), AIAlertType, deleteAIAlert(), getAIAlerts(), resolveAIAlertsForProduct(), triggerAIAnalysis(), createPurchaseOrder(), createSupplier() (+6 more)
-
 ### Community 38 - "Community 38"
-Cohesion: 0.17
-Nodes (17): AIAnalyzeModal(), AISearchModal(), AIUpdateModal(), LayoutCustomizer(), Navbar(), getMenuItems(), Sidebar(), useUI() (+9 more)
+Cohesion: 0.21
+Nodes (15): WhatsAppConfirmModal(), formatPhone(), ServiceListTable(), ServiceListTableProps, statusConfig, ServiceManagementModal(), ServiceReceiptModal(), ServiceReceiptModalProps (+7 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.18
-Nodes (10): getRecentTransactions(), Debt, ReceivablesClient(), ReceivablesClientProps, StockStats, ReceivablesStream(), RecentTransactionsStream(), RecentTransactionsStream() (+2 more)
+Cohesion: 0.15
+Nodes (14): getDefaultStaffPermissions(), STAFF_PERMISSION_FIELDS, STAFF_ROLE_DEFAULT_PERMISSIONS, STAFF_ROLE_LABELS, STAFF_ROLE_TEMPLATE_ROLES, StaffPermissionSet, CreateStaffModal(), StaffDeleteModal() (+6 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.22
-Nodes (10): getShopHealthAnalysis(), getCategories, getProducts, getProductsForCategorySummary, BulkAddProductModal(), CategorySummaryCards(), CategorySummaryCardsProps, StokPage() (+2 more)
+Cohesion: 0.15
+Nodes (13): Condition, CreateDeviceModal(), DeviceFormValues, deviceSchema, POPULAR_BRANDS, WARRANTY_MONTHS_OPTIONS, Condition, deviceSchema (+5 more)
 
 ### Community 41 - "Community 41"
+Cohesion: 0.15
+Nodes (15): bulkDeleteAgendaEventsAction(), clearMonthAgendaEventsAction(), completeAgendaEventAction(), createAgendaEventAction(), createRecurringAgendaEventsAction(), deleteAgendaEventAction(), getCalendarEventsAction(), rescheduleAgendaEventAction() (+7 more)
+
+### Community 42 - "Community 42"
+Cohesion: 0.19
+Nodes (14): dismissNotificationAction(), getSystemNotifications(), markAllNotificationsAsReadAction(), markNotificationAsReadAction(), NotificationCategory, NotificationType, SystemNotification, getServiceCounts() (+6 more)
+
+### Community 43 - "Community 43"
+Cohesion: 0.15
+Nodes (15): CustomerTable(), CustomerTableProps, AccountList(), AddDebtModal(), FinansClient(), TransactionHistory(), SortOrder, useTableSort() (+7 more)
+
+### Community 44 - "Community 44"
+Cohesion: 0.15
+Nodes (13): onboardingAISectorAnalysis(), createShopOnboarding(), finishOnboarding(), getOnboardingAIAnalysis(), resetShopData(), saveOnboardingFinance(), saveOnboardingIntegrations(), LOADING_MESSAGES (+5 more)
+
+### Community 45 - "Community 45"
+Cohesion: 0.19
+Nodes (9): getLiveActivity(), MobileStatsSkeleton(), MobileActionGrid(), MobileDashboard(), MobileStatsHeader(), MobileStatsHeaderProps, LiveActivityStream(), MobileActivityStream() (+1 more)
+
+### Community 46 - "Community 46"
 Cohesion: 0.14
 Nodes (14): app, { createServer }, cron, getLocalIps(), getPreferredIp(), handle, httpServer, io (+6 more)
 
-### Community 42 - "Community 42"
-Cohesion: 0.25
-Nodes (10): getServiceTickets(), getShop, getWarrantyStats(), getIndustryLabel(), ServisListePage(), ServiceTabsController(), ServiceTabsHeader(), ServiceData() (+2 more)
-
-### Community 43 - "Community 43"
+### Community 47 - "Community 47"
 Cohesion: 0.22
-Nodes (8): getDailySession(), getDailySummary(), getTransactions(), DailySessionControl(), FinanceDashboard(), DailySessionStream(), FinancialSummaryStream(), TransactionListStream()
+Nodes (11): DashboardDataContext, DashboardDataContextType, DashboardDataProvider(), DashboardSetting, useDashboardData(), CurrencyDisplay(), CurrencyPopover(), CurrencyPopoverProps (+3 more)
 
-### Community 44 - "Community 44"
+### Community 48 - "Community 48"
+Cohesion: 0.24
+Nodes (7): getDailySession(), getDailySummary(), getTransactions(), FinanceDashboard(), DailySessionStream(), FinancialSummaryStream(), TransactionListStream()
+
+### Community 49 - "Community 49"
+Cohesion: 0.15
+Nodes (12): CreateCustomerModal(), CreateCustomerModalProps, CustomerFormValues, customerSchema, ACTION_POOL, ActionItem, FLAT_AVAILABLE, iconMap (+4 more)
+
+### Community 50 - "Community 50"
+Cohesion: 0.22
+Nodes (9): AIAlertType, cleanupNegativeStocks(), deleteAIAlert(), getAIAlerts(), resolveAIAlertsForProduct(), triggerAIAnalysis(), getCriticalAndOutOfStockProducts(), getPurchaseOrders() (+1 more)
+
+### Community 51 - "Community 51"
 Cohesion: 0.26
-Nodes (3): GET(), POST(), WhatsAppManager
+Nodes (10): getAllInventoryMovements(), getCriticalProducts(), getInventoryStats(), StokHareketleriPage(), StockDashboardMetrics(), CriticalStockDialog(), StockMovementsClient(), StockMovementsClientProps (+2 more)
 
-### Community 45 - "Community 45"
-Cohesion: 0.23
-Nodes (7): saveAIIndustryConfig(), updateSetting(), LayoutCustomizerProps, Announcement, ANNOUNCEMENTS, AnnouncementsModal(), iconMap
+### Community 52 - "Community 52"
+Cohesion: 0.15
+Nodes (12): Core Requirements, Goals, Initial Test Coverage, Milestones, Non-Goals, Open Questions, Overview, Problem (+4 more)
 
-### Community 46 - "Community 46"
+### Community 53 - "Community 53"
 Cohesion: 0.17
 Nodes (11): 1. Teknik Servis Kaydı "Dönüp Durma" Sorunu (Kesin Çözüm), [2024-05-12] - Teknik Servis Kaydı ve WhatsApp Stabilizasyonu (Güncelleme), 2. Profil ve İsim Sorunları (Düzeltildi), 3. Kısayol Düzenlemeleri, Basar Teknik V2 - JOURNAL, Degisiklik Gunlugu, Gelecek Adımlar, Genel Proje Durumu (+3 more)
 
-### Community 47 - "Community 47"
+### Community 54 - "Community 54"
 Cohesion: 0.17
 Nodes (11): 🏗 1. Genel Mimari (Architecture), 🗺 2. Sayfa Haritası (Sitemap), 🧠 3. Kritik İş Mantığı (Logic), 📊 4. Veri Modeli (Prisma Schema), 🎨 5. Özel Tasarım Kuralları (Design System), 📝 6. Geliştirme Notları, Gelecek Planları, Hassas Noktalar (Caveats) (+3 more)
 
-### Community 48 - "Community 48"
+### Community 55 - "Community 55"
+Cohesion: 0.35
+Nodes (10): escapePDFString(), formatDateTR(), formatInvoiceMoney(), formatMoney(), generateInvoiceHTML(), generateInvoicePDF(), GET(), getMockInvoice() (+2 more)
+
+### Community 56 - "Community 56"
 Cohesion: 0.22
 Nodes (8): ActionGuideModal(), ActionGuideModalProps, Badge(), colorVariants, DashboardOnboardingClient(), DashboardOnboardingClientProps, FirstTaskCheck(), FirstTaskCheckProps
 
-### Community 49 - "Community 49"
-Cohesion: 0.22
-Nodes (6): LOADING_MESSAGES, MODULES, OnboardingWizard(), OnboardingWizardProps, Step, SetupCheckProps
+### Community 57 - "Community 57"
+Cohesion: 0.25
+Nodes (8): convertTransactionAmount(), CURRENCIES, getCurrencySymbol(), isTransactionCurrency(), resolveInitialTransactionCurrency(), TransactionCurrency, TransactionRates, rates
 
-### Community 50 - "Community 50"
+### Community 58 - "Community 58"
+Cohesion: 0.24
+Nodes (6): globalSearchAction(), COLOR_HOVER, COLOR_MAP, GlobalSearch(), QUICK_COMMANDS, GlobalSearch()
+
+### Community 60 - "Community 60"
 Cohesion: 0.2
 Nodes (9): Acceptance criteria, Constraints, Goal, Known context, Option 1: Props Injection (Selected), Option 2: Live Hook (useQuery), Options (2), Recommendation (+1 more)
 
-### Community 51 - "Community 51"
+### Community 61 - "Community 61"
+Cohesion: 0.31
+Nodes (6): Announcement, ANNOUNCEMENTS, AnnouncementsModal(), getAnnouncementSeenKey(), getAnnouncementSignature(), iconMap
+
+### Community 62 - "Community 62"
+Cohesion: 0.25
+Nodes (7): searchProducts, Category, QuickCreateProductModal(), QuickCreateProductModalProps, QuickProductFormValues, quickProductSchema, AddShortageFormProps
+
+### Community 63 - "Community 63"
+Cohesion: 0.36
+Nodes (6): realizeAgendaEventAction(), CalendarEvent, CalendarGridProps, DayDetailsModalProps, EventActionBar(), EventActionBarProps
+
+### Community 64 - "Community 64"
+Cohesion: 0.31
+Nodes (6): getReceiptSettings(), getShopInfo(), serviceTerms, updateReceiptSettings(), PrintButton(), YazdirPage()
+
+### Community 66 - "Community 66"
 Cohesion: 0.22
 Nodes (6): accountDetailModal, createAccountModal, createTransactionModal, dashboardPage, shortageStatusCard, statDetailModal
 
-### Community 52 - "Community 52"
-Cohesion: 0.39
-Nodes (4): resendApprovalCode(), verifyApprovalCode(), sendApprovalCodeToAdmin(), transporter
+### Community 67 - "Community 67"
+Cohesion: 0.32
+Nodes (5): buildTransactionSearchWhere(), containsSearch(), SEARCH_MODE, emptyFilter, filter
 
-### Community 53 - "Community 53"
-Cohesion: 0.36
-Nodes (6): getUnifiedHistory(), OperationType, UnifiedOperation, getSales(), SalesHistoryPage(), SalesHistoryClient()
-
-### Community 54 - "Community 54"
+### Community 68 - "Community 68"
 Cohesion: 0.29
 Nodes (5): cleanClass, content, files, fs, path
 
-### Community 55 - "Community 55"
+### Community 69 - "Community 69"
 Cohesion: 0.33
 Nodes (6): authMiddleware, config, isOnboardingPage, isVerifyPage, middleware(), role
 
-### Community 56 - "Community 56"
+### Community 70 - "Community 70"
+Cohesion: 0.29
+Nodes (6): SupplierOrderContext, SupplierOrderContextType, SupplierOrderItem, SupplierOrderList, SupplierOrderProvider(), SupplierOrders
+
+### Community 71 - "Community 71"
+Cohesion: 0.43
+Nodes (5): getUnifiedHistory(), OperationType, UnifiedOperation, getSales(), SalesHistoryPage()
+
+### Community 72 - "Community 72"
 Cohesion: 0.33
 Nodes (3): directoryPath, fs, path
 
-### Community 57 - "Community 57"
-Cohesion: 0.53
-Nodes (4): buildScannerUrl(), isLocalHost(), NetworkInfo, pickLanIp()
+### Community 73 - "Community 73"
+Cohesion: 0.47
+Nodes (3): getPOSInitialData(), getSaleById(), POSData()
 
-### Community 58 - "Community 58"
-Cohesion: 0.4
-Nodes (4): getExchangeRate(), OrderItem, PurchaseFormProps, QuickProductCreateModal()
-
-### Community 59 - "Community 59"
+### Community 74 - "Community 74"
 Cohesion: 0.33
 Nodes (3): AuraContext, AuraContextType, AuraType
 
-### Community 61 - "Community 61"
+### Community 75 - "Community 75"
+Cohesion: 0.4
+Nodes (3): prisma, { PrismaClient }, SUPER_ADMIN_EMAILS
+
+### Community 76 - "Community 76"
+Cohesion: 0.5
+Nodes (3): getCustomersPaginated(), CustomersData(), Props
+
+### Community 93 - "Community 93"
+Cohesion: 0.5
+Nodes (3): UIContext, UIContextType, UIProvider()
+
+### Community 94 - "Community 94"
 Cohesion: 0.5
 Nodes (3): JWT, Session, User
 
 ## Knowledge Gaps
-- **467 isolated node(s):** `nextConfig`, `content`, `fs`, `path`, `directoryPath` (+462 more)
+- **544 isolated node(s):** `{ PrismaClient }`, `prisma`, `{ PrismaClient }`, `prisma`, `nextConfig` (+539 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **50 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `getShopId()` connect `Community 13` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 10`, `Community 12`, `Community 14`, `Community 15`, `Community 16`, `Community 20`, `Community 21`, `Community 22`, `Community 23`, `Community 24`, `Community 26`, `Community 27`, `Community 28`, `Community 30`, `Community 31`, `Community 33`, `Community 35`, `Community 36`, `Community 37`, `Community 38`, `Community 39`, `Community 40`, `Community 42`, `Community 43`, `Community 44`, `Community 45`, `Community 53`?**
-  _High betweenness centrality (0.118) - this node is a cross-community bridge._
-- **Why does `cn()` connect `Community 16` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 17`, `Community 18`, `Community 19`, `Community 20`, `Community 23`, `Community 24`, `Community 25`, `Community 27`, `Community 28`, `Community 29`, `Community 30`, `Community 31`, `Community 32`, `Community 33`, `Community 38`, `Community 39`, `Community 40`, `Community 45`, `Community 48`, `Community 58`?**
-  _High betweenness centrality (0.099) - this node is a cross-community bridge._
-- **Why does `Button` connect `Community 4` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 10`, `Community 11`, `Community 12`, `Community 14`, `Community 15`, `Community 16`, `Community 17`, `Community 20`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 27`, `Community 28`, `Community 29`, `Community 31`, `Community 32`, `Community 33`, `Community 35`, `Community 39`, `Community 43`, `Community 45`, `Community 48`, `Community 49`, `Community 58`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `cn()` connect `Community 17` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 20`, `Community 21`, `Community 22`, `Community 24`, `Community 25`, `Community 26`, `Community 27`, `Community 28`, `Community 31`, `Community 32`, `Community 33`, `Community 34`, `Community 36`, `Community 38`, `Community 39`, `Community 41`, `Community 42`, `Community 43`, `Community 45`, `Community 47`, `Community 49`, `Community 51`, `Community 56`, `Community 58`, `Community 61`, `Community 62`, `Community 63`?**
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
+- **Why does `getShopId()` connect `Community 4` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 17`, `Community 19`, `Community 23`, `Community 25`, `Community 26`, `Community 28`, `Community 29`, `Community 30`, `Community 31`, `Community 32`, `Community 37`, `Community 41`, `Community 42`, `Community 44`, `Community 45`, `Community 48`, `Community 50`, `Community 51`, `Community 58`, `Community 63`, `Community 64`, `Community 65`, `Community 71`, `Community 73`, `Community 76`, `Community 108`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `Button` connect `Community 34` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 17`, `Community 18`, `Community 19`, `Community 20`, `Community 21`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 26`, `Community 29`, `Community 32`, `Community 36`, `Community 37`, `Community 38`, `Community 39`, `Community 40`, `Community 41`, `Community 42`, `Community 43`, `Community 44`, `Community 47`, `Community 48`, `Community 49`, `Community 51`, `Community 56`, `Community 61`, `Community 62`, `Community 63`, `Community 64`?**
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `getShopId()` (e.g. with `parseProductWithAI()` and `parseBulkProductsWithAI()`) actually correct?**
   _`getShopId()` has 14 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `nextConfig`, `content`, `fs` to the rest of the system?**
-  _467 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `{ PrismaClient }`, `prisma`, `{ PrismaClient }` to the rest of the system?**
+  _544 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

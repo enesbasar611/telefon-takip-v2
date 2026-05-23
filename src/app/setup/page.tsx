@@ -9,7 +9,8 @@ import { getShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import {
     Wrench, Package, ShoppingCart, CreditCard, BarChart3,
-    Heart, Calendar, CheckCircle2, ArrowRight, Zap, Sparkles
+    Heart, Calendar, CheckCircle2, ArrowRight, Zap, Sparkles,
+    Users, Wallet, Truck, UserCheck, MessageSquare, FileText
 } from "lucide-react";
 import { IndustryBackground } from "@/components/industry-background";
 
@@ -50,10 +51,52 @@ const ALL_MODULES = [
         color: "rose",
     },
     {
+        key: "CRM",
+        icon: Users,
+        label: "Müşteri Yönetimi (CRM)",
+        desc: "Müşteri listesi, iletişim geçmişi ve özel kayıtlar.",
+        color: "cyan",
+    },
+    {
+        key: "DEBT",
+        icon: Wallet,
+        label: "Veresiye & Borç Takibi",
+        desc: "Müşteri borçları, ödeme planları ve borç hatırlatıcıları.",
+        color: "rose",
+    },
+    {
+        key: "SUPPLIER",
+        icon: Truck,
+        label: "Toptancı & Tedarikçi",
+        desc: "Tedarikçi borçları, malzeme alımları ve stok girişleri.",
+        color: "blue",
+    },
+    {
+        key: "STAFF",
+        icon: UserCheck,
+        label: "Personel Takibi",
+        desc: "Personel maaş, prim ve performans takibi.",
+        color: "violet",
+    },
+    {
+        key: "NOTIFICATION",
+        icon: MessageSquare,
+        label: "WhatsApp Bildirimleri",
+        desc: "Otomatik durum güncellemeleri ve müşteri mesajları.",
+        color: "emerald",
+    },
+    {
         key: "APPOINTMENT",
         icon: Calendar,
         label: "Randevu & Ajanda",
         desc: "Müşteri randevularını ajandanızda yönetin.",
+        color: "cyan",
+    },
+    {
+        key: "EFATURA",
+        icon: FileText,
+        label: "e-Fatura Entegrasyonu",
+        desc: "EDM Bilişim e-Fatura/e-Arşiv oluşturma, gönderme ve gelen fatura takibi.",
         color: "cyan",
     },
 ];

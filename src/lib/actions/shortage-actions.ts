@@ -228,11 +228,11 @@ export async function getGlobalShortageList(dateStr?: string) {
 
 export async function getCouriers() {
   try {
-    const shopId = await getShopId(false);
+    const shopId = await getShopId();
     if (!shopId) return [];
 
-    // Tüm iç personellerin (USER/Müşteri hariç) kurye olarak atanabilmesi için filtreleme genişletildi.
-    // SUPER_ADMIN'ler shopId'den bağımsız olarak listede görünsün.
+    // Tüm personel rolleri kurye olarak atanabilir (USER hariç müşteriler)
+    // COURIER, STAFF, TECHNICIAN, ADMIN, MANAGER, CASHIER, SHOP_MANAGER, SUPER_ADMIN
     const couriers = await prisma.user.findMany({
       where: {
         OR: [

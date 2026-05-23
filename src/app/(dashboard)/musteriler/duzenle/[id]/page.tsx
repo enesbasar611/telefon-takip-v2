@@ -43,7 +43,9 @@ import {
   ShieldCheck,
   Zap,
   MoreVertical,
-  Loader2
+  Loader2,
+  Hash,
+  Landmark
 } from "lucide-react";
 import { updateCustomer, getCustomerById } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
@@ -60,6 +62,8 @@ const customerSchema = z.object({
   type: z.string().optional().or(z.literal("")),
   isVip: z.boolean().optional(),
   photo: z.string().optional().or(z.literal("")),
+  taxNumber: z.string().optional().or(z.literal("")),
+  taxOffice: z.string().optional().or(z.literal("")),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -88,6 +92,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
       type: "BIREYSEL",
       isVip: false,
       photo: "",
+      taxNumber: "",
+      taxOffice: "",
     },
   });
 
@@ -103,6 +109,8 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
         type: customer.type || "BIREYSEL",
         isVip: customer.isVip || false,
         photo: customer.photo || "",
+        taxNumber: customer.taxNumber || "",
+        taxOffice: customer.taxOffice || "",
       });
       setPhotoPreview(customer.photo || null);
     }
@@ -289,6 +297,55 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
                                 <div className="relative group">
                                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
                                   <Input placeholder="example@domain.com" {...field} className="bg-background border-border/50 h-14 pl-12 rounded-xl  focus:ring-1 focus:ring-blue-500/20" />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="taxNumber"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel className="text-gray-600  text-[10px]">VKN / TCKN</FormLabel>
+                              <FormControl>
+                                <div className="relative group">
+                                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
+                                  <Input
+                                    placeholder="10 veya 11 hane"
+                                    maxLength={11}
+                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                      field.onChange(v);
+                                    }}
+                                    className="bg-background border-border/50 h-14 pl-12 rounded-xl focus:ring-1 focus:ring-blue-500/20"
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="taxOffice"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel className="text-gray-600  text-[10px]">VERGİ DAİRESİ</FormLabel>
+                              <FormControl>
+                                <div className="relative group">
+                                  <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700 group-focus-within:text-blue-500 transition-colors" />
+                                  <Input
+                                    placeholder="Örn: Beyoğlu"
+                                    {...field}
+                                    value={field.value || ""}
+                                    className="bg-background border-border/50 h-14 pl-12 rounded-xl focus:ring-1 focus:ring-blue-500/20"
+                                  />
                                 </div>
                               </FormControl>
                               <FormMessage />

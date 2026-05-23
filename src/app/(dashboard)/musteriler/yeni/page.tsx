@@ -40,7 +40,9 @@ import {
   Star,
   StickyNote,
   UserPlus,
-  Loader2
+  Loader2,
+  Hash,
+  Landmark
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { createCustomer } from "@/lib/actions/customer-actions";
@@ -68,6 +70,8 @@ export default function NewCustomerPage() {
       type: "BIREYSEL",
       isVip: false,
       photo: "",
+      taxNumber: "",
+      taxOffice: "",
     },
   });
 
@@ -241,6 +245,50 @@ export default function NewCustomerPage() {
                                 <div className="relative">
                                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                                   <Input placeholder="example@domain.com" {...field} className="bg-background border-border/50 pl-10 focus:ring-blue-600" />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="taxNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-500  text-[10px]">VKN / TCKN</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Hash className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                                  <Input
+                                    placeholder="10 veya 11 hane"
+                                    maxLength={11}
+                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={(e) => {
+                                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                      field.onChange(v);
+                                    }}
+                                    className="bg-background border-border/50 pl-10 focus:ring-blue-600"
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="taxOffice"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-500  text-[10px]">VERGİ DAİRESİ</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Landmark className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                                  <Input placeholder="Örn: Beyoğlu" {...field} value={field.value || ""} className="bg-background border-border/50 pl-10 focus:ring-blue-600" />
                                 </div>
                               </FormControl>
                               <FormMessage />

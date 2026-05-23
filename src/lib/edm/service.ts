@@ -1,4 +1,6 @@
-type EdmLoginRequest = {
+import https from "https";
+
+export type EdmLoginRequest = {
     requesT_HEADER: {
         sessioN_ID: string;
         clienT_TXN_ID: string;
@@ -14,7 +16,7 @@ type EdmLoginRequest = {
     secreT_KEY?: string;
 };
 
-type EdmLoginResponse = {
+export type EdmLoginResponse = {
     requesT_RETURN?: {
         returN_CODE?: number;
         warnings?: string[];
@@ -22,7 +24,7 @@ type EdmLoginResponse = {
     sessioN_ID?: string | null;
 };
 
-type EdmRequestOptions = {
+export type EdmRequestOptions = {
     baseUrl?: string;
     username?: string;
     password?: string;
@@ -76,10 +78,10 @@ function trimTrailingSlash(value: string) {
 }
 
 function isSoapServiceUrl(value?: string) {
-    return Boolean(value && /\.svc(?:$|[/?#])/i.test(value));
+    return Boolean(value && /\.svc(?:$|[\/?#])/i.test(value));
 }
 
-function getEdmConfig(options: EdmRequestOptions = {}) {
+export function getEdmConfig(options: EdmRequestOptions = {}) {
     const legacyApiUrl = process.env.EDM_API_URL;
     const baseUrl = options.baseUrl
         || process.env.EDM_REST_API_URL
@@ -101,7 +103,22 @@ function getEdmConfig(options: EdmRequestOptions = {}) {
     };
 }
 
-function buildRequestHeader(sessionId = "0", reason = "Login") {
+const EDM_ALLOW_INSECURE_TLS = /^(1|true|yes)$/i.test(process.env.EDM_ALLOW_INSECURE_TLS || "");
+
+function getFetchAgent(url: string) {
+    if (!EDM_ALLOW_INSECURE_TLS) return undefined;
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol === "https:") {
+            return new https.Agent({ rejectUnauthorized: false });
+        }
+    } catch {
+        // ignore invalid url parse
+    }
+    return undefined;
+}
+
+export function buildRequestHeader(sessionId = "0", reason = "Login") {
     return {
         sessioN_ID: sessionId,
         clienT_TXN_ID: crypto.randomUUID(),
@@ -165,7 +182,7 @@ function amountToWords(amount: number, currency: string = "TRY"): string {
     const convertOrdered = (n: number, orderIdx: number) => {
         if (n === 0) return "";
         let group = convertGroup(n);
-        if (orderIdx === 1 && n === 1) group = ""; // "Bir Bin" -> "Bin"
+        if (orderIdx === 1 && n === 1) group = "";
         return group + orders[orderIdx];
     };
 
@@ -198,8 +215,19 @@ function amountToWords(amount: number, currency: string = "TRY"): string {
     return result.trim();
 }
 
-function getEdmCurrencyCode(currency: EdmInvoiceInput["currency"]) {
+export function getEdmCurrencyCode(currency: EdmInvoiceInput["currency"]) {
     return 0;
+}
+
+function getInvoiceContentType(format: "pdf" | "html") {
+    switch (format) {
+        case "pdf":
+            return 1;
+        case "html":
+            return 2;
+        default:
+            return 1;
+    }
 }
 
 function getInvoiceId(issueDate: Date, invoiceId?: string) {
@@ -209,7 +237,7 @@ function getInvoiceId(issueDate: Date, invoiceId?: string) {
     return `TST${datePart}${randomPart}`;
 }
 
-function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string, isEInvoice: boolean) {
+export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string, isEInvoice: boolean) {
     const currency = input.currency || "TRY";
     const issueDate = input.issueDate || new Date();
     const customerIdentifier = getCustomerIdentifier(input.customer);
@@ -338,13 +366,19 @@ function toBase64(value: string) {
     return Buffer.from(value, "utf8").toString("base64");
 }
 
-function extractInvoiceUuid(value: unknown): string | null {
+export function extractInvoiceUuid(value: unknown): string | null {
     if (!value || typeof value !== "object") return null;
 
     const walk = (node: any): string | null => {
         if (!node || typeof node !== "object") return null;
         if (node.UUID && typeof node.UUID === "string") return node.UUID;
         if (node.uuid && typeof node.uuid === "string") return node.uuid;
+        if (node.id && typeof node.id === "string") return node.id;
+        if (node.ID && typeof node.ID === "string") return node.ID;
+        if (node.invoiceId && typeof node.invoiceId === "string") return node.invoiceId;
+        if (node.invoicE_ID && typeof node.invoicE_ID === "string") return node.invoicE_ID;
+        if (node.trxid && typeof node.trxid === "string") return node.trxid;
+        if (node.TRXID && typeof node.TRXID === "string") return node.TRXID;
 
         for (const val of Object.values(node)) {
             if (Array.isArray(val)) {
@@ -363,7 +397,7 @@ function extractInvoiceUuid(value: unknown): string | null {
     return walk(value);
 }
 
-function extractEdmError(value: unknown): string | null {
+export function extractEdmError(value: unknown): string | null {
     if (!value || typeof value !== "object") return null;
     const parts: string[] = [];
 
@@ -393,7 +427,7 @@ function extractEdmError(value: unknown): string | null {
 }
 
 export class EdmService {
-    static async login(options: EdmRequestOptions = {}): Promise<string | null> {
+    static async login(options: EdmRequestOptions = {}): Promise<string> {
         const config = getEdmConfig(options);
         const payload: EdmLoginRequest = {
             requesT_HEADER: buildRequestHeader(),
@@ -402,14 +436,18 @@ export class EdmService {
             ...(config.secretKey ? { secreT_KEY: config.secretKey } : {}),
         };
 
-        const response = await fetch(`${config.baseUrl}/LoginRequest`, {
+        const loginUrl = `${config.baseUrl}/LoginRequest`;
+        const loginOptions: any = {
             method: "POST",
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
-        });
+        };
+        const loginAgent = getFetchAgent(loginUrl);
+        if (loginAgent) loginOptions.agent = loginAgent;
+        const response = await fetch(loginUrl, loginOptions);
 
         const responseText = await response.text();
         let data: EdmLoginResponse | null = null;
@@ -438,15 +476,36 @@ export class EdmService {
         const config = getEdmConfig(options);
         const sessionId = await this.login(options);
 
-        const response = await fetch(`${config.baseUrl}/api/CheckUser/${vknTckn}`, {
-            headers: { "Authorization": `Bearer ${sessionId}` }
-        });
+        const checkUserUrl = `${config.baseUrl}/api/CheckUserRequest`;
+        const payload = {
+            requesT_HEADER: buildRequestHeader(sessionId, "CheckUserRequest"),
+            useR_NAME: config.username,
+            user: {
+                identifier: vknTckn,
+            },
+        };
+        const checkUserOptions: any = {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const checkUserAgent = getFetchAgent(checkUserUrl);
+        if (checkUserAgent) checkUserOptions.agent = checkUserAgent;
+        const response = await fetch(checkUserUrl, checkUserOptions);
 
         if (!response.ok) return { isEInvoice: false };
 
         const data = await response.json().catch(() => null);
-        if (data && Array.isArray(data) && data.length > 0) {
-            return { isEInvoice: true, alias: data[0].Alias };
+        // EDM CheckUserRequest returns empty {} for non-registered users
+        // If response is empty or no alias, assume e-Arşiv (not e-Fatura)
+        if (data && typeof data === "object" && Object.keys(data).length > 0) {
+            const alias = data.alias || data.Alias || data.user?.alias || data.user?.Alias;
+            if (alias) {
+                return { isEInvoice: true, alias };
+            }
         }
 
         return { isEInvoice: false };
@@ -505,7 +564,8 @@ export class EdmService {
             ],
         };
 
-        const response = await fetch(`${config.baseUrl}${endpoint}`, {
+        const sendInvoiceUrl = `${config.baseUrl}${endpoint}`;
+        const sendInvoiceOptions: any = {
             method: "POST",
             headers: {
                 "Accept": "application/json",
@@ -513,17 +573,28 @@ export class EdmService {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
-        });
+        };
+        const sendInvoiceAgent = getFetchAgent(sendInvoiceUrl);
+        if (sendInvoiceAgent) sendInvoiceOptions.agent = sendInvoiceAgent;
+
+        console.log(`[EDM] sendInvoice başlıyor. URL: ${sendInvoiceUrl}, isEInvoice: ${isEInvoice}`);
+        console.log(`[EDM] sendInvoice payload keys:`, Object.keys(payload));
+        if (payload.invoice && Array.isArray(payload.invoice)) {
+            console.log(`[EDM] payload.invoice[0] keys:`, Object.keys(payload.invoice[0]));
+            console.log(`[EDM] payload.invoice[0].header keys:`, Object.keys(payload.invoice[0].header));
+        }
+
+        const response = await fetch(sendInvoiceUrl, sendInvoiceOptions);
 
         const responseText = await response.text();
         let data: any = null;
 
-        console.log(`[EDM] sendInvoice HTTP ${response.status} - raw body (${responseText.length} chars):`, responseText.slice(0, 500));
+        console.log(`[EDM] sendInvoice HTTP ${response.status} - Content-Length: ${responseText.length} chars`);
+        console.log(`[EDM] sendInvoice response body (first 800 chars):`, responseText.slice(0, 800));
 
         try {
             data = responseText ? JSON.parse(responseText) : null;
         } catch {
-            // Non-JSON response - not fatal if status is ok
             console.warn(`[EDM] sendInvoice response is not JSON. Raw: ${responseText.slice(0, 200)}`);
         }
 
@@ -548,18 +619,328 @@ export class EdmService {
         format: "pdf" | "html" = "pdf",
         options: EdmRequestOptions = {}
     ): Promise<Buffer> {
+        return await this.getInvoiceDocumentWithRetry({ uuid }, format, options);
+    }
+
+    static async getInvoiceDocumentBySearchKey(
+        searchKey: Record<string, unknown>,
+        format: "pdf" | "html" = "pdf",
+        sessionId: string,
+        config: { baseUrl: string }
+    ): Promise<Buffer | null> {
+        const contentType = getInvoiceContentType(format);
+        const requestUrl = `${config.baseUrl}/api/GetInvoiceRequest`;
+        const requestOptions: any = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json, text/plain, */*",
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                requesT_HEADER: buildRequestHeader(sessionId, "GetInvoiceRequest"),
+                invoicE_SEARCH_KEY: searchKey,
+                headeR_ONLY: "N",
+                invoicE_CONTENT_TYPE: contentType,
+            }),
+        };
+        const requestAgent = getFetchAgent(requestUrl);
+        if (requestAgent) requestOptions.agent = requestAgent;
+        const response = await fetch(requestUrl, requestOptions);
+        const responseText = await response.text();
+
+        let responseData: any = null;
+        try {
+            responseData = responseText ? JSON.parse(responseText) : null;
+        } catch {
+            responseData = null;
+        }
+
+        const extractBuffer = (data: unknown): Buffer | null => {
+            if (!data) return null;
+
+            const walk = (node: unknown): Buffer | null => {
+                if (typeof node === "string") {
+                    const candidate = node.trim();
+                    if (/^[A-Za-z0-9+/=\s]+$/.test(candidate) && candidate.length > 100) {
+                        try {
+                            return Buffer.from(candidate, "base64");
+                        } catch {
+                            return null;
+                        }
+                    }
+                    return null;
+                }
+
+                if (!node || typeof node !== "object") return null;
+
+                if (Array.isArray(node)) {
+                    for (const item of node) {
+                        const result = walk(item);
+                        if (result) return result;
+                    }
+                    return null;
+                }
+
+                const obj = node as Record<string, unknown>;
+                const content = obj["content"] ?? obj["Content"];
+                if (content && typeof content === "object") {
+                    const value = (content as Record<string, unknown>)["value"] ?? (content as Record<string, unknown>)["Value"];
+                    if (typeof value === "string") {
+                        try {
+                            return Buffer.from(value, "base64");
+                        } catch {
+                            // ignore
+                        }
+                    }
+                }
+
+                for (const value of Object.values(obj)) {
+                    const result = walk(value);
+                    if (result) return result;
+                }
+
+                return null;
+            };
+
+            return walk(data);
+        };
+
+        if (response.ok) {
+            const decoded = extractBuffer(responseData);
+            if (decoded) return decoded;
+
+            if (!responseData && responseText) {
+                try {
+                    return Buffer.from(responseText, "base64");
+                } catch {
+                    // ignore
+                }
+            }
+
+            const contentTypeHeader = response.headers.get("content-type") || "";
+            if (!/application\/json/i.test(contentTypeHeader)) {
+                const arrayBuffer = await response.arrayBuffer();
+                return Buffer.from(arrayBuffer);
+            }
+        }
+
+        return null;
+    }
+
+    static sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    static async getInvoiceDocumentWithRetry(
+        search: { uuid?: string; id?: string },
+        format: "pdf" | "html" = "pdf",
+        options: EdmRequestOptions = {},
+        maxAttempts = 10,
+        intervalMs = 3000
+    ): Promise<Buffer> {
+        const configRaw = getEdmConfig(options);
+        const config = { baseUrl: configRaw.baseUrl };
+        const sessionId = await this.login(options);
+
+        const attempted: string[] = [];
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (search.uuid) {
+                attempted.push(`GetInvoiceRequest uuid=${search.uuid} attempt=${attempt}`);
+                try {
+                    const buf = await this.getInvoiceDocumentBySearchKey({ uuid: search.uuid }, format, sessionId, config);
+                    if (buf && buf.length > 0) return buf;
+                } catch (e) {
+                    // ignore and continue
+                }
+            }
+
+            if (search.id) {
+                attempted.push(`GetInvoiceRequest id=${search.id} attempt=${attempt}`);
+                try {
+                    const buf = await this.getInvoiceDocumentBySearchKey({ id: search.id }, format, sessionId, config);
+                    if (buf && buf.length > 0) return buf;
+                } catch (e) {
+                    // ignore and continue
+                }
+            }
+
+            const fallbackUrls = [
+                `${config.baseUrl}/api/Invoice/Get${format.toUpperCase()}/${encodeURIComponent(search.uuid || search.id || "")}`,
+                `${config.baseUrl}/api/Invoice/Get${format.toUpperCase()}?uuid=${encodeURIComponent(search.uuid || search.id || "")}`,
+                `${config.baseUrl}/api/Invoice/GetDocument/${encodeURIComponent(search.uuid || search.id || "")}`,
+                `${config.baseUrl}/api/Invoice/GetDocument?uuid=${encodeURIComponent(search.uuid || search.id || "")}`,
+            ];
+
+            for (const fallbackUrl of fallbackUrls) {
+                if (!fallbackUrl.includes("%22") && !fallbackUrl.endsWith("/")) {
+                    try {
+                        const fallbackOptions: any = {
+                            headers: {
+                                "Accept": "application/octet-stream, application/pdf, text/html, */*",
+                                "Authorization": `Bearer ${sessionId}`,
+                            },
+                        };
+                        const fallbackAgent = getFetchAgent(fallbackUrl);
+                        if (fallbackAgent) fallbackOptions.agent = fallbackAgent;
+                        const fallbackResponse = await fetch(fallbackUrl, fallbackOptions);
+                        if (fallbackResponse.ok) {
+                            const arrayBuffer = await fallbackResponse.arrayBuffer();
+                            const buffer = Buffer.from(arrayBuffer);
+                            if (buffer.length > 0) return buffer;
+                        }
+                    } catch (fallbackError) {
+                        // ignore
+                    }
+                }
+            }
+
+            if (attempt < maxAttempts) await this.sleep(intervalMs);
+        }
+
+        throw new Error(`Fatura belgesi indirilemedi. Attempts: ${maxAttempts}. Tried: ${attempted.join(", ")}`);
+    }
+
+    static async getInvoiceStatus(
+        uuid: string,
+        options: EdmRequestOptions = {}
+    ): Promise<any> {
         const config = getEdmConfig(options);
         const sessionId = await this.login(options);
 
-        const response = await fetch(`${config.baseUrl}/api/Invoice/Get${format.toUpperCase()}/${uuid}`, {
-            headers: { "Authorization": `Bearer ${sessionId}` }
-        });
+        const payload = {
+            requesT_HEADER: buildRequestHeader(sessionId, "GetInvoiceStatusRequest"),
+            invoice: {
+                uuid,
+            },
+        };
 
-        if (response.ok) {
-            const arrayBuffer = await response.arrayBuffer();
-            return Buffer.from(arrayBuffer);
+        const statusUrl = `${config.baseUrl}/api/GetInvoiceStatusRequest`;
+        const statusOptions: any = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const statusAgent = getFetchAgent(statusUrl);
+        if (statusAgent) statusOptions.agent = statusAgent;
+
+        const response = await fetch(statusUrl, statusOptions);
+        const text = await response.text();
+        let data: any = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch {
+            data = null;
         }
 
-        throw new Error(`Fatura belgesi indirilemedi (${response.status})`);
+        if (!response.ok) {
+            const detail = extractEdmError(data) || text.slice(0, 500);
+            throw new Error(`EDM fatura durum sorgulama hatası: ${response.status}${detail ? ` - ${detail}` : ""}`);
+        }
+
+        return data;
+    }
+
+    static async cancelInvoice(
+        uuid: string,
+        invoiceId?: string,
+        options: EdmRequestOptions = {}
+    ): Promise<any> {
+        const config = getEdmConfig(options);
+        const sessionId = await this.login(options);
+
+        const payload = {
+            requesT_HEADER: buildRequestHeader(sessionId, "CancelInvoiceRequest"),
+            invoice: [
+                {
+                    uuid,
+                    ...(invoiceId ? { id: invoiceId } : {}),
+                },
+            ],
+        };
+
+        const cancelUrl = `${config.baseUrl}/api/CancelInvoiceRequest`;
+        const cancelOptions: any = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const cancelAgent = getFetchAgent(cancelUrl);
+        if (cancelAgent) cancelOptions.agent = cancelAgent;
+
+        const response = await fetch(cancelUrl, cancelOptions);
+        const text = await response.text();
+        let data: any = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch {
+            data = null;
+        }
+
+        if (!response.ok) {
+            const detail = extractEdmError(data) || text.slice(0, 500);
+            throw new Error(`EDM fatura iptal hatası: ${response.status}${detail ? ` - ${detail}` : ""}`);
+        }
+
+        return data;
+    }
+
+    static async getIncomingEnvelopes(
+        startDate: Date,
+        endDate: Date,
+        options: EdmRequestOptions = {}
+    ): Promise<any[]> {
+        const config = getEdmConfig(options);
+        const sessionId = await this.login(options);
+
+        const payload = {
+            requesT_HEADER: buildRequestHeader(sessionId, "GetEnvelopeRequest"),
+            invoicE_SEARCH_KEY: {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+            },
+        };
+
+        const url = `${config.baseUrl}/api/GetEnvelopeRequest`;
+        const requestOptions: any = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${sessionId}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const agent = getFetchAgent(url);
+        if (agent) requestOptions.agent = agent;
+
+        const response = await fetch(url, requestOptions);
+        const text = await response.text();
+        let data: any = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch {
+            data = null;
+        }
+
+        if (!response.ok) {
+            const detail = extractEdmError(data) || text.slice(0, 500);
+            throw new Error(`EDM gelen fatura sorgulama hatası: ${response.status}${detail ? ` - ${detail}` : ""}`);
+        }
+
+        if (data && Array.isArray(data.envelope)) {
+            return data.envelope;
+        }
+
+        return [];
     }
 }

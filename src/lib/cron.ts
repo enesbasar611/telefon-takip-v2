@@ -2,6 +2,7 @@ import cron from "node-cron";
 import prisma from "@/lib/prisma";
 import { getExportData } from "@/lib/actions/data-management-actions";
 import { getGoogleDriveClient, ensureBackupFolder, uploadBackup } from "@/lib/google-drive";
+import { initEdmCron } from "@/lib/edm/cron";
 
 /**
  * Schedule nightly backups at 03:00 AM
@@ -14,6 +15,9 @@ export function initCronJobs() {
         console.log("[CRON] Starting nightly Google Drive backups...");
         await runNightlyBackups();
     });
+
+    // EDM e-Fatura gelen fatura senkronizasyonu
+    initEdmCron();
 }
 
 async function runNightlyBackups() {

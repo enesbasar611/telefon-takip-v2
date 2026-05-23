@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import {
     Wrench, Package, ShoppingCart, BarChart3, Barcode,
     Heart, Calendar, CheckCircle2, Sparkles, Info,
-    Users, Wallet, Truck, UserCheck, MessageSquare
+    Users, Wallet, Truck, UserCheck, MessageSquare,
+    FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,13 @@ const ALL_MODULES = [
         desc: "Müşteri randevu takvimi ve iş planlayıcı.",
         color: "cyan",
     },
+    {
+        key: "EFATURA",
+        icon: FileText,
+        label: "e-Fatura Entegrasyonu",
+        desc: "EDM Bilişim e-Fatura/e-Arşiv oluşturma, gönderme ve gelen fatura takibi.",
+        color: "cyan",
+    },
 ];
 
 const colorMap: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -115,6 +123,16 @@ export function ModulesTab({ shop }: { shop: any }) {
     });
     const [saving, setSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
+
+    // shop prop değiştiğinde selected state'i senkronize et
+    useEffect(() => {
+        if (shop?.enabledModules && shop.enabledModules.length > 0) {
+            setSelected(shop.enabledModules);
+        } else {
+            setSelected(recommended);
+        }
+        setDirty(false);
+    }, [shop?.id, shop?.enabledModules?.join(",")]);
 
     const toggle = (key: string) => {
         setSelected((prev) =>

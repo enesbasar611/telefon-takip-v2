@@ -176,6 +176,7 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                         <TableHead className="font-medium px-8 py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">Profil Bilgisi</TableHead>
                                         <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">Sadakat</TableHead>
                                         <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">İletişim</TableHead>
+                                        <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest text-center">VKN/TCKN</TableHead>
                                         <TableHead className="font-medium py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest text-center">İşlem Hacmi</TableHead>
                                         <TableHead className="font-medium px-8 py-5 text-[10px] text-muted-foreground/60 uppercase tracking-widest text-right">Aksiyon</TableHead>
                                     </TableRow>
@@ -228,6 +229,20 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                                         <div className="text-[9px] text-muted-foreground/60 truncate max-w-[150px]">
                                                             {customer.email || "E-posta yok"}
                                                         </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex flex-col items-center gap-0.5">
+                                                        {customer.taxNumber ? (
+                                                            <>
+                                                                <span className="text-xs font-medium text-foreground">{customer.taxNumber}</span>
+                                                                {customer.taxOffice && (
+                                                                    <span className="text-[9px] text-muted-foreground/60">{customer.taxOffice}</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] text-muted-foreground/40">—</span>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">

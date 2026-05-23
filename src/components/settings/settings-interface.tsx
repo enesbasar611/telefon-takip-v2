@@ -111,9 +111,21 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
   const [isPending, startTransition] = useTransition();
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
 
-  // Build initial formData from settings array
+  // Build initial formData from settings array with defaults
   const initialFormData = useMemo(() => {
     const data: Record<string, string> = {};
+    // Tüm otomasyon ayarları varsayılan olarak aktif
+    const defaults: Record<string, string> = {
+      confirmBeforeMessage: "true",
+      autoReceiptOnService: "true",
+      autoReminderOnDelivery: "true",
+      showFinancialOnDashboard: "true",
+      requireApprovalForDiscount: "true",
+      autoStockAlert: "true",
+    };
+    // Önce defaults'ları koy
+    Object.assign(data, defaults);
+    // Sonra DB'den gelen değerlerle üzerine yaz
     settings.forEach((s: any) => {
       data[s.key] = s.value;
     });
@@ -122,6 +134,29 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
 
   const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
   const [savedData, setSavedData] = useState<Record<string, string>>(initialFormData);
+
+  // settings değiştiğinde formData ve savedData'yı senkronize et
+  useEffect(() => {
+    setFormData(prev => {
+      const merged = { ...initialFormData };
+      // DB'den yeni değerler gelirse üzerine yaz, ama kullanıcı değişiklik yaptıysa koru
+      settings.forEach((s: any) => {
+        if (prev[s.key] === undefined || prev[s.key] === savedData[s.key]) {
+          merged[s.key] = s.value;
+        } else {
+          merged[s.key] = prev[s.key];
+        }
+      });
+      return merged;
+    });
+    setSavedData(prev => {
+      const merged = { ...initialFormData };
+      settings.forEach((s: any) => {
+        merged[s.key] = s.value;
+      });
+      return merged;
+    });
+  }, [settings]);
 
   // Dirty state tracking
   const hasChanges = useMemo(() => {
@@ -140,10 +175,11 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
 
       startTransition(async () => {
         try {
-          // Pass true to revalidatePath and reflect changes immediately
           const result = await updateSetting(key, value, true);
           if (result.success) {
             setSavedData(prev => ({ ...prev, [key]: value }));
+            // Cache'i temizle ki yeniden yüklenince yeni değer gelsin
+            queryClient.invalidateQueries({ queryKey: ["settings"] });
           } else {
             toast.error("Ayar otomatik kaydedilemedi.");
           }
@@ -156,7 +192,7 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
         }
       });
     }
-  }, []);
+  }, [queryClient]);
 
   const handleSave = () => {
     startTransition(async () => {
@@ -274,12 +310,15 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
         </div>
       </div>
 
+      {/* FloatingSaveBar gizlendi — tüm ayarlar otomatik kaydediliyor */}
+      {/*
       <FloatingSaveBar
         hasChanges={hasChanges}
         isSaving={isPending}
         onSave={handleSave}
         onCancel={handleCancel}
       />
+      */}
     </div>
   );
 }

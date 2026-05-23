@@ -19,6 +19,8 @@ export const customerSchema = z.object({
     type: z.string().optional().default("BIREYSEL"),
     isVip: z.boolean().optional().default(false),
     photo: z.string().optional(),
+    taxNumber: z.string().optional().or(z.literal("")),
+    taxOffice: z.string().optional().or(z.literal("")),
 });
 
 // --- Product Schemas ---

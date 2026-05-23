@@ -110,7 +110,19 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       ]
     },
     { icon: CreditCard, label: "Veresiye", href: "/veresiye", module: "DEBT" },
-    { icon: FileText, label: "e-Fatura", href: "/efatura" },
+    {
+      icon: FileText,
+      label: "e-Fatura",
+      href: "/efatura",
+      module: "EFATURA",
+      subItems: [
+        { label: "Faturalarım", href: "/efatura" },
+        { label: "Yeni Fatura", href: "/efatura/yeni" },
+        { label: "Gelen Faturalar", href: "/efatura/gelen" },
+        { label: "İptaller", href: "/efatura/iptaller" },
+        { label: "Ayarlar", href: "/efatura/ayarlar" },
+      ]
+    },
     { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi", module: "SERVICE" },
     { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler", module: "SUPPLIER" },
     { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },

@@ -75,6 +75,8 @@ export async function getCustomersPaginated(params: {
           isVip: true,
           photo: true,
           loyaltyPoints: true,
+          taxNumber: true,
+          taxOffice: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -188,6 +190,8 @@ export async function createCustomer(rawData: z.input<typeof customerSchema>) {
         name: formatProperCase(data.name),
         phone: data.phone ? formatPhoneRaw(data.phone) : undefined,
         secondaryPhone: data.secondaryPhone ? formatPhoneRaw(data.secondaryPhone) : undefined,
+        taxNumber: data.taxNumber || undefined,
+        taxOffice: data.taxOffice || undefined,
         shopId,
       }
     });
@@ -238,7 +242,9 @@ export async function updateCustomer(id: string, rawData: Partial<z.infer<typeof
         ...data,
         ...(data.name ? { name: formatProperCase(data.name) } : {}),
         ...(data.phone ? { phone: formatPhoneRaw(data.phone) } : {}),
-        ...(data.secondaryPhone ? { secondaryPhone: formatPhoneRaw(data.secondaryPhone) } : {})
+        ...(data.secondaryPhone ? { secondaryPhone: formatPhoneRaw(data.secondaryPhone) } : {}),
+        ...(data.taxNumber !== undefined ? { taxNumber: data.taxNumber || null } : {}),
+        ...(data.taxOffice !== undefined ? { taxOffice: data.taxOffice || null } : {}),
       }
     });
     revalidatePath("/musteriler");

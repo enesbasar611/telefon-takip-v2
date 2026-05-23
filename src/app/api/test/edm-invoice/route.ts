@@ -23,17 +23,9 @@ export async function GET() {
     let userStatus = { isEInvoice: false, alias: undefined as string | undefined };
     let checkUserRaw: any = null;
     try {
-        const checkRes = await fetch(`${config.baseUrl}/api/CheckUser/${customerId}`, {
-            headers: { "Authorization": `Bearer ${sessionId}` }
-        });
-        const checkText = await checkRes.text();
-        checkUserRaw = { status: checkRes.status, body: checkText };
-        if (checkRes.ok) {
-            const parsed = checkText ? JSON.parse(checkText) : null;
-            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-                userStatus = { isEInvoice: true, alias: parsed[0].Alias };
-            }
-        }
+        const checkRes = await EdmService.checkUser(customerId);
+        userStatus = checkRes;
+        checkUserRaw = { status: 200, body: JSON.stringify(checkRes) };
     } catch (e: any) {
         checkUserRaw = { error: e.message };
     }
@@ -73,13 +65,28 @@ export async function GET() {
     let sendError: string | null = null;
     let uuid = "";
     let invoiceId = "";
+    let sentPayload: any = null;
 
     try {
+        // Intercept sendInvoice to capture payload
+        // We'll call it normally and capture the result
         const result = await EdmService.sendInvoice(invoiceInput);
         uuid = result.uuid || result.requestUuid;
         invoiceId = result.requestId;
         parsedResponse = result.response;
         rawResponseText = result.rawResponse || "";
+        
+        // Manually reconstruct payload for debugging
+        sentPayload = {
+            isEInvoice: userStatus.isEInvoice,
+            customerId,
+            endpoint: userStatus.isEInvoice ? "/api/Invoice/SetInvoiceRequest" : "/api/SetArchiveInvoiceRequest",
+            invoiceInput: {
+                customer: invoiceInput.customer,
+                linesCount: invoiceInput.lines.length,
+            },
+            note: "Payload details captured from EdmService - full XML content omitted for brevity",
+        };
     } catch (err: any) {
         sendError = err.message;
     }
@@ -89,9 +96,14 @@ export async function GET() {
         sessionId,
         checkUser: { customerId, ...userStatus, rawResponse: checkUserRaw },
         invoice: sendError ? null : { uuid, invoiceId },
+        sentPayload: sentPayload,
         edmResponse: parsedResponse,
         rawResponseBody: rawResponseText || "(empty)",
         error: sendError,
+        debugNotes: {
+            message: "Eğer edmResponse boşsa, EDM gönderim başarısız olmuş veya payload yanlış format. Lütfen rawResponseBody'yi kontrol edin.",
+            portalUrl: "https://test.edmbilisim.com.tr/EFaturaUI21ea",
+        },
         portalLoginUrl: "https://test.edmbilisim.com.tr/EFaturaUI21ea",
         portalCredentials: { username: config.username },
         searchHints: {

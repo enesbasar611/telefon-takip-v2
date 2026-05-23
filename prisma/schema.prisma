@@ -16,14 +16,19 @@ model Shop {
   email                String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  enabledModules       String[]              @default(["SERVICE", "STOCK", "SALE", "FINANCE"])
+  enabledModules       String[]              @default(["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"])
   industry             String                @default("GENERAL")
   themeConfig          Json?
   isFirstLogin         Boolean               @default(true)
   whatsappSessionId    String?
   isActive             Boolean               @default(true)
+  taxNumber     String?
+  taxOffice     String?
+  companyName   String?
+  companyAddress String?
+  companyCity   String?   @default("İSTANBUL")
+  companyDistrict String?
   website              String?               @default("basarteknik.tech")
-  agendaEvents         AgendaEvent[]
   attachments          Attachment[]
   categories           Category[]
   customers            Customer[]
@@ -32,6 +37,7 @@ model Shop {
   deviceHubInfos       DeviceHubInfo[]
   financeAccounts      FinanceAccount[]
   hiddenAgendaItems    HiddenAgendaItem[]
+  agendaEvents         AgendaEvent[]
   inventoryLogs        InventoryLog[]
   inventoryMovements   InventoryMovement[]
   notifications        Notification[]
@@ -47,6 +53,10 @@ model Shop {
   serviceTickets       ServiceTicket[]
   serviceUsedParts     ServiceUsedPart[]
   settings             Setting[]
+  edmInvoices          EDMInvoice[]
+  edmInvoiceLines      EDMInvoiceLine[]
+  edmIncomingInvoices  EDMIncomingInvoice[]
+  edmSettings          EDMSettings?
   shortageItems        ShortageItem[]
   stockAIAlerts        StockAIAlert[]
   suppliers            Supplier[]
@@ -133,8 +143,12 @@ model Customer {
   tickets        ServiceTicket[]
   shortageItems  ShortageItem[]
   transactions   Transaction[]
+  edmInvoices    EDMInvoice[]
   balance        Decimal         @default(0) @db.Decimal(12, 2)
   balanceUsd     Decimal         @default(0) @db.Decimal(12, 2)
+
+  taxNumber     String?
+  taxOffice     String?
 
   @@unique([shopId, phone])
 }
@@ -175,6 +189,7 @@ model ServiceTicket {
   shop                  Shop                @relation(fields: [shopId], references: [id])
   technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id])
   usedParts             ServiceUsedPart[]
+  edmInvoice            EDMInvoice?
 
   @@unique([shopId, ticketNumber])
   @@index([shopId, status])
@@ -461,6 +476,7 @@ model Sale {
   user               User                @relation(fields: [userId], references: [id])
   items              SaleItem[]
   transaction        Transaction?
+  edmInvoice         EDMInvoice?
 
   @@unique([shopId, saleNumber])
 }
@@ -882,4 +898,109 @@ model UserLeave {
 
   @@index([userId])
   @@index([shopId])
+}
+
+enum EDMInvoiceType {
+  EINVOICE
+  EARCHIVE
+}
+
+enum EDMInvoiceStatus {
+  DRAFT
+  PENDING
+  SENT
+  ERROR
+  CANCELLED
+}
+
+model EDMInvoice {
+  id              String           @id @default(cuid())
+  shopId          String
+  uuid            String           // EDM UUID (ETTN)
+  invoiceId       String           // Fatura numarası
+  type            EDMInvoiceType   @default(EARCHIVE)
+  status          EDMInvoiceStatus @default(DRAFT)
+  customerId      String?
+  saleId          String?          @unique
+  serviceTicketId String?          @unique
+  totalAmount     Decimal          @db.Decimal(12, 2)
+  subtotal        Decimal          @db.Decimal(12, 2)
+  taxTotal        Decimal          @db.Decimal(12, 2)
+  currency        String           @default("TRY")
+  issueDate       DateTime
+  note            String?
+  rawXml          String?          @db.Text
+  rawResponse     String?          @db.Text
+  edmError        String?          @db.Text
+  cancelledAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  shop          Shop             @relation(fields: [shopId], references: [id])
+  customer      Customer?        @relation(fields: [customerId], references: [id])
+  sale          Sale?            @relation(fields: [saleId], references: [id])
+  serviceTicket ServiceTicket?   @relation(fields: [serviceTicketId], references: [id])
+  lines         EDMInvoiceLine[]
+
+  @@index([shopId, status])
+  @@index([shopId, issueDate])
+  @@unique([shopId, uuid])
+}
+
+model EDMInvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  shopId      String
+  name        String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12, 2)
+  totalPrice  Decimal @db.Decimal(12, 2)
+  vatRate     Int     @default(18)
+  vatAmount   Decimal @db.Decimal(12, 2)
+  unitCode    String  @default("C62")
+
+  invoice EDMInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  shop    Shop       @relation(fields: [shopId], references: [id])
+}
+
+model EDMIncomingInvoice {
+  id           String   @id @default(cuid())
+  shopId       String
+  uuid         String   // Gelen fatura UUID
+  invoiceId    String   // Gelen fatura numarası
+  senderVkn    String
+  senderName   String
+  receiverVkn  String
+  amount       Decimal  @db.Decimal(12, 2)
+  currency     String   @default("TRY")
+  status       String   // PENDING/APPROVED/REJECTED
+  issueDate    DateTime
+  envelopeId   String?
+  htmlContent  String?  @db.Text
+  pdfBlob      Bytes?   // EDM'den alınan PDF binary
+  rawXml       String?  @db.Text
+  isRead       Boolean  @default(false)
+  syncedAt     DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, uuid])
+  @@index([shopId, issueDate])
+}
+
+model EDMSettings {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  senderVkn       String
+  senderName      String
+  companyAddress  String?
+  companyCity     String? @default("İSTANBUL")
+  companyDistrict String?
+  taxOffice       String?
+  defaultCurrency String   @default("TRY")
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id])
 }
