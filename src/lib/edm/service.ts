@@ -1,4 +1,5 @@
 import https from "https";
+import { writeFileSync } from "fs";
 
 export type EdmLoginRequest = {
     requesT_HEADER: {
@@ -240,6 +241,8 @@ function getInvoiceId(issueDate: Date, invoiceId?: string) {
 export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid: string, isEInvoice: boolean) {
     const currency = input.currency || "TRY";
     const issueDate = input.issueDate || new Date();
+    const issueDateStr = issueDate.toISOString().slice(0, 10);
+    const issueTimeStr = issueDate.toISOString().slice(11, 19);
     const customerIdentifier = getCustomerIdentifier(input.customer);
     const senderVkn = process.env.EDM_SENDER_VKN || process.env.EDM_USERNAME || "1111111111";
     const senderName = process.env.EDM_SENDER_NAME || DEFAULT_SENDER_NAME;
@@ -299,8 +302,8 @@ export function buildInvoiceXml(input: EdmInvoiceInput, invoiceId: string, uuid:
   <cbc:ID>${xmlEscape(invoiceId)}</cbc:ID>
   <cbc:CopyIndicator>false</cbc:CopyIndicator>
   <cbc:UUID>${xmlEscape(uuid)}</cbc:UUID>
-  <cbc:IssueDate>${issueDate.toISOString().slice(0, 10)}</cbc:IssueDate>
-  <cbc:IssueTime>${issueDate.toISOString().slice(11, 19)}</cbc:IssueTime>
+  <cbc:IssueDate>${issueDateStr}</cbc:IssueDate>
+  <cbc:IssueTime>${issueTimeStr}</cbc:IssueTime>
   <cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>
   <cbc:Note>${xmlEscape(amountToWords(totals.payableAmount, currency))}</cbc:Note>
   ${input.note ? `<cbc:Note>${xmlEscape(input.note)}</cbc:Note>` : ""}
@@ -534,32 +537,34 @@ export class EdmService {
         const requestId = getInvoiceId(issueDate, input.invoiceId);
         const invoiceXml = buildInvoiceXml({ ...input, issueDate }, requestId, requestUuid, isEInvoice);
         const totals = getInvoiceTotals(input.lines);
+        const issueDateStr = issueDate.toISOString().slice(0, 10);
+        const issueTimeStr = issueDate.toISOString().slice(11, 19);
 
         const payload = {
             requesT_HEADER: buildRequestHeader(sessionId, isEInvoice ? "SetInvoiceRequest" : "SetArchiveInvoiceRequest"),
             invoice: [
                 {
-                    header: {
-                        sender: process.env.EDM_SENDER_VKN || process.env.EDM_USERNAME,
-                        receiver: customerId,
-                        supplier: process.env.EDM_SENDER_NAME || DEFAULT_SENDER_NAME,
-                        customer: input.customer.name,
-                        issuE_DATE: issueDate.toISOString(),
-                        payablE_AMOUNT: {
+                    HEADER: {
+                        SENDER: process.env.EDM_SENDER_VKN || process.env.EDM_USERNAME,
+                        RECEIVER: customerId,
+                        SUPPLIER: process.env.EDM_SENDER_NAME || DEFAULT_SENDER_NAME,
+                        CUSTOMER: input.customer.name,
+                        ISSUE_DATE: issueDateStr + "T" + issueTimeStr,
+                        PAYABLE_AMOUNT: {
                             currencyID: 0,
                             value: totals.payableAmount,
                         },
-                        profileid: profileId,
-                        earchive: !isEInvoice,
-                        invoicE_TYPE: "SATIS",
-                        ...(isEInvoice ? { receiveraliaS: userStatus.alias } : { invoicE_SEND_TYPE: "ELEKTRONIK" }),
+                        PROFILEID: profileId,
+                        EARCHIVE: !isEInvoice,
+                        INVOICE_TYPE: "SATIS",
+                        ...(isEInvoice ? { RECEIVER_ALIAS: userStatus.alias } : { INVOICE_SEND_TYPE: "ELEKTRONIK" }),
                     },
-                    content: {
+                    CONTENT: {
                         contentType: "application/xml",
                         value: toBase64(invoiceXml),
                     },
-                    uuid: requestUuid,
-                    id: requestId,
+                    UUID: requestUuid,
+                    ID: requestId,
                 },
             ],
         };
@@ -578,10 +583,16 @@ export class EdmService {
         if (sendInvoiceAgent) sendInvoiceOptions.agent = sendInvoiceAgent;
 
         console.log(`[EDM] sendInvoice başlıyor. URL: ${sendInvoiceUrl}, isEInvoice: ${isEInvoice}`);
-        console.log(`[EDM] sendInvoice payload keys:`, Object.keys(payload));
+        try {
+            writeFileSync("C:\\Users\\PC\\.verdent\\workspace\\base\\edm_payload.json", JSON.stringify(payload, null, 2), "utf8");
+        } catch (e) {
+            console.error("[EDM] Payload yazma hatası:", e);
+        }
         if (payload.invoice && Array.isArray(payload.invoice)) {
             console.log(`[EDM] payload.invoice[0] keys:`, Object.keys(payload.invoice[0]));
-            console.log(`[EDM] payload.invoice[0].header keys:`, Object.keys(payload.invoice[0].header));
+            if (payload.invoice[0].HEADER) {
+                console.log(`[EDM] payload.invoice[0].HEADER keys:`, Object.keys(payload.invoice[0].HEADER));
+            }
         }
 
         const response = await fetch(sendInvoiceUrl, sendInvoiceOptions);
@@ -590,7 +601,11 @@ export class EdmService {
         let data: any = null;
 
         console.log(`[EDM] sendInvoice HTTP ${response.status} - Content-Length: ${responseText.length} chars`);
-        console.log(`[EDM] sendInvoice response body (first 800 chars):`, responseText.slice(0, 800));
+        try {
+            writeFileSync("C:\\Users\\PC\\.verdent\\workspace\\base\\edm_response.json", JSON.stringify({ status: response.status, body: responseText }, null, 2), "utf8");
+        } catch (e) {
+            console.error("[EDM] Response yazma hatası:", e);
+        }
 
         try {
             data = responseText ? JSON.parse(responseText) : null;

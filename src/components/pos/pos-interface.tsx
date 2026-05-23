@@ -78,9 +78,9 @@ export function POSInterface({ initialSaleId }: {
     enabled: !!initialSaleId
   });
 
-  const customers = posData?.customers || [];
-  const products = posData?.products || [];
-  const categories = posData?.categories || [];
+  const customers = (posData?.customers || []) as { id: string; name: string; phone: string; loyaltyPoints?: number }[];
+  const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
+  const categories = (posData?.categories || []) as { id: string; name: string }[];
 
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
@@ -139,7 +139,7 @@ export function POSInterface({ initialSaleId }: {
   // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
   useEffect(() => {
     const cid = searchParams.get("customerId");
-    if (cid && customers.find((c: any) => c.id === cid)) {
+    if (cid && customers.find((c) => c.id === cid)) {
       setSelectedCustomerId(cid);
     }
   }, [searchParams, customers]);
@@ -402,7 +402,7 @@ export function POSInterface({ initialSaleId }: {
 
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
-    return customers.find((c: any) => c.id === selectedCustomerId);
+    return customers.find((c) => c.id === selectedCustomerId);
   }, [selectedCustomerId, customers]);
 
   const totalPoints = selectedCustomer?.loyaltyPoints || 0;
@@ -585,7 +585,7 @@ export function POSInterface({ initialSaleId }: {
 
           {/* Grid Area */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/5 relative">
-            {isPosLoading && (posData?.products || []).length === 0 ? (
+            {isPosLoading && products.length === 0 ? (
               <div className="h-full w-full flex items-center justify-center">
                 <Loader2 className="h-10 w-10 text-primary animate-spin opacity-50" />
               </div>
@@ -602,7 +602,7 @@ export function POSInterface({ initialSaleId }: {
                     <button
                       key={product.id}
                       onClick={() => addToCart(product)}
-                      disabled={product.stock <= 0}
+                      disabled={(product.stock ?? 0) <= 0}
                       className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]"
                     >
                       {/* Top Row: Category & Stock */}

@@ -24,7 +24,7 @@ export async function GET(
         // Önce EDM'den dene
         try {
             const buffer = await EdmService.getInvoiceDocument(invoice.uuid, format);
-            return new NextResponse(buffer, {
+            return new NextResponse(new Uint8Array(buffer), {
                 status: 200,
                 headers: {
                     "Content-Type": format === "pdf" ? "application/pdf" : "text/html; charset=utf-8",
@@ -56,7 +56,7 @@ export async function GET(
         const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
         await browser.close();
 
-        return new NextResponse(Buffer.from(pdfBuffer), {
+        return new NextResponse(new Uint8Array(Buffer.from(pdfBuffer)), {
             status: 200,
             headers: {
                 "Content-Type": "application/pdf",

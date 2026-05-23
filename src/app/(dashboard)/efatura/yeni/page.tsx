@@ -18,19 +18,27 @@ const lineSchema = z.object({
     name: z.string().min(1, "Ürün/Hizmet adı zorunludur."),
     quantity: z.coerce.number().min(1, "Adet en az 1 olmalıdır."),
     unitPrice: z.coerce.number().min(0.01, "Birim fiyat 0'dan büyük olmalıdır."),
-    vatRate: z.coerce.number().min(0).max(100).default(18),
-    unitCode: z.string().default("C62"),
+    vatRate: z.coerce.number().min(0).max(100).optional(),
+    unitCode: z.string().optional(),
 });
 
 const invoiceSchema = z.object({
     customerId: z.string().optional(),
     lines: z.array(lineSchema).min(1, "En az bir kalem eklenmelidir."),
     issueDate: z.string().optional(),
-    currency: z.string().default("TRY"),
+    currency: z.string().optional(),
     note: z.string().optional(),
 });
 
 type InvoiceForm = z.infer<typeof invoiceSchema>;
+
+const defaultInvoice: InvoiceForm = {
+    customerId: undefined,
+    lines: [{ name: "", quantity: 1, unitPrice: 0, vatRate: 18, unitCode: "C62" }],
+    issueDate: undefined,
+    currency: "TRY",
+    note: "",
+};
 
 type Customer = {
     id: string;
@@ -73,10 +81,7 @@ export default function EfaturaYeniPage() {
         formState: { errors },
     } = useForm<InvoiceForm>({
         resolver: zodResolver(invoiceSchema),
-        defaultValues: {
-            currency: "TRY",
-            lines: [{ name: "", quantity: 1, unitPrice: 0, vatRate: 18, unitCode: "C62" }],
-        },
+        defaultValues: defaultInvoice,
     });
 
     const { fields, append, remove } = useFieldArray({ control, name: "lines" });

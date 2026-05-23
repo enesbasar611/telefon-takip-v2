@@ -61,12 +61,13 @@ export default function EfaturaIptallerPage() {
                 title="İptal Edilmiş Faturalar"
                 description="EDM üzerinden iptal edilmiş faturalarınız."
                 icon={XCircle}
-            >
-                <Button variant="outline" onClick={() => router.push("/efatura")} className="rounded-xl">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Faturalara Dön
-                </Button>
-            </PageHeader>
+                actions={
+                    <Button variant="outline" onClick={() => router.push("/efatura")} className="rounded-xl">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Faturalara Dön
+                    </Button>
+                }
+            />
 
             {loading ? (
                 <div className="flex items-center justify-center h-64">

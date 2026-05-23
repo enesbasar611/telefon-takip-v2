@@ -94,23 +94,24 @@ export default function EfaturaGelenPage() {
                 title="Gelen Faturalar"
                 description="EDM üzerinden alınan gelen e-Faturalarınız."
                 icon={Inbox}
-            >
-                <Button
-                    variant="outline"
-                    onClick={handleSync}
-                    disabled={syncing}
-                    className="rounded-xl"
-                >
-                    {syncing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                        <>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Senkronize Et
-                        </>
-                    )}
-                </Button>
-            </PageHeader>
+                actions={
+                    <Button
+                        variant="outline"
+                        onClick={handleSync}
+                        disabled={syncing}
+                        className="rounded-xl"
+                    >
+                        {syncing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Senkronize Et
+                            </>
+                        )}
+                    </Button>
+                }
+            />
 
             {loading ? (
                 <div className="flex items-center justify-center h-64">

@@ -20,7 +20,7 @@ export async function GET() {
 
     // Step 2: Check user type (e-invoice vs e-archive)
     const customerId = "11111111111"; // Test TCKN - EDM test portal
-    let userStatus = { isEInvoice: false, alias: undefined as string | undefined };
+    let userStatus: { isEInvoice: boolean; alias?: string | undefined } = { isEInvoice: false, alias: undefined };
     let checkUserRaw: any = null;
     try {
         const checkRes = await EdmService.checkUser(customerId);

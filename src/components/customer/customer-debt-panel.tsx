@@ -164,16 +164,16 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
         }
 
         startTransition(async () => {
-            const result = await collectGlobalCustomerPayment(
-                customer.id,
-                Number(paymentAmount),
+            const result = await collectGlobalCustomerPayment({
+                customerId: customer.id,
+                paymentAmount: Number(paymentAmount),
                 paymentCurrency,
-                paymentMethod,
-                accountId || undefined,
+                paymentMethod: paymentMethod as 'CASH' | 'CARD' | 'TRANSFER',
+                accountId: accountId || undefined,
                 usdRate,
                 notes,
-                selectedIds
-            );
+                debtIds: selectedIds,
+            });
 
             if (result.success) {
                 toast.success("Ödeme başarıyla alındı.");

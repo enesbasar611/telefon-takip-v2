@@ -99,15 +99,16 @@ export default function EfaturaPage() {
                 title="Faturalarım"
                 description="Gönderilen ve taslak durumundaki tüm e-Faturalarınız."
                 icon={FileText}
-            >
-                <Button
-                    onClick={() => router.push("/efatura/yeni")}
-                    className="h-10 rounded-xl bg-slate-950 text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Yeni Fatura
-                </Button>
-            </PageHeader>
+                actions={
+                    <Button
+                        onClick={() => router.push("/efatura/yeni")}
+                        className="h-10 rounded-xl bg-slate-950 text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Yeni Fatura
+                    </Button>
+                }
+            />
 
             <div className="flex flex-wrap gap-3">
                 <div className="relative flex-1 min-w-[240px]">

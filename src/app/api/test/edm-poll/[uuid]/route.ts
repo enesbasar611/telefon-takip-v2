@@ -32,7 +32,7 @@ export async function GET(
             intervalMs
         );
 
-        return new NextResponse(buffer, {
+        return new NextResponse(new Uint8Array(buffer), {
             status: 200,
             headers: {
                 "Content-Type": format === "pdf" ? "application/pdf" : "text/html",

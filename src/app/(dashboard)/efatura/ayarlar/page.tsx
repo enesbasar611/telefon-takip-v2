@@ -16,14 +16,25 @@ const settingsSchema = z.object({
     senderVkn: z.string().min(10, "VKN/TCKN en az 10 haneli olmalıdır.").max(11, "VKN/TCKN en fazla 11 haneli olmalıdır."),
     senderName: z.string().min(2, "Ünvan en az 2 karakter olmalıdır."),
     companyAddress: z.string().optional(),
-    companyCity: z.string().default("İSTANBUL"),
+    companyCity: z.string().optional(),
     companyDistrict: z.string().optional(),
     taxOffice: z.string().optional(),
-    defaultCurrency: z.string().default("TRY"),
-    isActive: z.boolean().default(false),
+    defaultCurrency: z.string().optional(),
+    isActive: z.boolean().optional(),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
+
+const defaultSettings: SettingsForm = {
+    senderVkn: "",
+    senderName: "",
+    companyAddress: "",
+    companyCity: "İSTANBUL",
+    companyDistrict: "",
+    taxOffice: "",
+    defaultCurrency: "TRY",
+    isActive: false,
+};
 
 export default function EfaturaAyarlarPage() {
     const [loading, setLoading] = useState(false);
@@ -38,11 +49,7 @@ export default function EfaturaAyarlarPage() {
         formState: { errors },
     } = useForm<SettingsForm>({
         resolver: zodResolver(settingsSchema),
-        defaultValues: {
-            companyCity: "İSTANBUL",
-            defaultCurrency: "TRY",
-            isActive: false,
-        },
+        defaultValues: defaultSettings,
     });
 
     const isActive = watch("isActive");
