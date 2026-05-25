@@ -54,11 +54,11 @@ export function RevenueAnalysisStream({ cols = 12, rows = 4 }: { cols?: number, 
                             <div className="hidden md:flex gap-10">
                                 <div className="flex flex-col">
                                     <span className="text-[9px] text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Brüt Gelir</span>
-                                    <span className="text-lg text-foreground tracking-tight">₺{profitMatrix.totalRevenue.toLocaleString('tr-TR')}</span>
+                                    <span className="text-lg text-foreground tracking-tight">₺{(profitMatrix?.totalRevenue ?? 0).toLocaleString('tr-TR')}</span>
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[9px] text-muted-foreground/60 tracking-[0.2em] mb-1 uppercase">Net Kâr</span>
-                                    <span className="text-lg text-secondary tracking-tight">₺{profitMatrix.totalNetProfit.toLocaleString('tr-TR')}</span>
+                                    <span className="text-lg text-secondary tracking-tight">₺{(profitMatrix?.totalNetProfit ?? 0).toLocaleString('tr-TR')}</span>
                                 </div>
                             </div>
                         </>

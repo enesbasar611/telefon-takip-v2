@@ -1,104 +1,66 @@
-import { NextResponse } from "next/server";
-import { getShopId } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { EdmService } from "@/lib/edm/service";
+import { getInvoices } from "@/lib/edm/rest-client";
 
-export async function GET(request: Request) {
+/**
+ * GET /api/edm/incoming
+ * Gelen faturaları listeler
+ */
+export async function GET(req: NextRequest) {
     try {
-        const shopId = await getShopId();
-        const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "20");
-        const status = searchParams.get("status");
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
-        const where: any = { shopId };
-        if (status) where.status = status;
+        const user = session.user as any;
+        const shopId = user.shopId || user.currentShopId;
 
-        const [invoices, total] = await Promise.all([
-            prisma.eDMIncomingInvoice.findMany({
-                where,
-                orderBy: { issueDate: "desc" },
-                skip: (page - 1) * limit,
-                take: limit,
-            }),
-            prisma.eDMIncomingInvoice.count({ where }),
-        ]);
-
-        return NextResponse.json({ invoices, total, page, limit });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
-
-export async function POST() {
-    try {
-        const shopId = await getShopId();
-
-        const settings = await prisma.eDMSettings.findUnique({
-            where: { shopId },
+        const edmSettings = await prisma.eDMSettings.findUnique({
+            where: { shopId: String(shopId) },
         });
 
-        if (!settings?.isActive) {
+        if (!edmSettings || !edmSettings.edmActive) {
             return NextResponse.json(
-                { error: "e-Fatura entegrasyonu aktif değil." },
-                { status: 400 }
+                { error: "e-Fatura modülü aktif değil." },
+                { status: 403 }
             );
         }
 
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
+        const { searchParams } = new URL(req.url);
+        const startDate = searchParams.get("startDate") || undefined;
+        const endDate = searchParams.get("endDate") || undefined;
 
-        const envelopes = await EdmService.getIncomingEnvelopes(startDate, endDate);
-        let created = 0;
-        let updated = 0;
+        const credentials = {
+            username: edmSettings.username!,
+            password: decryptPassword(edmSettings.passwordEncrypted),
+            senderVkn: edmSettings.senderVkn!,
+            baseUrl: edmSettings.apiUrl || undefined,
+        };
 
-        for (const env of envelopes) {
-            const uuid = env.UUID || env.uuid;
-            const invoiceId = env.ID || env.id || env.invoiceId;
-            if (!uuid) continue;
-
-            const existing = await prisma.eDMIncomingInvoice.findUnique({
-                where: { shopId_uuid: { shopId, uuid } },
-            });
-
-            const data = {
-                shopId,
-                uuid,
-                invoiceId: invoiceId || uuid,
-                senderVkn: env.senderVKN || env.sender || "",
-                senderName: env.senderName || env.supplier || "Bilinmeyen",
-                receiverVkn: env.receiverVKN || settings.senderVkn,
-                amount: env.payableAmount?.value || env.amount || 0,
-                currency: env.payableAmount?.currencyID === 0 ? "TRY" : (env.currency || "TRY"),
-                status: env.status || "PENDING",
-                issueDate: env.issueDate ? new Date(env.issueDate) : new Date(),
-                envelopeId: env.envelopeId || null,
-            };
-
-            if (existing) {
-                await prisma.eDMIncomingInvoice.update({
-                    where: { id: existing.id },
-                    data: {
-                        status: data.status,
-                        amount: data.amount,
-                        syncedAt: new Date(),
-                    },
-                });
-                updated++;
-            } else {
-                await prisma.eDMIncomingInvoice.create({ data });
-                created++;
-            }
-        }
-
-        return NextResponse.json({
-            success: true,
-            created,
-            updated,
-            totalProcessed: envelopes.length,
+        const invoices = await getInvoices(credentials, {
+            startDate,
+            endDate,
+            direction: "INBOUND",
         });
+
+        return NextResponse.json({ invoices });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[EDM Incoming List] Hata:", error);
+        return NextResponse.json(
+            { error: error.message || "Gelen faturalar listelenirken hata oluştu." },
+            { status: 500 }
+        );
+    }
+}
+
+function decryptPassword(encrypted: string | null): string {
+    if (!encrypted) throw new Error("Şifreli parola bulunamadı.");
+    try {
+        return Buffer.from(encrypted, "base64").toString("utf8");
+    } catch {
+        return encrypted;
     }
 }

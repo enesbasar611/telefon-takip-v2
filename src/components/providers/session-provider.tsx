@@ -40,7 +40,7 @@ export function NextAuthProvider({ children }: { children: React.ReactNode }) {
             // Disable background refresh when offline to prevent console errors
             refetchInterval={isOnline ? 120 : 0}
             // Only refetch on focus if online and with a delay
-            refetchOnWindowFocus={isOnline}
+            refetchOnWindowFocus={false}
         >
             <AuthStatusWatcher />
             {children}

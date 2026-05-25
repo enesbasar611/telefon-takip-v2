@@ -7,22 +7,15 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { sendApprovalCodeToAdmin } from "@/lib/mail";
+import { checkUserEInvoiceStatus } from "@/lib/e-invoice-check";
 
 
-const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ALTERNATIVE_SUPER_ADMIN = process.env.ALTERNATIVE_ADMIN_EMAIL;
 const PRIMARY_SUPER_ADMIN_EMAIL = "qwerty61.enes@gmail.com";
 
 function isSuperAdminEmail(email?: string | null): boolean {
     if (!email) return false;
     const normalizedEmail = email.toLowerCase();
-    return [
-        PRIMARY_SUPER_ADMIN_EMAIL,
-        SUPER_ADMIN_EMAIL,
-        ALTERNATIVE_SUPER_ADMIN,
-    ]
-        .filter(Boolean)
-        .some((adminEmail) => adminEmail!.toLowerCase() === normalizedEmail);
+    return normalizedEmail === PRIMARY_SUPER_ADMIN_EMAIL;
 }
 
 function generateVerificationCode(): string {
@@ -62,41 +55,17 @@ function getShopManagerPermissions() {
     };
 }
 
-async function ensureSuperAdminUser(userId: string) {
-    return prisma.user.update({
-        where: { id: userId },
-        data: getSuperAdminPermissions()
-    });
-}
-
-async function ensureShopOwnerUser(userId: string, role?: Role | string | null) {
-    return prisma.user.update({
-        where: { id: userId },
-        data: {
-            ...getShopManagerPermissions(),
-            role: isShopOwnerRole(role) ? role : "SHOP_MANAGER"
-        }
-    });
-}
-
-function needsFullAccessSync(user: {
-    isApproved?: boolean | null;
-    canSell?: boolean | null;
-    canService?: boolean | null;
-    canStock?: boolean | null;
-    canFinance?: boolean | null;
-    canDelete?: boolean | null;
-    canEdit?: boolean | null;
-}) {
-    // Only check functional permissions, NOT isApproved here 
-    // to avoid auto-approval loop in ensureShopOwnerUser
+// Note: Automatic role upgrades (ensureSuperAdminUser, ensureShopOwnerUser) 
+// have been removed to prevent unauthorized elevation.
+// Roles must now be assigned manually via the database or super admin dashboard.
+function needsFullAccessSync(user: any) {
     return !user.canSell || !user.canService || !user.canStock || !user.canFinance || !user.canDelete || !user.canEdit;
 }
 
 async function createShopForGoogleUser(user: { id: string; email?: string | null; name?: string | null }) {
     const existingUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { shopId: true }
+        select: { shopId: true, email: true }
     });
 
     if (existingUser?.shopId) {
@@ -113,14 +82,34 @@ async function createShopForGoogleUser(user: { id: string; email?: string | null
         }
     });
 
-    await prisma.user.update({
-        where: { id: user.id },
-        data: {
-            ...getShopManagerPermissions(),
-            isApproved: false, // New Google shops ALWAYS start unapproved
-            shopId: shop.id
-        }
-    });
+    const targetEmail = user.email || existingUser?.email;
+
+    if (targetEmail) {
+        await prisma.user.upsert({
+            where: { email: targetEmail.toLowerCase() },
+            update: {
+                ...getShopManagerPermissions(),
+                isApproved: false,
+                shopId: shop.id
+            },
+            create: {
+                id: user.id,
+                email: targetEmail.toLowerCase(),
+                ...getShopManagerPermissions(),
+                isApproved: false,
+                shopId: shop.id
+            }
+        });
+    } else {
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                ...getShopManagerPermissions(),
+                isApproved: false,
+                shopId: shop.id
+            }
+        });
+    }
 
     return shop.id;
 }
@@ -168,42 +157,33 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 const isSuperAdmin = isSuperAdminEmail(user.email);
-                let effectiveUser = user;
-                if (isSuperAdmin && (user.role !== "SUPER_ADMIN" || !user.isApproved || !user.canFinance || !user.canDelete || !user.canEdit)) {
-                    effectiveUser = await ensureSuperAdminUser(user.id);
-                } else if (!isSuperAdmin && isShopOwnerRole(user.role) && needsFullAccessSync(user)) {
-                    effectiveUser = await ensureShopOwnerUser(user.id, user.role);
-                }
 
-                // Kullanıcı şifreyle (yönetici tarafından oluşturulmuş hesapla) giriyorsa
-                // onay koduna gerek yoktur.
-                if (!isSuperAdmin && !effectiveUser.isApproved) {
-                    // Veritabanında onaylı değil görünüyorsa bile, credentials ile girildiği için onaylı sayıyoruz.
-                    // Eski kayıtlar için DB'yi güncelleyelim.
-                    await prisma.user.update({
-                        where: { id: effectiveUser.id },
-                        data: { isApproved: true }
-                    });
-                    effectiveUser.isApproved = true;
-                }
+                // Static role for designated Super Admin, keep existing role for others
+                const effectiveRole = isSuperAdmin ? "SUPER_ADMIN" as Role : (user.role || "USER" as Role);
 
-                if (!isSuperAdmin && !effectiveUser.shopId) {
+                // Shop check for everyone EXCEPT Super Admin
+                if (!isSuperAdmin && !user.shopId) {
                     throw new Error("ShopNotLinked");
                 }
 
+                // Approval check for everyone EXCEPT Super Admin
+                if (!isSuperAdmin && !user.isApproved) {
+                    throw new Error("AccountNotApproved");
+                }
+
                 return {
-                    id: effectiveUser.id,
-                    email: effectiveUser.email,
-                    name: effectiveUser.name,
-                    role: isSuperAdmin ? "SUPER_ADMIN" : effectiveUser.role,
-                    shopId: effectiveUser.shopId,
-                    isApproved: isSuperAdmin ? true : effectiveUser.isApproved,
-                    canSell: effectiveUser.canSell,
-                    canService: effectiveUser.canService,
-                    canStock: effectiveUser.canStock,
-                    canFinance: isSuperAdmin ? true : effectiveUser.canFinance,
-                    canEdit: isSuperAdmin ? true : effectiveUser.canEdit,
-                    canDelete: isSuperAdmin ? true : effectiveUser.canDelete,
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: effectiveRole,
+                    shopId: user.shopId,
+                    isApproved: isSuperAdmin ? true : user.isApproved,
+                    canSell: isSuperAdmin ? true : user.canSell,
+                    canService: isSuperAdmin ? true : user.canService,
+                    canStock: isSuperAdmin ? true : user.canStock,
+                    canFinance: isSuperAdmin ? true : user.canFinance,
+                    canEdit: isSuperAdmin ? true : user.canEdit,
+                    canDelete: isSuperAdmin ? true : user.canDelete,
                 };
             }
         })
@@ -213,15 +193,26 @@ export const authOptions: NextAuthOptions = {
             const email = user.email?.toLowerCase();
             const isSuperAdmin = isSuperAdminEmail(email);
 
-            if (isSuperAdmin && user.id) {
-                await ensureSuperAdminUser(user.id);
-                return true;
+            if (isSuperAdmin) {
+                return true; // Bypass all checks for Super Admin
             }
 
             if (account?.provider === "google") {
+                // Upsert Google user - restricted starting role
                 const dbUser = email
-                    ? await prisma.user.findUnique({
+                    ? await prisma.user.upsert({
                         where: { email },
+                        update: {
+                            name: user.name || undefined,
+                            image: (user.image || (user as any).picture) || undefined,
+                        },
+                        create: {
+                            email: email,
+                            name: user.name || undefined,
+                            image: (user.image || (user as any).picture) || undefined,
+                            role: Role.SHOP_MANAGER, // Use SHOP_MANAGER as default for new owners
+                            isApproved: false,
+                        },
                         select: {
                             id: true,
                             role: true,
@@ -231,35 +222,19 @@ export const authOptions: NextAuthOptions = {
                     })
                     : null;
 
-                // PROTECT AGAINST COURIERS LOGGING IN VIA OAUTH
-                // User requirement: No OAuth accounts should be COURIER.
-                if (dbUser && dbUser.role === "COURIER") {
-                    // Update role to SHOP_MANAGER or handle as per user request (force shop manager)
-                    await prisma.user.update({
-                        where: { id: dbUser.id },
-                        data: { role: "SHOP_MANAGER" }
-                    });
-                    // Refresh local record for the rest of the logic
-                    dbUser.role = "SHOP_MANAGER";
-                }
+                if (dbUser) {
+                    // Check if shop exists for onboarding redirect
+                    const shopExists = dbUser.shopId ? await prisma.shop.findUnique({ where: { id: dbUser.shopId } }) : null;
 
-                if (dbUser && !dbUser.shopId && dbUser.role === "STAFF") {
-                    await createShopForGoogleUser({ id: dbUser.id, email: user.email, name: user.name });
-                    return true;
-                }
+                    if (!dbUser.shopId || !shopExists) {
+                        return "/onboarding";
+                    }
 
-                if (dbUser && isShopOwnerRole(dbUser.role)) {
-                    if (needsFullAccessSync(dbUser)) {
-                        await ensureShopOwnerUser(dbUser.id, dbUser.role);
+                    if (!dbUser.isApproved && dbUser.role !== "COURIER") {
+                        return "/verify";
                     }
                     return true;
                 }
-
-                if (dbUser && !dbUser.isApproved) {
-                    return "/verify"; // Redirect strictly to verify if not approved
-                }
-
-                return true;
             }
 
             if (user.role !== "COURIER" && !user.isApproved) {
@@ -336,9 +311,7 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     const isSuperAdmin = isSuperAdminEmail(dbUser.email) || dbUser.role === "SUPER_ADMIN";
-                    const effectiveUser = isSuperAdmin
-                        ? (needsFullAccessSync(dbUser) || dbUser.role !== "SUPER_ADMIN" ? await ensureSuperAdminUser(dbUser.id) : dbUser)
-                        : (isShopOwnerRole(dbUser.role) && needsFullAccessSync(dbUser) ? await ensureShopOwnerUser(dbUser.id, dbUser.role) : dbUser);
+                    const effectiveUser = dbUser; // Stop auto-upgrading permissions via ensured methods
 
                     // Sync the core profile bits
                     token.id = dbUser.id;
@@ -349,9 +322,15 @@ export const authOptions: NextAuthOptions = {
                     if (!currentName || currentName === "...") {
                         const newName = dbUser.email?.split('@')[0] || "Kullanıcı";
                         try {
-                            await prisma.user.update({
-                                where: { id: dbUser.id },
-                                data: { name: newName }
+                            await prisma.user.upsert({
+                                where: { email: dbUser.email.toLowerCase() },
+                                update: { name: newName },
+                                create: {
+                                    id: dbUser.id,
+                                    email: dbUser.email.toLowerCase(),
+                                    name: newName,
+                                    role: dbUser.role
+                                }
                             });
                         } catch (e) {
                             console.error("Failed to fix user name in DB:", e);
@@ -371,9 +350,19 @@ export const authOptions: NextAuthOptions = {
                     token.shopId = effectiveUser.shopId || dbUser.shopId;
 
                     if (isSuperAdmin && !token.shopId) {
-                        // Fallback for Super Admin: find their primary shop or use the first one available
+                        // Priority 1: Primary shop (BAŞAR)
+                        // Priority 2: Any shop with "TEKNİK" or "TELEFON" (User's preferred category)
+                        // Priority 3: First available shop
                         const homeShop = await prisma.shop.findFirst({
                             where: { name: { contains: "BAŞAR", mode: "insensitive" } },
+                            orderBy: { createdAt: 'asc' }
+                        }) || await prisma.shop.findFirst({
+                            where: {
+                                OR: [
+                                    { name: { contains: "TEKNİK", mode: "insensitive" } },
+                                    { name: { contains: "TELEFON", mode: "insensitive" } }
+                                ]
+                            },
                             orderBy: { createdAt: 'asc' }
                         }) || await prisma.shop.findFirst({ orderBy: { createdAt: 'asc' } });
 
@@ -390,6 +379,9 @@ export const authOptions: NextAuthOptions = {
                     token.canEdit = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canEdit;
                     token.canDelete = (isSuperAdmin || dbUser.role === "COURIER") ? true : effectiveUser.canDelete;
                     token.isShopActive = (dbUser as any).shop?.isActive ?? true;
+
+                    // Check e-Invoice Status
+                    token.isEInvoiceUser = await checkUserEInvoiceStatus(dbUser.id);
 
                     // Impersonation detection: If Super Admin is NOT in their home shop (BAŞAR)
                     if (isSuperAdmin && token.shopId) {
@@ -424,6 +416,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.canDelete = token.canDelete;
                 session.user.isShopActive = token.isShopActive;
                 session.user.isImpersonating = token.isImpersonating;
+                session.user.isEInvoiceUser = token.isEInvoiceUser;
                 if (token.picture) session.user.image = token.picture;
                 if (token.image) session.user.image = token.image;
             }
@@ -435,42 +428,37 @@ export const authOptions: NextAuthOptions = {
             const email = user.email?.toLowerCase();
             const isSuperAdmin = isSuperAdminEmail(email);
 
-            if (isSuperAdmin && user.id) {
-                await ensureSuperAdminUser(user.id);
-            } else {
+            if (!isSuperAdmin) {
                 const dbUser = await prisma.user.findUnique({
                     where: { id: user.id },
                     select: { id: true, isApproved: true, verificationCode: true, role: true }
                 });
 
-                // Sync basic Role permissions if they are a shop owner, but don't auto-approve
-                if (dbUser && isShopOwnerRole(dbUser.role)) {
-                    if (needsFullAccessSync(dbUser as any)) {
-                        await ensureShopOwnerUser(dbUser.id, dbUser.role);
-                    }
-                }
-
                 // If not approved and no code exists, generate and send one
                 if (dbUser && !dbUser.isApproved && !dbUser.verificationCode) {
                     const code = generateVerificationCode();
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: {
+                    const normalizedEmail = user.email!.toLowerCase();
+                    await prisma.user.upsert({
+                        where: { email: normalizedEmail },
+                        update: {
                             verificationCode: code,
-                            isApproved: false // Ensure it's false
+                            isApproved: false
+                        },
+                        create: {
+                            email: normalizedEmail,
+                            name: user.name || undefined,
+                            verificationCode: code,
+                            isApproved: false,
+                            role: Role.SHOP_MANAGER,
                         }
                     });
-                    await sendApprovalCodeToAdmin(user.email!, code);
+                    await sendApprovalCodeToAdmin(normalizedEmail, code);
                 }
             }
         },
         async createUser({ user }) {
-            if (isSuperAdminEmail(user.email)) {
-                await ensureSuperAdminUser(user.id);
-                return;
-            }
-
-            await createShopForGoogleUser(user);
+            // New users are restricted by default.
+            // No auto-upgrade or shop creation here.
         }
     },
     pages: {
@@ -505,6 +493,14 @@ export async function getShopId(required = true): Promise<string | null> {
     if (session?.user?.role === "SUPER_ADMIN") {
         const homeShop = await prisma.shop.findFirst({
             where: { name: { contains: "BAŞAR", mode: "insensitive" } },
+            select: { id: true }
+        }) || await prisma.shop.findFirst({
+            where: {
+                OR: [
+                    { name: { contains: "TEKNİK", mode: "insensitive" } },
+                    { name: { contains: "TELEFON", mode: "insensitive" } }
+                ]
+            },
             select: { id: true }
         }) || await prisma.shop.findFirst({ select: { id: true } });
 

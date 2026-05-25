@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getShopId } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { EdmService } from "@/lib/edm/service";
 
 export async function GET(
     request: Request,
@@ -21,21 +20,7 @@ export async function GET(
             return NextResponse.json({ error: "Fatura bulunamadı." }, { status: 404 });
         }
 
-        // Önce EDM'den dene
-        try {
-            const buffer = await EdmService.getInvoiceDocument(invoice.uuid, format);
-            return new NextResponse(new Uint8Array(buffer), {
-                status: 200,
-                headers: {
-                    "Content-Type": format === "pdf" ? "application/pdf" : "text/html; charset=utf-8",
-                    "Content-Disposition": `attachment; filename="${invoice.invoiceId}.${format}"`,
-                },
-            });
-        } catch (edmError: any) {
-            console.warn(`[EDM] PDF/HTML indirme başarısız: ${edmError.message}`);
-        }
-
-        // Fallback: lokal HTML oluştur
+        // HTML formatı
         if (format === "html") {
             const html = generateLocalHtml(invoice);
             return new NextResponse(html, {
@@ -47,22 +32,35 @@ export async function GET(
             });
         }
 
-        // Fallback: puppeteer ile PDF
-        const puppeteer = await import("puppeteer");
-        const browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
-        const html = generateLocalHtml(invoice);
-        await page.setContent(html, { waitUntil: "networkidle0" });
-        const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-        await browser.close();
+        // PDF formatı — puppeteer ile
+        try {
+            const puppeteer = await import("puppeteer");
+            const browser = await puppeteer.launch({ headless: true });
+            const page = await browser.newPage();
+            const html = generateLocalHtml(invoice);
+            await page.setContent(html, { waitUntil: "networkidle0" });
+            const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+            await browser.close();
 
-        return new NextResponse(new Uint8Array(Buffer.from(pdfBuffer)), {
-            status: 200,
-            headers: {
-                "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="${invoice.invoiceId}.pdf"`,
-            },
-        });
+            return new NextResponse(new Uint8Array(Buffer.from(pdfBuffer)), {
+                status: 200,
+                headers: {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition": `attachment; filename="${invoice.invoiceId}.pdf"`,
+                },
+            });
+        } catch (pdfError: any) {
+            console.error("[PDF] Oluşturma hatası:", pdfError);
+            // PDF başarısız olursa HTML olarak döndür
+            const html = generateLocalHtml(invoice);
+            return new NextResponse(html, {
+                status: 200,
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Content-Disposition": `attachment; filename="${invoice.invoiceId}.html"`,
+                },
+            });
+        }
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

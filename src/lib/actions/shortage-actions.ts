@@ -157,11 +157,9 @@ export async function getShortageItems() {
 
 export async function getGlobalShortageList(dateStr?: string) {
   try {
-    const session = await auth();
+    await auth(); // session auth kontrolü
     const shopId = await getShopId(false);
     if (!shopId) return [];
-
-    const isAdmin = ["ADMIN", "SUPER_ADMIN", "SHOP_MANAGER", "MANAGER"].includes(session?.user?.role || "");
 
     let dateFilter = {};
     if (dateStr) {
@@ -199,9 +197,9 @@ export async function getGlobalShortageList(dateStr?: string) {
       orderBy: { createdAt: "desc" }
     });
 
-    // 2. Get low stock products
-    const lowStockProducts = await prisma.product.findMany({
-      where: { shopId, stock: { lte: prisma.product.fields.criticalStock } },
+    // 2. Get low stock products — app-level filter (Prisma field references cannot be used in lte comparisons)
+    const allTrackedProducts = await prisma.product.findMany({
+      where: { shopId, criticalStock: { gt: 0 } }, // only products with a defined critical threshold
       include: {
         shortageItems: {
           where: { isResolved: false }
@@ -209,6 +207,8 @@ export async function getGlobalShortageList(dateStr?: string) {
         shop: { select: { name: true } }
       }
     });
+    // Filter in application: stock <= criticalStock
+    const lowStockProducts = allTrackedProducts.filter((p: any) => p.stock <= p.criticalStock);
 
     // Filter out products that already have a manual shortage entry
     const missingProductAlerts = lowStockProducts
@@ -237,15 +237,12 @@ export async function getCouriers() {
     const shopId = await getShopId();
     if (!shopId) return [];
 
-    // Tüm personel rolleri kurye olarak atanabilir (USER hariç müşteriler)
-    // COURIER, STAFF, TECHNICIAN, ADMIN, MANAGER, CASHIER, SHOP_MANAGER, SUPER_ADMIN
+    // SADECE 'COURIER' rolündeki personelleri getir
+    // User talebi: "sadece corruier olarak atanan personel görüncek"
     const couriers = await prisma.user.findMany({
       where: {
-        OR: [
-          { shopId: shopId },
-          { role: Role.SUPER_ADMIN }
-        ],
-        role: { not: Role.USER }
+        shopId: shopId,
+        role: Role.COURIER
       },
       select: { id: true, name: true, surname: true, role: true }
     });
@@ -385,49 +382,37 @@ export async function bulkMarkShortageAsNotFound(ids: string[], isNotFound: bool
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
 
-    if (isNotFound) {
-      // For bulk marking as not found, we need to update each note
-      // Since prisma.updateMany doesn't support string manipulation with existing fields easily,
-      // and we want it to be reliable, we'll do it for each if it's a reasonable count.
-      // But for bulk "Bulunmadı", we can just prepend the marker if it's not there.
+    // Single-pass: fetch all items, compute new notes, update in one transaction
+    const items = await prisma.shortageItem.findMany({
+      where: { id: { in: ids }, shopId },
+      select: { id: true, notes: true }
+    });
 
-      // Simpler approach: updateMany to set isTaken=false, takenAt=null
-      // and then handle notes.
-      await prisma.$transaction(ids.map(id =>
-        prisma.shortageItem.update({
-          where: { id, shopId },
+    await prisma.$transaction(
+      items.map((item) => {
+        const currentNotes = String(item.notes || "").trim();
+        let nextNotes: string | null;
+
+        if (isNotFound) {
+          // Prepend marker if not already present
+          nextNotes = currentNotes.includes(NOT_FOUND_MARKER)
+            ? currentNotes
+            : `${NOT_FOUND_MARKER}${currentNotes ? ` ${currentNotes}` : ""}`;
+        } else {
+          // Strip marker
+          nextNotes = currentNotes.replace(NOT_FOUND_MARKER, "").trim() || null;
+        }
+
+        return prisma.shortageItem.update({
+          where: { id: item.id, shopId },
           data: {
-            isTaken: false,
-            takenAt: null,
-            notes: {
-              set: undefined // We'll handle this in a real map if needed, but let's stick to updateMany for speed if notes don't matter as much for bulk
-            }
+            notes: nextNotes,
+            isTaken: isNotFound ? false : undefined,
+            takenAt: isNotFound ? null : undefined
           }
-        })
-      ));
-
-      // Actually, let's just loop for notes to be safe
-      for (const id of ids) {
-        const item = await prisma.shortageItem.findUnique({ where: { id, shopId }, select: { notes: true } });
-        if (item && !String(item.notes || "").includes(NOT_FOUND_MARKER)) {
-          await prisma.shortageItem.update({
-            where: { id, shopId },
-            data: { notes: `${NOT_FOUND_MARKER}${item.notes ? ` ${item.notes}` : ""}` }
-          });
-        }
-      }
-    } else {
-      for (const id of ids) {
-        const item = await prisma.shortageItem.findUnique({ where: { id, shopId }, select: { notes: true } });
-        if (item) {
-          const cleanNotes = String(item.notes || "").replace(NOT_FOUND_MARKER, "").trim();
-          await prisma.shortageItem.update({
-            where: { id, shopId },
-            data: { notes: cleanNotes || null }
-          });
-        }
-      }
-    }
+        });
+      })
+    );
 
     revalidatePath("/");
     revalidatePath("/kurye");
@@ -462,7 +447,9 @@ export async function getCourierTasks(dateStr?: string) {
       }
     }
 
-    const isHistory = dateStr !== "" && dateStr !== undefined;
+    // isHistory = true only for PAST dates; today should still filter to active (isResolved: false) tasks
+    const today = new Date().toISOString().slice(0, 10);
+    const isHistory = !!dateStr && dateStr !== today;
 
     const whereClause: any = isAdmin
       ? {

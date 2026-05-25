@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { industries, IndustryType } from "@/config/industries";
 import { updateShopModules } from "@/lib/actions/setting-actions";
@@ -211,11 +210,10 @@ export function ModulesTab({ shop }: { shop: any }) {
                     const Icon = mod.icon;
 
                     return (
-                        <motion.button
+                        <button
                             key={mod.key}
-                            whileTap={{ scale: 0.98 }}
                             onClick={() => toggle(mod.key)}
-                            className={`relative flex items-start gap-3 p-4 rounded-2xl border text-left transition-all duration-200 outline-none w-full
+                            className={`relative flex items-start gap-3 p-4 rounded-2xl border text-left transition-all duration-200 outline-none w-full active:scale-[0.98]
                 ${isActive
                                     ? `${colors.bg} ${colors.border}`
                                     : "bg-card border-border/40 hover:border-border"
@@ -242,62 +240,50 @@ export function ModulesTab({ shop }: { shop: any }) {
                                 </p>
                             </div>
 
-                            <AnimatePresence>
-                                {isActive && (
-                                    <motion.div
-                                        initial={{ scale: 0, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        exit={{ scale: 0, opacity: 0 }}
-                                        className="absolute top-3 right-3"
-                                    >
-                                        <CheckCircle2 className={`h-4 w-4 ${colors.text}`} />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.button>
+                            {isActive && (
+                                <div className="absolute top-3 right-3">
+                                    <CheckCircle2 className={`h-4 w-4 ${colors.text}`} />
+                                </div>
+                            )}
+                        </button>
                     );
                 })}
             </div>
 
             {/* Save Bar */}
-            <AnimatePresence>
-                {dirty && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="flex items-center justify-between gap-4 bg-card border border-border/50 rounded-2xl px-5 py-3"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-amber-400" />
-                            <span className="text-sm text-muted-foreground">
-                                Kaydedilmemiş değişiklikler var
-                            </span>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    const current = shop?.enabledModules?.length ? shop.enabledModules : recommended;
-                                    setSelected(current);
-                                    setDirty(false);
-                                }}
-                            >
-                                İptal
-                            </Button>
-                            <Button
-                                size="sm"
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="rounded-xl"
-                            >
-                                {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {dirty && (
+                <div
+                    className="flex items-center justify-between gap-4 bg-card border border-border/50 rounded-2xl px-5 py-3"
+                >
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-amber-400" />
+                        <span className="text-sm text-muted-foreground">
+                            Kaydedilmemiş değişiklikler var
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                const current = shop?.enabledModules?.length ? shop.enabledModules : recommended;
+                                setSelected(current);
+                                setDirty(false);
+                            }}
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="rounded-xl"
+                        >
+                            {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -115,13 +115,6 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       label: "e-Fatura",
       href: "/efatura",
       module: "EFATURA",
-      subItems: [
-        { label: "Faturalarım", href: "/efatura" },
-        { label: "Yeni Fatura", href: "/efatura/yeni" },
-        { label: "Gelen Faturalar", href: "/efatura/gelen" },
-        { label: "İptaller", href: "/efatura/iptaller" },
-        { label: "Ayarlar", href: "/efatura/ayarlar" },
-      ]
     },
     { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi", module: "SERVICE" },
     { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler", module: "SUPPLIER" },
@@ -137,6 +130,7 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
         ...(effectiveRole === "SUPER_ADMIN" ? [
           { label: "Sektör Yönetimi", href: "/ayarlar/sektorler" },
           { label: "Tüm Dükkanlar (Admin)", href: "/admin/shops" },
+          { label: "EDM Yönetimi", href: "/admin/edm" },
         ] : []),
       ]
     },
@@ -150,7 +144,6 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   onNavigate?: () => void
 }) {
   const { data: session } = useSession();
-  const router = useRouter();
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [aiSearchOpen, setAiSearchOpen] = useState(false);
@@ -158,41 +151,10 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   const [aiAnalyzeOpen, setAiAnalyzeOpen] = useState(false);
   const [isAiHovered, setIsAiHovered] = useState(false);
   const [localActivePath, setLocalActivePath] = useState(pathname);
-  const [currentShop, setCurrentShop] = useState<any>(shop);
-  const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
-
-  useEffect(() => {
-    if (shop) {
-      setCurrentShop(shop);
-    } else {
-      const fetchShop = async () => {
-        const { getShop } = await import("@/lib/actions/setting-actions");
-        const res = await getShop();
-        if (res) setCurrentShop(res);
-      };
-      fetchShop();
-    }
-  }, [shop]);
-  useEffect(() => {
-    const checkStatus = async () => {
-
-      try {
-        const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");
-        const res = await getWhatsAppStatusAction();
-        setWhatsappStatus(res.status);
-      } catch (error) {
-        console.error("WhatsApp status check failed", error);
-      }
-    };
-
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000); // Check every 30s
-    return () => clearInterval(interval);
-  }, []);
 
   const userRole = session?.user?.role || user?.role;
   const isImpersonating = (session?.user as any)?.isImpersonating || false;
-  const menuItems = getMenuItems(currentShop, userRole, isImpersonating);
+  const menuItems = getMenuItems(shop, userRole, isImpersonating);
 
   useEffect(() => {
     setLocalActivePath(pathname);
@@ -202,7 +164,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     if (activeMenu && !openMenus.includes(activeMenu.label)) {
       setOpenMenus(prev => [...prev, activeMenu.label]);
     }
-  }, [pathname, currentShop]); // Re-run when currentShop changes
+  }, [pathname, shop]);
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev =>
@@ -210,14 +172,8 @@ export function Sidebar({ className, user, shop, onNavigate }: {
     );
   };
 
-  const handleNavigation = (href: string) => {
-    setLocalActivePath(href);
-    onNavigate?.();
-  };
-
-
   // Logo always stable - only industry label changes below
-  const industryConfig = getIndustryConfig(currentShop?.industry);
+  const industryConfig = getIndustryConfig(shop?.industry);
 
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
@@ -225,7 +181,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
         {/* Subtle Decorative Background Glow */}
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
 
-        <Link href="/" className="flex items-center gap-4 group outline-none relative z-10 w-full">
+        <Link href="/" prefetch={false} className="flex items-center gap-4 group outline-none relative z-10 w-full">
           <motion.div
             className="h-12 w-12 shrink-0 rounded-2xl bg-black dark:bg-[#0A0A0A] border border-white/10 flex items-center justify-center shadow-2xl relative overflow-hidden p-2.5"
             animate={{
@@ -258,7 +214,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
           </motion.div>
           <div className="flex flex-col flex-1 min-w-0 items-start text-left">
             <h1 className="text-[17px] font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
-              {currentShop?.name || "BAŞAR TEKNİK"}
+              {shop?.name || "BAŞAR TEKNİK"}
             </h1>
             <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate block">
               {industryConfig?.name || "ERP SİSTEMİ"}
@@ -281,7 +237,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
               session?.user?.role !== "SHOP_MANAGER") return false;
 
             // Granular module check
-            if ((item as any).module && !isModuleEnabled(currentShop, (item as any).module)) return false;
+            if ((item as any).module && !isModuleEnabled(shop, (item as any).module)) return false;
 
             return true;
           }).map((item) => {
@@ -323,6 +279,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                 ) : (
                   <Link
                     href={item.href}
+                    prefetch={false}
                     onClick={() => { setLocalActivePath(item.href); onNavigate?.(); }}
                     className={cn(
                       "flex items-center gap-3 w-full rounded-xl px-3 py-3 text-[15.5px] font-medium transition-all duration-150 outline-none group",
@@ -336,9 +293,6 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                       strokeWidth={1.5}
                     />
                     <span className="flex-1 text-left leading-none">{item.label}</span>
-                    {item.label === "Ayarlar" && whatsappStatus === "DISCONNECTED" && (
-                      <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] flex-shrink-0" />
-                    )}
                     {isActive && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
                   </Link>
                 )}
@@ -349,6 +303,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
                       <Link
                         key={sub.label}
                         href={sub.href}
+                        prefetch={false}
                         onClick={() => { setLocalActivePath(sub.href); onNavigate?.(); }}
                         className={cn(
                           "px-3 py-2.5 text-left text-[13.5px]  rounded-lg transition-all duration-150 outline-none leading-none block",

@@ -15,10 +15,15 @@ const authMiddleware = withAuth(
             const isApproved = token.isApproved;
             const hasShop = !!token.shopId;
 
-            // 1. ACCESS VERIFICATION (CRITICAL FIRST STEP)
-            // If not approved and not super admin, must be on /verify
-            // EXCEPT: COURIER role does not require approval
+            // 1. ACCESS VERIFICATION & ONBOARDING (CRITICAL FIRST STEP)
+            // If not approved and not super admin, check if they need onboarding first
             if (!isApproved && !isSuperAdmin && role !== "COURIER") {
+                if (!hasShop) {
+                    if (!isOnboardingPage) {
+                        return NextResponse.redirect(new URL("/onboarding", req.url));
+                    }
+                    return NextResponse.next();
+                }
                 if (!isVerifyPage) {
                     return NextResponse.redirect(new URL("/verify", req.url));
                 }
@@ -33,7 +38,7 @@ const authMiddleware = withAuth(
                 return NextResponse.redirect(new URL("/dashboard", req.url));
             }
 
-            // 2. ONBOARDING (RESTRICTED TO APPROVED USERS WITHOUT SHOP)
+            // 2. ONBOARDING (REMAINING CHECK FOR APPROVED USERS WITHOUT SHOP)
             if (!hasShop && !isOnboardingPage && !isSuperAdmin) {
                 return NextResponse.redirect(new URL("/onboarding", req.url));
             }
@@ -72,6 +77,12 @@ const authMiddleware = withAuth(
                 return NextResponse.redirect(new URL("/", req.url));
             }
 
+            // E-Invoice Route Protection (RedirectGuard)
+            const isEInvoicePage = pathname.startsWith("/finans/e-fatura") || pathname.startsWith("/e-fatura");
+            if (isEInvoicePage && !token.isEInvoiceUser && !isSuperAdmin) {
+                return NextResponse.redirect(new URL("/ayarlar?tab=moduller&error=EInvoiceNotEnabled", req.url));
+            }
+
             if (pathname.startsWith("/finans") && !token.canFinance && !isAdmin) {
                 return NextResponse.redirect(new URL("/", req.url));
             }
@@ -93,7 +104,7 @@ const authMiddleware = withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            authorized: () => true,
         },
     }
 );

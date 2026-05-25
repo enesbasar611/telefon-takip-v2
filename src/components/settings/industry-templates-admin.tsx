@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Palette, Pencil, Trash2, MessageSquare, CheckCircle2,
@@ -178,15 +177,11 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates?
                         </div>
 
                         {/* Expanded Detail / Edit */}
-                        <AnimatePresence>
-                            {expandedId === t.id && (
-                                <motion.div
-                                    key="detail"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden border-t border-white/10"
-                                >
+                        {expandedId === t.id && (
+                            <div
+                                key="detail"
+                                className="overflow-hidden border-t border-white/10 animate-in fade-in slide-in-from-top-2 duration-300"
+                            >
                                     <div className="p-5 space-y-6">
                                         {editingId === t.id ? (
                                             <>
@@ -324,9 +319,8 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates?
                                             </div>
                                         )}
                                     </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

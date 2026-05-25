@@ -58,7 +58,7 @@ import {
     bulkUpdateShortageQuantity
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
-import { getStaff } from "@/lib/actions/staff-actions";
+import { getCouriers } from "@/lib/actions/shortage-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { processReturnOutcome } from "@/lib/actions/return-actions";
 import { Role } from "@prisma/client";
@@ -196,10 +196,10 @@ export function CourierDashboardClient({
         refetchOnMount: false,
     });
 
-    // React Query for Couriers (Staff filter)
-    const { data: staffData } = useQuery({
-        queryKey: ["staff"],
-        queryFn: () => getStaff(),
+    // Kurye listesi: DB seviyesinde sadece COURIER rolüyle filtrelenmiş veri gelir
+    const { data: couriersData } = useQuery({
+        queryKey: ["couriers"],
+        queryFn: () => getCouriers(),
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
@@ -228,10 +228,7 @@ export function CourierDashboardClient({
     const allShortages = globalShortagesData || initialAllShortages;
     const categories = categoriesData || initialCategories;
     const suppliers = suppliersData || EMPTY_ARRAY;
-    const couriers = useMemo(() => {
-        const filtered = (staffData || initialCouriers).filter((s: Record<string, any>) => s.role === 'COURIER');
-        return filtered.length > 0 ? filtered : EMPTY_ARRAY;
-    }, [staffData, initialCouriers]);
+    const couriers = couriersData ?? EMPTY_ARRAY;
     const notifications = notificationsData?.notifications || initialNotifications;
     const activeCourierNotifications = notifications;
 

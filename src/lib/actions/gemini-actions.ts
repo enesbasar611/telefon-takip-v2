@@ -155,13 +155,12 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
     try {
         const genAI = new GoogleGenerativeAI(key);
         const model = genAI.getGenerativeModel(
-
             {
                 model: "gemini-2.5-flash",
                 generationConfig: {
                     responseMimeType: responseType === "json" ? "application/json" : "text/plain",
                     temperature: 0.1,
-                    maxOutputTokens: 2048
+                    maxOutputTokens: 4096
                 }
             }
         );
@@ -193,6 +192,27 @@ async function callGemini(shopId: string, promptParts: string[], responseType: "
 
             // Basic fix for unterminated strings or common AI JSON errors
             // (Only for simple cases, JSON.parse will still be the final judge)
+            rawText = rawText
+                .replace(/,\s*([\]}])/g, '$1') // Remove trailing commas
+                .replace(/("[^"]*":\s*(?:"[^"]*"|true|false|null|[0-9.-]+))\s*(")/g, '$1,$2') // Add missing commas after values
+                .replace(/([}\]])\s*(")/g, '$1,$2'); // Add missing commas after objects/arrays
+
+            // Handle cutoff JSON (unterminated strings/braces)
+            const openQuotes = (rawText.match(/"/g) || []).length;
+            if (openQuotes % 2 !== 0) rawText += '"';
+
+            const openBraces = (rawText.match(/{/g) || []).length;
+            const closeBraces = (rawText.match(/}/g) || []).length;
+            if (openBraces > closeBraces) {
+                for (let i = 0; i < openBraces - closeBraces; i++) rawText += '}';
+            }
+
+            const openBrackets = (rawText.match(/\[/g) || []).length;
+            const closeBrackets = (rawText.match(/\]/g) || []).length;
+            if (openBrackets > closeBrackets) {
+                for (let i = 0; i < openBrackets - closeBrackets; i++) rawText += ']';
+            }
+
             text = rawText;
         }
 

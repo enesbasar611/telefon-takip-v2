@@ -13,7 +13,6 @@ import { updateShopThemeConfig } from "@/lib/actions/superadmin-actions";
 import { generateIndustryConfigWithAI } from "@/lib/actions/gemini-actions";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
 import { getIndustryConfig } from "@/lib/industry-utils";
 
 export function FormsTab({ shop, formData, adminShopId }: { shop: any, formData?: Record<string, string>, adminShopId?: string }) {
@@ -278,137 +277,129 @@ export function FormsTab({ shop, formData, adminShopId }: { shop: any, formData?
                         )}
 
                         <div className="space-y-4">
-                            <AnimatePresence mode="popLayout">
-                                {fields.map((field: any, index: number) => {
-                                    const isEditing = editingIndex === index;
-                                    return (
-                                        <motion.div
-                                            key={field.key || index}
-                                            layout
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className={cn(
-                                                "group relative bg-white dark:bg-[#0a0a0a] border rounded-[1.5rem] overflow-hidden transition-all shadow-sm hover:shadow-md",
-                                                isEditing ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : "border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                                            )}
-                                        >
-                                            <div className="p-4 flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="p-2 text-slate-300 dark:text-white/10 cursor-grab active:cursor-grabbing">
-                                                        <GripVertical className="w-4 h-4" />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-sm">{field.label}</span>
-                                                            {field.required && <Badge className="bg-rose-500/10 text-rose-500 text-[8px] border-none px-1 h-4 font-black">ZORUNLU</Badge>}
-                                                            {field.coreMapping && <Badge variant="outline" className="text-[8px] opacity-70 px-1 font-black bg-blue-500/5 text-blue-500 border-blue-500/20 uppercase">Core</Badge>}
-                                                        </div>
-                                                        <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5 font-medium">
-                                                            {field.type === 'text' && <><Type className="w-2.5 h-2.5" /> Metin Alanı</>}
-                                                            {field.type === 'number' && <><Hash className="w-2.5 h-2.5" /> Sayısal Değer</>}
-                                                            {field.type === 'select' && <><List className="w-2.5 h-2.5" /> Seçim Menüsü</>}
-                                                            {field.type === 'textarea' && <><AlignLeft className="w-2.5 h-2.5" /> Geniş Metin Alanı</>}
-                                                        </div>
-                                                    </div>
+                            {fields.map((field: any, index: number) => {
+                                const isEditing = editingIndex === index;
+                                return (
+                                    <div
+                                        key={field.key || index}
+                                        className={cn(
+                                            "group relative bg-white dark:bg-[#0a0a0a] border rounded-[1.5rem] overflow-hidden transition-all shadow-sm hover:shadow-md",
+                                            isEditing ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : "border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                                        )}
+                                    >
+                                        <div className="p-4 flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="p-2 text-slate-300 dark:text-white/10 cursor-grab active:cursor-grabbing">
+                                                    <GripVertical className="w-4 h-4" />
                                                 </div>
-
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setEditingIndex(isEditing ? null : index)}
-                                                        className={cn(
-                                                            "h-10 w-10 rounded-xl transition-all",
-                                                            isEditing ? "bg-indigo-500 text-white hover:bg-indigo-600" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-indigo-500"
-                                                        )}
-                                                    >
-                                                        {isEditing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => removeField(index)}
-                                                        className="h-10 w-10 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </Button>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-sm">{field.label}</span>
+                                                        {field.required && <Badge className="bg-rose-500/10 text-rose-500 text-[8px] border-none px-1 h-4 font-black">ZORUNLU</Badge>}
+                                                        {field.coreMapping && <Badge variant="outline" className="text-[8px] opacity-70 px-1 font-black bg-blue-500/5 text-blue-500 border-blue-500/20 uppercase">Core</Badge>}
+                                                    </div>
+                                                    <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5 font-medium">
+                                                        {field.type === 'text' && <><Type className="w-2.5 h-2.5" /> Metin Alanı</>}
+                                                        {field.type === 'number' && <><Hash className="w-2.5 h-2.5" /> Sayısal Değer</>}
+                                                        {field.type === 'select' && <><List className="w-2.5 h-2.5" /> Seçim Menüsü</>}
+                                                        {field.type === 'textarea' && <><AlignLeft className="w-2.5 h-2.5" /> Geniş Metin Alanı</>}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            {isEditing && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: "auto", opacity: 1 }}
-                                                    className="border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] p-6 space-y-6"
-                                                >
-                                                    <div className="grid grid-cols-2 gap-6">
-                                                        <div className="space-y-1.5">
-                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Görünen İsim</Label>
-                                                            <Input
-                                                                value={field.label}
-                                                                onChange={(e) => updateField(index, { label: e.target.value })}
-                                                                placeholder="Örn: Arıza Nedeni"
-                                                                className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl focus:border-indigo-500/50 transition-all"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Alan Tipi</Label>
-                                                            <Select value={field.type} onValueChange={(val) => updateField(index, { type: val })}>
-                                                                <SelectTrigger className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-xl">
-                                                                    <SelectItem value="text">Kısa Metin</SelectItem>
-                                                                    <SelectItem value="number">Sayı</SelectItem>
-                                                                    <SelectItem value="textarea">Uzun Metin (Açıklama)</SelectItem>
-                                                                    <SelectItem value="select">Seçenek Listesi</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-6 items-end">
-                                                        <div className="space-y-1.5">
-                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Sistem Anahtarı (Benzersiz)</Label>
-                                                            <Input
-                                                                value={field.key}
-                                                                onChange={(e) => updateField(index, { key: e.target.value })}
-                                                                placeholder="field_key"
-                                                                className={cn(
-                                                                    "h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl font-mono text-[10px]",
-                                                                    field.coreMapping && "opacity-50 cursor-not-allowed bg-slate-100"
-                                                                )}
-                                                                disabled={!!field.coreMapping}
-                                                            />
-                                                        </div>
-                                                        <div className="flex items-center gap-3 p-2 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl h-11 px-4 cursor-pointer" onClick={() => updateField(index, { required: !field.required })}>
-                                                            <Switch
-                                                                checked={field.required}
-                                                                onCheckedChange={(val) => updateField(index, { required: val })}
-                                                                className="data-[state=checked]:bg-rose-500 scale-75"
-                                                            />
-                                                            <span className="text-[10px] font-black uppercase tracking-tight text-muted-foreground">BU ALAN ZORUNLU OLSUN</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {field.type === "select" && (
-                                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                                                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Seçenekler (Virgül ile Ayırın)</Label>
-                                                            <Input
-                                                                value={field.options?.join(", ") || ""}
-                                                                onChange={(e) => updateField(index, { options: e.target.value.split(",").map((s) => s.trim()) })}
-                                                                placeholder="Seçenek 1, Seçenek 2, Seçenek 3"
-                                                                className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium"
-                                                            />
-                                                        </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setEditingIndex(isEditing ? null : index)}
+                                                    className={cn(
+                                                        "h-10 w-10 rounded-xl transition-all",
+                                                        isEditing ? "bg-indigo-500 text-white hover:bg-indigo-600" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-indigo-500"
                                                     )}
-                                                </motion.div>
-                                            )}
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
+                                                >
+                                                    {isEditing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removeField(index)}
+                                                    className="h-10 w-10 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        {isEditing && (
+                                            <div
+                                                className="border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] p-6 space-y-6"
+                                            >
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Görünen İsim</Label>
+                                                        <Input
+                                                            value={field.label}
+                                                            onChange={(e) => updateField(index, { label: e.target.value })}
+                                                            placeholder="Örn: Arıza Nedeni"
+                                                            className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl focus:border-indigo-500/50 transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Alan Tipi</Label>
+                                                        <Select value={field.type} onValueChange={(val) => updateField(index, { type: val })}>
+                                                            <SelectTrigger className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-white dark:bg-[#111] border-slate-200 dark:border-white/10 rounded-xl">
+                                                                <SelectItem value="text">Kısa Metin</SelectItem>
+                                                                <SelectItem value="number">Sayı</SelectItem>
+                                                                <SelectItem value="textarea">Uzun Metin (Açıklama)</SelectItem>
+                                                                <SelectItem value="select">Seçenek Listesi</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-6 items-end">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Sistem Anahtarı (Benzersiz)</Label>
+                                                        <Input
+                                                            value={field.key}
+                                                            onChange={(e) => updateField(index, { key: e.target.value })}
+                                                            placeholder="field_key"
+                                                            className={cn(
+                                                                "h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl font-mono text-[10px]",
+                                                                field.coreMapping && "opacity-50 cursor-not-allowed bg-slate-100"
+                                                            )}
+                                                            disabled={!!field.coreMapping}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-3 p-2 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl h-11 px-4 cursor-pointer" onClick={() => updateField(index, { required: !field.required })}>
+                                                        <Switch
+                                                            checked={field.required}
+                                                            onCheckedChange={(val) => updateField(index, { required: val })}
+                                                            className="data-[state=checked]:bg-rose-500 scale-75"
+                                                        />
+                                                        <span className="text-[10px] font-black uppercase tracking-tight text-muted-foreground">BU ALAN ZORUNLU OLSUN</span>
+                                                    </div>
+                                                </div>
+
+                                                {field.type === "select" && (
+                                                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Seçenekler (Virgül ile Ayırın)</Label>
+                                                        <Input
+                                                            value={field.options?.join(", ") || ""}
+                                                            onChange={(e) => updateField(index, { options: e.target.value.split(",").map((s) => s.trim()) })}
+                                                            placeholder="Seçenek 1, Seçenek 2, Seçenek 3"
+                                                            className="h-11 bg-white dark:bg-black/20 border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         <Button variant="outline" onClick={() => addField()} className="w-full h-16 border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/[0.01] hover:bg-slate-50 dark:hover:bg-white/5 rounded-3xl text-muted-foreground font-bold group transition-all">
@@ -446,25 +437,20 @@ export function FormsTab({ shop, formData, adminShopId }: { shop: any, formData?
                         </div>
 
                         <div className="flex flex-wrap gap-3">
-                            <AnimatePresence>
-                                {(themeConfig.accessories || []).map((item: string, idx: number) => (
-                                    <motion.div
-                                        key={item}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        className="group bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl py-3 pl-5 pr-3 flex items-center gap-3 hover:border-indigo-500/30 transition-all shadow-sm"
+                            {(themeConfig.accessories || []).map((item: string, idx: number) => (
+                                <div
+                                    key={item}
+                                    className="group bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl py-3 pl-5 pr-3 flex items-center gap-3 hover:border-indigo-500/30 transition-all shadow-sm"
+                                >
+                                    <span className="text-sm font-bold tracking-tight">{item}</span>
+                                    <button
+                                        onClick={() => removeField(idx)}
+                                        className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all flex items-center justify-center"
                                     >
-                                        <span className="text-sm font-bold tracking-tight">{item}</span>
-                                        <button
-                                            onClick={() => removeField(idx)}
-                                            className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all flex items-center justify-center"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

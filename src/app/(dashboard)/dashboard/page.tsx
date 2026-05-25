@@ -60,50 +60,9 @@ async function DashboardContentData() {
 
   const initialStats = await getDashboardInit(shopId);
   queryClient.setQueryData(["dashboard-init", shopId || ""], initialStats);
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-revenue-analysis"],
-      queryFn: async () => {
-        const [salesTrendRaw, profitMatrixRaw] = await Promise.all([
-          getSalesReport(),
-          getProfitMatrix("THIS_MONTH"),
-        ]);
-        return {
-          salesTrend: serializePrisma(salesTrendRaw),
-          profitMatrix: serializePrisma(profitMatrixRaw),
-        };
-      },
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-recent-transactions", shopId || ""],
-      queryFn: async () => {
-        if (!shopId) return [];
-        return serializePrisma(await getRecentTransactions(shopId));
-      },
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-service-metrics"],
-      queryFn: async () => serializePrisma(await getServiceMetrics()),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-smart-insights", shopId || ""],
-      queryFn: async () => serializePrisma(await getDashboardStats(shopId || "")),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-receivables", shopId || ""],
-      queryFn: async () => ({
-        debts: serializePrisma(await getDebts()),
-        shop,
-      }),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ["dashboard-top-products", shopId || "", 4],
-      queryFn: async () => {
-        if (!shopId) return [];
-        return getTopProducts(shopId, 4);
-      },
-    }),
-  ]);
+  // REMOVED: Blocking Promise.all prefetchQuery block.
+  // We let the client-side useQuery hooks in individual widgets fetch data lazily.
+  // This prevents the server from hanging for seconds/minutes before sending HTML.
 
   const industryConf = getIndustryConfig(shop?.industry);
   const serviceLabel = getIndustryLabel(shop, "serviceTicket");

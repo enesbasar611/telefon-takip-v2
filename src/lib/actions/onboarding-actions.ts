@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function createShopOnboarding(data: { name: string; industry: string; address?: string; phone?: string; }) {
+export async function createShopOnboarding(data: { name: string; industry: string; address?: string; phone?: string; taxOffice?: string; taxNumber?: string; }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.id) {
@@ -24,72 +24,55 @@ export async function createShopOnboarding(data: { name: string; industry: strin
             include: { shop: true }
         });
 
+        const shopData: any = {
+            name: data.name,
+            industry: data.industry,
+            address: data.address,
+            phone: data.phone,
+            taxOffice: data.taxOffice,
+            taxNumber: data.taxNumber,
+            isFirstLogin: true,
+            website: "basarteknik.tech"
+        };
+
+        let shop;
         if (existingUser?.shop) {
-            const shop = await prisma.shop.update({
+            shop = await prisma.shop.update({
                 where: { id: existingUser.shop.id },
-                data: {
-                    name: data.name,
-                    industry: data.industry,
-                    address: data.address,
-                    phone: data.phone,
-                    isFirstLogin: true,
-                    enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE"],
-                    themeConfig: null,
-                    website: "basarteknik.tech"
-                } as any
+                data: shopData
             });
-
-            // SYNC TO RECEIPTS FOR ALL TYPES
-            const receiptTypes = ['pos', 'service', 'stock'];
-            for (const rType of receiptTypes) {
-                await prisma.receiptSettings.upsert({
-                    where: { id: `${shop.id}_${rType}` },
-                    update: {
-                        title: data.name.toUpperCase(),
-                        phone: data.phone || "",
-                        address: data.address || "",
-                    },
-                    create: {
-                        id: `${shop.id}_${rType}`,
-                        shopId: shop.id,
-                        title: data.name.toUpperCase(),
-                        phone: data.phone || "",
-                        address: data.address || "",
-                        website: "basarteknik.tech",
-                        subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
+        } else {
+            shop = await prisma.shop.create({
+                data: {
+                    ...shopData,
+                    users: {
+                        connect: { id: session.user.id }
                     }
-                });
-            }
-
-            return { success: true, shopId: shop.id, shopName: shop.name };
+                }
+            });
         }
-
-        const shop = await prisma.shop.create({
-            data: {
-                name: data.name,
-                industry: data.industry,
-                address: data.address,
-                phone: data.phone,
-                users: {
-                    connect: { id: session.user.id }
-                },
-                website: "basarteknik.tech"
-            } as any
-        });
 
         // SYNC TO RECEIPTS
         const receiptTypes = ['pos', 'service', 'stock'];
-        await prisma.receiptSettings.createMany({
-            data: receiptTypes.map(rType => ({
-                id: `${shop.id}_${rType}`,
-                shopId: shop.id,
-                title: data.name.toUpperCase(),
-                phone: data.phone || "",
-                address: data.address || "",
-                website: "basarteknik.tech",
-                subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
-            }))
-        });
+        for (const rType of receiptTypes) {
+            await prisma.receiptSettings.upsert({
+                where: { id: `${shop.id}_${rType}` },
+                update: {
+                    title: data.name.toUpperCase(),
+                    phone: data.phone || "",
+                    address: data.address || "",
+                },
+                create: {
+                    id: `${shop.id}_${rType}`,
+                    shopId: shop.id,
+                    title: data.name.toUpperCase(),
+                    phone: data.phone || "",
+                    address: data.address || "",
+                    website: "basarteknik.tech",
+                    subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
+                }
+            });
+        }
 
         return { success: true, shopId: shop.id, shopName: shop.name };
     } catch (e: any) {
@@ -208,9 +191,28 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
             data: {
                 enabledModules: modules,
                 industry: sector || null,
-                themeConfig: themeConfig
+                themeConfig: themeConfig,
+                isFinanceEnabled: modules.includes("FINANCE"),
+                isServiceEnabled: modules.includes("SERVICE"),
+                isStockEnabled: modules.includes("STOCK"),
+                isCourierEnabled: modules.includes("COURIER"),
+                isEInvoiceEnabled: modules.includes("EFATURA")
             } as any
         });
+
+        // Initialize default "Ayarlar" based on modules
+        const defaultSettings = [];
+        if (modules.includes("FINANCE")) defaultSettings.push({ key: "finance_default_currency", value: "TRY" });
+        if (modules.includes("SERVICE")) defaultSettings.push({ key: "service_auto_sms", value: "true" });
+        if (modules.includes("STOCK")) defaultSettings.push({ key: "stock_critical_alert", value: "true" });
+
+        for (const setting of defaultSettings) {
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId, key: setting.key } },
+                update: { value: setting.value },
+                create: { shopId, key: setting.key, value: setting.value }
+            });
+        }
 
         // UPDATE RECEIPT SUBTITLE BASED ON SECTOR
         if (sector) {

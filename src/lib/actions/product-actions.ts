@@ -873,7 +873,7 @@ export async function getProductMovements(productId: string) {
 export async function getInventoryStats() {
   try {
     const shopId = await getShopId();
-    const [products, criticalCount, outOfStockCount] = await Promise.all([
+    const [products, allTrackedProducts, outOfStockCount] = await Promise.all([
       prisma.product.findMany({
         where: { shopId },
         select: {
@@ -882,14 +882,9 @@ export async function getInventoryStats() {
           stock: true,
         }
       }),
-      prisma.product.count({
-        where: {
-          shopId,
-          stock: {
-            lte: prisma.product.fields.criticalStock,
-            gt: 0
-          }
-        }
+      prisma.product.findMany({
+        where: { shopId, criticalStock: { gt: 0 } },
+        select: { stock: true, criticalStock: true }
       }),
       prisma.product.count({
         where: {
@@ -898,6 +893,8 @@ export async function getInventoryStats() {
         }
       })
     ]);
+
+    const criticalCount = allTrackedProducts.filter(p => p.stock > 0 && p.stock <= p.criticalStock).length;
 
     const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
     const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
@@ -929,14 +926,16 @@ export async function createCategory(name: string) {
 export async function getCriticalProducts() {
   try {
     const shopId = await getShopId();
-    const products = await prisma.product.findMany({
+    const allProducts = await prisma.product.findMany({
       where: {
         shopId,
-        stock: { lte: prisma.product.fields.criticalStock }
+        criticalStock: { gt: 0 }
       },
       include: { category: true },
       orderBy: { stock: "asc" }
     });
+    // Filter in application: stock <= criticalStock
+    const products = allProducts.filter(p => p.stock <= p.criticalStock);
     return serializePrisma(products);
   } catch (error) {
     console.error("Error fetching critical products:", error);

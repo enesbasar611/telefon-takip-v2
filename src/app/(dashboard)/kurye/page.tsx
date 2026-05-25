@@ -8,7 +8,7 @@ import {
     getGlobalShortageList,
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
-import { getStaff } from "@/lib/actions/staff-actions";
+import { getCouriers } from "@/lib/actions/shortage-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 
 export const dynamic = 'force-dynamic';
@@ -44,8 +44,8 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
             queryFn: () => getCategories(),
         }),
         queryClient.prefetchQuery({
-            queryKey: ["staff"],
-            queryFn: () => getStaff(),
+            queryKey: ["couriers"],
+            queryFn: () => getCouriers(),
         }),
         queryClient.prefetchQuery({
             queryKey: ["suppliers"],

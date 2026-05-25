@@ -2,6 +2,8 @@ import { SettingsInterface } from "@/components/settings/settings-interface";
 import { getSession } from "@/lib/auth";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSettings, getShop } from "@/lib/actions/setting-actions";
+import { getAllReceiptSettings } from "@/lib/actions/receipt-settings";
 
 function SettingsSkeleton() {
   return (
@@ -28,9 +30,21 @@ export default async function AyarlarPage() {
   const session = await getSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
+  // Pre-fetch data for faster load and better SEO/Hydration
+  const [settings, receiptSettings, shop] = await Promise.all([
+    getSettings(),
+    getAllReceiptSettings(),
+    getShop()
+  ]);
+
   return (
     <Suspense fallback={<SettingsSkeleton />}>
-      <SettingsInterface isSuperAdmin={isSuperAdmin} />
+      <SettingsInterface
+        isSuperAdmin={isSuperAdmin}
+        initialSettings={settings}
+        receiptSettings={receiptSettings}
+        shop={shop}
+      />
     </Suspense>
   );
 }

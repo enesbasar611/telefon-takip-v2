@@ -7,7 +7,7 @@ import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Za
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { getAllReceiptSettings } from "@/lib/actions/receipt-settings";
 import { Loader2 } from "lucide-react";
@@ -51,24 +51,27 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
     queryKey: ["settings"],
     queryFn: getSettings,
     initialData: initialSettings,
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 mins
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: receiptSettings = initialReceiptSettings || [] } = useQuery({
     queryKey: ["receipt-settings"],
     queryFn: getAllReceiptSettings,
     initialData: initialReceiptSettings,
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 mins
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: shop = initialShop } = useQuery({
     queryKey: ["shop"],
     queryFn: getShop,
     initialData: initialShop,
-    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 mins
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const tabs = useMemo(() => {
     if (isSuperAdmin) {
@@ -85,21 +88,6 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
   const [activeTab, setActiveTabStates] = useState(searchParams.get("tab") || "shop");
   const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
 
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const { getWhatsAppStatusAction } = await import("@/lib/actions/data-management-actions");
-        const res = await getWhatsAppStatusAction();
-        setWhatsappStatus(res.status);
-      } catch (error) {
-        console.error("WhatsApp status check failed", error);
-      }
-    };
-
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const setActiveTab = (tab: string) => {
     setActiveTabStates(tab);
@@ -138,25 +126,33 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
   // settings değiştiğinde formData ve savedData'yı senkronize et
   useEffect(() => {
     setFormData(prev => {
-      const merged = { ...initialFormData };
-      // DB'den yeni değerler gelirse üzerine yaz, ama kullanıcı değişiklik yaptıysa koru
+      const merged: Record<string, string> = { ...initialFormData };
+      // DB'den gelen değerleri uygula, ama kullanıcı daha önce bir değer girmişse onu koru
       settings.forEach((s: any) => {
-        if (prev[s.key] === undefined || prev[s.key] === savedData[s.key]) {
-          merged[s.key] = s.value;
-        } else {
-          merged[s.key] = prev[s.key];
-        }
+        merged[s.key] = prev[s.key] !== undefined ? prev[s.key] : s.value;
       });
+      // Avoid unnecessary state updates by returning previous state when identical
+      try {
+        if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
+      } catch {
+        // fall back to setting merged if stringify fails for some reason
+      }
       return merged;
     });
+
     setSavedData(prev => {
-      const merged = { ...initialFormData };
+      const merged: Record<string, string> = { ...initialFormData };
       settings.forEach((s: any) => {
         merged[s.key] = s.value;
       });
+      try {
+        if (JSON.stringify(prev) === JSON.stringify(merged)) return prev;
+      } catch {
+      }
       return merged;
     });
-  }, [settings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, initialFormData]);
 
   // Dirty state tracking
   const hasChanges = useMemo(() => {

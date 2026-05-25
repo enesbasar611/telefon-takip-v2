@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
     Loader2,
@@ -13,63 +14,85 @@ import {
     Clock,
     XCircle,
     Search,
-    Filter,
+    Printer,
+    Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
-type Invoice = {
+// Invoice tipi - API'den gelen veriye göre
+interface Invoice {
     id: string;
     uuid: string;
     invoiceId: string;
     type: string;
     status: string;
-    customer: { name: string; taxNumber: string | null } | null;
     totalAmount: number;
+    subtotal: number;
+    taxTotal: number;
     currency: string;
     issueDate: string;
-    createdAt: string;
     note: string | null;
-};
+    createdAt: string;
+    cancelledAt: string | null;
+    customer: {
+        name: string;
+        taxNumber: string | null;
+        taxOffice: string | null;
+        address: string | null;
+    } | null;
+    lines: {
+        id: string;
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        vatRate: number;
+        vatAmount: number;
+    }[];
+}
 
 const statusMap: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-    DRAFT: { label: "Taslak", color: "bg-slate-100 text-slate-700", icon: Clock },
-    PENDING: { label: "Beklemede", color: "bg-amber-100 text-amber-700", icon: Clock },
-    SENT: { label: "Gönderildi", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-    ERROR: { label: "Hata", color: "bg-red-100 text-red-700", icon: AlertCircle },
-    CANCELLED: { label: "İptal", color: "bg-rose-100 text-rose-700", icon: XCircle },
+    DRAFT: { label: "Taslak", color: "bg-muted text-muted-foreground", icon: Clock },
+    PENDING: { label: "Beklemede", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: Clock },
+    SENT: { label: "Gönderildi", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 },
+    ERROR: { label: "Hata", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: AlertCircle },
+    CANCELLED: { label: "İptal", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", icon: XCircle },
 };
 
 export default function EfaturaPage() {
+    const { data: session } = useSession();
     const router = useRouter();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
-    const [total, setTotal] = useState(0);
+    const [edmActive, setEdmActive] = useState<boolean | null>(null);
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<string | "">("");
-    const limit = 20;
+
+    useEffect(() => {
+        async function checkEdmStatus() {
+            try {
+                const res = await fetch("/api/edm/settings");
+                const data = await res.json();
+                setEdmActive(data.settings?.edmActive === true || data.edmActive === true);
+            } catch {
+                setEdmActive(false);
+            }
+        }
+        checkEdmStatus();
+    }, []);
 
     async function loadInvoices() {
+        if (edmActive === false) return;
         setLoading(true);
         try {
-            const params = new URLSearchParams();
-            params.set("page", String(page));
-            params.set("limit", String(limit));
-            if (statusFilter) params.set("status", statusFilter);
-
-            const res = await fetch(`/api/edm/invoices?${params.toString()}`);
+            const res = await fetch("/api/edm/invoices?limit=100");
             const data = await res.json();
             if (res.ok) {
                 setInvoices(data.invoices || []);
-                setTotal(data.total || 0);
             } else {
                 toast.error(data.error || "Faturalar yüklenemedi.");
             }
-        } catch (error) {
+        } catch {
             toast.error("Bağlantı hatası.");
         } finally {
             setLoading(false);
@@ -77,148 +100,232 @@ export default function EfaturaPage() {
     }
 
     useEffect(() => {
-        loadInvoices();
-    }, [page, statusFilter]);
+        if (edmActive === true) {
+            loadInvoices();
+        }
+    }, [edmActive]);
 
-    const filtered = invoices.filter((inv) => {
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
+    const filteredInvoices = invoices.filter((inv) => {
+        const term = search.toLowerCase();
         return (
-            inv.invoiceId.toLowerCase().includes(q) ||
-            inv.uuid.toLowerCase().includes(q) ||
-            (inv.customer?.name || "").toLowerCase().includes(q) ||
-            (inv.customer?.taxNumber || "").includes(q)
+            inv.customer?.name?.toLowerCase().includes(term) ||
+            inv.invoiceId?.toLowerCase().includes(term) ||
+            inv.lines?.some((l) => l.name.toLowerCase().includes(term))
         );
     });
 
-    const totalPages = Math.ceil(total / limit);
+    function formatDate(dateStr: string) {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString("tr-TR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        });
+    }
 
-    return (
-        <div className="container mx-auto max-w-7xl space-y-6 p-4 md:p-8 animate-in fade-in duration-700">
-            <PageHeader
-                title="Faturalarım"
-                description="Gönderilen ve taslak durumundaki tüm e-Faturalarınız."
-                icon={FileText}
-                actions={
-                    <Button
-                        onClick={() => router.push("/efatura/yeni")}
-                        className="h-10 rounded-xl bg-slate-950 text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Yeni Fatura
-                    </Button>
-                }
-            />
+    function formatTime(dateStr: string) {
+        const d = new Date(dateStr);
+        return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    }
 
-            <div className="flex flex-wrap gap-3">
-                <div className="relative flex-1 min-w-[240px]">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input
-                        placeholder="Fatura no, UUID veya müşteri ara..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 rounded-xl"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-slate-400" />
-                    {["", "DRAFT", "PENDING", "SENT", "ERROR", "CANCELLED"].map((s) => (
-                        <Button
-                            key={s || "all"}
-                            variant={statusFilter === s ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => { setStatusFilter(s); setPage(1); }}
-                            className="rounded-xl text-xs"
-                        >
-                            {s ? statusMap[s]?.label || s : "Tümü"}
-                        </Button>
-                    ))}
-                </div>
+    function handlePrint(invoiceId: string) {
+        window.open(`/api/edm/invoice/${invoiceId}/render`, "_blank");
+    }
+
+    function handleDownload(invoiceId: string) {
+        window.open(`/api/edm/invoice/${invoiceId}/render?download=1`, "_blank");
+    }
+
+    if (edmActive === null) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
             </div>
+        );
+    }
 
-            {loading ? (
-                <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
-                </div>
-            ) : filtered.length === 0 ? (
-                <Card className="rounded-2xl border-slate-200 dark:border-slate-800">
-                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                        <FileText className="h-12 w-12 text-slate-300 mb-4" />
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">Henüz fatura bulunmuyor</h3>
-                        <p className="text-sm text-slate-500 mt-1">Yeni bir e-Fatura oluşturmak için yukarıdaki butonu kullanın.</p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="space-y-3">
-                    {filtered.map((inv) => {
-                        const status = statusMap[inv.status] || statusMap.DRAFT;
-                        const StatusIcon = status.icon;
-                        return (
-                            <Card
-                                key={inv.id}
-                                className="rounded-2xl border-slate-200 dark:border-slate-800 cursor-pointer transition-all hover:shadow-md hover:border-sky-200 dark:hover:border-sky-800"
-                                onClick={() => router.push(`/efatura/${inv.id}`)}
-                            >
-                                <CardContent className="p-4 flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center dark:bg-slate-800">
-                                            <FileText className="h-5 w-5 text-slate-500" />
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">{inv.invoiceId}</div>
-                                            <div className="text-xs text-slate-500">
-                                                {inv.customer?.name || "—"} • {inv.customer?.taxNumber || "—"}
-                                            </div>
-                                            <div className="text-xs text-slate-400">
-                                                {new Date(inv.issueDate).toLocaleDateString("tr-TR")} • {inv.uuid.slice(0, 8)}...
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <Badge className={`${status.color} border-0 rounded-lg`}>
-                                            <StatusIcon className="mr-1 h-3 w-3" />
-                                            {status.label}
-                                        </Badge>
-                                        <div className="text-right">
-                                            <div className="font-bold">{Number(inv.totalAmount).toFixed(2)} {inv.currency}</div>
-                                            <div className="text-xs text-slate-400">{inv.type === "EARCHIVE" ? "e-Arşiv" : "e-Fatura"}</div>
-                                        </div>
-                                        <Button variant="ghost" size="sm" className="rounded-xl">
-                                            <Eye className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+    if (edmActive === false) {
+        const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
-                    {totalPages > 1 && (
-                        <div className="flex justify-center gap-2 pt-4">
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="text-center max-w-lg">
+                    <div className="w-24 h-24 bg-muted/50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-border/20">
+                        <FileText className="h-12 w-12 text-muted-foreground/30" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">E-Fatura Pasif</h2>
+                    <p className="text-muted-foreground/80 text-lg leading-relaxed mb-8">
+                        {isSuperAdmin
+                            ? "E-Fatura / E-Arşiv entegrasyonunu dükkanınızda aktifleştirmek için öncelikle EDM Bilişim bağlantı ayarlarını tamamlamalısınız."
+                            : "E-Fatura / E-Arşiv entegrasyonunu kullanmak için işletme sahibi veya sistem yöneticinizle iletişime geçin. Bu modül şu an dükkanınız için aktif değildir."}
+                    </p>
+                    {isSuperAdmin && (
+                        <div className="flex flex-col items-center gap-4">
                             <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page <= 1}
-                                onClick={() => setPage((p) => p - 1)}
-                                className="rounded-xl"
+                                onClick={() => router.push("/admin/edm")}
+                                className="rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-7 h-auto text-lg font-medium shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
                             >
-                                Önceki
+                                Ayarlara Git
                             </Button>
-                            <span className="text-sm text-slate-500 self-center">
-                                Sayfa {page} / {totalPages}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page >= totalPages}
-                                onClick={() => setPage((p) => p + 1)}
-                                className="rounded-xl"
-                            >
-                                Sonraki
-                            </Button>
+                            <p className="text-xs text-muted-foreground/60 italic">
+                                Sadece Super Admin olarak bu ayarları görebilirsiniz.
+                            </p>
                         </div>
                     )}
                 </div>
-            )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-background">
+            <div className="max-w-5xl mx-auto px-4 py-8 md:px-8">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 className="text-3xl font-semibold text-foreground tracking-tight">
+                            Faturalar
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            {invoices.length} fatura
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => router.push("/efatura/yeni")}
+                        className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 h-11 shadow-sm"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Yeni Fatura
+                    </Button>
+                </div>
+
+                {/* Search */}
+                <div className="relative mb-6">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Müşteri adı, ürün veya fatura no ara..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-11 h-12 bg-card border-0 rounded-2xl shadow-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
+                    />
+                </div>
+
+                {/* Invoice List */}
+                <div className="space-y-3">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : filteredInvoices.length === 0 ? (
+                        <div className="text-center py-20">
+                            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <FileText className="h-8 w-8 text-muted-foreground/50" />
+                            </div>
+                            <p className="text-muted-foreground">Fatura bulunamadı.</p>
+                        </div>
+                    ) : (
+                        filteredInvoices.map((invoice) => {
+                            const status = statusMap[invoice.status] || statusMap.DRAFT;
+                            const StatusIcon = status.icon;
+                            const firstItem = invoice.lines?.[0];
+                            const isSent = invoice.status === "SENT";
+
+                            return (
+                                <div
+                                    key={invoice.id}
+                                    onClick={() => router.push(`/efatura/${invoice.id}`)}
+                                    className={`
+                                        group bg-card rounded-2xl p-5 cursor-pointer
+                                        transition-all duration-200 ease-out
+                                        hover:shadow-md
+                                        ${isSent ? "border border-emerald-500/30 hover:border-emerald-500" : "border border-border hover:border-border/80"}
+                                    `}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        {/* Icon */}
+                                        <div className={`
+                                            w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
+                                            ${isSent ? "bg-emerald-500/10" : "bg-muted"}
+                                        `}>
+                                            <FileText className={`h-5 w-5 ${isSent ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`} />
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <h3 className="font-medium text-foreground truncate">
+                                                    {invoice.customer?.name || "Müşteri"}
+                                                </h3>
+                                                <span className={`
+                                                    inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                                    ${status.color}
+                                                `}>
+                                                    <StatusIcon className="h-3 w-3" />
+                                                    {status.label}
+                                                </span>
+                                            </div>
+                                            {firstItem && (
+                                                <p className="text-sm text-muted-foreground truncate">
+                                                    {firstItem.name}
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                {formatDate(invoice.issueDate)} • {formatTime(invoice.issueDate)}
+                                            </p>
+                                        </div>
+
+                                        {/* Amount */}
+                                        <div className="text-right flex-shrink-0">
+                                            <p className={`text-lg font-semibold ${isSent ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+                                                {new Intl.NumberFormat("tr-TR", {
+                                                    minimumFractionDigits: 2,
+                                                }).format(invoice.totalAmount)}
+                                                <span className="text-sm ml-0.5">₺</span>
+                                            </p>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                            <div className="flex items-center bg-muted rounded-xl p-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(`/efatura/${invoice.id}`);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-background hover:text-primary transition-colors text-muted-foreground"
+                                                    title="Görüntüle"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownload(invoice.id);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-background hover:text-primary transition-colors text-muted-foreground"
+                                                    title="İndir"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handlePrint(invoice.id);
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-background hover:text-primary transition-colors text-muted-foreground"
+                                                    title="Yazdır"
+                                                >
+                                                    <Printer className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

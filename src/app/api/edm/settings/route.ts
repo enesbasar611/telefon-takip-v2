@@ -1,35 +1,70 @@
 import { NextResponse } from "next/server";
-import { getShopId } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const shopId = await getShopId();
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const user = session.user as any;
+        const shopId = user.shopId || user.currentShopId;
+
         const settings = await prisma.eDMSettings.findUnique({
-            where: { shopId },
+            where: { shopId: String(shopId) },
         });
-        return NextResponse.json({ settings });
+
+        return NextResponse.json({
+            edmActive: settings?.edmActive ?? false,
+            settings: settings
+                ? {
+                      senderVkn: settings.senderVkn,
+                      senderName: settings.senderName,
+                      senderAddress: settings.senderAddress,
+                      senderCity: settings.senderCity,
+                      senderDistrict: settings.senderDistrict,
+                      senderTaxOffice: settings.senderTaxOffice,
+                      environment: settings.environment,
+                      username: settings.username,
+                  }
+                : null,
+        });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(req: Request) {
     try {
-        const shopId = await getShopId();
-        const body = await request.json();
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const user = session.user as any;
+        const shopId = user.shopId || user.currentShopId;
+        const isSuperAdmin = user.role === "SUPER_ADMIN";
+
+        const body = await req.json();
 
         const {
             senderVkn,
             senderName,
+            senderAddress,
+            senderCity,
+            senderDistrict,
+            senderTaxOffice,
             username,
-            passwordEncrypted,
+            password,
             apiUrl,
-            registrationUrl,
             environment,
-            isActive,
+            edmActive,
         } = body;
 
+        // Validasyon
         if (!senderVkn || !senderName) {
             return NextResponse.json(
                 { error: "VKN ve ünvan zorunludur." },
@@ -37,41 +72,68 @@ export async function PUT(request: Request) {
             );
         }
 
+        if (senderVkn.length !== 10 || !/^\d{10}$/.test(senderVkn)) {
+            return NextResponse.json(
+                { error: "VKN 10 haneli rakam olmalıdır." },
+                { status: 400 }
+            );
+        }
+
+        // Şifreyi base64 ile şifrele (geçici çözüm — production'da daha güvenli olmalı)
+        const passwordEncrypted = password
+            ? Buffer.from(password).toString("base64")
+            : undefined;
+
         const settings = await prisma.eDMSettings.upsert({
-            where: { shopId },
+            where: { shopId: String(shopId) },
             update: {
                 senderVkn,
                 senderName,
-                username,
-                passwordEncrypted,
-                apiUrl,
-                registrationUrl,
+                senderAddress: senderAddress || null,
+                senderCity: senderCity || null,
+                senderDistrict: senderDistrict || null,
+                senderTaxOffice: senderTaxOffice || null,
+                username: username || null,
+                ...(passwordEncrypted && { passwordEncrypted }),
+                apiUrl: apiUrl || null,
                 environment: environment || "TEST",
-                isActive: isActive ?? false,
+                // Sadece Super Admin edmActive'yi değiştirebilir
+                ...(isSuperAdmin && { edmActive: edmActive ?? false }),
             },
             create: {
-                shopId,
+                shopId: String(shopId),
                 senderVkn,
                 senderName,
-                username,
-                passwordEncrypted,
-                apiUrl,
-                registrationUrl,
+                senderAddress: senderAddress || null,
+                senderCity: senderCity || null,
+                senderDistrict: senderDistrict || null,
+                senderTaxOffice: senderTaxOffice || null,
+                username: username || null,
+                passwordEncrypted: passwordEncrypted || null,
+                apiUrl: apiUrl || null,
                 environment: environment || "TEST",
-                isActive: isActive ?? false,
+                edmActive: isSuperAdmin ? (edmActive ?? false) : false,
             },
         });
 
-        // Aynı zamanda Shop modelini de güncelle (genel firma kartı)
+        // Shop modelini de güncelle
         await prisma.shop.update({
-            where: { id: shopId },
+            where: { id: String(shopId) },
             data: {
                 taxNumber: senderVkn,
                 companyName: senderName,
             },
         });
 
-        return NextResponse.json({ settings });
+        return NextResponse.json({
+            success: true,
+            settings: {
+                senderVkn: settings.senderVkn,
+                senderName: settings.senderName,
+                environment: settings.environment,
+                edmActive: settings.edmActive,
+            },
+        });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

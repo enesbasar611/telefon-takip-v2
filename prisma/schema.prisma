@@ -24,6 +24,11 @@ model Shop {
   isActive             Boolean               @default(true)
   taxNumber     String?
   taxOffice     String?
+  isFinanceEnabled     Boolean               @default(true)
+  isServiceEnabled     Boolean               @default(true)
+  isStockEnabled       Boolean               @default(true)
+  isCourierEnabled     Boolean               @default(true)
+  isEInvoiceEnabled    Boolean               @default(true)
   companyName   String?
   companyAddress String?
   companyCity   String?   @default("İSTANBUL")
@@ -149,6 +154,7 @@ model Customer {
 
   taxNumber     String?
   taxOffice     String?
+  isEInvoiceUser Boolean?  @default(false) // EDM CheckUser sonucu: true=e-Fatura, false=e-Arsiv
 
   @@unique([shopId, phone])
 }
@@ -931,6 +937,8 @@ model EDMInvoice {
   note            String?
   rawXml          String?          @db.Text
   rawResponse     String?          @db.Text
+  xmlContent      String?          @db.Text
+  xsltContent     String?          @db.Text
   edmError        String?          @db.Text
   cancelledAt     DateTime?
   createdAt       DateTime         @default(now())
@@ -994,11 +1002,17 @@ model EDMSettings {
   environment       String   @default("TEST") // TEST or PRODUCTION
   senderVkn         String?
   senderName        String?
+  senderAddress     String?
+  senderCity        String?   @default("İstanbul")
+  senderDistrict    String?
+  senderTaxOffice   String?
   username          String?
   passwordEncrypted String?  @db.Text
   apiUrl            String?
   registrationUrl   String?
-  isActive          Boolean  @default(false)
+  edmActive         Boolean  @default(false)  // Bayi icin e-Fatura modulu aktif mi?
+  earsivXslt        String?  @db.Text         // e-Arsiv XSLT sablonu
+  efaturaXslt       String?  @db.Text         // e-Fatura XSLT sablonu
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

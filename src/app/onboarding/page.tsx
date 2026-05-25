@@ -99,7 +99,9 @@ export default function OnboardingPage() {
         industry: "PHONE_REPAIR",
         customIndustry: "",
         address: "",
-        phone: ""
+        phone: "",
+        taxOffice: "",
+        taxNumber: ""
     });
 
     // Check for existing shop on mount
@@ -121,7 +123,9 @@ export default function OnboardingPage() {
                     industry: existingShop.industry || "PHONE_REPAIR",
                     customIndustry: "",
                     address: existingShop.address || "",
-                    phone: existingShop.phone || ""
+                    phone: existingShop.phone || "",
+                    taxOffice: existingShop.taxOffice || "",
+                    taxNumber: existingShop.taxNumber || ""
                 });
 
                 // Restore step if possible, or trigger analysis
@@ -186,12 +190,22 @@ export default function OnboardingPage() {
                 return toast.error("Lütfen geçerli bir telefon numarası girin.");
             }
 
+            // Tax Number validation
+            if (shopData.taxNumber) {
+                const isNumeric = /^\d+$/.test(shopData.taxNumber);
+                if (!isNumeric || (shopData.taxNumber.length !== 10 && shopData.taxNumber.length !== 11)) {
+                    return toast.error("Vergi numarası 10 veya 11 haneli rakam olmalıdır.");
+                }
+            }
+
             setLoading(true);
             const res = await createShopOnboarding({
                 name: shopData.name,
                 industry: sector,
                 address: shopData.address,
-                phone: shopData.phone
+                phone: shopData.phone,
+                taxOffice: shopData.taxOffice,
+                taxNumber: shopData.taxNumber
             });
 
             if (res.success && res.shopId) {
@@ -389,6 +403,33 @@ export default function OnboardingPage() {
                                             value={shopData.phone}
                                             onChange={val => setShopData({ ...shopData, phone: val })}
                                             className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner border-0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                            <Building className="h-3 w-3" /> Vergi Dairesi
+                                        </Label>
+                                        <Input
+                                            placeholder="Örn: Beyoğlu V.D."
+                                            value={shopData.taxOffice}
+                                            onChange={e => setShopData({ ...shopData, taxOffice: e.target.value })}
+                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                            <QrCode className="h-3 w-3" /> Vergi / T.C. No (10-11 Hane)
+                                        </Label>
+                                        <Input
+                                            placeholder="1234567890"
+                                            value={shopData.taxNumber}
+                                            onChange={e => setShopData({ ...shopData, taxNumber: e.target.value })}
+                                            maxLength={11}
+                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
                                         />
                                     </div>
                                 </div>

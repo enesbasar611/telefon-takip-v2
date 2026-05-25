@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getProfile, getStaffPerformance, updateProfile, updatePassword } from "@/lib/actions/staff-actions";
+import { updateShop } from "@/lib/actions/setting-actions";
 import { User, Mail, Phone, Calendar, Briefcase, MapPin, Building2, TrendingUp, CheckCircle2, History, Loader2, ExternalLink, Settings, ShieldCheck, Camera, Save, X, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -25,7 +26,17 @@ export default function ProfilePage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Edit Form State
-    const [editData, setEditData] = useState({ name: "", surname: "", phone: "", image: "" });
+    const [editData, setEditData] = useState({
+        name: "",
+        surname: "",
+        phone: "",
+        image: "",
+        // Shop data
+        companyName: "",
+        taxNumber: "",
+        taxOffice: "",
+        address: "",
+    });
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Password State
@@ -37,7 +48,16 @@ export default function ProfilePage() {
             const p = await getProfile();
             setProfile(p);
             if (p) {
-                setEditData({ name: p.name || "", surname: p.surname || "", phone: p.phone || "", image: p.image || "" });
+                setEditData({
+                    name: p.name || "",
+                    surname: p.surname || "",
+                    phone: p.phone || "",
+                    image: p.image || "",
+                    companyName: p.shop?.companyName || "",
+                    taxNumber: p.shop?.taxNumber || "",
+                    taxOffice: p.shop?.taxOffice || "",
+                    address: p.shop?.address || "",
+                });
                 const perf = await getStaffPerformance(p.id);
                 setPerformance(perf);
             }
@@ -56,7 +76,25 @@ export default function ProfilePage() {
         if (!editData.name) return toast.error("İsim alanı boş bırakılamaz.");
         setIsSaving(true);
         try {
-            const res = await updateProfile(editData);
+            // Update User Profile
+            const res = await updateProfile({
+                name: editData.name,
+                surname: editData.surname,
+                phone: editData.phone,
+                image: editData.image
+            });
+
+            // Update Shop Info (if user is MANAGER or ADMIN)
+            if (profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") {
+                await updateShop({
+                    ...profile.shop,
+                    companyName: editData.companyName,
+                    taxNumber: editData.taxNumber,
+                    taxOffice: editData.taxOffice,
+                    address: editData.address,
+                });
+            }
+
             if (res.success) {
                 toast.success("Profil başarıyla güncellendi.");
                 setProfile(res.user);
@@ -204,6 +242,33 @@ export default function ProfilePage() {
                                         <Label className="text-xs font-bold uppercase opacity-60">Telefon</Label>
                                         <Input value={editData.phone} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
                                     </div>
+
+                                    {(profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") && (
+                                        <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-4">
+                                            <Label className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Mağaza / Vergi Bilgileri</Label>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold uppercase opacity-60">Resmi Unvan</Label>
+                                                <Input value={editData.companyName} onChange={(e) => setEditData({ ...editData, companyName: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs font-bold uppercase opacity-60">VKN / TCKN</Label>
+                                                    <Input value={editData.taxNumber} onChange={(e) => setEditData({ ...editData, taxNumber: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs font-bold uppercase opacity-60">Vergi Dairesi</Label>
+                                                    <Input value={editData.taxOffice} onChange={(e) => setEditData({ ...editData, taxOffice: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold uppercase opacity-60">Adres</Label>
+                                                <Input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <DialogFooter className="gap-3">
@@ -339,6 +404,11 @@ export default function ProfilePage() {
                             </div>
                             <div className="space-y-4 pt-2">
                                 <InfoRow icon={MapPin} label="Konum" value={profile.shop?.address || "Belirtilmemiş"} />
+                                <InfoRow icon={Building2} label="Resmi Unvan" value={profile.shop?.companyName || "Belirtilmemiş"} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InfoRow icon={ShieldCheck} label="VKN/TC" value={profile.shop?.taxNumber || "Girilmemiş"} />
+                                    <InfoRow icon={Building2} label="Vergi Dairesi" value={profile.shop?.taxOffice || "Girilmemiş"} />
+                                </div>
                                 <InfoRow icon={Phone} label="Mağaza Telefon" value={profile.shop?.phone || "Belirtilmemiş"} />
                             </div>
                         </div>

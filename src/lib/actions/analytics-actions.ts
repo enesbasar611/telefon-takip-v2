@@ -17,7 +17,7 @@ export async function getProfitMatrix(range: string = "THIS_MONTH") {
     }
 
     const shopId = await getShopId(false);
-    if (!shopId) return { totalRevenue: 0, totalCost: 0, netProfit: 0, margin: 0, returnLoss: 0 };
+    if (!shopId) return { totalRevenue: 0, totalPartsCost: 0, totalOverhead: 0, totalNetProfit: 0, totalReturnLosses: 0 };
 
     const [services, returns] = await Promise.all([
       prisma.serviceTicket.findMany({

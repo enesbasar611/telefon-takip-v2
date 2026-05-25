@@ -1,24 +1,18 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/phone-input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
 import { updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
-import { Store, MapPin, Mail, Box, ShieldCheck, Zap } from "lucide-react";
+import { Store, MapPin, Mail, Zap } from "lucide-react";
 import { industries } from "@/config/industries";
 
-type IndustryType = "PHONE_REPAIR" | "ELECTRICIAN" | "PLUMBING" | "COMPUTER_REPAIR" | "GENERAL";
+type IndustryType = "PHONE_REPAIR" | "ELECTRICIAN" | "PLUMBING" | "COMPUTER_REPAIR" | "GROCERY" | "CLOTHING" | "GENERAL";
 
 interface ShopTabProps {
     shop: any;
@@ -27,6 +21,7 @@ interface ShopTabProps {
 export function ShopTab({ shop }: ShopTabProps) {
     const { data: session } = useSession();
     const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+    const queryClient = useQueryClient();
     const [isPending, startTransition] = useTransition();
     const [formData, setFormData] = useState({
         name: shop?.name || "",
@@ -34,14 +29,40 @@ export function ShopTab({ shop }: ShopTabProps) {
         phone: shop?.phone || "",
         email: shop?.email || "",
         address: shop?.address || "",
+        taxNumber: shop?.taxNumber || "",
+        taxOffice: shop?.taxOffice || "",
+        companyName: shop?.companyName || "",
+        companyCity: shop?.companyCity || "İSTANBUL",
+        companyDistrict: shop?.companyDistrict || "",
         enabledModules: shop?.enabledModules || ["SERVICE", "STOCK", "POS", "FINANCE", "CUSTOMERS"]
     });
+
+    // shop verisi değiştiğinde (örn. DB'den yüklendiğinde) formu güncelle
+    useEffect(() => {
+        if (shop) {
+            setFormData({
+                name: shop.name || "",
+                industry: shop.industry || "GENERAL",
+                phone: shop.phone || "",
+                email: shop.email || "",
+                address: shop.address || "",
+                taxNumber: shop.taxNumber || "",
+                taxOffice: shop.taxOffice || "",
+                companyName: shop.companyName || "",
+                companyCity: shop.companyCity || "İSTANBUL",
+                companyDistrict: shop.companyDistrict || "",
+                enabledModules: shop.enabledModules || ["SERVICE", "STOCK", "POS", "FINANCE", "CUSTOMERS"]
+            });
+        }
+    }, [shop]);
 
     const handleSave = () => {
         startTransition(async () => {
             const result = await updateShop(formData);
             if (result.success) {
                 toast.success("Dükkan bilgileri başarıyla güncellendi.");
+                // Cache'i temizle ki veriler taze kalsın
+                queryClient.invalidateQueries({ queryKey: ["shop"] });
             } else {
                 toast.error("Güncelleme sırasında bir hata oluştu.");
             }
@@ -72,32 +93,53 @@ export function ShopTab({ shop }: ShopTabProps) {
 
                         <div className="space-y-2">
                             <Label htmlFor="industry">Sektör Tipi</Label>
-                            <Select
+                            <select
+                                id="industry"
                                 value={formData.industry}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, industry: value as IndustryType }))}
+                                onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value as IndustryType }))}
+                                disabled={!isSuperAdmin}
+                                className="w-full h-12 rounded-xl border border-slate-200 dark:border-white/10 bg-card/50 px-4 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
                             >
-                                <SelectTrigger
-                                    className="bg-card/50"
-                                    disabled={!isSuperAdmin}
-                                >
-                                    <SelectValue placeholder="Sektör seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(industries).map(([key, config]) => (
-                                        <SelectItem key={key} value={key} textValue={(config as any).name}>
-                                            <div className="flex flex-col py-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-semibold">{(config as any).name}</span>
-                                                    {key === shop?.industry && <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />}
-                                                </div>
-                                                <span className="text-[10px] text-muted-foreground/70">{(config as any).labels.customerAsset} yönetimi için optimize edildi</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                {Object.entries(industries).map(([key, config]) => (
+                                    <option key={key} value={key}>{(config as any).name}</option>
+                                ))}
+                            </select>
                             <p className="text-[10px] text-muted-foreground">Sektör değişimi buton ve terimleri otomatik günceller.</p>
                         </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="taxNumber">VKN / TCKN</Label>
+                            <Input
+                                id="taxNumber"
+                                value={formData.taxNumber}
+                                onChange={(e) => setFormData(prev => ({ ...prev, taxNumber: e.target.value }))}
+                                placeholder="10 veya 11 haneli numara"
+                                className="bg-card/50"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="taxOffice">Vergi Dairesi</Label>
+                            <Input
+                                id="taxOffice"
+                                value={formData.taxOffice}
+                                onChange={(e) => setFormData(prev => ({ ...prev, taxOffice: e.target.value }))}
+                                placeholder="Örn: Beyoğlu V.D."
+                                className="bg-card/50"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="companyName">Resmi Unvan</Label>
+                        <Input
+                            id="companyName"
+                            value={formData.companyName}
+                            onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                            placeholder="Örn: Başar Teknik İletişim Ltd. Şti."
+                            className="bg-card/50"
+                        />
                     </div>
                 </div>
 
@@ -133,8 +175,31 @@ export function ShopTab({ shop }: ShopTabProps) {
                         </div>
                     </div>
 
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="companyCity">İl</Label>
+                            <Input
+                                id="companyCity"
+                                value={formData.companyCity}
+                                onChange={(e) => setFormData(prev => ({ ...prev, companyCity: e.target.value }))}
+                                placeholder="Örn: İstanbul"
+                                className="bg-card/50"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="companyDistrict">İlçe</Label>
+                            <Input
+                                id="companyDistrict"
+                                value={formData.companyDistrict}
+                                onChange={(e) => setFormData(prev => ({ ...prev, companyDistrict: e.target.value }))}
+                                placeholder="Örn: Kadıköy"
+                                className="bg-card/50"
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
-                        <Label htmlFor="address">Adres</Label>
+                        <Label htmlFor="address">Tam Adres</Label>
                         <Input
                             id="address"
                             value={formData.address}
@@ -153,7 +218,7 @@ export function ShopTab({ shop }: ShopTabProps) {
                         </h3>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {["SERVICE", "STOCK", "POS", "FINANCE", "CUSTOMERS"].map((mod) => (
+                        {["SERVICE", "STOCK", "POS", "FINANCE", "CUSTOMERS", "EFATURA"].map((mod) => (
                             <button
                                 key={mod}
                                 onClick={() => {

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getShopId } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { EdmService } from "@/lib/edm/service";
 
 export async function GET(
     request: Request,
@@ -47,18 +46,8 @@ export async function DELETE(
             return NextResponse.json({ error: "Fatura bulunamadı." }, { status: 404 });
         }
 
-        if (invoice.status === "SENT" || invoice.status === "PENDING") {
-            // EDM üzerinden iptal et
-            try {
-                await EdmService.cancelInvoice(invoice.uuid, invoice.invoiceId);
-            } catch (edmError: any) {
-                return NextResponse.json(
-                    { error: `EDM iptal hatası: ${edmError.message}` },
-                    { status: 502 }
-                );
-            }
-        }
-
+        // TODO: EDM REST API üzerinden iptal et
+        // Şimdilik sadece DB'de iptal olarak işaretle
         await prisma.eDMInvoice.update({
             where: { id },
             data: { status: "CANCELLED", cancelledAt: new Date() },

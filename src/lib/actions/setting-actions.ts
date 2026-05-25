@@ -41,7 +41,7 @@ export const getShop = cache(async function getShop() {
       }
     },
     [`shop-${shopId}`],
-    { tags: [`shop-${shopId}`, "shop"], revalidate: 3600 }
+    { tags: [`shop-${shopId}`, "shop"], revalidate: 60 }
   )();
 });
 
@@ -102,10 +102,49 @@ export async function updateShop(data: any) {
         phone: data.phone,
         email: data.email,
         address: data.address,
+        taxNumber: data.taxNumber,
+        taxOffice: data.taxOffice,
+        companyName: data.companyName,
+        companyAddress: data.address, // Adresi buraya da eşitleyelim
+        companyCity: data.companyCity,
+        companyDistrict: data.companyDistrict,
         enabledModules: data.enabledModules,
-        themeConfig: data.themeConfig
+        themeConfig: data.themeConfig,
+        // Sync flags
+        isFinanceEnabled: data.enabledModules?.includes("FINANCE"),
+        isServiceEnabled: data.enabledModules?.includes("SERVICE"),
+        isStockEnabled: data.enabledModules?.includes("STOCK"),
+        isCourierEnabled: data.enabledModules?.includes("COURIER"),
+        isEInvoiceEnabled: data.enabledModules?.includes("EFATURA")
       } as any,
     });
+
+    // EDM Ayarları ile senkronize et
+    // Eğer dükkanın e-Fatura modülü aktifse ve VKN/Vergi bilgileri değiştiyse oraya da yansıt
+    await prisma.eDMSettings.upsert({
+      where: { shopId },
+      create: {
+        shopId,
+        senderVkn: data.taxNumber || null,
+        senderTaxOffice: data.taxOffice || null,
+        senderName: data.companyName || data.name || null,
+        senderAddress: data.address || null,
+        senderCity: data.companyCity || "İstanbul",
+        senderDistrict: data.companyDistrict || null,
+      },
+      update: {
+        ...(data.taxNumber !== undefined && { senderVkn: data.taxNumber }),
+        ...(data.taxOffice !== undefined && { senderTaxOffice: data.taxOffice }),
+        ...(data.companyName !== undefined && { senderName: data.companyName }),
+        ...(data.address !== undefined && { senderAddress: data.address }),
+        ...(data.companyCity !== undefined && { senderCity: data.companyCity }),
+        ...(data.companyDistrict !== undefined && { senderDistrict: data.companyDistrict }),
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/ayarlar");
+    revalidatePath("/admin/edm");
     revalidatePath("/");
     revalidatePath("/ayarlar");
     revalidateTag("shop");
@@ -123,10 +162,20 @@ export async function updateShopModules(enabledModules: string[]) {
     if (!shopId) return { success: false, error: "Dükkan bulunamadı." };
     await prisma.shop.update({
       where: { id: shopId },
-      data: { enabledModules } as any,
+      data: {
+        enabledModules,
+        // Sync flags
+        isFinanceEnabled: enabledModules.includes("FINANCE"),
+        isServiceEnabled: enabledModules.includes("SERVICE"),
+        isStockEnabled: enabledModules.includes("STOCK"),
+        isCourierEnabled: enabledModules.includes("COURIER"),
+        isEInvoiceEnabled: enabledModules.includes("EFATURA")
+      } as any,
     });
     revalidatePath("/");
     revalidatePath("/ayarlar");
+    revalidateTag("shop");
+    revalidateTag(`shop-${shopId}`);
     return { success: true };
   } catch (error) {
     console.error("updateShopModules error:", error);

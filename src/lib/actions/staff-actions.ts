@@ -75,6 +75,11 @@ export async function getProfile() {
                         email: true,
                         phone: true,
                         address: true,
+                        taxNumber: true,
+                        taxOffice: true,
+                        companyName: true,
+                        companyCity: true,
+                        companyDistrict: true,
                     }
                 },
                 ...(shopId ? {
