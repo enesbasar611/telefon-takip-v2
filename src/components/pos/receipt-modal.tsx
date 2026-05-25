@@ -40,7 +40,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
       const html2canvasModule = await import("html2canvas");
       const html2canvas = html2canvasModule.default;
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 3,
+        scale: 4, // Higher scale for extreme clarity on thermal
         backgroundColor: "#ffffff",
         logging: false,
         useCORS: true,
@@ -65,12 +65,19 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     w.document.write(`<!DOCTYPE html><html><head><title>Satış Fişi</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; }
-  img { display: block; width: 100%; height: auto; page-break-inside: avoid; }
-  @page { size: auto; margin: 5px 0; }
+  body { background: white; width: 100%; display: flex; justify-content: center; }
+  img { 
+    display: block; 
+    width: 58mm; /* Force 58mm width */
+    height: auto; 
+    page-break-inside: avoid;
+    image-rendering: pixelated; /* Keeps text edges sharp */
+  }
+  @page { size: 58mm auto; margin: 0; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    img { filter: grayscale(1) contrast(3) brightness(0.85); width: 100%; }
+    body { background: white; }
+    img { width: 58mm; height: auto; margin: 0; }
   }
 </style>
 </head><body><img src="${url}" /></body></html>`);
@@ -129,9 +136,12 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             </div>
           </div>
 
-          {/* Thermal Receipt Preview */}
-          <div className="bg-white rounded-2xl shadow-inner border border-slate-200 overflow-hidden">
-            <div ref={receiptRef} className="bg-white p-6 w-full font-mono text-[10px] leading-relaxed text-black">
+          <div className="bg-slate-50 p-4 flex justify-center border-y border-border/40">
+            <div
+              ref={receiptRef}
+              className="bg-white p-4 w-[384px] font-mono text-[11px] leading-relaxed text-black shadow-lg"
+              style={{ width: '384px', minWidth: '384px' }} // Standard POS58 width
+            >
               {/* Header */}
               <div className="text-center border-b-2 border-black pb-3 mb-3">
                 {settings?.logoUrl && (
@@ -139,17 +149,17 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
                     <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-150" />
                   </div>
                 )}
-                <h3 className="font-black text-sm uppercase tracking-widest">{settings?.title || "BAŞAR TEKNİK"}</h3>
-                <p className="font-black text-[9px] mt-0.5 uppercase tracking-wider">{settings?.subtitle || "PROFESYONEL TEKNİK SERVİS"}</p>
-                <p className="font-bold mt-1">Tel: {settings?.phone || "+90 (5xx) xxx xx xx"}</p>
-                {settings?.address && <p className="font-bold text-[8px]">{settings.address}</p>}
+                <h3 className="font-black text-lg uppercase tracking-widest">{settings?.title || "BAŞAR TEKNİK"}</h3>
+                <p className="font-black text-[10px] mt-0.5 uppercase tracking-wider">{settings?.subtitle || "PROFESYONEL TEKNİK SERVİS"}</p>
+                <p className="font-black mt-1 text-xs">Tel: {settings?.phone || "+90 (5xx) xxx xx xx"}</p>
+                {settings?.address && <p className="font-black text-[9px] leading-tight mt-1">{settings.address}</p>}
               </div>
 
               {/* Info */}
               <div className="space-y-1 mb-3 border-b-2 border-black pb-3">
                 <div className="flex justify-between">
                   <span className="font-black">Fiş No:</span>
-                  <span className="font-black">{sale.saleNumber}</span>
+                  <span className="font-black text-xs">{sale.saleNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-black">Tarih:</span>
@@ -157,7 +167,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-black">Müşteri:</span>
-                  <span className="font-black">{sale.customer?.name || "HIZLI SATIŞ"}</span>
+                  <span className="font-black uppercase">{sale.customer?.name || "HIZLI SATIŞ"}</span>
                 </div>
               </div>
 
@@ -165,21 +175,21 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
               <div className="space-y-1.5 mb-3 border-b-2 border-black pb-3">
                 {sale.items?.map((item: any, i: number) => (
                   <div key={i} className="flex justify-between gap-2">
-                    <span className="flex-1 font-black break-words whitespace-normal">{item.product?.name}</span>
-                    <span className="whitespace-nowrap font-bold shrink-0">{item.quantity} x ₺{Number(item.unitPrice).toFixed(2)}</span>
-                    <span className="font-black shrink-0">₺{Number(item.totalPrice).toFixed(2)}</span>
+                    <span className="flex-1 font-black break-words whitespace-normal uppercase text-xs">{item.product?.name}</span>
+                    <span className="whitespace-nowrap font-black shrink-0">{item.quantity}x</span>
+                    <span className="font-black shrink-0 text-xs text-right w-20">₺{Number(item.totalPrice).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
               {/* Totals */}
               <div className="space-y-1 mb-3">
-                <div className="flex justify-between font-black text-xs">
-                  <span>GENEL TOPLAM:</span>
+                <div className="flex justify-between font-black text-sm pt-1">
+                  <span>TOPLAM:</span>
                   <span>₺{Number(sale.finalAmount).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold">
-                  <span>Ödeme Yöntemi:</span>
+                <div className="flex justify-between font-black text-[9px] uppercase mt-1">
+                  <span>ÖDEME:</span>
                   <span>{sale.paymentMethod}</span>
                 </div>
               </div>

@@ -82,24 +82,27 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
     const sortedDates = Object.keys(groups);
 
     return (
-        <div className="bg-white p-6 w-[380px] font-sans text-black relative">
+        <div
+            className="bg-white p-4 w-[384px] font-mono text-black relative"
+            style={{ width: '384px', minWidth: '384px' }}
+        >
             {/* Top Right Date */}
             <div className="absolute top-4 right-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                 {format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })}
             </div>
 
             {/* Header */}
-            <div className="text-center pb-4 border-b border-dashed border-slate-200 mb-4 mt-2">
+            <div className="text-center pb-4 border-b-2 border-black mb-4 mt-2">
                 {logoUrl && (
                     <div className="mb-2 flex justify-center">
-                        <img src={logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-125" />
+                        <img src={logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-150" />
                     </div>
                 )}
                 <h1 className="text-lg font-black uppercase tracking-widest text-black mb-0.5">{shopName || "TELEFON DÜNYASI"}</h1>
-                <p className="text-[9px] font-black text-black uppercase tracking-[0.3em] mb-2">HESAP EKSTRESİ</p>
+                <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] mb-2">HESAP EKSTRESİ</p>
 
                 <div className="mt-2">
-                    <p className="text-base font-black text-slate-900 uppercase tracking-tight inline-block border-b-2 border-indigo-600 pb-0.5">
+                    <p className="text-sm font-black text-black uppercase tracking-tight inline-block border-b-4 border-black pb-1">
                         {customer.name}
                     </p>
                 </div>
@@ -141,9 +144,9 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
                             <table className="w-full border-collapse border border-slate-200 rounded-md overflow-hidden shadow-sm">
                                 <thead>
-                                    <tr className="bg-slate-100 text-[8px] font-black text-black uppercase tracking-widest">
-                                        <th className="border border-slate-300 px-2 py-1.5 text-left">İŞLEM / DETAY</th>
-                                        <th className="border border-slate-300 px-2 py-1.5 text-right w-24">TUTAR</th>
+                                    <tr className="bg-black text-[9px] font-black text-white uppercase tracking-widest">
+                                        <th className="border border-black px-2 py-1.5 text-left">İŞLEM / DETAY</th>
+                                        <th className="border border-black px-2 py-1.5 text-right w-24">TUTAR</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -161,8 +164,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                         ) : (
                                                             <TrendingUp className="w-3 h-3 text-rose-600 shrink-0 mt-0.5" />
                                                         )}
-                                                        <div className={cn("flex flex-col gap-0.5", !isDebt ? "text-emerald-800 font-black italic" : "text-black")}>
-                                                            <span className="text-black font-extrabold uppercase text-[10px] leading-tight flex items-center gap-1.5 break-words whitespace-normal">
+                                                        <div className={cn("flex flex-col gap-1", !isDebt ? "text-black italic" : "text-black")}>
+                                                            <span className="text-black font-black uppercase text-[10px] leading-tight flex items-center gap-1.5 break-words whitespace-normal">
                                                                 {(() => {
                                                                     const desc = item.description || item.notes || (isDebt ? 'Ürün/Hizmet' : 'Tahsilat');
                                                                     if (desc.includes('(Kurye Teslimatı)')) {
@@ -176,13 +179,13 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                                     </div>
                                                 </td>
                                                 <td className={cn(
-                                                    "border border-slate-300 px-2 py-2 text-xs font-black tabular-nums text-right align-middle",
-                                                    !isDebt ? "text-emerald-700" : (item.currency === 'USD' ? "text-black" : "text-black")
+                                                    "border border-black px-2 py-2 text-[11px] font-black tabular-nums text-right align-middle",
+                                                    !isDebt ? "text-black" : "text-black"
                                                 )}>
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         {item.currency === 'USD' && (
-                                                            <span className="text-[7.5px] font-black text-black uppercase tracking-tighter">
-                                                                (~₺{(Number(item.amount) * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })})
+                                                            <span className="text-[8px] font-black text-black uppercase tracking-tighter">
+                                                                (~₺{(Number(item.amount) * currentUsdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })})
                                                             </span>
                                                         )}
                                                         <span>
@@ -259,13 +262,13 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
             const html2canvasModule = await import("html2canvas");
             const html2canvas = html2canvasModule.default;
             const canvas = await html2canvas(receiptRef.current, {
-                scale: 3,
+                scale: 4,
                 backgroundColor: "#ffffff",
                 logging: false,
                 useCORS: true,
                 onclone: (clonedDoc) => {
-                    const el = clonedDoc.querySelector('.font-sans') as HTMLElement;
-                    if (el) el.style.fontFamily = "Inter, system-ui, sans-serif";
+                    const el = clonedDoc.querySelector('.font-mono') as HTMLElement;
+                    if (el) el.style.fontFamily = "'Courier New', monospace";
                 }
             });
             return new Promise<Blob | null>((resolve) => {
@@ -320,12 +323,18 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
         w.document.write(`<!DOCTYPE html><html><head><title>Borç Ekstresi</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; }
-  img { display: block; width: 100%; height: auto; page-break-inside: avoid; }
-  @page { size: auto; margin: 5px 0; }
+  body { background: white; width: 100%; display: flex; justify-content: center; }
+  img { 
+    display: block; 
+    width: 58mm; 
+    height: auto; 
+    page-break-inside: avoid;
+    image-rendering: pixelated;
+  }
+  @page { size: 58mm auto; margin: 0; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    img { filter: grayscale(1) contrast(3) brightness(0.85); width: 100%; }
+    img { width: 58mm; }
   }
 </style>
 </head><body><img src="${url}" /></body></html>`);

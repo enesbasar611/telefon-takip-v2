@@ -55,40 +55,38 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                     </div>
 
                     {/* Thermal Preview */}
-                    <div className="receipt-preview bg-white text-black p-6 rounded-xl border border-slate-200 font-mono text-[9px] leading-relaxed shadow-inner">
-                        <div className="text-center border-b border-black border-dashed pb-3 mb-3">
+                    <div className="receipt-preview bg-white text-black p-4 w-[384px] font-mono shadow-xl mx-auto">
+                        <div className="text-center border-b-2 border-black pb-3 mb-3">
                             {settings?.logoUrl && (
                                 <div className="mb-2 flex justify-center">
-                                    <img src={settings.logoUrl} alt="Logo" className="h-6 w-auto grayscale contrast-125" />
+                                    <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-150" />
                                 </div>
                             )}
-                            <h3 className="font-medium  text-xs">{settings?.title || "BAŞAR TEKNİK"}</h3>
-                            <p className=" text-[8px] mt-0.5">{settings?.subtitle || "EKSİK ÜRÜN & TEDARİK LİSTESİ"}</p>
-                            <p className="text-[8px] mt-1">Tel: {settings?.phone}</p>
+                            <h3 className="font-black text-sm uppercase">{settings?.title || "BAŞAR TEKNİK"}</h3>
+                            <p className="font-black text-[9px] mt-0.5 uppercase tracking-wider">{settings?.subtitle || "EKSİK ÜRÜN & TEDARİK LİSTESİ"}</p>
+                            <p className="font-black text-[9px] mt-1">Tel: {settings?.phone}</p>
                         </div>
 
                         <div className="mb-3">
-                            <div className="grid grid-cols-12 gap-2  border-b border-black pb-1 mb-1 text-[8px]">
-                                <span className="col-span-6">ÜRÜN ADI</span>
-                                <span className="col-span-2 text-center">MEVCUT</span>
-                                <span className="col-span-2 text-center">ALINACAK</span>
-                                <span className="col-span-2 text-right">DURUM</span>
+                            <div className="grid grid-cols-12 gap-1 border-b-2 border-black pb-1 mb-1 text-[9px] font-black">
+                                <span className="col-span-8">ÜRÜN ADI</span>
+                                <span className="col-span-2 text-center">MEV</span>
+                                <span className="col-span-2 text-right">ALIN</span>
                             </div>
                             <div className="space-y-1">
                                 {items.map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-12 gap-2 py-1 border-b border-black/5 last:border-0 items-center">
-                                        <span className="col-span-6 truncate  leading-tight">{item.name}</span>
-                                        <span className="col-span-2 text-center  text-muted-foreground/80">{item.product?.stock || 0}</span>
-                                        <span className="col-span-2 text-center  text-black">{item.quantity || 1}</span>
-                                        <span className="col-span-2 text-right opacity-50 px-1 border border-black/20 rounded-[2px] text-[7px] h-3 flex items-center justify-center"> [ ] </span>
+                                    <div key={idx} className="grid grid-cols-12 gap-1 py-1 border-b border-black/10 last:border-0 items-center text-[10px] font-black">
+                                        <span className="col-span-8 truncate uppercase">{item.name}</span>
+                                        <span className="col-span-2 text-center">{item.product?.stock || 0}</span>
+                                        <span className="col-span-2 text-right">{item.quantity || 1}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="text-center mt-6 pt-3 border-t border-black border-dashed opacity-70">
-                            <p className="">{settings?.footer || "Tedarik Listesi Otomatik Oluşturulmuştur"}</p>
-                            <p className="text-[7px] mt-0.5">{settings?.website || "v2.basarteknik.com"}</p>
+                        <div className="text-center mt-6 pt-3 border-t-2 border-black border-dashed">
+                            <p className="font-black text-[10px] uppercase">{settings?.footer || "Tedarik Listesi Otomatik Oluşturulmuştur"}</p>
+                            <p className="text-[8px] font-black mt-1 uppercase">{settings?.website || "v2.basarteknik.com"}</p>
                         </div>
                     </div>
                 </div>
@@ -103,29 +101,30 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
 
                 <style dangerouslySetInnerHTML={{
                     __html: `
-          @media print {
+           @media print {
             body * { visibility: hidden !important; }
-            .receipt-preview, .receipt-preview * { visibility: visible !important; }
+            .receipt-preview, .receipt-preview * { 
+              visibility: visible !important; 
+              color: black !important;
+              background: white !important;
+              font-family: 'Courier New', monospace !important;
+              font-weight: 900 !important;
+            }
             .receipt-preview {
               position: fixed !important;
               left: 0 !important;
               top: 0 !important;
-              width: 80mm !important;
-              padding: 5mm !important;
+              width: 58mm !important;
+              padding: 4mm !important;
               border: none !important;
               box-shadow: none !important;
               background: white !important;
               color: black !important;
             }
-            @page { size: 80mm auto; margin: 0; }
+            @page { size: 58mm auto; margin: 0; }
           }
         `}} />
             </DialogContent>
         </Dialog>
     );
 }
-
-
-
-
-

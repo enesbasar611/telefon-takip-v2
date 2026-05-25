@@ -86,166 +86,78 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
-                    {/* Receipt Preview (Thermal Layout) */}
-                    <div className="receipt-preview bg-white text-black p-8 rounded-2xl shadow-inner border border-slate-200 font-sans text-[10px] leading-snug">
-                        <div className="text-center border-b-2 border-black pb-4 mb-4">
-                            {settings?.logoUrl && (
-                                <div className="mb-3 flex justify-center">
-                                    <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-125" />
+                    {/* Thermal Print Preview Container */}
+                    <div className="flex justify-center bg-slate-100 p-4 border-y border-border/40">
+                        <div className="receipt-preview bg-white text-black p-4 w-[384px] font-mono shadow-xl">
+                            <div className="text-center border-b-2 border-black pb-3 mb-3">
+                                {settings?.logoUrl && (
+                                    <div className="mb-2 flex justify-center">
+                                        <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-150" />
+                                    </div>
+                                )}
+                                <h3 className="font-black text-lg uppercase">{settings?.title || "BAŞAR TEKNİK"}</h3>
+                                <p className="text-[10px] font-black mt-0.5 uppercase tracking-wider">{settings?.subtitle || "TEKNİK SERVİS FİŞİ"}</p>
+                                <p className="text-xs font-black mt-1">Tel: {settings?.phone}</p>
+                            </div>
+
+                            <div className="space-y-1 mb-3 border-b-2 border-black pb-2">
+                                <div className="flex justify-between">
+                                    <span className="font-black">SERVİS NO:</span>
+                                    <span className="font-black text-xs">{editableTicket.ticketNumber}</span>
                                 </div>
-                            )}
-                            <h3 className="font-medium  text-sm">{settings?.title || "BAŞAR TEKNİK"}</h3>
-                            <p className=" text-[8px] mt-0.5 opacity-80">{settings?.subtitle || "Mobil servis & teknik destek"}</p>
-                            <div className="mt-2 text-[7px]  space-y-0.5">
-                                <p>{settings?.phone}</p>
-                                {settings?.address && <p className="opacity-70">{settings.address}</p>}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between items-center bg-black text-white px-2 py-1.5 mb-4">
-                            <span className=" text-[9px]">KAYIT NO</span>
-                            <span className="text-xs ">{ticket.ticketNumber}</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 mb-4 border-b border-black border-dashed pb-3">
-                            <div>
-                                <p className="text-[7px]  text-gray-500 mb-0.5">Müşteri</p>
-                                {isEditing ? (
-                                    <input
-                                        className="w-full border-b border-blue-500 text-[10px] focus:outline-none"
-                                        value={editableTicket.customer?.name}
-                                        onChange={(e) => setEditableTicket((prev: any) => ({ ...prev, customer: { ...prev.customer, name: e.target.value } }))}
-                                    />
-                                ) : (
-                                    <p className=" text-[10px]">{editableTicket.customer?.name}</p>
-                                )}
-                                <p className="text-[8px]  mt-0.5">{formatPhone(editableTicket.customer?.phone)}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[7px]  text-gray-500 mb-0.5">Tarih</p>
-                                <p className=" text-[9px]">{format(new Date(editableTicket.createdAt), "dd.MM.yyyy")}</p>
-                                <p className="text-[7px] opacity-60">{format(new Date(editableTicket.createdAt), "HH:mm")}</p>
-                            </div>
-                        </div>
-
-                        <div className="mb-4 space-y-2">
-                            <div className="bg-gray-100 px-2 py-1 mb-2  text-[8px] text-center shadow-sm border border-gray-200 uppercase font-bold tracking-wider">{getIndustryLabel(shop, "customerAsset")} BİLGİLERİ</div>
-                            <div className="flex justify-between border-b border-gray-100 pb-1">
-                                <span className="text-gray-500 text-[8px] uppercase">{getIndustryLabel(shop, "customerAsset")}:</span>
-                                {isEditing ? (
-                                    <div className="flex gap-1 text-[9px]">
-                                        <input className="w-16 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceBrand} onChange={(e) => updateField("deviceBrand", e.target.value)} />
-                                        <input className="w-20 border-b border-blue-500 focus:outline-none" value={editableTicket.deviceModel} onChange={(e) => updateField("deviceModel", e.target.value)} />
-                                    </div>
-                                ) : (
-                                    <span className="font-bold">{editableTicket.deviceBrand} {editableTicket.deviceModel}</span>
-                                )}
-                            </div>
-
-                            {/* Dynamic Attributes */}
-                            {editableTicket.attributes && Object.entries(editableTicket.attributes).map(([key, value]) => {
-                                if (!value || key === "brand" || key === "model" || key === "imei") return null;
-                                return (
-                                    <div key={key} className="flex justify-between border-b border-gray-100 pb-1">
-                                        <span className="text-gray-500 text-[8px] uppercase">{key}:</span>
-                                        <span className="font-medium">{String(value)}</span>
-                                    </div>
-                                );
-                            })}
-
-                            <div className="flex justify-between border-b border-gray-100 pb-1">
-                                <span className="text-gray-500 text-[8px] uppercase">SERİ/KIMLIK NO:</span>
-                                {isEditing ? (
-                                    <input className="text-right border-b border-blue-500 text-[9px] focus:outline-none" value={editableTicket.imei || ""} onChange={(e) => updateField("imei", e.target.value)} />
-                                ) : (
-                                    <span className="">{editableTicket.imei || editableTicket.serialNumber || "—"}</span>
-                                )}
-                            </div>
-                            <div className="mt-2 text-center py-1.5 bg-black text-white font-bold text-[8px] uppercase tracking-tighter">Arıza Tanımı</div>
-                            <div className="mt-1">
-                                {isEditing ? (
-                                    <textarea
-                                        className="w-full bg-gray-50 p-2 border border-blue-500 rounded text-[9px] focus:outline-none h-12"
-                                        value={editableTicket.problemDesc}
-                                        onChange={(e) => updateField("problemDesc", e.target.value)}
-                                    />
-                                ) : (
-                                    <p className="p-2 border border-black/10 rounded text-[9px] leading-tight select-all">{editableTicket.problemDesc}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {(editableTicket.accessories?.length > 0 || editableTicket.cosmeticConditions?.length > 0) && (
-                            <div className="mb-4 space-y-3">
-                                <div className="bg-gray-100 px-2 py-1 mb-2 text-[8px] text-center shadow-sm border border-gray-200 uppercase tracking-wider font-semibold">Cihaz Durumu & Aksesuarlar</div>
-
-                                {editableTicket.accessories?.length > 0 && (
-                                    <div className="flex flex-col gap-1 border-b border-gray-100 pb-2">
-                                        <span className="text-gray-500 text-[8px] uppercase font-bold">Aksesuarlar:</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {editableTicket.accessories.map((item: string, i: number) => (
-                                                <span key={item} className="text-[9px] bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-sm">
-                                                    {item}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {(editableTicket.cosmeticConditions?.length > 0 || editableTicket.cosmeticNotes) && (
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-gray-500 text-[8px] uppercase font-bold">Kozmetik Durum:</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {editableTicket.cosmeticConditions?.map((item: string) => (
-                                                <span key={item} className="text-[9px] bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-sm">{item}</span>
-                                            ))}
-                                        </div>
-                                        {editableTicket.cosmeticNotes && (
-                                            <p className="text-[9px] mt-1 text-slate-700 italic border-l-2 border-slate-200 pl-2">
-                                                {editableTicket.cosmeticNotes}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Barcode */}
-                        <div className="flex flex-col items-center justify-center my-6 py-4 border-y border-black/5 bg-gray-50/50">
-                            <Barcode value={editableTicket.ticketNumber} height={35} fontSize={9} />
-                            <p className="text-[7px]  text-gray-400 mt-1">{settings?.website || "basarteknik.com"}</p>
-                        </div>
-
-                        {settings?.terms && (
-                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-6">
-                                <p className="text-[8px]  mb-1.5 border-b border-gray-200 pb-1">Önemli Şartlar</p>
-                                <div className="text-[6.5px] text-gray-600 font-medium leading-[1.4] whitespace-pre-wrap break-words w-full h-auto min-h-min">
-                                    {settings.terms}
+                                <div className="flex justify-between">
+                                    <span className="font-black">TARİH:</span>
+                                    <span className="font-black">{format(new Date(editableTicket.createdAt), "dd/MM/yyyy HH:mm")}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-black">MÜŞTERİ:</span>
+                                    <span className="font-black uppercase">{editableTicket.customer?.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-black">TELEFON:</span>
+                                    <span className="font-black">{editableTicket.customer?.phone}</span>
                                 </div>
                             </div>
-                        )}
 
-                        <div className="flex justify-between border-t-2 border-black pt-3 items-center">
-                            <span className=" text-[9px]">TAHMİNİ ÜCRET:</span>
-                            {isEditing ? (
-                                <div className="flex items-center gap-1">
-                                    <span className="text-lg">₺</span>
-                                    <input
-                                        type="number"
-                                        className="w-20 border-b border-blue-500 text-lg focus:outline-none text-right font-medium"
-                                        value={editableTicket.estimatedCost}
-                                        onChange={(e) => updateField("estimatedCost", e.target.value)}
-                                    />
+                            <div className="space-y-2 mb-3 border-b-2 border-black pb-2 italic">
+                                <div>
+                                    <p className="text-[9px] font-black uppercase text-black/60">CİHAZ:</p>
+                                    <p className="text-[11px] font-black uppercase">{editableTicket.deviceBrand} {editableTicket.deviceModel}</p>
                                 </div>
-                            ) : (
-                                <span className="text-lg ">₺{formatCurrency(editableTicket.estimatedCost)}</span>
-                            )}
-                        </div>
+                                {editableTicket.imei && (
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-black/60">SERİ NO/IMEI:</p>
+                                        <p className="text-[11px] font-black">{editableTicket.imei}</p>
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-[9px] font-black uppercase text-black/60">ŞİKAYET:</p>
+                                    <p className="text-[11px] font-black uppercase leading-tight">{editableTicket.problemDesc}</p>
+                                </div>
+                            </div>
 
+                            <div className="flex justify-between border-t-2 border-black pt-3 items-center">
+                                <span className="font-black text-sm">TAHMİNİ ÜCRET:</span>
+                                {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                        <span className="font-black text-lg">₺</span>
+                                        <input
+                                            type="number"
+                                            className="w-20 border-b border-black text-lg focus:outline-none text-right font-black"
+                                            value={editableTicket.estimatedCost}
+                                            onChange={(e) => updateField("estimatedCost", e.target.value)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="font-black text-lg">₺{formatCurrency(editableTicket.estimatedCost)}</span>
+                                )}
+                            </div>
 
-                        <div className="text-center mt-6 pt-4 border-t border-black border-dashed opacity-70">
-                            <p className=" text-[9px]">{settings?.footer || "Cihazınız güvenli ellerde."}</p>
-                            <p className="text-[6px] mt-1 ">TELEFON TAKİP V2 / WEBFONE</p>
+                            <div className="text-center mt-6 pt-3 border-t-2 border-black border-dashed">
+                                <p className="font-black text-[10px] uppercase">{settings?.footer || "Cihazınızı bu fiş ile teslim alınız."}</p>
+                                <p className="text-[9px] font-black mt-1 uppercase">Bizi Tercih Ettiğiniz İçin Teşekkürler</p>
+                                <p className="text-[8px] font-black mt-2">{settings?.website || "v2.basarteknik.com"}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -270,21 +182,24 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                     __html: `
           @media print {
             body * { visibility: hidden !important; }
-            .receipt-preview, .receipt-preview * { visibility: visible !important; }
+            .receipt-preview, .receipt-preview * { 
+              visibility: visible !important; 
+              color: black !important;
+              background: white !important;
+              font-family: 'Courier New', monospace !important;
+            }
             .receipt-preview {
               position: fixed !important;
               left: 0 !important;
               top: 0 !important;
-              width: 80mm !important;
-              padding: 5mm !important;
+              width: 58mm !important;
+              padding: 4mm !important;
               border: none !important;
               box-shadow: none !important;
               background: white !important;
               color: black !important;
-              word-wrap: break-word !important;
-              overflow-wrap: break-word !important;
             }
-            @page { size: 80mm auto; margin: 0; }
+            @page { size: 58mm auto; margin: 0; }
           }
         `}} />
             </DialogContent>

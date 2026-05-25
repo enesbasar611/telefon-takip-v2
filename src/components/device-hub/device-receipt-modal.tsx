@@ -223,31 +223,43 @@ function ThermalReceipt({
     return (
         <div
             id="receipt-content-thermal"
+            className="font-mono text-black"
             style={{
-                width: "80mm",
+                width: "58mm", // Standard POS58 width
                 background: "#fff",
                 color: "#000",
-                fontFamily: "'Courier New', monospace",
-                padding: "4mm",
+                padding: "2mm",
                 boxSizing: "border-box",
-                fontSize: "9pt",
+                fontSize: "10pt",
+                fontWeight: 900,
             }}
         >
-            <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "6px", marginBottom: "8px" }}>
-                <div style={{ fontWeight: 900, fontSize: "10pt" }}>{info.name}</div>
-                <div style={{ fontSize: "7pt" }}>SLZ: BTK-{device.deviceInfo?.imei?.slice(-4)}</div>
-                <div style={{ marginTop: "4px", fontWeight: 700 }}>{isPurchase ? "ALIŞ SÖZLEŞMESİ" : "SATIŞ BELGESİ"}</div>
+            <div style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: "8px", marginBottom: "8px" }}>
+                <div style={{ fontWeight: 900, fontSize: "12pt", textTransform: "uppercase" }}>{info.name}</div>
+                <div style={{ fontSize: "8pt", marginTop: "2px" }}>SLZ: BTK-{device.deviceInfo?.imei?.slice(-4)}</div>
+                <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "11pt", border: "2px solid #000", display: "inline-block", padding: "2px 8px" }}>
+                    {isPurchase ? "ALIŞ SÖZLEŞMESİ" : "SATIŞ BELGESİ"}
+                </div>
             </div>
-            <div style={{ marginBottom: "6px", fontSize: "8pt" }}>
-                <div>Tarih: {date}</div>
-                <div>Müşteri: {customer.name || "—"}</div>
-                <div>Cihaz: {device.name}</div>
-                <div>IMEI: {device.deviceInfo?.imei ?? "—"}</div>
-                <div>Fiyat: {price.toLocaleString("tr-TR")} ₺</div>
+
+            <div style={{ marginBottom: "10px", fontSize: "10pt", lineHeight: "1.2" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Tarih:</span> <span>{date}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}><span>Müşteri:</span> <span style={{ textTransform: "uppercase" }}>{customer.name || "—"}</span></div>
+                <div style={{ borderTop: "1px solid #000", marginTop: "6px", paddingTop: "6px" }}>
+                    <div style={{ fontSize: "9pt", opacity: 0.8 }}>CİHAZ BİLGİSİ:</div>
+                    <div style={{ fontWeight: 900, textTransform: "uppercase" }}>{device.name}</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}><span>IMEI:</span> <span>{device.deviceInfo?.imei ?? "—"}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px", fontSize: "12pt", borderTop: "2px solid #000", paddingTop: "4px" }}>
+                    <span>TUTAR:</span>
+                    <span>₺{price.toLocaleString("tr-TR")}</span>
+                </div>
             </div>
-            {info.address && <div style={{ fontSize: "7pt", marginTop: "4px", opacity: 0.8 }}>{info.address}</div>}
-            <div style={{ fontSize: "7pt", fontWeight: "bold" }}>Tel: {info.phone}</div>
-            <div style={{ borderTop: "1px dashed #000", marginTop: "12px", paddingTop: "4px", fontSize: "7pt", textAlign: "center" }}>
+
+            {info.address && <div style={{ fontSize: "8pt", marginTop: "8px", borderTop: "1px dashed #000", paddingTop: "4px" }}>{info.address}</div>}
+            <div style={{ fontSize: "9pt", fontWeight: 900, marginTop: "2px" }}>Tel: {info.phone}</div>
+
+            <div style={{ borderTop: "2px solid #000", marginTop: "12px", paddingTop: "6px", fontSize: "8pt", textAlign: "center", fontStyle: "italic" }}>
                 Sözleşme şartları A4 nüshasındadır.
             </div>
         </div>
@@ -372,11 +384,23 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
           <title>${formType === "purchase" ? "Alış-Satış Sözleşmesi" : "Belge"}</title>
           <style>
             @page { 
-              size: ${isA4 ? "A4" : "80mm auto"}; 
+              size: ${isA4 ? "A4" : "58mm auto"}; 
               margin: 0; 
             }
-            body { margin: 0; padding: 0; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              background: white !important;
+            }
+            * { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+              color: black !important;
+            }
+            #receipt-content-thermal {
+              width: 58mm !important;
+              padding: 4mm !important;
+            }
           </style>
         </head>
         <body>${content.outerHTML}</body>
@@ -520,13 +544,13 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                                 </div>
                                 <div className="flex items-center bg-card rounded-lg p-1 border border-border">
                                     <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>A4 Standart</button>
-                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>80mm Termal</button>
+                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>58mm Termal</button>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 bg-[#05070A] overflow-auto p-10 flex justify-center items-start custom-scrollbar">
-                            <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : 'w-[80mm]'}`}>
+                            <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : 'w-[58mm]'}`}>
                                 {printFormat === "a4" ? (
                                     <A4Receipt device={device} formType={formType} date={now} customer={customer} expert={expert} shopInfo={shopInfo} />
                                 ) : (
