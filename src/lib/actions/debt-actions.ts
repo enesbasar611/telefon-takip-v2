@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { recordAuditLog } from "./audit-actions";
 
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
@@ -229,11 +230,28 @@ export async function createDebt(data: {
 export async function deleteDebt(debtId: string) {
   try {
     const shopId = await getShopId();
+    const debt = await prisma.debt.findUnique({
+      where: { id: debtId, shopId },
+      include: { customer: true }
+    });
+
+    if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
+
     await prisma.debt.delete({
       where: { id: debtId, shopId }
     });
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
+
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "CUSTOMER",
+      entityId: debt.customerId,
+      entityName: debt.customer?.name,
+      message: `${debt.customer?.name || 'Müşteri'} için olan ${debt.amount} TL tutarındaki borç kaydı silindi.`,
+      details: { amount: debt.amount, customerId: debt.customerId }
+    });
+
     return { success: true };
   } catch (error) {
     console.error("deleteDebt error:", error);
@@ -789,6 +807,15 @@ export async function deleteCustomerPayment(transactionId: string) {
     revalidatePath("/veresiye");
     revalidatePath("/satis/kasa");
     revalidatePath(`/musteriler/${customerId}`);
+
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "CUSTOMER",
+      entityId: customerId,
+      entityName: transaction.customer?.name,
+      message: `${transaction.customer?.name || 'Müşteri'} tarafından yapılan ${transaction.amount} TL tutarındaki tahsilat geri alındı/silindi.`,
+      details: { amount: transaction.amount, currency: transaction.currency, customerId }
+    });
 
     return { success: true };
   } catch (error: any) {

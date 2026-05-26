@@ -41,7 +41,8 @@ import {
   TrendingUp,
   History,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { createManualTransaction, updateManualTransaction, getAccounts, getTransactions } from "@/lib/actions/finance-actions";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
@@ -129,7 +130,6 @@ export function CreateTransactionModal({
     }
   });
 
-  // Update default values when initialType or initialCategory changes (if modal is not open yet or is being reset)
   useEffect(() => {
     if (initialType) setValue("type", initialType);
     if (initialCategory) setValue("category", initialCategory);
@@ -146,15 +146,18 @@ export function CreateTransactionModal({
     enabled: open,
     placeholderData: keepPreviousData,
   });
+
   const defaultCurrency = useMemo(() => {
     return settings.find((setting: any) => setting.key === "defaultCurrency")?.value || "TRY";
   }, [settings]);
+
   const { data: rates } = useQuery({
     queryKey: ["exchange-rates"],
     queryFn: getCurrentExchangeRates,
     enabled: open,
     placeholderData: keepPreviousData,
   });
+
   const { data: accounts = initialAccounts || [] } = useQuery<any[]>({
     queryKey: ["finance-accounts"],
     queryFn: getAccounts,
@@ -162,12 +165,14 @@ export function CreateTransactionModal({
     initialData: initialAccounts,
     placeholderData: keepPreviousData,
   });
+
   const { data: recentTransactions = [] } = useQuery<any[]>({
     queryKey: ["transactions", { pageSize: 4 }],
     queryFn: () => getTransactions({ pageSize: 4 }),
     enabled: open,
     placeholderData: keepPreviousData,
   });
+
   const summary = useMemo(() => {
     const income = recentTransactions.filter((t: any) => t.type === "INCOME").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
     const expense = recentTransactions.filter((t: any) => t.type === "EXPENSE").reduce((acc: number, t: any) => acc + Number(t.amount), 0);
@@ -252,7 +257,6 @@ export function CreateTransactionModal({
   });
   const isPending = transactionMutation.isPending;
 
-  // Auto-open from URL query param (e.g. from global search: ?action=add-income)
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'add-income') {
@@ -314,7 +318,27 @@ export function CreateTransactionModal({
     }
   };
 
+  const selectedAccount = useMemo(() => {
+    return accounts.find(a => a.id === watch("accountId"));
+  }, [accounts, watch("accountId")]);
+
+  const isInsufficient = useMemo(() => {
+    if (transactionType !== "EXPENSE" || !selectedAccount || !amountValue) return false;
+
+    // For Credit Card, check against available balance (limit - balance)
+    if (selectedAccount.type === "CREDIT_CARD") {
+      return amountValue > (selectedAccount.availableBalance || 0);
+    }
+
+    // For Cash/Bank, check against current balance
+    return amountValue > selectedAccount.balance;
+  }, [transactionType, selectedAccount, amountValue]);
+
   const onSubmit = async (data: TransactionFormValues) => {
+    if (isInsufficient) {
+      toast.error("Yetersiz bakiye! Bu kasa eksiye düşeceği için işlem yapılamaz.");
+      return;
+    }
     transactionMutation.mutate(data);
   };
 
@@ -554,6 +578,13 @@ export function CreateTransactionModal({
                   </SelectContent>
                 </Select>
                 {errors.accountId && <p className="text-[10px] text-rose-500 ml-2">{errors.accountId.message}</p>}
+
+                {isInsufficient && (
+                  <div className="flex items-center gap-2 mt-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                    <p className="text-[10px] text-rose-500 font-medium">Bu kasada yeterli bakiye yok! Kasa eksiye düşeceği için işlem yapılamaz.</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -581,7 +612,6 @@ export function CreateTransactionModal({
               {errors.description && <p className="text-[10px] text-rose-500 ml-2 italic">{errors.description.message}</p>}
             </div>
 
-            {/* Document Upload Area */}
             <div className="space-y-3">
               <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Upload className="h-3 w-3" /> BELGE / FİŞ YÜKLE
@@ -609,7 +639,6 @@ export function CreateTransactionModal({
                 <p className="text-[9px] text-muted-foreground/50 mt-2">PNG, JPG, PDF (MAX. 10MB)</p>
               </div>
 
-              {/* Uploaded Files List */}
               {attachments.length > 0 && (
                 <div className="grid grid-cols-1 gap-3 mt-4">
                   {attachments.map((file, idx) => (
@@ -645,12 +674,12 @@ export function CreateTransactionModal({
               )}
             </div>
 
-            {/* Modal Actions */}
             <div className="sticky bottom-0 -mx-2 flex gap-3 border-t border-border/70 bg-background/90 px-2 pb-2 pt-4 backdrop-blur-xl">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="h-12 flex-1 rounded-xl text-[11px] font-semibold uppercase tracking-widest">Iptal</Button>
-              <Button type="submit" disabled={isPending} className={cn(
+              <Button type="submit" disabled={isPending || isInsufficient} className={cn(
                 "h-12 flex-[1.6] rounded-xl text-[11px] font-semibold uppercase tracking-widest text-white gap-2 shadow-lg",
-                transactionType === "INCOME" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
+                transactionType === "INCOME" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20",
+                isInsufficient && "opacity-50 cursor-not-allowed grayscale"
               )}>
                 {isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -668,7 +697,6 @@ export function CreateTransactionModal({
         {/* Right Side: Sidebar */}
         <div className="flex-[0.6] bg-zinc-50/50 dark:bg-zinc-900/30 border-l border-zinc-200 dark:border-zinc-800 p-8 md:p-10 flex flex-col h-full overflow-hidden">
           <div className="space-y-10 h-full overflow-y-auto custom-scrollbar pr-2">
-            {/* Balances Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -704,7 +732,6 @@ export function CreateTransactionModal({
               </div>
             </div>
 
-            {/* Recent History Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -729,7 +756,7 @@ export function CreateTransactionModal({
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
                       <p className="text-[10px] text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
-                        {format(new Date(tx.createdAt), "HH:mm")} • {tx.financeAccount?.name || "Bilinmiyor"}
+                        {tx.createdAt ? format(new Date(tx.createdAt), "HH:mm") : "--:--"} • {tx.financeAccount?.name || "Bilinmiyor"}
                       </p>
                     </div>
                     <div className="text-right">
@@ -743,13 +770,9 @@ export function CreateTransactionModal({
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-border/40 text-[10px] uppercase tracking-widest hover:border-primary/40 transition-all mt-4">
-                  TÜM HAREKETLERİ GÖR
-                </Button>
               </div>
             </div>
 
-            {/* Financial Summary Box */}
             <div className="p-8 rounded-[2rem] bg-blue-500/5 border border-blue-500/20 relative overflow-hidden group">
               <TrendingUp className="absolute -right-4 -bottom-4 h-24 w-24 text-indigo-500/10 group-hover:rotate-12 transition-transform duration-700" />
               <div className="relative z-10">
@@ -760,7 +783,7 @@ export function CreateTransactionModal({
                   <h4 className="font-medium text-xs text-foreground tracking-widest">FİNANSAL ÖZET</h4>
                 </div>
                 <p className="text-[11px] text-muted-foreground/70 leading-relaxed uppercase tracking-tighter">
-                  BU AY TOPLAM GELİRİNİZ GİDERLERİNİZDEN <span className="text-emerald-500 font-extrabold tracking-normal">₺{(summary.income - summary.expense).toLocaleString('tr-TR')}</span> DAHA FAZLA. PERFORMANS %12 ARTIŞTA.
+                  BU AY TOPLAM GELİRİNİZ GİDERLERİNİZDEN <span className="text-emerald-500 font-extrabold tracking-normal">₺{(summary.income - summary.expense).toLocaleString('tr-TR')}</span> DAHA FAZLA.
                 </p>
               </div>
             </div>

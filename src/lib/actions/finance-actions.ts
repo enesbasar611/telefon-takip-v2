@@ -9,6 +9,9 @@ import { transactionSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildTransactionSearchWhere } from "@/lib/finance/transaction-search";
 import { z } from "zod";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { recordAuditLog } from "./audit-actions";
+import { convertTransactionAmount } from "@/lib/finance/transaction-currency";
 
 export async function getTransactions(options: {
   accountId?: string;
@@ -150,6 +153,7 @@ export async function createAccount(data: {
   }
 }
 
+
 export async function createManualTransaction(rawData: z.infer<typeof transactionSchema>) {
   try {
     const shopId = await getShopId();
@@ -213,16 +217,39 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
       if (!account) throw new Error("Hesap bulunamadı.");
 
       const oldBalance = Number(account.balance);
-      const newBalance = data.type === 'INCOME' ? oldBalance + data.amount : oldBalance - data.amount;
+      const rates = await getExchangeRates(shopId);
+      const tryAmount = convertTransactionAmount(data.amount, data.currency as any, rates).TRY;
+
+      let newBalance: number;
+
+      if (account.type === "CREDIT_CARD") {
+        // For credit cards, 'balance' in DB represents the used amount (debt)
+        // INCOME means paying the card (decreasing debt)
+        // EXPENSE means spending (increasing debt)
+        newBalance = data.type === 'INCOME' ? oldBalance - tryAmount : oldBalance + tryAmount;
+
+        // VALIDATION: Prevent exceeding limit
+        const limit = account.limit ? Number(account.limit) : 0;
+        if (data.type === 'EXPENSE' && newBalance > limit) {
+          throw new Error("Kart limiti yetersiz! Bu islem yapilamaz.");
+        }
+      } else {
+        // For CASH, BANK, POS, 'balance' represents available money
+        newBalance = data.type === 'INCOME' ? oldBalance + tryAmount : oldBalance - tryAmount;
+
+        // VALIDATION: Prevent negative balance
+        if (data.type === 'EXPENSE' && newBalance < 0) {
+          throw new Error("Yetersiz bakiye! Bu kasa eksiye düşeceği için işlem yapılamaz.");
+        }
+      }
 
       // 2. Calculate New Available Balance if it's a Credit Card
       let newAvailableBalance = account.availableBalance ? Number(account.availableBalance) : null;
       if (account.type === "CREDIT_CARD") {
-        // Credit card available balance is limit - balance (but here balance is used as current spendable amount)
-        // Actually, let's stick to: balance = money in account/available limit.
-        // If it's a credit card, availableBalance = balance.
-        newAvailableBalance = newBalance;
+        const limit = account.limit ? Number(account.limit) : 0;
+        newAvailableBalance = limit - newBalance;
       }
+
 
       const t = await tx.transaction.create({
         data: {
@@ -980,6 +1007,16 @@ export async function deleteAccount(id: string) {
 
     revalidatePath("/satis/kasa");
     revalidateTag(`dashboard-${shopId}`);
+
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "FINANCE",
+      entityId: id,
+      entityName: account.name,
+      message: `${account.name} isimli kasa/hesap silindi.`,
+      details: { type: account.type, finalBalance: account.balance }
+    });
+
     return { success: true };
   } catch (error) {
     console.error("Account deletion error:", error);
@@ -990,14 +1027,22 @@ export async function deleteAccount(id: string) {
 export async function deleteTransaction(id: string) {
   try {
     const shopId = await getShopId();
+    let deletedTxDetails: any = null;
 
     await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findUnique({
         where: { id, shopId },
-        include: { financeAccount: true }
+        include: { financeAccount: true, user: true }
       });
 
       if (!transaction) throw new Error("İşlem bulunamadı.");
+      deletedTxDetails = {
+        amount: transaction.amount,
+        type: transaction.type,
+        description: transaction.description,
+        accountName: transaction.financeAccount?.name,
+        userName: transaction.user?.name
+      };
 
       // Reverse balance
       if (transaction.financeAccountId) {
@@ -1037,6 +1082,18 @@ export async function deleteTransaction(id: string) {
 
     revalidatePath("/satis/kasa");
     revalidateTag(`dashboard-${shopId}`);
+
+    if (deletedTxDetails) {
+      await recordAuditLog({
+        action: "DELETE",
+        entityType: "FINANCE",
+        entityId: id,
+        entityName: deletedTxDetails.description || "Finansal İşlem",
+        message: `${deletedTxDetails.accountName || 'Kasa'} hesabından ${deletedTxDetails.amount} TL tutarındaki işlem silindi. (${deletedTxDetails.description || ''})`,
+        details: deletedTxDetails
+      });
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Delete transaction error:", error);

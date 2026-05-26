@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Wallet, Landmark, CreditCard, Loader2, Search } from "lucide-react";
-import { createAccount, updateAccount, getAccounts, createManualTransaction } from "@/lib/actions/finance-actions";
+import { Plus, Wallet, Landmark, CreditCard, Loader2, Search, Trash2 } from "lucide-react";
+import { createAccount, updateAccount, getAccounts, createManualTransaction, deleteAccount } from "@/lib/actions/finance-actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -265,6 +265,27 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
                             )}
 
                             <div className="flex gap-4">
+                                {selectedAccount && !selectedAccount.name?.toLowerCase().includes("merkez") && !(selectedAccount as any).isDefault && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={async () => {
+                                            if (confirm(`${selectedAccount.name} hesabını silmek istediğinize emin misiniz?`)) {
+                                                const res = await deleteAccount(selectedAccount.id);
+                                                if (res.success) {
+                                                    toast.success("Hesap silindi.");
+                                                    setOpen(false);
+                                                    queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                                                } else {
+                                                    toast.error(res.error);
+                                                }
+                                            }
+                                        }}
+                                        className="h-14 w-14 rounded-[1.5rem] border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center p-0"
+                                    >
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                )}
                                 <Button type="button" variant="ghost" onClick={() => setView("LIST")} className="flex-1 h-14 text-[10px] rounded-[1.5rem] hover:bg-zinc-100 transition-colors uppercase tracking-[0.2em] border border-border/40 text-muted-foreground font-bold">İPTAL</Button>
                                 <Button type="submit" disabled={loading} className={cn("flex-[2] h-14 text-[10px] rounded-[1.5rem] shadow-xl text-white uppercase tracking-[0.2em] font-bold", isEdit ? "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20")}>
                                     {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (view === "FORM" ? (selectedAccount ? "GÜNCELLE" : "HESABI OLUŞTUR") : "BAKİYEYİ EKLE")}

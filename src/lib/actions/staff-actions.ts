@@ -7,6 +7,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId, auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { getDefaultStaffPermissions } from "@/lib/staff-permissions";
+import { recordAuditLog } from "./audit-actions";
+
 
 export const getStaff = async (shopId?: string) => {
     const finalShopId = shopId || await getShopId();
@@ -177,6 +179,16 @@ export async function createStaff(data: {
         });
         revalidatePath("/personel");
         revalidateTag(`staff-${shopId}`);
+
+        await recordAuditLog({
+            action: "CREATE",
+            entityType: "STAFF",
+            entityId: user.id,
+            entityName: `${user.name} ${user.surname || ""}`.trim(),
+            message: `${user.name} ${user.surname || ""}`.trim() + ` isimli yeni personel eklendi.`,
+            details: { role: user.role }
+        });
+
         return { success: true, user: serializePrisma(user) };
     } catch (error) {
         console.error("Error creating staff:", error);
@@ -221,6 +233,16 @@ export async function updateStaff(userId: string, data: any) {
 
         revalidatePath("/personel");
         revalidateTag(`staff-${shopId}`);
+
+        await recordAuditLog({
+            action: "UPDATE",
+            entityType: "STAFF",
+            entityId: userId,
+            entityName: `${targetUser.name} ${targetUser.surname || ""}`,
+            message: `${targetUser.name} personeli bilgileri güncellendi.`,
+            details: { updatedFields: Object.keys(data) }
+        });
+
         return { success: true };
     } catch (error) {
         console.error("Error updating staff:", error);
@@ -328,6 +350,16 @@ export async function deleteStaff(userId: string, options?: {
 
         revalidatePath("/personel");
         revalidateTag(`staff-${shopId}`);
+
+        await recordAuditLog({
+            action: "DELETE",
+            entityType: "STAFF",
+            entityId: userId,
+            entityName: `${targetUser.name} ${targetUser.surname || ""}`,
+            message: `${targetUser.name} personeli sistemden silindi.`,
+            details: { deletionOptions: options }
+        });
+
         return { success: true };
     } catch (error) {
         console.error("Error deleting staff:", error);
@@ -400,6 +432,12 @@ export async function getStaffLogs(page = 1, limit = 10, search?: string, date?:
             orderBy: { createdAt: 'desc' }
         });
 
+        const auditLogs = await prisma.auditLog.findMany({
+            where,
+            include: { user: true },
+            orderBy: { createdAt: 'desc' }
+        });
+
         const combined = [
             ...serviceLogs.map(log => ({
                 id: log.id,
@@ -414,6 +452,16 @@ export async function getStaffLogs(page = 1, limit = 10, search?: string, date?:
                 user: sale.user || { name: 'Sistem' },
                 message: `satış işlemi gerçekleştirdi: ${Number(sale.finalAmount).toLocaleString('tr-TR')} ₺`,
                 createdAt: sale.createdAt
+            })),
+            ...auditLogs.map((log: any) => ({
+                id: log.id,
+                type: 'audit',
+                user: log.user || { name: 'Sistem' },
+                message: log.message,
+                createdAt: log.createdAt,
+                action: log.action,
+                entityType: log.entityType,
+                entityName: log.entityName
             }))
         ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 

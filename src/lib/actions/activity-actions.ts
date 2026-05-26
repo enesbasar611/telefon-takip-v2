@@ -17,10 +17,14 @@ export interface UnifiedOperation {
     currency: string;
     customerName: string;
     customerId?: string;
+    customerPhone?: string;
     paymentMethod: string;
+    accountName?: string;
     description: string;
-    items: { name: string; quantity: number; price?: number }[];
+    items: { name: string; quantity: number; price?: number; productId?: string }[];
     status?: string;
+    saleId?: string;
+    debtId?: string;
 }
 
 export async function getUnifiedHistory(options: {
@@ -69,19 +73,13 @@ export async function getUnifiedHistory(options: {
                 where,
                 include: {
                     customer: true,
+                    financeAccount: true,
                     sale: {
                         include: {
                             items: { include: { product: true } }
                         }
                     },
-                    debt: {
-                        include: {
-                            // Direct debts items are tracked via inventory movements where notes link back
-                            // But for simplicity in the feed, we can rely on the description or 
-                            // join movements if we want product names.
-                            // However, our new Transactions already have a good description.
-                        }
-                    }
+                    debt: true
                 },
                 orderBy: { createdAt: "desc" },
                 skip,
@@ -102,8 +100,19 @@ export async function getUnifiedHistory(options: {
             const operationItems = tx.sale?.items.map((item: any) => ({
                 name: item.product?.name || "Bilinmeyen Ürün",
                 quantity: item.quantity,
-                price: Number(item.price)
+                price: Number(item.price),
+                productId: item.productId
             })) || [];
+
+            // If it's a debt and no items exist (direct debt), add description as a virtual item
+            if (isDebt && operationItems.length === 0) {
+                operationItems.push({
+                    name: tx.description || "Veresiye Kaydı",
+                    quantity: 1,
+                    price: Number(tx.amount),
+                    productId: undefined
+                });
+            }
 
             return {
                 id: tx.id,
@@ -114,10 +123,14 @@ export async function getUnifiedHistory(options: {
                 currency: tx.currency,
                 customerName: tx.customer?.name || "Perakende Müşteri",
                 customerId: tx.customerId || undefined,
+                customerPhone: tx.customer?.phone || undefined,
                 paymentMethod: tx.paymentMethod,
+                accountName: tx.financeAccount?.name,
                 description: tx.description,
                 items: operationItems,
-                status: isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT")
+                status: isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT"),
+                saleId: tx.saleId || undefined,
+                debtId: tx.debtId || undefined
             };
         });
 

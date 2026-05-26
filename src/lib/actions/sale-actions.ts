@@ -11,6 +11,7 @@ import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 import { saleSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
+import { recordAuditLog } from "./audit-actions";
 
 // getOrCreateDevUser removed.
 

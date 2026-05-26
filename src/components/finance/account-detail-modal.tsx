@@ -12,6 +12,8 @@ import { getAccountAnalytics } from "@/lib/actions/finance-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
+
 
 interface Account {
     id: string;
@@ -25,6 +27,10 @@ interface Account {
 export function AccountDetailModal({ account }: { account: Account }) {
     const [open, setOpen] = useState(false);
     const [period, setPeriod] = useState<"DAY" | "WEEK" | "MONTH">("WEEK");
+
+    const { rates } = useDashboardData();
+    const usdRate = rates?.usd || 35.0;
+    const eurRate = rates?.eur || 38.0;
     const { data: analytics, isLoading, isFetching, refetch } = useQuery<any>({
         queryKey: ["account-analytics", account.id, period],
         queryFn: () => getAccountAnalytics(account.id, period),
@@ -86,6 +92,10 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             <p className={cn("text-4xl  tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
                                 ₺{Number(account.balance).toLocaleString('tr-TR')}
                             </p>
+                            <div className="flex justify-end gap-3 mt-1 opacity-60">
+                                <span className="text-xs font-medium text-muted-foreground">~${(Number(account.balance) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-xs font-medium text-muted-foreground">~€{(Number(account.balance) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
+                            </div>
                         </div>
                     </DialogHeader>
                 </div>
@@ -324,9 +334,20 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <p className={cn("text-[13px] ", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
-                                                        {t.type === 'INCOME' ? '+' : '-'}₺{Number(t.amount).toLocaleString('tr-TR')}
-                                                    </p>
+                                                    <div className="flex flex-col items-end">
+                                                        <p className={cn("text-[13px] font-semibold", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
+                                                            {t.type === 'INCOME' ? '+' : '-'}
+                                                            {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}
+                                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "TRY" ? 2 : 1 })}
+                                                        </p>
+                                                        <p className="text-[9px] text-muted-foreground/60 font-medium">
+                                                            {t.currency === "TRY" ? (
+                                                                `~${(Number(t.amount) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}$`
+                                                            ) : (
+                                                                `~₺${Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString('tr-TR')}`
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

@@ -9,6 +9,8 @@ import { productSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateProductBarcode } from "@/lib/barcode-utils";
 import { z } from "zod";
+import { recordAuditLog } from "./audit-actions";
+
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
   const shopId = await getShopId();
@@ -347,6 +349,16 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
     revalidatePath("/ikinci-el");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "PRODUCT",
+      entityId: product.id,
+      entityName: product.name,
+      message: `${product.name} isimli yeni ürün oluşturuldu.`,
+      details: { stock: product.stock, buyPrice: product.buyPrice, sellPrice: product.sellPrice }
+    });
+
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -568,6 +580,20 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
     if (newStock !== undefined && newStock <= 0) {
       await checkStockAndAddShortage(id, product.name);
     }
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "PRODUCT",
+      entityId: product.id,
+      entityName: product.name,
+      message: `${product.name} ürün bilgileri güncellendi.`,
+      details: {
+        changes: Object.keys(data).filter(key => (data as any)[key] !== undefined),
+        oldStock: oldProduct?.stock,
+        newStock: product.stock
+      }
+    });
+
     return { success: true, product: serializePrisma(product) };
   } catch (error) {
     console.error("Update product error:", error);
@@ -831,6 +857,19 @@ export async function deleteProduct(id: string, force: boolean = false) {
       await tx.deviceHubInfo.deleteMany({ where: { productId: id } });
       await tx.shortageItem.deleteMany({ where: { productId: id, shopId } });
       await tx.product.delete({ where: { id, shopId } });
+    });
+
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "PRODUCT",
+      entityId: id,
+      entityName: usage.name,
+      message: `${usage.name} isimli ürün sistemden tamamen silindi.`,
+      details: {
+        wasFound: !!usage,
+        force,
+        stock: usage.stock
+      }
     });
 
     revalidatePath("/stok");

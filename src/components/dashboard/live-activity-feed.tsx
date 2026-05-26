@@ -18,7 +18,9 @@ import {
   Package,
   ShoppingCart,
   Users,
-  ChevronRight
+  ChevronRight,
+  ShieldAlert,
+  Scale
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -49,8 +51,13 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
           {activity.slice(0, 5).map((item) => (
             <div key={item.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 group">
               <div className="flex items-start gap-5">
-                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary/10 border-secondary/20 text-secondary'}`}>
-                  {item.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
+                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' :
+                    item.type === 'AUDIT' ? 'bg-rose-100 dark:bg-rose-500/20 border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400' :
+                      'bg-secondary/10 border-secondary/20 text-secondary'
+                  }`}>
+                  {item.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> :
+                    item.type === 'AUDIT' ? <ShieldAlert className="h-5 w-5" /> :
+                      <Banknote className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-4 mb-2">
@@ -84,8 +91,3 @@ export function LiveActivityFeed({ activity }: { activity: any[] }) {
     </Card>
   );
 }
-
-
-
-
-

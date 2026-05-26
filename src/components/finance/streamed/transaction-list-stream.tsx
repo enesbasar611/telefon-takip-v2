@@ -6,7 +6,7 @@ import { TransactionHistory } from "../transaction-history";
 import { getTransactions } from "@/lib/actions/finance-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function TransactionListStream({ initialSearch = "" }: { initialSearch?: string }) {
+export function TransactionListStream({ initialSearch = "", accountId }: { initialSearch?: string; accountId?: string }) {
     const [search, setSearch] = useState(initialSearch);
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
@@ -19,8 +19,8 @@ export function TransactionListStream({ initialSearch = "" }: { initialSearch?: 
     }, [search]);
 
     const { data: transactions, isPending } = useQuery({
-        queryKey: ["finance-transactions", 1, debouncedSearch],
-        queryFn: () => getTransactions({ page: 1, pageSize: 50, search: debouncedSearch }),
+        queryKey: ["finance-transactions", 1, debouncedSearch, accountId],
+        queryFn: () => getTransactions({ page: 1, pageSize: 50, search: debouncedSearch, accountId }),
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes
     });

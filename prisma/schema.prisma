@@ -16,6 +16,7 @@ model Shop {
   email                String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  auditLogs            AuditLog[]
   enabledModules       String[]              @default(["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"])
   industry             String                @default("GENERAL")
   themeConfig          Json?
@@ -123,6 +124,7 @@ model User {
   shortageTasks        ShortageItem[]  @relation("ShortageAssignment")
   transactions         Transaction[]
   leaves               UserLeave[]
+  auditLogs            AuditLog[]
   shop                 Shop?           @relation(fields: [shopId], references: [id])
 }
 
@@ -1051,4 +1053,24 @@ model Invoices {
   @@index([tenant_id, direction])
   @@index([tenant_id, ettn])
   @@index([tenant_id, invoice_date])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  shopId      String
+  action      String   // e.g., "DELETE", "UPDATE", "CREATE"
+  entityType  String   // e.g., "PRODUCT", "STAFF", "CUSTOMER", "SALE", "SERVICE"
+  entityId    String?
+  entityName  String?  // Name of the entity at the time of log (important for deleted items)
+  message     String
+  details     Json?    // Optional: stores old values or more context
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([userId])
+  @@index([createdAt])
 }

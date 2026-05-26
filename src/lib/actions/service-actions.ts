@@ -13,6 +13,7 @@ import { sendWhatsAppAction } from "./data-management-actions";
 import { getSettings } from "./setting-actions";
 import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 import { serviceTicketSchema } from "@/lib/validations/schemas";
+import { recordAuditLog } from "./audit-actions";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 // Local schema moved to centralized lib/validations/schemas.ts
@@ -913,6 +914,12 @@ export async function deleteServiceTicket(id: string) {
   const shopId = await getShopId();
 
   try {
+    const ticket = await prisma.serviceTicket.findUnique({
+      where: { id, shopId }
+    });
+
+    if (!ticket) return { success: false, error: "Servis kaydı bulunamadı." };
+
     await prisma.$transaction(async (tx) => {
       // 1. Stok iadesi için kullanılan parçaları bul
       const usedParts = await tx.serviceUsedPart.findMany({ where: { ticketId: id, shopId } });
@@ -981,6 +988,15 @@ export async function deleteServiceTicket(id: string) {
     revalidatePath("/stok");
     revalidatePath("/tedarikciler");
     revalidatePath("/");
+
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "SERVICE",
+      entityId: id,
+      entityName: `#${ticket.ticketNumber}`,
+      message: `#${ticket.ticketNumber} numaralı servis kaydı silindi.`,
+      details: { ticketNumber: ticket.ticketNumber, deviceModel: ticket.deviceModel }
+    });
 
     return { success: true };
   } catch (error: any) {

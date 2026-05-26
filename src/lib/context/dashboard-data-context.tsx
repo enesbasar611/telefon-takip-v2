@@ -43,13 +43,31 @@ export function DashboardDataProvider({
         refetchOnMount: false,
     });
 
+    // Handle LocalStorage caching for rates to survive browser refreshes/data clearing issues
+    React.useEffect(() => {
+        if (data?.rates) {
+            localStorage.setItem(`last_known_rates_${shopId || 'global'}`, JSON.stringify(data.rates));
+        }
+    }, [data?.rates, shopId]);
+
+    const cachedRates = React.useMemo(() => {
+        if (typeof window === 'undefined') return null;
+        try {
+            const cached = localStorage.getItem(`last_known_rates_${shopId || 'global'}`);
+            return cached ? JSON.parse(cached) : null;
+        } catch (e) {
+            return null;
+        }
+    }, [shopId]);
+
+    const rates = data?.rates || initialRates || cachedRates;
     const settings: DashboardSetting[] = data?.settings || initialSettings || [];
     const defaultCurrency = (settings.find(s => s.key === "defaultCurrency")?.value as any) || "TRY";
 
     return (
         <DashboardDataContext.Provider
             value={{
-                rates: data?.rates || initialRates,
+                rates,
                 stats: data?.stats || initialStats,
                 settings,
                 defaultCurrency,

@@ -11,6 +11,8 @@ import { AccountDetailModal } from "./account-detail-modal";
 import { TransferModal } from "./transfer-modal";
 import { useToast } from "@/hooks/use-toast";
 import { deleteAccount } from "@/lib/actions/finance-actions";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -57,7 +59,14 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
     };
 
     const { toast } = useToast();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+    const { rates } = useDashboardData();
+    const usdRate = rates?.usd || 35.0;
+    const eurRate = rates?.eur || 38.0;
 
     const handleDelete = async (id: string) => {
         setIsDeleting(id);
@@ -86,16 +95,74 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Balance Card */}
+                <Card
+                    onClick={() => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("accountId");
+                        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+                    }}
+                    className={cn(
+                        "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-[2rem] cursor-pointer",
+                        !searchParams.get("accountId") ? "ring-2 ring-blue-500 border-blue-500/50 bg-blue-500/5" : "hover:border-blue-500/30"
+                    )}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardContent className="p-6 relative z-10">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500 bg-blue-600 text-white border-blue-600/20">
+                                <Wallet className="h-6 w-6" />
+                            </div>
+                            <Badge variant="outline" className="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
+                                Hepsi
+                            </Badge>
+                        </div>
+                        <div>
+                            <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">Toplam Kasa</h3>
+                            <p className="text-2xl tracking-tighter text-foreground">
+                                ₺{accounts.reduce((sum, acc) => {
+                                    if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
+                                    return sum + Number(acc.balance);
+                                }, 0).toLocaleString('tr-TR')}
+                            </p>
+                            <div className="flex gap-2 mt-0.5 opacity-60">
+                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                    ~${(accounts.reduce((sum, acc) => {
+                                        if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
+                                        return sum + Number(acc.balance);
+                                    }, 0) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                </span>
+                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                    ~€{(accounts.reduce((sum, acc) => {
+                                        if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
+                                        return sum + Number(acc.balance);
+                                    }, 0) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest opacity-60">TÜM HAREKETLERİ GÖR</p>
+                        </div>
+                    </CardContent>
+                </Card>
                 {accounts.map((account) => {
                     const Icon = icons[account.type] || Wallet;
                     const isCentral = account.name.toLowerCase().includes("merkez") || (account as any).isDefault;
+                    const isSelected = searchParams.get("accountId") === account.id;
 
                     return (
                         <Card
                             key={account.id}
+                            onClick={() => {
+                                const params = new URLSearchParams(searchParams.toString());
+                                if (params.get("accountId") === account.id) {
+                                    params.delete("accountId");
+                                } else {
+                                    params.set("accountId", account.id);
+                                }
+                                router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+                            }}
                             className={cn(
-                                "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-[2rem]",
-                                isCentral ? "hover:border-blue-500/50" : "hover:border-rose-500/30"
+                                "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-[2rem] cursor-pointer",
+                                isSelected ? "ring-2 ring-blue-500 border-blue-500/50 bg-blue-500/5" : (isCentral ? "hover:border-blue-500/50" : "hover:border-rose-500/30")
                             )}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -104,7 +171,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                     <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
                                         <Icon className="h-6 w-6" />
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {!isCentral && (
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -145,6 +212,14 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 <div>
                                     <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
                                     <p className="text-2xl tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+                                    <div className="flex gap-2 mt-0.5 opacity-60">
+                                        <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                            ~${(Number(account.balance) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                            ~€{(Number(account.balance) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                        </span>
+                                    </div>
 
                                     {account.type === "CREDIT_CARD" && account.limit && (
                                         <div className="mt-3 space-y-1.5 ">
@@ -161,7 +236,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+                                <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                                     <AccountDetailModal account={account} />
                                     <CreateAccountModal account={account} />
                                     <TransferModal accounts={accounts} fromAccountId={account.id} />

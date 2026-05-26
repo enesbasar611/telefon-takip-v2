@@ -17,8 +17,7 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { deleteTransaction, deleteTransactions } from "@/lib/actions/finance-actions";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { EditTransactionWrapper } from "./edit-transaction-wrapper";
 import {
     AlertDialog,
@@ -47,11 +46,10 @@ export function TransactionHistory({
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const { data: rates } = useQuery({
-        queryKey: ["exchange-rates"],
-        queryFn: () => getExchangeRates(null),
-    });
-    const usdRate = rates?.usd || 32.5;
+    const { rates } = useDashboardData();
+    const usdRate = rates?.usd || 35.0;
+    const eurRate = rates?.eur || 38.0;
+
 
     const filtered = transactions.filter((t) => {
         // Only show transactions that actually impact cash/bank/card accounts
@@ -266,17 +264,28 @@ export function TransactionHistory({
                                         </TableCell>
                                         <TableCell className="text-right pr-8">
                                             <div className="flex flex-col items-end">
-                                                <div className={cn("flex items-center gap-1.5 text-base  tracking-tighter font-semibold", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
+                                                <div className={cn("flex items-center gap-1.5 text-base tracking-tighter font-semibold", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
                                                     {t.type === 'INCOME' ? '+' : '-'}
-                                                    {t.currency === "USD" ? "$" : "₺"}
-                                                    {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
+                                                    {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}
+                                                    {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "TRY" ? 2 : 1 })}
                                                     {t.type === 'INCOME' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                                                 </div>
-                                                {t.currency === "USD" && (
-                                                    <span className="text-[10px] text-muted-foreground/60 font-medium">
-                                                        ~₺{Math.round(Number(t.amount) * usdRate).toLocaleString('tr-TR')}
-                                                    </span>
-                                                )}
+                                                <div className="flex flex-col items-end opacity-50 space-y-0">
+                                                    {t.currency === "TRY" ? (
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">
+                                                                ~${(Number(t.amount) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                            </span>
+                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">
+                                                                ~€{(Number(t.amount) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] text-muted-foreground font-medium">
+                                                            ~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString('tr-TR')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </TableCell>
 
@@ -299,13 +308,18 @@ export function TransactionHistory({
                                                             {isIncome
                                                                 ? <ArrowUpRight className="h-3 w-3" />
                                                                 : <ArrowDownRight className="h-3 w-3" />}
-                                                            {t.currency === "USD" ? "$" : "₺"}
-                                                            {balance.toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
+                                                            {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}
+                                                            {balance.toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "TRY" ? 2 : 1 })}
                                                         </div>
                                                     );
 
                                                 })()}
-                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest">
+                                                {t.currency !== "TRY" && (
+                                                    <span className="text-[9px] text-muted-foreground/60 font-medium">
+                                                        ~₺{Math.round(Number(t.runningBalance) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString('tr-TR')}
+                                                    </span>
+                                                )}
+                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest whitespace-nowrap">
                                                     {t.financeAccount?.name || 'KASA'} BAKİYESİ
                                                 </span>
                                             </div>
@@ -359,14 +373,25 @@ export function TransactionHistory({
                                     <div className={cn("flex flex-col items-end gap-0.5 font-bold tracking-tighter", t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500')}>
                                         <div className="flex items-center gap-1 text-base">
                                             {t.type === 'INCOME' ? '+' : '-'}
-                                            {t.currency === "USD" ? "$" : "₺"}
-                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "USD" ? 0 : 2 })}
+                                            {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}
+                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "TRY" ? 2 : 1 })}
                                         </div>
-                                        {t.currency === "USD" && (
-                                            <span className="text-[10px] text-muted-foreground/60 font-medium">
-                                                ~₺{Math.round(Number(t.amount) * usdRate).toLocaleString('tr-TR')}
-                                            </span>
-                                        )}
+                                        <div className="flex flex-col items-end opacity-50">
+                                            {t.currency === "TRY" ? (
+                                                <>
+                                                    <span className="text-[9px] text-muted-foreground font-medium">
+                                                        ~${(Number(t.amount) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                    </span>
+                                                    <span className="text-[9px] text-muted-foreground font-medium">
+                                                        ~€{(Number(t.amount) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground font-medium">
+                                                    ~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString('tr-TR')}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                 </div>

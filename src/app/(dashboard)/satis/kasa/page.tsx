@@ -10,41 +10,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 import { getDailySummary, getTransactions, getDailySession } from "@/lib/actions/finance-actions";
 
-function SummarySkeleton() {
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-32 rounded-3xl" />
-                ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-48 rounded-3xl" />
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function HistorySkeleton() {
-    return (
-        <div className="space-y-4 bg-card p-8 rounded-[2rem]">
-            <Skeleton className="h-8 w-48 mb-6" />
-            {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
-            ))}
-        </div>
-    );
-}
-
 export default async function KasaRaporuPage({
     searchParams,
 }: {
-    searchParams?: { search?: string };
+    searchParams?: { search?: string; accountId?: string };
 }) {
     const queryClient = new QueryClient();
     const initialSearch = searchParams?.search?.trim() || "";
+    const accountId = searchParams?.accountId;
 
     // Parallel prefetching
     await Promise.all([
@@ -53,8 +26,8 @@ export default async function KasaRaporuPage({
             queryFn: getDailySummary
         }),
         queryClient.prefetchQuery({
-            queryKey: ["finance-transactions", 1, initialSearch],
-            queryFn: () => getTransactions({ page: 1, pageSize: 50, search: initialSearch })
+            queryKey: ["finance-transactions", 1, initialSearch, accountId],
+            queryFn: () => getTransactions({ page: 1, pageSize: 50, search: initialSearch, accountId })
         }),
         queryClient.prefetchQuery({
             queryKey: ["daily-session"],
@@ -102,14 +75,10 @@ export default async function KasaRaporuPage({
                             ))}
                         </div>
                     }>
-                        <TransactionListStream initialSearch={initialSearch} />
+                        <TransactionListStream initialSearch={initialSearch} accountId={accountId} />
                     </Suspense>
                 </div>
             </div>
         </HydrationBoundary>
     );
 }
-
-
-
-

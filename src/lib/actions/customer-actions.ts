@@ -7,6 +7,7 @@ import { getShopId, getUserId } from "@/lib/auth";
 import { customerSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
+import { recordAuditLog } from "./audit-actions";
 
 export async function getCustomers() {
   try {
@@ -196,6 +197,16 @@ export async function createCustomer(rawData: z.input<typeof customerSchema>) {
       }
     });
     revalidatePath("/musteriler");
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "CUSTOMER",
+      entityId: customer.id,
+      entityName: customer.name,
+      message: `${customer.name} isimli yeni müşteri eklendi.`,
+      details: { type: customer.type, phone: customer.phone }
+    });
+
     return { success: true, customer: serializePrisma(customer) };
   } catch (error) {
     console.error("Error creating customer:", error);
@@ -270,6 +281,12 @@ export async function deleteCustomer(id: string, options?: {
 
     // Rate limit: 10 deletions per minute per user
     await checkRateLimit(`deleteCustomer:${userId}`, 10);
+
+    const customer = await prisma.customer.findUnique({
+      where: { id, shopId }
+    });
+
+    if (!customer) return { success: false, error: "Müşteri bulunamadı." };
 
     return await prisma.$transaction(async (tx) => {
       // 1. Handle Sales
@@ -350,6 +367,16 @@ export async function deleteCustomer(id: string, options?: {
       await tx.customer.delete({ where: { id, shopId } });
 
       revalidatePath("/musteriler");
+
+      await recordAuditLog({
+        action: "DELETE",
+        entityType: "CUSTOMER",
+        entityId: id,
+        entityName: customer.name,
+        message: `${customer.name} isimli müşteri sistemden silindi.`,
+        details: { options, phone: customer.phone }
+      });
+
       return { success: true };
     });
   } catch (error: any) {

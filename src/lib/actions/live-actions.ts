@@ -7,7 +7,7 @@ export async function getLiveActivity() {
   try {
     const shopId = await getShopId(false);
     if (!shopId) return [];
-    const [serviceLogs, transactions] = await Promise.all([
+    const [serviceLogs, transactions, auditLogs] = await Promise.all([
       prisma.serviceLog.findMany({
         where: { shopId },
         take: 5,
@@ -19,6 +19,12 @@ export async function getLiveActivity() {
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { sale: { include: { customer: true } } }
+      }),
+      prisma.auditLog.findMany({
+        where: { shopId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: { user: true }
       })
     ]);
 
@@ -40,8 +46,17 @@ export async function getLiveActivity() {
         time: tr.createdAt,
         user: tr.sale?.customer?.name || 'Hızlı Satış',
         amount: Number(tr.amount)
+      })),
+      ...auditLogs.map((log: any) => ({
+        id: `audit-${log.id}`,
+        type: 'AUDIT',
+        title: log.entityType,
+        message: log.message,
+        time: log.createdAt,
+        user: log.user?.name || 'Sistem',
+        action: log.action
       }))
-    ].sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 8);
+    ].sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 10);
 
     return serializePrisma(activity);
   } catch (error) {

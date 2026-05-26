@@ -82,7 +82,7 @@ export default async function DashboardLayout({
         } else if (isSuperAdmin) {
             // Default empty state for shop-less super admin (e.g. at /admin/shops)
             staff = [];
-            initialRates = { usd: 34, eur: 37, ga: 3000, lastUpdate: new Date() };
+            initialRates = { usd: 35, eur: 38, ga: 3100, lastUpdate: new Date() };
             shop = { name: "Yönetim Paneli", industry: "GENERAL" };
             settings = [];
         }

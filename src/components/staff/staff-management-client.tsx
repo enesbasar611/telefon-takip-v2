@@ -28,7 +28,10 @@ import {
     Lock,
     Phone,
     Mail,
-    UserPlus
+    UserPlus,
+    Trash2,
+    Edit3,
+    PlusCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1088,50 +1091,65 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                         </div>
                     )}
                     <div className="divide-y divide-border/5">
-                        {logs.map((log: any, i: number) => (
-                            <div key={i} className="p-6 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
-                                        log.type === 'service' ? "bg-emerald-500/10 text-emerald-500" : "bg-blue-500/10 text-blue-500"
-                                    )}>
-                                        {log.type === 'service' ? (
-                                            <Shield className="w-5 h-5" />
-                                        ) : (
-                                            <TrendingUp className="w-5 h-5" />
-                                        )}
+                        {logs.map((log: any, i: number) => {
+                            const isAudit = log.type === 'audit';
+                            const actionColor =
+                                isAudit && log.action === 'DELETE' ? "bg-red-500/10 text-red-500" :
+                                    isAudit && log.action === 'UPDATE' ? "bg-amber-500/10 text-amber-500" :
+                                        isAudit ? "bg-emerald-500/10 text-emerald-500" :
+                                            log.type === 'service' ? "bg-emerald-500/10 text-emerald-500" :
+                                                "bg-blue-500/10 text-blue-500";
+                            const typeLabel =
+                                isAudit && log.action === 'DELETE' ? "SİLME İŞLEMİ" :
+                                    isAudit && log.action === 'UPDATE' ? "GÜNCELLEME" :
+                                        isAudit && log.action === 'CREATE' ? "YENİ KAYIT" :
+                                            log.type === 'service' ? "TEKNİK SERVİS" : "SATIŞ SİSTEMİ";
+                            const typeLabelColor =
+                                isAudit && log.action === 'DELETE' ? "text-red-600 bg-red-500/10" :
+                                    isAudit && log.action === 'UPDATE' ? "text-amber-600 bg-amber-500/10" :
+                                        isAudit ? "text-emerald-600 bg-emerald-500/10" : "text-muted-foreground";
+                            return (
+                                <div key={i} className="p-6 flex items-center justify-between group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105", actionColor)}>
+                                            {isAudit && log.action === 'DELETE' ? <Trash2 className="w-5 h-5" /> :
+                                                isAudit && log.action === 'UPDATE' ? <Edit3 className="w-5 h-5" /> :
+                                                    isAudit ? <PlusCircle className="w-5 h-5" /> :
+                                                        log.type === 'service' ? <Shield className="w-5 h-5" /> :
+                                                            <TrendingUp className="w-5 h-5" />}
+                                        </div>
+                                        <div className="space-y-1 text-left">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-black text-foreground/90">
+                                                    <span className="text-blue-600 dark:text-blue-400 uppercase text-[9px] font-black px-2 py-0.5 bg-blue-500/10 rounded-md mr-3 tracking-widest">
+                                                        {log.user?.name || 'Sistem'}
+                                                    </span>
+                                                    {log.message}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-[10px] text-muted-foreground font-black tracking-widest group-hover:text-foreground transition-colors uppercase italic opacity-40">#{log.id.slice(-8).toUpperCase()}</p>
+                                                <div className="h-1 w-1 rounded-full bg-border"></div>
+                                                <p className={cn("text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-md", typeLabelColor)}>{typeLabel}</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1 text-left">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-black text-foreground/90">
-                                                <span className="text-blue-600 dark:text-blue-400 uppercase text-[9px] font-black px-2 py-0.5 bg-blue-500/10 rounded-md mr-3 tracking-widest">
-                                                    {log.user?.name}
-                                                </span>
-                                                {log.message}
+                                    <div className="flex items-center gap-8">
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
+                                                {new Date(log.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long' })}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-muted-foreground tracking-widest">
+                                                {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <p className="text-[10px] text-muted-foreground font-black tracking-widest group-hover:text-foreground transition-colors uppercase italic opacity-40">#{log.id.slice(-8).toUpperCase()}</p>
-                                            <div className="h-1 w-1 rounded-full bg-border"></div>
-                                            <p className="text-[9px] font-black text-muted-foreground tracking-widest uppercase">{log.type === 'service' ? 'TEKNİK SERVİS' : 'SATIŞ SİSTEMİ'}</p>
-                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 transition-all bg-slate-100 dark:bg-white/5">
+                                            <ArrowUpRight className="w-4 h-4" />
+                                        </Button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-8">
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
-                                            {new Date(log.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long' })}
-                                        </p>
-                                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">
-                                            {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 transition-all bg-slate-100 dark:bg-white/5">
-                                        <ArrowUpRight className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     {!isLogsLoading && logs.length === 0 && (
                         <div className="p-32 text-center space-y-5">
