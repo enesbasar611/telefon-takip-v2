@@ -8,7 +8,7 @@ import { getProfitMatrix } from "@/lib/actions/analytics-actions";
 import { serializePrisma, cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
-export function RevenueAnalysisStream({ cols = 12, rows = 4 }: { cols?: number, rows?: number }) {
+export function RevenueAnalysisStream({ cols = 12, rows = 4, onDataStatus }: { cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
     const isSmall = cols < 12;
     const isVerySmall = cols < 8;
     const isShort = rows < 3;
@@ -20,9 +20,17 @@ export function RevenueAnalysisStream({ cols = 12, rows = 4 }: { cols?: number, 
                 getSalesReport(),
                 getProfitMatrix("THIS_MONTH")
             ]);
+            const salesTrend = serializePrisma(salesTrendRaw);
+            const profitMatrix = serializePrisma(profitMatrixRaw);
+
+            if (onDataStatus) {
+                const isEmpty = (!salesTrend || salesTrend.length === 0) && (!profitMatrix || profitMatrix.totalRevenue === 0);
+                onDataStatus(isEmpty);
+            }
+
             return {
-                salesTrend: serializePrisma(salesTrendRaw),
-                profitMatrix: serializePrisma(profitMatrixRaw)
+                salesTrend,
+                profitMatrix
             };
         },
         staleTime: 5 * 60 * 1000,

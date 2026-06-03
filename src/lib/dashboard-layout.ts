@@ -6,23 +6,36 @@ export interface DashboardWidgetConfig {
 }
 
 export const SYSTEM_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
+  // ROW 1: Financial KPIs
   { id: "stat_sales", cols: 6, rows: 1 },
   { id: "stat_income", cols: 6, rows: 1 },
   { id: "stat_collections", cols: 6, rows: 1 },
+  { id: "stat_accounts", cols: 6, rows: 1 },
+
+  // ROW 2: Operational KPIs
   { id: "stat_ready", cols: 6, rows: 1 },
   { id: "stat_pending", cols: 6, rows: 1 },
   { id: "stat_stock", cols: 6, rows: 1 },
   { id: "stat_debts", cols: 6, rows: 1 },
-  { id: "stat_accounts", cols: 6, rows: 1 },
-  { id: "revenue", cols: 18, rows: 5 },
-  { id: "service_status", cols: 6, rows: 5 },
-  { id: "ai_insights", cols: 12, rows: 4 },
-  { id: "shortage_status", cols: 12, rows: 5 },
-  { id: "inventory", cols: 8, rows: 6 },
-  { id: "service_queue", cols: 16, rows: 6 },
-  { id: "transactions", cols: 16, rows: 6 },
-  { id: "activity", cols: 8, rows: 6 },
-  { id: "receivables", cols: 24, rows: 4 },
+
+  // ROW 3: Main Analytics & Overview
+  { id: "revenue", cols: 16, rows: 4 },
+  { id: "service_status", cols: 8, rows: 4 },
+
+  // ROW 4: Insights & Activity
+  { id: "ai_insights", cols: 10, rows: 4 },
+  { id: "activity", cols: 14, rows: 4 },
+
+  // ROW 5: Detailed Lists
+  { id: "service_queue", cols: 12, rows: 5 },
+  { id: "transactions", cols: 12, rows: 5 },
+
+  // ROW 6: Inventory & Receivables
+  { id: "inventory", cols: 10, rows: 5 },
+  { id: "receivables", cols: 14, rows: 5 },
+
+  // Extra Widgets (Courier Status)
+  { id: "shortage_status", cols: 24, rows: 2 },
 ];
 
 function isPositiveNumber(value: unknown) {

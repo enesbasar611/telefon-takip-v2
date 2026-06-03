@@ -302,6 +302,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
             // Create separate debt records for each item as requested
             let anyFailed = false;
+            let finalAfter: any = null;
 
             for (const item of debtItems) {
                 const res = await createDebt({
@@ -318,7 +319,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                         quantity: item.quantity
                     }]
                 });
-                if (!res.success) {
+                if (res.success) {
+                    finalAfter = res.after;
+                } else {
                     anyFailed = true;
                 }
             }
@@ -329,20 +332,32 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                 // Construct WhatsApp Message
                 try {
                     const now = new Date();
-                    const dateStr = format(now, "dd MMM yyyy HH:mm", { locale: tr }).toUpperCase();
-                    let message = `*${dateStr}*\n\n`;
+                    const dateStr = format(now, "dd.MM.yyyy HH:mm", { locale: tr });
+                    let message = `*${data.customerName} - Bilgilendirme*\n\n`;
+                    message += `📅 *Tarih:* ${dateStr}\n\n`;
+                    message += `*📝 Yeni Kayıtlar:*\n`;
 
                     debtItems.forEach(item => {
                         const isUSD = item.currency === "USD";
                         const symbol = isUSD ? '$' : '₺';
-                        const equivSymbol = isUSD ? '₺' : '$';
-
-                        const originalAmt = item.amount;
-                        const equivalentAmt = isUSD ? Math.round(originalAmt * usdRate) : Math.round(originalAmt / usdRate);
-                        const equivFormatted = equivalentAmt.toLocaleString('tr-TR');
-
-                        message += `• ${item.title}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                        message += `• ${item.title}: ${symbol}${item.amount.toLocaleString('tr-TR')}\n`;
                     });
+
+                    if (finalAfter) {
+                        message += `\n*📊 Güncel Borç Durumu:*\n`;
+                        if (finalAfter.totalRemainingTRY > 0) {
+                            message += `• TL Borç: ₺${finalAfter.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+                        }
+                        if (finalAfter.totalRemainingUSD > 0) {
+                            message += `• USD Borç: $${finalAfter.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+                        }
+
+                        const total = finalAfter.totalRemainingTRY + (finalAfter.totalRemainingUSD * usdRate);
+                        message += `--------------------\n`;
+                        message += `*Genel Toplam:* ₺${Math.round(total).toLocaleString('tr-TR')}\n`;
+                    }
+
+                    message += `\n_Hayırlı işler dileriz._`;
 
                     const sanitizedPhone = data.customerPhone.replace(/\D/g, "");
                     const finalPhone = sanitizedPhone.startsWith('90') ? sanitizedPhone : `90${sanitizedPhone}`;

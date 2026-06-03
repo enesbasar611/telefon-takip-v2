@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getShortageItems } from "@/lib/actions/shortage-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,18 +45,26 @@ interface GroupedShortage {
     courierData?: { name?: string, phone?: string };
 }
 
-export function ShortageStatusCard() {
+export function ShortageStatusCard({ onDataStatus }: { onDataStatus?: (isEmpty: boolean) => void }) {
     const [selectedGroup, setSelectedGroup] = useState<GroupedShortage | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const VISIBLE_LIMIT = 4;
-    const { data: items = [], isPending: isInitialLoading, isFetching: isBackgroundFetching, refetch } = useQuery<any[]>({
+    const { data: items = [], isPending: isInitialLoading, isFetching: isBackgroundFetching, isLoading: queryLoading, refetch } = useQuery<any[]>({
         queryKey: ["shortages"],
-        queryFn: getShortageItems,
+        queryFn: async () => {
+            return await getShortageItems();
+        },
         placeholderData: keepPreviousData,
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,
         refetchOnMount: false,
     });
+
+    useEffect(() => {
+        if (!queryLoading && onDataStatus) {
+            onDataStatus(!items || items.length === 0);
+        }
+    }, [items, queryLoading, onDataStatus]);
 
     const isLoading = isInitialLoading && items.length === 0;
     const isUpdating = isBackgroundFetching && items.length > 0;
@@ -145,11 +153,11 @@ export function ShortageStatusCard() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Sipariş verileri yükleniyor...</p>
                         </div>
                     ) : groupList.length === 0 ? (
-                        <div className="py-20 flex flex-col items-center justify-center space-y-6 opacity-30">
-                            <div className="h-20 w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                                <Truck className="w-8 h-8 text-muted-foreground" />
+                        <div className="py-8 flex flex-col items-center justify-center space-y-4 opacity-30">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                                <Truck className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                             </div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-center">Aktif kurye siparişi bulunamadı</p>
+                            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-center px-4">Aktif kurye siparişi bulunamadı</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-3 p-6 pb-2">

@@ -44,8 +44,8 @@
     "hash": "a18e76502ea6c015edad09f005c66844"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\server.js": {
-    "mtime": 1778940154.6517117,
-    "hash": "6b9fadca4ec3c680e32284d8bb3099da"
+    "mtime": 1779860597.468403,
+    "hash": "8deb7d3677902241bdc03ddd73f58cb7"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\tailwind.config.ts": {
     "mtime": 1777243566.7900453,
@@ -66,6 +66,10 @@
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\prisma\\migrations\\20260525022741_add_shop_modules\\migration.sql": {
     "mtime": 1779676061.869864,
     "hash": "0f19c5ce7d93fcd4fda41181b95667ae"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\prisma\\migrations\\20260526151315_add_audit_log\\migration.sql": {
+    "mtime": 1779808395.767178,
+    "hash": "004aa7f65c29a98deea7cb993b003b5b"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\prisma\\migrations.bak\\20260512125632_veresiye_bitti\\migration.sql": {
     "mtime": 1778590592.1056583,
@@ -240,8 +244,8 @@
     "hash": "dc777a4826368b45d609355f386b6ef3"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\layout.tsx": {
-    "mtime": 1779370383.2253342,
-    "hash": "d7d9a282961fb8c2861690334b9f12cd"
+    "mtime": 1779806219.0317698,
+    "hash": "66280832641adb9510ea62088041228f"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\not-found.tsx": {
     "mtime": 1779465528.0874057,
@@ -284,8 +288,8 @@
     "hash": "730172b6a67006044551a50f5ca327a4"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\ayarlar\\page.tsx": {
-    "mtime": 1779051166.437789,
-    "hash": "4bd0ab8a747263afc57b0db982c2db20"
+    "mtime": 1779712636.8117933,
+    "hash": "f257a8ca1f618c02ba4bfbf25e61d880"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\ayarlar\\moduller\\page.tsx": {
     "mtime": 1779051211.8998256,
@@ -304,8 +308,8 @@
     "hash": "9267cbd6bdcddc3a1a3dfe5e777b2a5a"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\dashboard\\page.tsx": {
-    "mtime": 1779374046.289256,
-    "hash": "4b2524e34e2f79dc00aace0214166335"
+    "mtime": 1779718139.1844094,
+    "hash": "6f5406c78e7b63495daa2b739ff9a009"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\efatura\\page.tsx": {
     "mtime": 1779676898.6860242,
@@ -328,8 +332,8 @@
     "hash": "1029fb3207e5074cde7fc84f6c7b63e1"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\kurye\\page.tsx": {
-    "mtime": 1779540372.9641013,
-    "hash": "f54e65f8d84f9b88b26e17789dbd1044"
+    "mtime": 1779712032.0876434,
+    "hash": "5d80b20c43b3d8a422adf209ce0b6542"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\musteriler\\page.tsx": {
     "mtime": 1779010807.7412608,
@@ -368,8 +372,8 @@
     "hash": "9f54708456289b14b6969ea064639db0"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\satis\\kasa\\page.tsx": {
-    "mtime": 1779328756.0001528,
-    "hash": "3e2ca844cec26a6e005e1cda04ee9185"
+    "mtime": 1779802957.7808912,
+    "hash": "c706feeea9173444a7f8befa7c33c850"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\app\\(dashboard)\\servis\\page.tsx": {
     "mtime": 1778914846.7775297,
@@ -544,8 +548,8 @@
     "hash": "438a8817f3dcbf07f930c3252bd775dd"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\sidebar.tsx": {
-    "mtime": 1779629785.756155,
-    "hash": "f43e065e79015d7a513661f903f08ab9"
+    "mtime": 1779716991.2483187,
+    "hash": "6c8b24c89a8dc8274913314b529f0aeb"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\theme-provider.tsx": {
     "mtime": 1775630337.4100373,
@@ -672,8 +676,8 @@
     "hash": "c2d51faf4f709c6778fbec07e262ab8c"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\dashboard-client.tsx": {
-    "mtime": 1779101891.8403113,
-    "hash": "ac6a12a0b42e0d665bde63946c939903"
+    "mtime": 1779861506.9305396,
+    "hash": "17ce52c47dfaf7825a10c0a4fa62df5c"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\dashboard-content.tsx": {
     "mtime": 1778260828.4124744,
@@ -700,8 +704,8 @@
     "hash": "a74d2da4bb358dafff6d66d4ede43977"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\live-activity-feed.tsx": {
-    "mtime": 1778678719.0826316,
-    "hash": "38706c54410e97ed676a8e9f784c556a"
+    "mtime": 1779815139.6155,
+    "hash": "71a387e026526daedd9e95938a74a472"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\live-clock.tsx": {
     "mtime": 1777260909.2066133,
@@ -724,28 +728,28 @@
     "hash": "77f2356c0c597c7eb37019cf684dabdb"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\receivables-client.tsx": {
-    "mtime": 1779066290.1484344,
-    "hash": "ce0a16e55a5332c71711d0e87a1c992d"
+    "mtime": 1779861660.7324812,
+    "hash": "aeca5aa7f66e5264d5e9a34d5b16e749"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\smart-insights.tsx": {
     "mtime": 1779066520.7943394,
     "hash": "a8ec343c9f6ba107e9e52f161906e631"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\stat-card.tsx": {
-    "mtime": 1779374031.814222,
-    "hash": "d9afe6a2c4ee30ca42cb364ccfa31a8b"
+    "mtime": 1779859266.767231,
+    "hash": "8c14623cc3ba98f3c72136c43b7e77f9"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\stat-widget-wrapper.tsx": {
-    "mtime": 1779374039.5901926,
-    "hash": "1530c55c8cb04bd5e88126fb6a06cbf2"
+    "mtime": 1779859272.1347978,
+    "hash": "d925691ac03132f2e846743023440079"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\modals\\stat-detail-modal.tsx": {
-    "mtime": 1779377158.0609958,
-    "hash": "d831e883893dfd93962391297e636a00"
+    "mtime": 1779859663.8021672,
+    "hash": "deec721576d6ba20760c4335f807a5a7"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\live-activity-stream.tsx": {
-    "mtime": 1775630337.360955,
-    "hash": "6e8e5d0cf529a260f6a0272cbdabf02c"
+    "mtime": 1779863995.7586818,
+    "hash": "de0b92b4361c78a0e535ffc431b8d8a0"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\mobile-activity-stream.tsx": {
     "mtime": 1776213995.9014323,
@@ -756,28 +760,28 @@
     "hash": "6222add6026c189ec3c25d08247d7f62"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\receivables-stream.tsx": {
-    "mtime": 1779067849.6465037,
-    "hash": "2cebc95f9b61d46aa1349162242af02f"
+    "mtime": 1779864028.5827703,
+    "hash": "4b6074e8a82bc239c8884334a8a4dd11"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\recent-transactions-stream.tsx": {
-    "mtime": 1779316309.3034122,
-    "hash": "ba63a80c120e741d256baad25e57cf66"
+    "mtime": 1779863990.4774644,
+    "hash": "9f5b0f7bd5c889dd79405f9bcc668001"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\revenue-analysis-stream.tsx": {
-    "mtime": 1779675726.8212278,
-    "hash": "cc5bb573ae6e3b559b74c15eee9b64a9"
+    "mtime": 1779861583.3765697,
+    "hash": "72db59141abc7eebc56486cd343e3d60"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\service-queue-stream.tsx": {
-    "mtime": 1778678754.5598013,
-    "hash": "288eb5945e9f3aaf538de7ec80026170"
+    "mtime": 1779864020.798552,
+    "hash": "bd145546e52731e6146ba55da0a87d52"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\service-status-stream.tsx": {
-    "mtime": 1779067575.6928732,
-    "hash": "1ee9a88d804270755d40453d4014210e"
+    "mtime": 1779861591.4807684,
+    "hash": "f1917da0e70f7f4e0a43ec94eb37044b"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\smart-insights-stream.tsx": {
-    "mtime": 1779067709.7245662,
-    "hash": "9eb3c3254c57f82a001ce351f99ee266"
+    "mtime": 1779861599.7546084,
+    "hash": "1ce59f63ddb24694ea7133e70670ab3a"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\stats-client-wrapper.tsx": {
     "mtime": 1775630337.3635461,
@@ -788,12 +792,12 @@
     "hash": "ff22fe93c3db9b220c170dfaaa844908"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\streamed\\top-products-stream.tsx": {
-    "mtime": 1779067725.1156702,
-    "hash": "ea529ee78555cbc13168087d26ce353d"
+    "mtime": 1779864015.8954082,
+    "hash": "8a8628ca6cfbf190555e61732411e5da"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\dashboard\\widgets\\shortage-status-card.tsx": {
-    "mtime": 1779316603.0564058,
-    "hash": "15ddf1520978c536cc3b1521a4926e2b"
+    "mtime": 1779864051.3295476,
+    "hash": "3896a93dab9b293f93a81ebb6da982ce"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\device-hub\\create-device-modal.tsx": {
     "mtime": 1779067620.1403604,
@@ -836,8 +840,8 @@
     "hash": "e93a5db0b8c0344930f12fcaea2a4399"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\device-hub\\device-receipt-modal.tsx": {
-    "mtime": 1776696476.1434884,
-    "hash": "f6f4c50d165428c4b7a0df2dbd3fb0e4"
+    "mtime": 1779720989.688326,
+    "hash": "f032d260418a5eebe2aae4e1842cd1d2"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\device-hub\\device-sales-chart.tsx": {
     "mtime": 1776697074.4825547,
@@ -852,32 +856,32 @@
     "hash": "1caba5191b74992e17a1c655c62de972"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\account-detail-modal.tsx": {
-    "mtime": 1779067513.8346076,
-    "hash": "561e7ea3cb5082e587a9d3e0b90c7b75"
+    "mtime": 1779806157.812333,
+    "hash": "599af35e45ed3d59f5dfb2c193871e0b"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\account-list.tsx": {
-    "mtime": 1779326052.8567226,
-    "hash": "9cb05d36ba1d50b78aeeb95b11e10d94"
+    "mtime": 1779806152.7663684,
+    "hash": "1bdb019d7e18e67d418e60bbe19251db"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\add-debt-modal.tsx": {
-    "mtime": 1779324472.5889547,
-    "hash": "0f90f2a3c2334cc4afa8fcdf057a4773"
+    "mtime": 1779856542.797782,
+    "hash": "2b2734fc04070ea0ae90b3694d254b11"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\create-account-modal.tsx": {
-    "mtime": 1779330116.0662842,
-    "hash": "6c09500c01b8de1e3d472d44c5cc4d12"
+    "mtime": 1779805804.9026794,
+    "hash": "ea9c6aa71978e460bb0976bfc8742a20"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\create-transaction-modal.tsx": {
-    "mtime": 1779330201.5521867,
-    "hash": "5c79c9025eefe23600233e100a8a3264"
+    "mtime": 1779803043.803175,
+    "hash": "91ff661868e09b02b56671b623ed979d"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\daily-session-control.tsx": {
     "mtime": 1775630337.3725457,
     "hash": "e8065204833cb270cfdd3e3aae17c560"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\debt-receipt-modal.tsx": {
-    "mtime": 1778933808.9157417,
-    "hash": "b82562937de1377a417364325c94e439"
+    "mtime": 1779720901.4853375,
+    "hash": "1f539424e303fe55257da6ff7a59f07c"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\edit-customer-payment-modal.tsx": {
     "mtime": 1779327246.4675956,
@@ -896,16 +900,16 @@
     "hash": "e63630fed74dea5bf3dd25dfd0590124"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\transaction-history.tsx": {
-    "mtime": 1779328773.0015063,
-    "hash": "ea11d081eb840befd93eb88651587aba"
+    "mtime": 1779806147.01121,
+    "hash": "62ea3e69cb86da98e29777389494d418"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\transfer-modal.tsx": {
     "mtime": 1776774811.0865924,
     "hash": "de22ab3c792d847b27017d4759869b5a"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye-client.tsx": {
-    "mtime": 1779324600.1254785,
-    "hash": "fc47caf594f2e05d65d1e616b7fc184c"
+    "mtime": 1779860140.0475316,
+    "hash": "e475d109acf098988a1454b8333c7fc5"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\streamed\\daily-session-stream.tsx": {
     "mtime": 1778865172.382277,
@@ -916,8 +920,36 @@
     "hash": "20e1a8341f0f8704d42b1678f9fce9aa"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\streamed\\transaction-list-stream.tsx": {
-    "mtime": 1779328865.878542,
-    "hash": "39dfcafd948a820f12f8eacff3bbb915"
+    "mtime": 1779802963.8746376,
+    "hash": "b78882bc8d307225957d84b0a5d67e5d"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-analysis-side.tsx": {
+    "mtime": 1779856745.7459283,
+    "hash": "31675b46a75e0dfe5ec41b69b38620dc"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-customer-card.tsx": {
+    "mtime": 1779856938.0074,
+    "hash": "b0a6ad53822d640757eca2fac77bc84e"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-empty-state.tsx": {
+    "mtime": 1779856789.202566,
+    "hash": "63df8d8ab0091fd316737d457f0c4b5b"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-payment-modal.tsx": {
+    "mtime": 1779858339.7875657,
+    "hash": "f121461da0f6b3bb4aaa36976338188d"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-payment-summary-modal.tsx": {
+    "mtime": 1779858445.7539062,
+    "hash": "501ea75692d9fad4a0734b254b8bf3da"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-stats.tsx": {
+    "mtime": 1779856733.8576856,
+    "hash": "378a4944abfdfa70fe1d1428ea90ad2e"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\finance\\veresiye\\veresiye-toolbar.tsx": {
+    "mtime": 1779858439.3827784,
+    "hash": "b45cf7ad197cba7d898378bf5b12f510"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\navbar\\bildirimler-client.tsx": {
     "mtime": 1775630337.380468,
@@ -956,8 +988,8 @@
     "hash": "e03b915ac389acb543934f395ed61d37"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\navbar\\stock-receipt-modal.tsx": {
-    "mtime": 1778169718.4785204,
-    "hash": "2e1605bfa8007d30f53066d6dd438805"
+    "mtime": 1779720951.1226385,
+    "hash": "f87cffe9a0178e0aef2f23d73c38d6a2"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\notifications\\notification-feed.tsx": {
     "mtime": 1777541298.5658932,
@@ -976,16 +1008,32 @@
     "hash": "34364d3cc7ae6fed99fa9a626de33193"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\pos-compact.tsx": {
-    "mtime": 1778678642.2443109,
-    "hash": "30587923f9549cf8077bd9871966e634"
+    "mtime": 1779863573.7469692,
+    "hash": "826327491010e0cc0f1a24d3949e0c1f"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\pos-interface.tsx": {
-    "mtime": 1779532332.5067513,
-    "hash": "528362f0dae24e6c30539dcc66845a27"
+    "mtime": 1779863478.0467436,
+    "hash": "9c01881b3820d5bd3c3a90905efd28e7"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\receipt-modal.tsx": {
-    "mtime": 1778933810.8970487,
-    "hash": "034f08427806c0fed60956ffa436afb6"
+    "mtime": 1779720887.1369548,
+    "hash": "c73284e5fc0195dcfc840f2d63009a31"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\parts\\cart-item.tsx": {
+    "mtime": 1779863133.866102,
+    "hash": "3aaaa8a697d03829641a114752eb3540"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\parts\\checkout-summary.tsx": {
+    "mtime": 1779863174.0493574,
+    "hash": "a2f6c9acd6faa65abd6909d8119a40b3"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\parts\\customer-selector.tsx": {
+    "mtime": 1779863264.7602732,
+    "hash": "455ba1b36e371fe6bb12f19849e3185c"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\pos\\parts\\product-card.tsx": {
+    "mtime": 1779863115.115625,
+    "hash": "44538e6099804ae4e6109521f8539906"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\printing\\print-button.tsx": {
     "mtime": 1775630337.3854237,
@@ -1060,12 +1108,12 @@
     "hash": "849c5ae5a3aa5d4c4038b1951bde7ae1"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\providers\\session-provider.tsx": {
-    "mtime": 1779314226.8124115,
-    "hash": "8286a114a1802e8a5020b04ba40cce07"
+    "mtime": 1779715460.424511,
+    "hash": "4ce281f7f26c35e98093e048a07614b9"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\providers\\socket-provider.tsx": {
-    "mtime": 1779314248.0299542,
-    "hash": "cce495ef412f0e9752d320062166fba3"
+    "mtime": 1779717718.157299,
+    "hash": "7f1d4d1f34d41c79bc594d89418e18b5"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\reports\\export-buttons.tsx": {
     "mtime": 1778915681.840919,
@@ -1080,8 +1128,16 @@
     "hash": "4ce62ce6b133cea1dd5272752cbf8c38"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\satis\\sales-history-client.tsx": {
-    "mtime": 1779325583.7220478,
-    "hash": "4197f44d7b468a910ed398992cc9c6a0"
+    "mtime": 1779863929.3316624,
+    "hash": "31d1164f722afc119d0a8a0edfc24042"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\satis\\parts\\operation-details.tsx": {
+    "mtime": 1779863878.7718544,
+    "hash": "d3a9d524bd148a463357b8bf5d24429e"
+  },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\satis\\parts\\sales-history-row.tsx": {
+    "mtime": 1779863890.3622534,
+    "hash": "b1d5d540bf0ec32cc376ebd40ebb654f"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\scanner\\scanner-help-modal.tsx": {
     "mtime": 1777291422.8738737,
@@ -1124,8 +1180,8 @@
     "hash": "6e4471af6359f439ca529fc2ca3acdae"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\service\\service-receipt-modal.tsx": {
-    "mtime": 1778169708.0291884,
-    "hash": "bcfe6152ea4dc7d76f48a200edf40453"
+    "mtime": 1779720926.9135756,
+    "hash": "023792f6114a0a9cd6844101eedceaee"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\service\\service-stats.tsx": {
     "mtime": 1775630337.3980398,
@@ -1172,8 +1228,8 @@
     "hash": "4066ea89764b968076ed6efd2d66a3f6"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\settings\\settings-interface.tsx": {
-    "mtime": 1779676723.0370684,
-    "hash": "5186c4f81789361671efdca1dceb4db5"
+    "mtime": 1779716999.481211,
+    "hash": "46b6dffbe2af58258962831c9704ad33"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\settings\\tabs\\admin-tab.tsx": {
     "mtime": 1778533962.9667394,
@@ -1208,8 +1264,8 @@
     "hash": "82b01ccdf971ea973df8cf4d7db3635a"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\settings\\tabs\\shop-tab.tsx": {
-    "mtime": 1779702348.5380821,
-    "hash": "2e251d012fee90a0ca020dda104924af"
+    "mtime": 1779712615.4766965,
+    "hash": "600ddbecd6e3ec6e66d098269336ebe2"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\settings\\tabs\\whatsapp-tab.tsx": {
     "mtime": 1778847398.9784398,
@@ -1252,8 +1308,8 @@
     "hash": "81d74bf8d25f374f8bccc9a4baffe649"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\staff\\staff-management-client.tsx": {
-    "mtime": 1779365403.4736314,
-    "hash": "d9ea44d789a6cd46b55d53104e879c02"
+    "mtime": 1779813271.5864906,
+    "hash": "4f1f6c2db549a38b2685df52a6cca203"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\components\\stock\\add-return-modal.tsx": {
     "mtime": 1779321930.157082,
@@ -1488,8 +1544,8 @@
     "hash": "5820516046f6f6f35f47a9801840af1b"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\auth.ts": {
-    "mtime": 1779675566.89834,
-    "hash": "0bca9673e3420be1aedf860b90698ec2"
+    "mtime": 1779861204.9846108,
+    "hash": "f99f044fb5cd02002a847d8f22e8d3f8"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\barcode-utils.ts": {
     "mtime": 1777258056.9247503,
@@ -1504,8 +1560,8 @@
     "hash": "5602905c4320d07e90f7239348bdddd5"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\dashboard-layout.ts": {
-    "mtime": 1779101627.6265059,
-    "hash": "a2371de7b2c64fda571d2c493bdc0cec"
+    "mtime": 1779859244.4225733,
+    "hash": "cfb301e19e2e6215ab0ba4df0dae78bd"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\device-utils.tsx": {
     "mtime": 1775630337.4320428,
@@ -1540,8 +1596,8 @@
     "hash": "56b153e0f12d5c0da765e03805af32de"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\prisma.ts": {
-    "mtime": 1779067353.7642775,
-    "hash": "ca42f1f34158ad4e2cd550fb0b67ad30"
+    "mtime": 1779860590.930052,
+    "hash": "79a8137c9e0e8074cda805398e759e9f"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\rate-limit.ts": {
     "mtime": 1775944283.438885,
@@ -1564,8 +1620,8 @@
     "hash": "8752bee4b8f6c2b3976b5ad591eae400"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\activity-actions.ts": {
-    "mtime": 1779325567.4342902,
-    "hash": "61a89420cf5673c458ad7afb583ab689"
+    "mtime": 1779864065.2732942,
+    "hash": "84d6dc6c1c7e50b76de7c18213f701e0"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\agenda-actions.ts": {
     "mtime": 1776351923.2718697,
@@ -1575,17 +1631,21 @@
     "mtime": 1779675732.5802934,
     "hash": "615258d741c32d1400238ca922efba4e"
   },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\audit-actions.ts": {
+    "mtime": 1779808411.6603186,
+    "hash": "a979d9935128a28a3fe41855581ff01d"
+  },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\category-actions.ts": {
     "mtime": 1778915492.9469526,
     "hash": "1dfd46a0040834c1b3fea230cfca96f9"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\currency-actions.ts": {
-    "mtime": 1779330194.3925261,
-    "hash": "156e353ef3e131b2016f31feb7633289"
+    "mtime": 1779806319.610114,
+    "hash": "294987d7852669aa7d0a54829906a1d1"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\customer-actions.ts": {
-    "mtime": 1779466407.2102542,
-    "hash": "50e0175b32addc7fab7d9fe1da0d9db9"
+    "mtime": 1779814992.572439,
+    "hash": "c205b3646c6f72977448c24a43e15974"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\customer-lookup-actions.ts": {
     "mtime": 1778669536.0123086,
@@ -1604,16 +1664,16 @@
     "hash": "0ecc497629312ae567e1826b260cd0be"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\debt-actions.ts": {
-    "mtime": 1779324365.687249,
-    "hash": "cf378bdf414ce3cf2e44e9968c9ebaa7"
+    "mtime": 1779860104.443384,
+    "hash": "a09713823ab74dce9ab5d17b36ff6d52"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\device-hub-actions.ts": {
     "mtime": 1776696183.1502967,
     "hash": "aa4bec0c70d37b92194e7225b2a22d92"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\finance-actions.ts": {
-    "mtime": 1779329643.0073252,
-    "hash": "1fcd810b4b00595861390d1388a93d29"
+    "mtime": 1779814983.2426667,
+    "hash": "5b3882b6b87c8d78e9eeb801cc018aa5"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\gemini-actions.ts": {
     "mtime": 1779673110.8250992,
@@ -1628,8 +1688,8 @@
     "hash": "0bd5c091f0d0dc4256da689ebcab3af4"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\live-actions.ts": {
-    "mtime": 1778295674.9243207,
-    "hash": "0cedd5a3db033e44494e8ecd007f7acb"
+    "mtime": 1779815099.8518317,
+    "hash": "de064dd49358ccaae73587af61fb2e66"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\model-lookup-actions.ts": {
     "mtime": 1774994770.2517445,
@@ -1644,8 +1704,8 @@
     "hash": "071dd3fa4ebbf22ea3710c3639be9539"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\product-actions.ts": {
-    "mtime": 1779375484.147634,
-    "hash": "016ad2495e8d503c52f8e229e3282b81"
+    "mtime": 1779808420.2183802,
+    "hash": "c6f697e6718da85483e767f343c92b47"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\purchase-actions.ts": {
     "mtime": 1779203827.287032,
@@ -1668,16 +1728,16 @@
     "hash": "feccceab54ffca21661e45e3919aa8a2"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\sale-actions.ts": {
-    "mtime": 1779375489.8984535,
-    "hash": "2acce7460a60953ceb0aa1c64b3df0cc"
+    "mtime": 1779815009.5622811,
+    "hash": "6ac39e8a25a61c00cf53abffae524182"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\search-actions.ts": {
     "mtime": 1779196985.902126,
     "hash": "8065009f5db479ec42c7c353d0051324"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\service-actions.ts": {
-    "mtime": 1779375495.7982495,
-    "hash": "015dc5c4b877431b1f166845e652c269"
+    "mtime": 1779815001.2009778,
+    "hash": "01a6d761f9e8862901d59bf6ca9c8df6"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\setting-actions.ts": {
     "mtime": 1779702357.1898587,
@@ -1688,8 +1748,8 @@
     "hash": "ef6daf2762b686c2eebee1fac6d9686e"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\staff-actions.ts": {
-    "mtime": 1779702457.521497,
-    "hash": "433cd9292895eed69db70919acd633b6"
+    "mtime": 1779808708.625825,
+    "hash": "8443ecf67fbc86d4e6038fd84dfa09a9"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\actions\\stock-ai-actions.ts": {
     "mtime": 1779370556.7755628,
@@ -1716,8 +1776,8 @@
     "hash": "3f2cb8b2cbdca99550b2c8febe970afc"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\context\\dashboard-data-context.tsx": {
-    "mtime": 1779067381.9855435,
-    "hash": "905cb1a51bbe852c3349fa58f8dab5bd"
+    "mtime": 1779806212.7434618,
+    "hash": "fe5494700847fe95f709eee10324f5cd"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\src\\lib\\context\\shortage-context.tsx": {
     "mtime": 1779370991.5812964,
@@ -1883,6 +1943,10 @@
     "mtime": 1775352844.8704538,
     "hash": "438bc26c6bd92b083bac302189d4cadd"
   },
+  "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\tmp\\replace_script.py": {
+    "mtime": 1779857640.6433706,
+    "hash": "5d4a10d6c5707376c614832fde5d1847"
+  },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\tmp\\update-critical-stock.ts": {
     "mtime": 1779205337.8202665,
     "hash": "09acb12cea1a9e72747cd9dc728e4051"
@@ -1896,8 +1960,8 @@
     "hash": "4a93c3f297276cc21a417db1b9a55afa"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\JOURNAL.md": {
-    "mtime": 1779538313.099763,
-    "hash": "1746b9d01c94d4e9b52959d5c49150f5"
+    "mtime": 1779864368.8659072,
+    "hash": "583dbd09aff48ca061e86cbb0849fa9f"
   },
   "C:\\Users\\PC\\Desktop\\dukkan-app\\telefon-takip-v2\\telefon-takip-v2\\PROJECT_CONTEXT.md": {
     "mtime": 1778539776.0397325,

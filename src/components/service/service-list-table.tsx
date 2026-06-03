@@ -47,7 +47,8 @@ import {
   ShoppingBag,
   XCircle,
   Trash2,
-  UserCircle
+  UserCircle,
+  Loader2
 } from "lucide-react";
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
@@ -59,8 +60,10 @@ import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal
 import { cn, formatPhone } from "@/lib/utils";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import { getIndustryLabel } from "@/lib/industry-utils";
-import { deleteServiceTicket } from "@/lib/actions/service-actions";
+import { deleteServiceTicket, bulkUpdateServiceStatus } from "@/lib/actions/service-actions";
+import { STATUS_CONFIG } from "@/lib/constants/service";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,15 +75,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const statusConfig: Record<ServiceStatus, { label: string; color: string; icon: any }> = {
-  PENDING: { label: "Beklemede", color: "bg-slate-500", icon: Clock },
-  APPROVED: { label: "Onaylandı", color: "bg-blue-500", icon: CheckCircle2 },
-  REPAIRING: { label: "Tamirde", color: "bg-orange-500", icon: Wrench },
-  WAITING_PART: { label: "Parça Bekliyor", color: "bg-purple-500", icon: PackagePlus },
-  READY: { label: "Hazır", color: "bg-emerald-500", icon: CheckCircle2 },
-  DELIVERED: { label: "Teslim Edildi", color: "bg-green-600", icon: ShoppingBag },
-  CANCELLED: { label: "İptal Edildi", color: "bg-red-500", icon: XCircle },
-};
+const statusConfig = STATUS_CONFIG;
 
 interface ServiceListTableProps {
   data: any[];
@@ -107,12 +102,38 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [rowSelection, setRowSelection] = useState({});
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const identifierLabel = getIndustryLabel(shop, "serviceIdentifier");
   const problemLabel = getIndustryLabel(shop, "problemDesc");
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="translate-y-[2px] rounded-md border-border/50 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          className="translate-y-[2px] rounded-md border-border/50 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "ticketNumber",
       header: "FİŞ NO",
@@ -304,11 +325,13 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       globalFilter,
+      rowSelection,
     },
     globalFilterFn: (row, columnId, value) => {
       const customerName = row.original.customer?.name as string;
@@ -659,6 +682,71 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Floating Bulk Action Bar */}
+      {table.getFilteredSelectedRowModel().rows.length > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-5 duration-300">
+          <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-8 ring-1 ring-white/5">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Toplu İşlemler</span>
+              <span className="text-sm font-bold text-white">{table.getFilteredSelectedRowModel().rows.length} Cihaz Seçildi</span>
+            </div>
+
+            <div className="h-8 w-px bg-white/10" />
+
+            <div className="flex items-center gap-2">
+              <Button
+                disabled={isBulkUpdating}
+                onClick={async () => {
+                  const ids = table.getFilteredSelectedRowModel().rows.map(row => row.original.id);
+                  setIsBulkUpdating(true);
+                  const res = await bulkUpdateServiceStatus(ids, "READY");
+                  if (res.success) {
+                    toast.success(`${ids.length} cihaz başarıyla 'HAZIR' durumuna getirildi.`);
+                    table.resetRowSelection();
+                  } else {
+                    toast.error(res.error);
+                  }
+                  setIsBulkUpdating(false);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-6 rounded-xl gap-2 h-11"
+              >
+                {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                HEPSİ HAZIR
+              </Button>
+
+              <Button
+                disabled={isBulkUpdating}
+                variant="outline"
+                onClick={async () => {
+                  const ids = table.getFilteredSelectedRowModel().rows.map(row => row.original.id);
+                  setIsBulkUpdating(true);
+                  const res = await bulkUpdateServiceStatus(ids, "REPAIRING");
+                  if (res.success) {
+                    toast.success(`${ids.length} cihaz 'TAMİRDE' durumuna çekildi.`);
+                    table.resetRowSelection();
+                  } else {
+                    toast.error(res.error);
+                  }
+                  setIsBulkUpdating(false);
+                }}
+                className="bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500 hover:text-white text-xs font-bold px-6 rounded-xl gap-2 h-11"
+              >
+                <Wrench className="h-4 w-4" /> TAMİRE AL
+              </Button>
+
+              <Button
+                disabled={isBulkUpdating}
+                variant="outline"
+                onClick={() => table.resetRowSelection()}
+                className="bg-white/5 border-white/10 text-white/60 hover:text-white text-xs font-bold px-6 rounded-xl h-11"
+              >
+                İPTAL
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

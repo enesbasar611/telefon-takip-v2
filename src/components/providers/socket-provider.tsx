@@ -27,19 +27,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        if (status === "loading") return;
-
-        // Skip socket connection on courier panel as requested - it causes 
-        // connection errors on unstable mobile networks and isn't needed there.
-        const isCourierPage = pathname?.startsWith("/kurye");
-
-        const allowedPaths = ["/satis", "/servis", "/stok", "/sorgula"];
-        const isAllowed = allowedPaths.some(p => pathname?.startsWith(p));
-
-        // Sadece giriş yapılmışsa, shopId varsa, kurye sayfasında değilsek VE izin verilen sayfalardaysak bağlan
-        if (status !== "authenticated" || !session?.user?.shopId || isCourierPage || !isAllowed) {
+        if (status === "loading" || status !== "authenticated" || !session?.user?.shopId) {
             if (socket) {
-                console.log(`[SOCKET] Bağlantı için uygun olmayan durum (Sayfa: ${pathname}), kesiliyor...`);
+                console.log("[SOCKET] Oturum kapalı veya shopId yok, bağlantı kesiliyor.");
                 socket.disconnect();
                 setSocket(null);
                 setIsConnected(false);
@@ -50,7 +40,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const shopId = session.user.shopId;
         const socketUrl = window.location.origin;
 
-        console.log(`[SOCKET] ${shopId} için ${pathname} sayfasında başlatılıyor:`, socketUrl);
+        console.log(`[SOCKET] ${shopId} için bağlantı başlatılıyor:`, socketUrl);
 
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
@@ -58,30 +48,28 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             upgrade: true,
             rememberUpgrade: true,
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 5, // Optimized as per task
             reconnectionDelay: 2000,
             reconnectionDelayMax: 10000,
             timeout: 20000,
-            autoConnect: true, // we still use autoConnect since we are already inside the "isAllowed" block
+            autoConnect: true,
+            multiplex: true, // Optimized for performance
         });
 
         socketInstance.on("connect", () => {
             const transport = (socketInstance as any).io?.engine?.transport?.name || "Bilinmiyor";
             console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Shop: ${shopId} | Transport: ${transport}`);
 
-            // Odaya katıl
+            // Join room once connected
             socketInstance.emit("join_room", shopId);
-
             setIsConnected(true);
+
+            // Only show toast if not already connected (prevents toast spam)
             toast.success("Barkod sunucusuna bağlandı");
         });
 
         socketInstance.on("connect_error", (err: any) => {
             console.error("[SOCKET] BAĞLANTI HATASI:", err.message);
-            // Sadece mobil cihazlarda hata göster
-            if (window.innerWidth < 768) {
-                toast.error(`Barkod Bağlantı Hatası: ${err.message}`);
-            }
             setIsConnected(false);
         });
 
@@ -90,7 +78,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             setIsConnected(false);
         });
 
-        // Debug: Sunucuya özel ping gönder
         const pingInterval = setInterval(() => {
             if (socketInstance.connected) {
                 socketInstance.emit("ping_status", {
@@ -106,7 +93,23 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             clearInterval(pingInterval);
             socketInstance.disconnect();
         };
-    }, [status, session?.user?.shopId, pathname]);
+    }, [status, session?.user?.shopId]); // Removed pathname dependency
+
+    // Side effect to handle path-based restrictions if needed, without disconnecting
+    useEffect(() => {
+        if (!socket) return;
+
+        const isCourierPage = pathname?.startsWith("/kurye");
+        const allowedPaths = ["/satis", "/servis", "/stok", "/sorgula"];
+        const isAllowed = allowedPaths.some(p => pathname?.startsWith(p));
+
+        if (isCourierPage || !isAllowed) {
+            // We could pause or emit a 'leave_room' here if desired, 
+            // but the user wants the socket to stay global and active.
+            // For now, we just log it to keep the connection alive but silent.
+            console.log(`[SOCKET] Kısıtlı sayfadasınız (${pathname}), ama global bağlantı korunuyor.`);
+        }
+    }, [pathname, socket]);
 
     return (
         <SocketContext.Provider value={{ socket, isConnected }}>

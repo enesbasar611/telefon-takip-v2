@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
+import { SalesHistoryRow } from "./parts/sales-history-row";
+import { OperationDetails } from "./parts/operation-details";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -281,204 +283,44 @@ export function SalesHistoryClient({
                                     </tr>
                                 ) : (
                                     initialData.items.map((op) => (
-                                        <>
-                                            <tr
-                                                key={op.id}
-                                                className="group hover:bg-muted/5 transition-colors duration-200 cursor-pointer"
-                                                onClick={() => setExpandedOpId(expandedOpId === op.id ? null : op.id)}
-                                            >
-                                                <td className="px-8 py-6">
-                                                    <Badge variant="outline" className={cn("text-[8px] font-bold px-2 py-0.5 rounded-md border", getTypeColor(op.type))}>
-                                                        {getTypeLabel(op.type)}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-6 py-6">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[11px] font-medium leading-none">{format(new Date(op.date), "dd MMMM yyyy", { locale: tr })}</span>
-                                                        <span className="text-[10px] text-muted-foreground font-mono">{format(new Date(op.date), "HH:mm")}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                                                            <User className="h-4 w-4 text-orange-600" />
-                                                        </div>
-                                                        <span className="text-[11px] font-semibold">{op.customerName}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6">
-                                                    <div className="flex flex-col gap-1.5 max-w-md">
-                                                        {op.items.length > 0 ? (
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {op.items.slice(0, 2).map((item, idx) => (
-                                                                    <Badge key={idx} variant="secondary" className="text-[9px] px-1.5 py-0 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-muted-foreground border-none">
-                                                                        {item.quantity}x {item.name}
-                                                                    </Badge>
-                                                                ))}
-                                                                {op.items.length > 2 && (
-                                                                    <span className="text-[9px] text-muted-foreground ml-1">+{op.items.length - 2} ürün</span>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[11px] text-muted-foreground line-clamp-1">{op.description}</span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6 text-right">
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <span className="text-sm font-bold tracking-tight">
-                                                            {op.currency === 'USD' ? '$' : '₺'}{op.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                        <div className="flex items-center gap-1 opacity-50">
-                                                            {getPaymentIcon(op.paymentMethod)}
-                                                            <span className="text-[9px] uppercase tracking-wider font-bold">
-                                                                {op.accountName
-                                                                    ? `${translateLabel(op.accountName)} (${getPaymentLabel(op.paymentMethod)})`
-                                                                    : getPaymentLabel(op.paymentMethod)}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {op.type === 'SALE' && (
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                title="Fiş Yazdır"
-                                                                disabled={receiptLoading === op.id}
-                                                                className="h-10 w-10 rounded-xl hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 transition-all"
-                                                                onClick={(e) => { e.stopPropagation(); handlePrintReceipt(op); }}
-                                                            >
-                                                                {receiptLoading === op.id
-                                                                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                                                                    : <Printer className="h-4 w-4" />
-                                                                }
-                                                            </Button>
-                                                        )}
-                                                        {(op.type === 'SALE' || op.type === 'DEBT_DIRECT') && (
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                title="İade İşlemi"
-                                                                className="h-10 w-10 rounded-xl hover:bg-orange-500 hover:text-white transition-all shadow-none"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (op.items.length === 1) {
-                                                                        handleReturn(op, op.items[0]);
-                                                                    } else {
-                                                                        setExpandedOpId(expandedOpId === op.id ? null : op.id);
-                                                                        toast.info("Lütfen iade etmek istediğiniz ürünü seçin.");
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <ArrowLeftRight className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            title="Detaylar"
-                                                            className="h-10 w-10 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-none"
-                                                            onClick={(e) => { e.stopPropagation(); setExpandedOpId(expandedOpId === op.id ? null : op.id); }}
-                                                        >
-                                                            {expandedOpId === op.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                        <Fragment key={op.id}>
+                                            <SalesHistoryRow
+                                                op={op}
+                                                isExpanded={expandedOpId === op.id}
+                                                onToggleExpand={() => setExpandedOpId(expandedOpId === op.id ? null : op.id)}
+                                                getTypeLabel={getTypeLabel}
+                                                getTypeColor={getTypeColor}
+                                                getPaymentIcon={getPaymentIcon}
+                                                getPaymentLabel={getPaymentLabel}
+                                                translateLabel={translateLabel}
+                                                handlePrintReceipt={handlePrintReceipt}
+                                                handleReturn={(op, item) => {
+                                                    if (op.items.length > 1 && expandedOpId !== op.id) {
+                                                        setExpandedOpId(op.id);
+                                                        toast.info("Lütfen iade etmek istediğiniz ürünü seçin.");
+                                                    } else {
+                                                        handleReturn(op, item);
+                                                    }
+                                                }}
+                                                receiptLoading={receiptLoading}
+                                            />
                                             {expandedOpId === op.id && (
                                                 <tr className="bg-muted/10">
                                                     <td colSpan={6} className="px-8 py-4 border-b border-border/20">
-                                                        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                            <div className="flex items-center justify-between">
-                                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">İşlem Detayları</h4>
-                                                                <div className="h-px flex-1 bg-border/20 mx-4" />
-                                                                <span className="text-[10px] font-mono opacity-40">#{op.number}</span>
-                                                            </div>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                                <div className="space-y-3">
-                                                                    <p className="text-[11px] text-muted-foreground/80 leading-relaxed italic">"{op.description}"</p>
-                                                                    {op.items.length > 0 && (
-                                                                        <div className="space-y-2">
-                                                                            {op.items.map((item, idx) => (
-                                                                                <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-background/50 border border-border/40 group/sub">
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[10px]">{item.quantity}x</div>
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className="text-[11px] font-bold">{item.name}</span>
-                                                                                            <span className="text-[10px] text-muted-foreground">{op.currency === 'USD' ? '$' : '₺'}{(item.price || 0).toLocaleString('tr-TR')} / birim</span>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                                                                                        <Button
-                                                                                            size="sm"
-                                                                                            variant="ghost"
-                                                                                            className="h-8 px-3 rounded-xl text-[10px] font-bold hover:bg-orange-500/10 hover:text-orange-600"
-                                                                                            onClick={() => handleReturn(op, item)}
-                                                                                        >
-                                                                                            <ArrowLeftRight className="h-3 w-3 mr-1.5" />
-                                                                                            İADE
-                                                                                        </Button>
-                                                                                        <Button
-                                                                                            size="sm"
-                                                                                            variant="ghost"
-                                                                                            className="h-8 px-3 rounded-xl text-[10px] font-bold hover:bg-emerald-500/10 hover:text-emerald-600"
-                                                                                            onClick={() => handleSendWhatsApp(op, item)}
-                                                                                        >
-                                                                                            <MessageCircle className="h-3 w-3 mr-1.5" />
-                                                                                            MSJ
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="bg-background/40 rounded-3xl p-6 border border-border/40 space-y-4">
-                                                                    <div className="flex flex-col gap-1">
-                                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">İŞLEM ÖZETİ</span>
-                                                                        <div className="flex items-baseline justify-between">
-                                                                            <span className="text-2xl font-black">{op.currency === 'USD' ? '$' : '₺'}{op.amount.toLocaleString('tr-TR')}</span>
-                                                                            <Badge variant="outline" className={cn("text-[9px] font-black tracking-widest", getTypeColor(op.type))}>
-                                                                                {getTypeLabel(op.type)}
-                                                                            </Badge>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div className="flex flex-col gap-0.5 p-3 rounded-2xl bg-muted/20 border border-border/20">
-                                                                            <span className="text-[8px] font-black text-muted-foreground opacity-50 uppercase">ÖDEME YÖNTEMİ</span>
-                                                                            <span className="text-[10px] font-bold">{getPaymentLabel(op.paymentMethod)}</span>
-                                                                        </div>
-                                                                        <div className="flex flex-col gap-0.5 p-3 rounded-2xl bg-muted/20 border border-border/20">
-                                                                            <span className="text-[8px] font-black text-muted-foreground opacity-50 uppercase">HESAP / KASA</span>
-                                                                            <span className="text-[10px] font-bold truncate">{translateLabel(op.accountName) || "Nakit Kasa"}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex gap-2">
-                                                                        <Button
-                                                                            className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-bold text-[10px] tracking-widest shadow-lg shadow-emerald-500/20"
-                                                                            onClick={() => handlePrintReceipt(op)}
-                                                                        >
-                                                                            <Printer className="w-3.5 h-3.5 mr-2" />
-                                                                            FİŞ YAZDIR
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            className="flex-1 h-11 rounded-2xl font-bold text-[10px] tracking-widest"
-                                                                            onClick={() => handleSendWhatsApp(op)}
-                                                                        >
-                                                                            <MessageCircle className="w-3.5 h-3.5 mr-2" />
-                                                                            WHATSAPP
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        <OperationDetails
+                                                            op={op}
+                                                            getTypeColor={getTypeColor}
+                                                            getTypeLabel={getTypeLabel}
+                                                            getPaymentLabel={getPaymentLabel}
+                                                            translateLabel={translateLabel}
+                                                            handleReturn={handleReturn}
+                                                            handleSendWhatsApp={handleSendWhatsApp}
+                                                            handlePrintReceipt={handlePrintReceipt}
+                                                        />
                                                     </td>
                                                 </tr>
                                             )}
-                                        </>
+                                        </Fragment>
                                     ))
                                 )}
                             </tbody>

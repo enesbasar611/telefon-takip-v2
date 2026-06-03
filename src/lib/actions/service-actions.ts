@@ -404,6 +404,46 @@ export async function updateServiceCost(ticketId: string, estimatedCost: number,
   }
 }
 
+export async function bulkUpdateServiceStatus(ticketIds: string[], status: ServiceStatus, message?: string) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    // Check if status requires complex delivery logic
+    if (status === ServiceStatus.DELIVERED) {
+      throw new Error("Teslimat işlemi toplu olarak yapılamaz. Lütfen her cihazı ayrı ayrı teslim edin.");
+    }
+
+    await prisma.$transaction(
+      ticketIds.map((id) =>
+        prisma.serviceTicket.update({
+          where: { id, shopId },
+          data: {
+            status,
+            logs: {
+              create: {
+                message: message || `Toplu Durum Güncellemesi: ${status}`,
+                status: status,
+                shopId
+              }
+            }
+          }
+        })
+      )
+    );
+
+    revalidatePath("/servis");
+    revalidatePath("/servis/liste");
+    revalidateTag(`tickets-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Bulk status update error:", error);
+    return { success: false, error: error.message || "Toplu güncelleme sırasında bir hata oluştu." };
+  }
+}
+
 export async function updateServicePartPrice(partId: string, unitPrice: number) {
   try {
     const shopId = await getShopId();
@@ -800,15 +840,53 @@ export async function getServiceCounts() {
 
     const totalCount = counts.reduce((acc, c) => acc + c._count, 0);
 
+    // Calculate Ready Value (Estimated cost of READY tickets)
+    const readyValueResult = await prisma.serviceTicket.aggregate({
+      where: { shopId, status: "READY" },
+      _sum: { estimatedCost: true }
+    });
+
+    // Calculate Monthly Revenue (Delivered in current month)
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const monthlyDelivered = await prisma.serviceTicket.findMany({
+      where: {
+        shopId,
+        status: "DELIVERED",
+        deliveredAt: { gte: startOfMonth }
+      },
+      select: {
+        actualCost: true,
+        estimatedCost: true,
+        usedParts: {
+          select: {
+            unitPrice: true,
+            quantity: true
+          }
+        }
+      }
+    });
+
+    let monthlyRevenue = 0;
+    monthlyDelivered.forEach(t => {
+      const partsTotal = t.usedParts.reduce((acc, p) => acc + (Number(p.unitPrice) * p.quantity), 0);
+      const labor = Number(t.actualCost) || Number(t.estimatedCost);
+      monthlyRevenue += (partsTotal + labor);
+    });
+
     return {
       active: activeCount,
       ready: readyCount,
       done: doneCount,
-      all: totalCount
+      all: totalCount,
+      readyValue: Number(readyValueResult._sum.estimatedCost || 0),
+      monthlyRevenue
     };
   } catch (error) {
     console.error("Error fetching service counts:", error);
-    return { active: 0, ready: 0, done: 0, all: 0 };
+    return { active: 0, ready: 0, done: 0, all: 0, readyValue: 0, monthlyRevenue: 0 };
   }
 }
 

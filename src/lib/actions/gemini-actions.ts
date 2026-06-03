@@ -363,6 +363,7 @@ export async function parseCategoryTreeWithAI(
     const rates = await getExchangeRates(shopId);
     const usdRate = rates.usd > 1 ? rates.usd : 35;
 
+    const categoryList = await buildCategoryContext();
     const productList = await buildProductContext();
     const setting = await prisma.setting.findUnique({
         where: { shopId_key: { shopId, key: "defaultCurrency" } }
@@ -372,14 +373,21 @@ export async function parseCategoryTreeWithAI(
     const systemPrompt = `Sen bir telefon & teknik servis dükkanı yazılımının envanter asistanısın.
 Kullanıcı bir kategori hiyerarşisi ve ürün tanımı yazıyor.
 MAĞAZA VARSAYILAN PARA BİRİMİ: ${defaultCurrency}
-MEVCUT ÜRÜNLER (Mükerrer eklememek için kontrol et): ${JSON.stringify(productList.slice(0, 50))}
+
+MEVCUT KATEGORİLER:
+${JSON.stringify(categoryList.slice(0, 100), null, 2)}
+
+MEVCUT ÜRÜNLER (Mükerrer eklememek için kontrol et): 
+${JSON.stringify(productList.slice(0, 50))}
+
 Kurallara uy:
 1. Eğer bir ürün yukarıdaki MEVCUT ÜRÜNLER listesinde birebir aynı isimle varsa, onu tekrar EKLEME. 
-2. "Şarj Aletleri > Type-C > 27W" gibi hiyerarşiler → her seviye ayrı kategori düğümü
-3. Her kategorinin parentName'ini bir üst seviyenin name'i olarak doldur (root → null)
-4. Seri modeller için HER MODEL ayrı ürün satırı olarak oluştur (max 20 ürün)
-5. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
-6. EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan.
+2. Mevcut kategorileri (ID ve isim) kullanmaya çalış. Eğer kullanıcı "Şarj" dediyse ve "Şarj Aletleri" kategorisi varsa onu eşleştir.
+3. "Şarj Aletleri > Type-C > 27W" gibi hiyerarşiler → her seviye ayrı kategori düğümü
+4. Her kategorinin parentName'ini bir üst seviyenin name'i olarak doldur (root → null)
+5. Seri modeller için HER MODEL ayrı ürün satırı olarak oluştur (max 20 ürün)
+6. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
+7. EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan.
 SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `KULLANICI AÇIKLAMASI:\n${description}`;
@@ -956,23 +964,22 @@ export async function getTechnicalServiceAnalysis(): Promise<{ success: boolean;
         const commonProblems = tickets.map(t => t.problemDesc).slice(0, 20);
         const deviceModels = tickets.map(t => `${t.deviceBrand} ${t.deviceModel}`).slice(0, 20);
 
-        const systemPrompt = `Sen BAŞAR AI Teknik Servis Analistisin. Teknik servis operasyonlarını analiz edip dükkan sahibine yol gösterecek bir özet rapor sun.
-Asla JSON veya süslü parantez kullanma. Doğrudan düz metin ve markdown (listeler, kalın yazılar) kullan.
-Kısa, öz ve aksiyon odaklı ol.
+        const systemPrompt = `Sen BAŞAR AI Teknik Servis Mimarı ve İş Geliştirme Danışmanısın. Teknik servis operasyonlarını derinlemesine analiz edip, dükkan sahibine hem teknik hem de yönetimsel stratejik kararlar almasında rehberlik edeceksin.
+Asla JSON veya teknik kod benzeri yapılar kullanma. Doğrudan profesyonel, akıcı ve aksiyon odaklı markdown (kalın yazılar, listeler) kullan.
 
-RAPOR AKIŞI:
-1. 🔧 OPERASYON: Genel durum özeti.
-2. 📱 CİHAZ/ARIZA: En çok gelen cihazlar ve kronikleşen arızalar.
-3. 💸 KARLILIK: Servis ücretleri ve maliyetler üzerine kısa bir yorum.
-4. 🚀 TAVSİYE: Teknik servis hızını veya kalitesini artıracak 2 altın kural.
+RAPOR STRATEJİSİ VE ANALİZ DERİNLİĞİ:
+1. 🔧 OPERASYONEL NABIZ: Mevcut iş yükünü, bekleme sürelerini ve operasyonel verimliliği değerlendir. "Şu an dükkan nasıl dönüyor?" sorusuna kısa bir yanıt ver.
+2. 📱 ARIZA-ÇÖZÜM REHBERİ: Özellikle "PENDING" (Beklemede) ve "REPAIRING" (İşlemde) olan kayıtlarındaki arıza açıklamalarına odaklan. Bu cihazlar için kronik sorunları tespit et ve teknik çözüm yolları öner (örn: "iPhone 11 ekran değişimlerinde Face ID riskine dikkat", "Sık gelen şarj soketi arızaları için stoktaki X marka parçayı kullanın").
+3. 💸 YÖNETİMSEL İPUCU: Karlılığı artırmak için hangi cihaz gruplarına veya arıza türlerine odaklanılması gerektiğini, maliyet/performans dengesini yorumla.
+4. 🚀 STRATEJİK 2 ADIM: Servis hızını ve müşteri memnuniyetini anında artıracak, somut ve uygulanabilir 2 altın kural belirle.
 
 ANALİZ VERİLERİ (Son 30 Gün):
-- Toplam Kayıt: ${tickets.length}
+- Toplam İşlem: ${tickets.length} adet
 - Durum Dağılımı: ${JSON.stringify(statusSummary)}
-- Örnek Arızalar: ${commonProblems.join(", ")}
-- Örnek Cihazlar: ${deviceModels.join(", ")}`;
+- İncelenen Arıza Tanımları: ${commonProblems.join(", ")}
+- Hizmet Verilen Modeller: ${deviceModels.join(", ")}`;
 
-        const result = await callGemini(shopId, [systemPrompt, "Teknik servis genel analiz raporu oluştur."], "text");
+        const result = await callGemini(shopId, [systemPrompt, "Sektörel veriler ışığında kapsamlı servis yönetim raporu oluştur."], "text");
         if ("error" in result) return { success: false, error: result.error };
 
         return { success: true, analysis: result.text };

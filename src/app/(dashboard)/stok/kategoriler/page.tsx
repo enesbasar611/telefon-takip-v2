@@ -1,10 +1,16 @@
-import { Package, Sparkles, Layers, PlusCircle, ChevronRight } from "lucide-react";
+import { Sparkles, Layers, PlusCircle, ChevronRight } from "lucide-react";
 import { getAllCategories } from "@/lib/actions/category-actions";
 import { getAllProductsForCategoriesUI } from "@/lib/actions/product-actions";
-import { CategoryManagementClient } from "@/components/product/category-management-client";
+import { CategoryManagementContainer } from "@/components/product/category-management";
 import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import { Metadata } from "next";
 
 import { PageHeader } from "@/components/ui/page-header";
+
+export const metadata: Metadata = {
+    title: "Kategori Yönetimi | Stok Takip",
+    description: "Ürün ağacınızı ve kategorilerinizi yönetin.",
+};
 
 export default async function KategorilerPage() {
     const queryClient = new QueryClient();
@@ -36,7 +42,7 @@ export default async function KategorilerPage() {
                     }
                 />
 
-                <CategoryManagementClient />
+                <CategoryManagementContainer />
 
                 {/* How-To Guide */}
                 <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-white/[0.02] p-6 space-y-4 shadow-sm backdrop-blur-sm">

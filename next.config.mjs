@@ -8,6 +8,13 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    images: {
+        formats: ['image/webp', 'image/avif'],
+        remotePatterns: [
+            { protocol: 'https', hostname: '**.googleapis.com' },
+            { protocol: 'https', hostname: '**.googleusercontent.com' },
+        ],
+    },
     experimental: {
         serverComponentsExternalPackages: ["puppeteer-extra", "puppeteer-extra-plugin-stealth", "puppeteer", "whatsapp-web.js", "unzipper"],
     },
@@ -28,6 +35,17 @@ const nextConfig = {
             poll: 1000, // Windows için daha kararlı dosya izleme
             aggregateTimeout: 300,
         };
+        
+        // Bundle analyzer - sadece ANALYZE=true ile çalışır
+        if (process.env.ANALYZE === 'true') {
+            const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+            config.plugins.push(new BundleAnalyzerPlugin({
+                analyzerMode: 'server',
+                analyzerPort: isServer ? 8888 : 8889,
+                openAnalyzer: true,
+            }));
+        }
+        
         return config;
     },
 };

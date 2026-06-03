@@ -1247,7 +1247,182 @@ export async function getProductByBarcode(barcode: string) {
   }
 }
 
+export async function bulkCreateAIInventory(nodes: any[]) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    const result = await prisma.$transaction(async (tx) => {
+      const createdMap: Record<string, string> = {};
+      const existingCats = await tx.category.findMany({ where: { shopId } });
+      existingCats.forEach(c => {
+        createdMap[c.name.toLowerCase()] = c.id;
+      });
+
+      const updatedCats: any[] = [];
+      const updatedProds: any[] = [];
+
+      for (const node of nodes) {
+        // Resolve parentId
+        let parentId = node.parentName
+          ? createdMap[node.parentName.toLowerCase()]
+          : null;
+
+        // Ensure category exists
+        const formattedCatName = formatTitleCase(node.name);
+        const lowerCatName = node.name.toLowerCase();
+
+        let catId = createdMap[lowerCatName];
+
+        if (!catId) {
+          // Get max order for this level
+          const maxOrder = await tx.category.aggregate({
+            _max: { order: true },
+            where: { shopId, parentId: parentId || null }
+          });
+
+          const cat = await tx.category.create({
+            data: {
+              name: formattedCatName,
+              parentId: parentId || null,
+              order: (maxOrder._max.order || 0) + 1,
+              shopId
+            }
+          });
+          catId = cat.id;
+          createdMap[lowerCatName] = catId;
+          updatedCats.push(cat);
+        }
+
+        // Process products
+        for (const p of node.products) {
+          const formattedProdName = formatTitleCase(p.name);
+
+          // Check duplicate
+          const existingProd = await tx.product.findFirst({
+            where: {
+              shopId,
+              OR: [
+                { name: { equals: formattedProdName, mode: 'insensitive' } },
+                ...(p.barcode ? [{ barcode: formatUppercase(p.barcode) }] : [])
+              ]
+            }
+          });
+
+          if (existingProd) {
+            // Add stock if duplicate
+            if (p.stock > 0) {
+              const updated = await tx.product.update({
+                where: { id: existingProd.id },
+                data: { stock: { increment: p.stock } }
+              });
+
+              await tx.inventoryMovement.create({
+                data: {
+                  productId: existingProd.id,
+                  quantity: p.stock,
+                  type: "PURCHASE",
+                  notes: "AI Çoklu Ekle (Mevcut Ürün)",
+                  shopId
+                }
+              });
+
+              await tx.inventoryLog.create({
+                data: {
+                  productId: existingProd.id,
+                  userId,
+                  quantity: p.stock,
+                  type: "PURCHASE",
+                  notes: "AI Çoklu Ekle (Mevcut Ürün)",
+                  shopId
+                }
+              });
+              updatedProds.push(updated);
+            }
+          } else {
+            // Create new product
+            const newProd = await tx.product.create({
+              data: {
+                name: formattedProdName,
+                categoryId: catId,
+                buyPrice: p.buyPrice,
+                buyPriceUsd: p.buyPriceUsd ?? null,
+                sellPrice: p.sellPrice,
+                sellPriceUsd: p.sellPriceUsd ?? null,
+                stock: p.stock,
+                criticalStock: p.criticalStock || 1,
+                barcode: p.barcode ? formatUppercase(p.barcode) : generateProductBarcode({
+                  shopId,
+                  productId: `temp-${Date.now()}`,
+                  productName: formattedProdName,
+                }),
+                location: p.location,
+                shopId,
+                attributes: {
+                  priceCurrency: p.buyPriceUsd || p.sellPriceUsd ? "USD" : "TRY"
+                },
+                movements: p.stock > 0 ? {
+                  create: {
+                    quantity: p.stock,
+                    type: "PURCHASE",
+                    notes: "AI Çoklu Ekle",
+                    shopId
+                  }
+                } : undefined,
+                inventoryLogs: p.stock > 0 ? {
+                  create: {
+                    userId,
+                    quantity: p.stock,
+                    type: "PURCHASE",
+                    notes: "AI Çoklu Ekle",
+                    shopId
+                  }
+                } : undefined
+              }
+            });
+
+            // Fix barcode if it was temp
+            if (newProd.barcode?.startsWith("BAR-temp-")) {
+              const fixedBarcode = generateProductBarcode({
+                shopId,
+                productId: newProd.id,
+                productName: newProd.name,
+                createdAtMs: newProd.createdAt.getTime()
+              });
+              const fixedProd = await tx.product.update({
+                where: { id: newProd.id },
+                data: { barcode: fixedBarcode }
+              });
+              updatedProds.push(fixedProd);
+            } else {
+              updatedProds.push(newProd);
+            }
+          }
+        }
+      }
+
+      return { categories: updatedCats, products: updatedProds };
+    });
+
+    revalidatePath("/stok");
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateTag(`products-${shopId}`);
+
+    return {
+      success: true,
+      categories: serializePrisma(result.categories),
+      products: serializePrisma(result.products)
+    };
+  } catch (error: any) {
+    console.error("bulkCreateAIInventory error:", error);
+    return { success: false, error: "Toplu kayıt işlemi sırasında hata oluştu." };
+  }
+}
+
 export async function adjustStockById(id: string, quantity: number, notes?: string) {
+
   try {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };

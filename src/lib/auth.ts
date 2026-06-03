@@ -194,7 +194,32 @@ export const authOptions: NextAuthOptions = {
             const isSuperAdmin = isSuperAdminEmail(email);
 
             if (isSuperAdmin) {
-                return true; // Bypass all checks for Super Admin
+                // Ensure Super Admin exists in the current DB
+                await prisma.user.upsert({
+                    where: { email },
+                    update: { role: "SUPER_ADMIN" },
+                    create: {
+                        email: email!,
+                        name: user.name || "Enes Başar",
+                        role: "SUPER_ADMIN",
+                        isApproved: true
+                    }
+                });
+
+                // Auto-bootstrap: If no shop exists in the system, create the primary one
+                const shopCount = await prisma.shop.count();
+                if (shopCount === 0) {
+                    console.log("[Setup] No shops found. Bootstrapping primary shop...");
+                    await prisma.shop.create({
+                        data: {
+                            id: "clprimary0000000000000000", // Stable ID for bootstrapping
+                            name: "BAŞAR TEKNİK MERKEZ",
+                            isActive: true,
+                            enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"]
+                        }
+                    });
+                }
+                return true;
             }
 
             if (account?.provider === "google") {
@@ -278,13 +303,14 @@ export const authOptions: NextAuthOptions = {
                 }
             }
 
-            // Real-time DB sync on every request - OPTIMIZED WITH TTL
+            // Real-time DB sync on every request - OPTIMIZED WITH TTL (5s for Super Admin, 30s for others)
             const now = Math.floor(Date.now() / 1000);
-            const isSuperAdminQuickSync = (token.role === "SUPER_ADMIN");
+            const isSuperAdmin = (token.role === "SUPER_ADMIN") || isSuperAdminEmail(token.email as string);
+            const syncInterval = isSuperAdmin ? 5 : 30;
 
-            if (token.id && (!token.lastSync || now - (token.lastSync as number) > 30 || isSuperAdminQuickSync)) {
+            if (token.id && (!token.lastSync || now - (token.lastSync as number) > syncInterval)) {
                 try {
-                    const dbUser = await (prisma.user as any).findUnique({
+                    let dbUser = await (prisma.user as any).findUnique({
                         where: { id: token.id },
                         select: {
                             id: true,
@@ -305,12 +331,46 @@ export const authOptions: NextAuthOptions = {
                         }
                     });
 
-                    // Force logout if user no longer exists
+                    // Force logout or clear stale data if user no longer exists in current DB
                     if (!dbUser) {
-                        return null as any;
+                        if (isSuperAdmin) {
+                            console.log(`[JWT] Super Admin ${token.email} not found. Re-provisioning...`);
+                            const newUser = await prisma.user.upsert({
+                                where: { email: token.email?.toLowerCase() },
+                                update: { role: "SUPER_ADMIN" },
+                                create: {
+                                    email: token.email?.toLowerCase()!,
+                                    name: token.name || "Enes Başar",
+                                    role: "SUPER_ADMIN",
+                                    isApproved: true
+                                }
+                            });
+                            token.id = newUser.id; // Switch to new ID
+                            token.lastSync = now;
+
+                            // Auto-bootstrap shop if none exists
+                            const shopCount = await prisma.shop.count();
+                            if (shopCount === 0) {
+                                console.log("[Setup] No shops found. Bootstrapping primary shop in JWT...");
+                                await prisma.shop.create({
+                                    data: {
+                                        id: "clprimary0000000000000000",
+                                        name: "BAŞAR TEKNİK MERKEZ",
+                                        isActive: true,
+                                        enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"]
+                                    }
+                                });
+                            }
+
+                            dbUser = newUser as any;
+                        } else {
+                            console.warn(`[JWT] User ${token.id} (${token.email}) not found in database. Clearing stale shopId.`);
+                            token.shopId = undefined;
+                            token.lastSync = now;
+                            return token;
+                        }
                     }
 
-                    const isSuperAdmin = isSuperAdminEmail(dbUser.email) || dbUser.role === "SUPER_ADMIN";
                     const effectiveUser = dbUser; // Stop auto-upgrading permissions via ensured methods
 
                     // Sync the core profile bits
@@ -383,13 +443,20 @@ export const authOptions: NextAuthOptions = {
                     // Check e-Invoice Status
                     token.isEInvoiceUser = await checkUserEInvoiceStatus(dbUser.id);
 
-                    // Impersonation detection: If Super Admin is NOT in their home shop (BAŞAR)
+                    // Impersonation detection: If Super Admin is NOT in their home shop
                     if (isSuperAdmin && token.shopId) {
-                        const homeShop = await prisma.shop.findFirst({
-                            where: { name: { contains: "BAŞAR", mode: "insensitive" } },
-                            select: { id: true }
+                        const currentShop = await prisma.shop.findUnique({
+                            where: { id: token.shopId as string },
+                            select: { name: true }
                         });
-                        token.isImpersonating = homeShop && token.shopId !== homeShop.id;
+
+                        const shopName = (currentShop?.name || "").toLowerCase();
+                        const isHomeShop = shopName.includes("başar") ||
+                            shopName.includes("basar") ||
+                            token.shopId === "clprimary0000000000000000" ||
+                            shopName === "";
+
+                        token.isImpersonating = !isHomeShop;
                     } else {
                         token.isImpersonating = false;
                     }
@@ -477,35 +544,47 @@ export const auth = cache(async () => {
     return session;
 });
 
+// Cached home shop lookup for Super Admin fallback
+const getHomeShopId = cache(async () => {
+    const homeShop = await prisma.shop.findFirst({
+        where: { name: { contains: "BAŞAR", mode: "insensitive" } },
+        select: { id: true }
+    }) || await prisma.shop.findFirst({
+        where: {
+            OR: [
+                { name: { contains: "TEKNİK", mode: "insensitive" } },
+                { name: { contains: "TELEFON", mode: "insensitive" } }
+            ]
+        },
+        select: { id: true }
+    }) || await prisma.shop.findFirst({ select: { id: true } });
+
+    return homeShop?.id || null;
+});
+
 export function getShopId(): Promise<string>;
 export function getShopId(required: true): Promise<string>;
 export function getShopId(required: false): Promise<string | null>;
 export async function getShopId(required = true): Promise<string | null> {
     const session = await auth();
 
-    // Fast path: shopId is already in the token
-    if (session?.user?.shopId) {
-        return session.user.shopId;
+    // Validate shopId: must be truthy and not "null" string/placeholder
+    let shopId = session?.user?.shopId;
+    if (shopId === "null" || shopId === "undefined" || shopId === "") {
+        shopId = undefined;
+    }
+
+    if (shopId) {
+        return shopId;
     }
 
     // Super Admin fallback: token may lack shopId during impersonation transitions.
     // Find the "home" shop automatically so no call site crashes.
-    if (session?.user?.role === "SUPER_ADMIN") {
-        const homeShop = await prisma.shop.findFirst({
-            where: { name: { contains: "BAŞAR", mode: "insensitive" } },
-            select: { id: true }
-        }) || await prisma.shop.findFirst({
-            where: {
-                OR: [
-                    { name: { contains: "TEKNİK", mode: "insensitive" } },
-                    { name: { contains: "TELEFON", mode: "insensitive" } }
-                ]
-            },
-            select: { id: true }
-        }) || await prisma.shop.findFirst({ select: { id: true } });
-
-        if (homeShop) {
-            return homeShop.id;
+    if (session?.user?.role === "SUPER_ADMIN" || isSuperAdminEmail(session?.user?.email as string)) {
+        const homeShopId = await getHomeShopId();
+        if (homeShopId) {
+            console.log(`[getShopId] Super Admin fallback to homeShopId: ${homeShopId}`);
+            return homeShopId;
         }
     }
 

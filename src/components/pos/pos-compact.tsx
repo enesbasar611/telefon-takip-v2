@@ -1,57 +1,38 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
     Search,
-    Plus,
-    Minus,
-    Banknote,
-    Printer,
-    ChevronRight,
     Package,
-    Wrench,
     Smartphone,
-    User,
-    Trash2,
     ShoppingBag,
-    UserPlus,
-    CheckCircle,
-    Phone,
-    CreditCard,
-    Landmark,
-    History,
-    AlertCircle,
-    Camera,
     ShoppingCart,
+    Camera,
+    Plus,
+    Wrench,
     Loader2
 } from "lucide-react";
 import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { ReceiptModal } from "./receipt-modal";
-import { cn, formatPhone, formatCurrency } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
-import { Sparkles, UserCircle } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSettings } from "@/lib/actions/setting-actions";
-// Cart Persistence Effect
 import { useScanner } from "@/hooks/use-scanner";
 import { useSession } from "next-auth/react";
 import { ScannerModal } from "../scanner/scanner-modal";
+import { CartItem } from "./parts/cart-item";
+import { CustomerSelector } from "./parts/customer-selector";
+import { CheckoutSummary } from "./parts/checkout-summary";
 import { useRouter } from "next/navigation";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { useQuery } from "@tanstack/react-query";
 
-export function POSCompact({ products, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
+export function POSCompact({ products: initialProducts, customers, categories }: { products: any[]; customers: any[]; categories: any[] }) {
     const [productSearch, setProductSearch] = useState("");
     const [customerSearch, setCustomerSearch] = useState("");
     const [view, setView] = useState<'products' | 'cart'>('products');
@@ -59,25 +40,63 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const [cart, setCart] = useState<any[]>([]);
     const [paymentMethod, setPaymentMethod] = useState("CASH");
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
+    const [localProducts, setLocalProducts] = useState(initialProducts);
+    const [isLoaded, setIsLoaded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [lastSale, setLastSale] = useState<any>(null);
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [localProducts, setLocalProducts] = useState(products);
     const lastAddRef = useRef<{ id: string; time: number } | null>(null);
 
-    // Update local products when props change
-    useEffect(() => {
-        setLocalProducts(products);
-    }, [products]);
+    const { rates: exchangeRates } = useDashboardData();
+    const { data: settingsData } = useQuery({
+        queryKey: ["settings"],
+        queryFn: () => getSettings(),
+    });
 
-    const [pointValueTl, setPointValueTl] = useState<number>(5);
-    const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
+    const pointValueTl = useMemo(() => {
+        const loyaltyVal = settingsData?.find((s: any) => s.key === "loyalty_point_value_tl")?.value;
+        return Number(loyaltyVal) || 5;
+    }, [settingsData]);
+
+    const loyaltyEnabled = useMemo(() => {
+        const enabled = settingsData?.find((s: any) => s.key === "loyalty_enabled")?.value;
+        return enabled !== "false";
+    }, [settingsData]);
 
     const { data: session } = useSession();
     const router = useRouter();
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+    const { toast } = useToast();
+
+    // Helper Functions
+    function getCartItemCurrency(item: any): "TRY" | "USD" | "EUR" {
+        const storedCurrency = item?.attributes?.priceCurrency;
+        if (storedCurrency === "USD" || storedCurrency === "EUR") return storedCurrency;
+        return item?.sellPriceUsd ? "USD" : "TRY";
+    }
+
+    const getCartCurrencySymbol = useCallback((item: any) => {
+        const itemCurrency = getCartItemCurrency(item);
+        if (itemCurrency === "USD") return "$";
+        if (itemCurrency === "EUR") return "€";
+        return "₺";
+    }, []);
+
+    const getEquivalentDisplay = useCallback((product: any) => {
+        const itemCurrency = getCartItemCurrency(product);
+        const usdRate = Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
+
+        if (itemCurrency === "USD") {
+            const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
+            const tlEquiv = Math.round(priceUsd * usdRate);
+            return `(₺${tlEquiv.toLocaleString("tr-TR")})`;
+        } else {
+            const priceTl = Number(product.sellPrice || 0);
+            const usdEquiv = Math.round(priceTl / usdRate);
+            return `($${usdEquiv})`;
+        }
+    }, [exchangeRates, settingsData]);
 
     const {
         initializeScannerRoom,
@@ -87,12 +106,17 @@ export function POSCompact({ products, customers, categories }: { products: any[
     } = useScanner((barcode, deviceId) => {
         const success = addBarcodeMatchToCart(barcode);
         if (success) {
-            const product = products.find(p => p.barcode?.toUpperCase() === barcode.trim().toUpperCase());
+            const product = initialProducts.find(p => p.barcode?.toUpperCase() === barcode.trim().toUpperCase());
             if (product) sendSuccessFeedback(product.name, deviceId);
         } else {
             sendErrorFeedback("Ürün bulunamadı!", deviceId);
         }
     });
+
+    // Update local products when props change
+    useEffect(() => {
+        setLocalProducts(initialProducts);
+    }, [initialProducts]);
 
     // Sync cart to mobile whenever it changes
     useEffect(() => {
@@ -107,7 +131,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
 
     // Load cart from localStorage
     useEffect(() => {
-        const savedCart = localStorage.getItem("pos_active_cart");
+        const savedCart = localStorage.getItem("pos_active_compact_cart");
         if (savedCart) {
             try {
                 setCart(JSON.parse(savedCart));
@@ -121,26 +145,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
     // Save cart to localStorage
     useEffect(() => {
         if (isLoaded) {
-            localStorage.setItem("pos_active_cart", JSON.stringify(cart));
+            localStorage.setItem("pos_active_compact_cart", JSON.stringify(cart));
             syncCartToMobile(cart);
         }
     }, [cart, isLoaded, syncCartToMobile]);
-
-    // Load points config
-    useEffect(() => {
-        async function fetchPointsSettings() {
-            try {
-                const settings = await getSettings();
-                const config = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
-                setPointValueTl(Number(config.loyalty_point_value_tl) || 5);
-                setLoyaltyEnabled(config.loyalty_enabled !== "false");
-            } catch (err) {
-            }
-        }
-        fetchPointsSettings();
-    }, []);
-
-    const { toast } = useToast();
 
     const filteredProducts = useMemo(() => {
         return localProducts.filter((p) => {
@@ -155,7 +163,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const addToCart = (product: any) => {
         if (!product) return;
 
-        // Debounce rapid additions of the same product (prevent "1 adds 3" bug)
+        // Debounce rapid additions of the same product
         const now = Date.now();
         const lastAdd = lastAddRef.current;
         if (lastAdd && lastAdd.id === product.id && now - lastAdd.time < 500) {
@@ -188,7 +196,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
         const normalizedValue = value.trim().toUpperCase();
         if (!normalizedValue) return false;
 
-        const product = products.find((p: any) =>
+        const product = initialProducts.find((p: any) =>
             p.barcode?.toUpperCase() === normalizedValue ||
             p.sku?.toUpperCase() === normalizedValue
         );
@@ -238,21 +246,12 @@ export function POSCompact({ products, customers, categories }: { products: any[
         setCart(cart.filter(item => item.id !== id));
     };
 
-    // Listen for mobile-initiated cart actions (Bridge to Mobile Scanner)
+    // Listen for mobile-initiated cart actions
     useEffect(() => {
-        const handleRemove = (e: any) => {
-            removeFromCart(e.detail.productId);
-        };
-        const handleUpdateQty = (e: any) => {
-            updateQuantity(e.detail.productId, e.detail.delta);
-        };
-        const handleAdd = (e: any) => {
-            addToCart(e.detail.product);
-        };
-
-        const handleUpdatePrice = (e: any) => {
-            updatePrice(e.detail.productId, e.detail.newPrice);
-        };
+        const handleRemove = (e: any) => removeFromCart(e.detail.productId);
+        const handleUpdateQty = (e: any) => updateQuantity(e.detail.productId, e.detail.delta);
+        const handleAdd = (e: any) => addToCart(e.detail.product);
+        const handleUpdatePrice = (e: any) => updatePrice(e.detail.productId, e.detail.newPrice);
 
         window.addEventListener("scanner_remove_from_cart", handleRemove);
         window.addEventListener("scanner_update_quantity", handleUpdateQty);
@@ -265,11 +264,10 @@ export function POSCompact({ products, customers, categories }: { products: any[
             window.removeEventListener("scanner_add_to_cart", handleAdd);
             window.removeEventListener("scanner_update_price", handleUpdatePrice);
         };
-    }, [cart, products]); // Re-bind when data changes
+    }, [cart, initialProducts]);
 
     const totalItemsAmount = cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
     const tax = totalItemsAmount * 0.20;
-    const subtotal = totalItemsAmount - tax;
 
     const activeCustomer = useMemo(() => {
         return customers.find(c => c.id === selectedCustomerId);
@@ -289,7 +287,6 @@ export function POSCompact({ products, customers, categories }: { products: any[
     const handleCheckout = async () => {
         if (cart.length === 0) return;
 
-        // Debt validation
         if (paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")) {
             toast({ title: "Müşteri Seçilmedi", description: "Veresiye işlemi için önce müşteri seçmelisiniz.", variant: "destructive" });
             return;
@@ -314,7 +311,6 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 setLastSale(result.data);
                 setShowReceipt(true);
                 setCart([]);
-                // Update local stock optimistically/instantly
                 setLocalProducts(prev => prev.map(p => {
                     const cartItem = cart.find(item => item.id === p.id);
                     if (cartItem) {
@@ -322,7 +318,6 @@ export function POSCompact({ products, customers, categories }: { products: any[
                     }
                     return p;
                 }));
-                // Reset states for next sale
                 setCustomerSearch("");
                 setSelectedCustomerId(undefined);
                 toast({ title: "Satış Başarılı" });
@@ -337,6 +332,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
     };
 
     const isDebtBlocked = paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null");
+
     const closeReceiptAndRefresh = () => {
         setShowReceipt(false);
         setLastSale(null);
@@ -345,7 +341,7 @@ export function POSCompact({ products, customers, categories }: { products: any[
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground font-sans overflow-hidden">
-            {/* Search Bar for Products - Enhanced Spacing & Glassmorphism */}
+            {/* Search Bar */}
             <div className="px-4 pt-4 pb-3">
                 <div className="flex items-center gap-2 relative group">
                     <div className="relative flex-1">
@@ -366,21 +362,14 @@ export function POSCompact({ products, customers, categories }: { products: any[
                         size="icon"
                         variant="secondary"
                         className="h-11 w-11 shrink-0 rounded-xl bg-blue-500/10 text-blue-600 shadow-sm transition-all hover:bg-blue-500 hover:text-white active:scale-95"
-                        onClick={() => {
-                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            if (isMobile) {
-                                setIsScannerModalOpen(true);
-                            } else {
-                                router.push("/ayarlar/moduller");
-                            }
-                        }}
+                        onClick={() => setIsScannerModalOpen(true)}
                     >
                         <Camera className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
-            {/* Category Pills - Modern Minimalist */}
+            {/* Category Pills */}
             <div className="px-4 pb-3 overflow-x-auto scrollbar-hide no-scrollbar">
                 <div className="flex gap-2 min-w-max">
                     <button
@@ -395,28 +384,25 @@ export function POSCompact({ products, customers, categories }: { products: any[
                         <ShoppingBag className="h-3.5 w-3.5" />
                         HEPSİ
                     </button>
-                    {categories.map((cat) => {
-                        const Icon = cat.name.toLowerCase().includes('aksesuar') ? Smartphone : (cat.name.toLowerCase().includes('parça') ? Package : Wrench);
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(cat.id)}
-                                className={cn(
-                                    "flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-black tracking-tight transition-all",
-                                    selectedCategory === cat.id
-                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                        : "bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted hover:border-border"
-                                )}
-                            >
-                                <Icon className="h-3.5 w-3.5" />
-                                <span className="truncate max-w-[140px] uppercase">{cat.name}</span>
-                            </button>
-                        );
-                    })}
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={cn(
+                                "flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-black tracking-tight transition-all",
+                                selectedCategory === cat.id
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                    : "bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted hover:border-border"
+                            )}
+                        >
+                            {cat.name.toLowerCase().includes('aksesuar') ? <Smartphone className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+                            <span className="truncate max-w-[140px] uppercase">{cat.name}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* View Tabs - Glass Style */}
+            {/* View Tabs */}
             <div className="px-4 mb-3">
                 <div className="flex rounded-xl border border-border/40 bg-muted/40 p-1 backdrop-blur-md">
                     <button
@@ -443,8 +429,8 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 </div>
             </div>
 
-            {/* Content Area - Premium Cards */}
-            <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar pb-4 no-scrollbar">
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto px-4 space-y-2 no-scrollbar">
                 <AnimatePresence mode="wait">
                     {view === 'products' ? (
                         <motion.div
@@ -452,36 +438,34 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="space-y-2"
+                            className="grid grid-cols-1 gap-2 pb-4"
                         >
                             {filteredProducts.map((product) => (
                                 <div
                                     key={product.id}
-                                    className="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/70 px-3 py-2.5 transition-all duration-200 hover:border-blue-500/30 hover:bg-blue-500/5 active:scale-[0.99]"
+                                    className="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/50 bg-card px-3 py-2.5 hover:border-blue-500/30 active:scale-[0.99] transition-all"
                                     onClick={() => addToCart(product)}
                                 >
-                                    <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/40 transition-colors group-hover:border-blue-500/10 group-hover:bg-blue-500/5">
-                                            <Package className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-blue-500/50" />
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 group-hover:border-blue-500/10">
+                                            <Package className="h-4 w-4 text-muted-foreground/40" />
                                         </div>
                                         <div className="flex min-w-0 flex-col">
-                                            <h4 className="truncate text-xs font-black uppercase tracking-tight text-foreground transition-colors group-hover:text-blue-600">{product.name}</h4>
+                                            <h4 className="truncate text-xs font-black uppercase text-foreground">{product.name}</h4>
                                             <div className="mt-1 flex items-center gap-2">
-                                                <Badge variant="outline" className="rounded-md border-none bg-muted/50 px-2 py-0.5 text-[8px] text-muted-foreground">
-                                                    {product.category.name.toUpperCase()}
+                                                <Badge variant="outline" className="rounded-md px-2 py-0.5 text-[8px] text-muted-foreground uppercase">
+                                                    {product.category?.name || "GENEL"}
                                                 </Badge>
                                                 <div className="flex items-center gap-1">
-                                                    <div className={cn("h-1.5 w-1.5 rounded-full", product.stock <= 5 ? "bg-rose-500" : "bg-emerald-500")} />
-                                                    <span className={cn("text-[9px] font-black", product.stock <= 5 ? "text-rose-500" : "text-emerald-500")}>{product.stock}</span>
+                                                    <div className={cn("h-1.5 w-1.5 rounded-full", (product.stock || 0) <= 5 ? "bg-rose-500" : "bg-emerald-500")} />
+                                                    <span className={cn("text-[9px] font-black", (product.stock || 0) <= 5 ? "text-rose-500" : "text-emerald-500")}>{product.stock || 0}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
-                                        <div className="text-right">
-                                            <span className="text-sm font-black text-foreground tabular-nums">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
-                                        </div>
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 shadow-sm transition-all group-hover:bg-blue-600 group-hover:text-white">
+                                        <span className="text-sm font-black tabular-nums">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                        <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                             <Plus className="h-4 w-4" />
                                         </div>
                                     </div>
@@ -497,59 +481,34 @@ export function POSCompact({ products, customers, categories }: { products: any[
                             className="space-y-4"
                         >
                             {cart.length === 0 ? (
-                                <div className="py-20 flex flex-col items-center justify-center text-muted-foreground/20 text-center">
-                                    <ShoppingCart className="h-16 w-16 mb-6 opacity-5" />
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Sepetiniz Boş</p>
+                                <div className="py-20 flex flex-col items-center justify-center text-center">
+                                    <ShoppingCart className="h-16 w-16 mb-4 opacity-5" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sepetiniz Boş</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between px-2 mb-4">
-                                        <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">SEPET DETAYI</h3>
+                                <div className="space-y-3 pb-4">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h3 className="text-[10px] font-black text-muted-foreground uppercase">SEPET DETAYI</h3>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => setCart([])}
-                                            className="h-8 px-4 text-[10px] text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 font-black rounded-xl border border-rose-500/10 transition-all"
+                                            className="h-8 px-3 text-[10px] text-rose-500 font-black"
                                         >
                                             TEMİZLE
                                         </Button>
                                     </div>
                                     {cart.map((item) => (
-                                        <div key={item.id} className="bg-card border-2 border-border/40 p-4 rounded-[1.5rem] space-y-4 shadow-sm hover:border-blue-500/20 transition-all">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="text-xs font-black text-foreground truncate uppercase tracking-tight">{item.name}</h4>
-                                                    <div className="flex items-center gap-3 mt-2">
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl transition-all hover:bg-blue-500/10">
-                                                            <span className="text-[10px] text-blue-600 font-black">₺</span>
-                                                            <input
-                                                                type="number"
-                                                                value={item.sellPrice}
-                                                                onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
-                                                                className="bg-transparent border-none text-[11px] text-blue-700 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
-                                                            />
-                                                        </div>
-                                                        <Badge variant="outline" className="text-[9px] bg-muted/30 border-none text-muted-foreground uppercase">{item.category.name}</Badge>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => removeFromCart(item.id)}
-                                                    className="text-muted-foreground/30 hover:text-rose-500 p-2 rounded-xl transition-all hover:bg-rose-500/10"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                            <div className="flex items-center justify-between pt-4 border-t-2 border-border/30">
-                                                <div className="flex items-center bg-muted/40 rounded-xl p-1 border border-border/30">
-                                                    <button onClick={() => updateQuantity(item.id, -1)} className="w-9 h-9 flex items-center justify-center hover:bg-background rounded-lg transition-all text-muted-foreground hover:text-foreground"><Minus className="h-4 w-4" /></button>
-                                                    <span className="w-10 text-center font-black text-xs tabular-nums text-foreground">{item.quantity}</span>
-                                                    <button onClick={() => updateQuantity(item.id, 1)} className="w-9 h-9 flex items-center justify-center hover:bg-background rounded-lg transition-all text-muted-foreground hover:text-foreground"><Plus className="h-4 w-4" /></button>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-sm font-black text-foreground tabular-nums">₺{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <CartItem
+                                            key={item.id}
+                                            item={item}
+                                            updateQuantity={updateQuantity}
+                                            updatePrice={updatePrice}
+                                            removeFromCart={removeFromCart}
+                                            getCartCurrencySymbol={getCartCurrencySymbol}
+                                            getEquivalentDisplay={getEquivalentDisplay}
+                                            isCompact={true}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -558,226 +517,45 @@ export function POSCompact({ products, customers, categories }: { products: any[
                 </AnimatePresence>
             </div>
 
-            {/* Cart Summary Section - Fixed at bottom with modern look */}
-            <div className="space-y-4 border-t border-border/40 bg-card p-4 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl dark:shadow-none">
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-2">
-                        <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] leading-none">MÜŞTERİ SEÇİMİ</Label>
-                        {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
-                            <button
-                                onClick={async () => {
-                                    setIsProcessing(true);
-                                    const res = await createCustomer({
-                                        name: customerSearch,
-                                        phone: "",
-                                        email: "",
-                                        type: "BIREYSEL",
-                                        isVip: false
-                                    });
-                                    if (res.success) {
-                                        toast({ title: "Müşteri Eklendi" });
-                                        setSelectedCustomerId(res.customer.id);
-                                        setCustomerSearch(customerSearch);
-                                    }
-                                    setIsProcessing(false);
-                                }}
-                                className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all bg-blue-500/5 px-3 py-1.5 rounded-lg border border-blue-500/10"
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                HIZLI KAYIT
-                            </button>
-                        )}
-                    </div>
+            {/* Bottom Actions */}
+            <div className="mt-auto border-t bg-card/50 backdrop-blur-xl px-4 py-4 space-y-4 shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.1)]">
+                <CustomerSelector
+                    customers={customers}
+                    selectedCustomerId={selectedCustomerId}
+                    setSelectedCustomerId={setSelectedCustomerId}
+                    customerSearch={customerSearch}
+                    setCustomerSearch={setCustomerSearch}
+                    onNewCustomer={async (name) => {
+                        setIsProcessing(true);
+                        const res = await createCustomer({ name, phone: "" });
+                        if (res.success) {
+                            toast({ title: "Müşteri Eklendi" });
+                            setSelectedCustomerId(res.customer.id);
+                            setCustomerSearch(name);
+                        }
+                        setIsProcessing(false);
+                    }}
+                    isProcessing={isProcessing}
+                    isCompact={true}
+                />
 
-                    <div className="relative group">
-                        <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-blue-500 transition-all duration-300" />
-                        <Input
-                            placeholder="Müşteri ara veya yeni isim gir..."
-                            value={activeCustomer ? activeCustomer.name : customerSearch}
-                            onChange={(e) => {
-                                setCustomerSearch(e.target.value);
-                                if (selectedCustomerId) setSelectedCustomerId(undefined);
-                            }}
-                            className="h-11 rounded-xl border border-border/50 bg-muted/40 pl-10 pr-3 text-xs font-medium text-foreground transition-all focus:bg-background focus:ring-4 focus:ring-blue-500/5"
-                        />
-
-                        {(customerSearch.length > 0 && !selectedCustomerId) && (
-                            <div className="absolute bottom-full left-0 w-full mb-4 bg-background/95 backdrop-blur-xl border-2 border-border/50 rounded-[2rem] shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-4 duration-300">
-                                <div className="max-h-72 overflow-y-auto p-3 custom-scrollbar no-scrollbar">
-                                    {!customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
-                                        <button
-                                            onClick={async () => {
-                                                setIsProcessing(true);
-                                                const res = await createCustomer({
-                                                    name: customerSearch,
-                                                    phone: "",
-                                                    email: "",
-                                                    type: "BIREYSEL",
-                                                    isVip: false
-                                                });
-                                                if (res.success) {
-                                                    toast({ title: "Müşteri Eklendi" });
-                                                    setSelectedCustomerId(res.customer.id);
-                                                    setCustomerSearch(customerSearch);
-                                                }
-                                                setIsProcessing(false);
-                                            }}
-                                            className="w-full text-left p-4 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-between mb-2 shadow-lg shadow-blue-500/20"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                                                    <Plus className="h-5 w-5" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-black opacity-70 uppercase tracking-widest">YENİ MÜŞTERİ</span>
-                                                    <span className="text-sm font-bold truncate max-w-[180px]">{customerSearch}</span>
-                                                </div>
-                                            </div>
-                                            <ChevronRight className="h-5 w-5 opacity-50" />
-                                        </button>
-                                    )}
-
-                                    <button
-                                        onClick={() => {
-                                            setSelectedCustomerId(undefined);
-                                            setCustomerSearch("");
-                                        }}
-                                        className="w-full text-left p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all flex items-center justify-between mb-2 group border border-border/40"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-xl bg-muted-foreground/10 flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors">
-                                                <User className="h-5 w-5" />
-                                            </div>
-                                            <span className="text-[11px] font-black text-muted-foreground group-hover:text-foreground tracking-widest">PERAKENDE (İSİMSİZ)</span>
-                                        </div>
-                                        <CheckCircle className={cn("h-5 w-5 text-emerald-500", !selectedCustomerId ? "opacity-100" : "opacity-0")} />
-                                    </button>
-
-                                    {customers
-                                        .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone && c.phone.includes(customerSearch)))
-                                        .slice(0, 10)
-                                        .map(customer => (
-                                            <button
-                                                key={customer.id}
-                                                onClick={() => {
-                                                    setSelectedCustomerId(customer.id);
-                                                    setCustomerSearch(customer.name);
-                                                }}
-                                                className="w-full text-left p-4 rounded-2xl hover:bg-muted/40 transition-all flex items-center justify-between mb-1 group border border-transparent hover:border-border/40"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-blue-500/5 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all">
-                                                        <UserCircle className="h-5 w-5" />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-foreground">{customer.name}</span>
-                                                        {customer.phone && (
-                                                            <span className="text-[10px] text-muted-foreground mt-0.5 font-medium">{formatPhone(customer.phone)}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <CheckCircle className={cn("h-5 w-5 text-blue-600 transition-opacity", selectedCustomerId === customer.id ? "opacity-100" : "opacity-0")} />
-                                            </button>
-                                        ))
-                                    }
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="bg-muted/30 border-2 border-border/40 p-5 rounded-[1.75rem] space-y-4">
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
-                        <span className="text-xs font-black text-foreground/70 tabular-nums">₺{subtotal.toLocaleString('tr-TR')}</span>
-                    </div>
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
-                        <span className="text-xs font-black text-foreground/70 tabular-nums">₺{tax.toLocaleString('tr-TR')}</span>
-                    </div>
-                    <div className="flex justify-between items-end pt-4 mt-2 border-t-2 border-border/30">
-                        <span className="text-xs font-black text-foreground tracking-[0.1em] uppercase leading-none">ÖDENECEK TUTAR</span>
-                        <div className="flex flex-col items-end">
-                            {loyaltyDiscountAmount > 0 && (
-                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- ₺{formatCurrency(loyaltyDiscountAmount)}</Badge>
-                            )}
-                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">₺{total.toLocaleString('tr-TR')}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {loyaltyEnabled && totalPoints > 0 && selectedCustomerId && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/20 flex items-center justify-between group overflow-hidden relative">
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white">
-                                <Sparkles className="h-6 w-6" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">SADAKAT PUANLARI</span>
-                                <span className="text-xs font-bold text-white tabular-nums">{totalPoints} Puan • ₺{formatCurrency(totalPoints * pointValueTl)}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="flex flex-col items-end mr-2">
-                                <span className="text-[10px] font-black text-white uppercase opacity-70">İNDİRİM</span>
-                                <span className="text-sm font-black text-white">-{applyLoyaltyDiscount ? `₺${formatCurrency(loyaltyDiscountAmount)}` : '₺0'}</span>
-                            </div>
-                            <Checkbox
-                                id="loyalty-checkbox"
-                                checked={applyLoyaltyDiscount}
-                                onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
-                                className="h-7 w-7 rounded-lg border-2 border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-blue-600"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Payment Method Selector - More spacing and contrast */}
-                <div className="grid grid-cols-4 gap-3">
-                    {[
-                        { id: "CASH", label: "NAKİT", icon: Banknote, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                        { id: "CREDIT_CARD", label: "KART", icon: CreditCard, color: "text-blue-500", bg: "bg-blue-500/10" },
-                        { id: "BANK_TRANSFER", label: "HAVALE", icon: Landmark, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-                        { id: "DEBT", label: "VERESİYE", icon: History, color: "text-rose-500", bg: "bg-rose-500/10" }
-                    ].map((method) => (
-                        <button
-                            key={method.id}
-                            onClick={() => setPaymentMethod(method.id)}
-                            className={cn(
-                                "flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-[1.25rem] border-2 transition-all duration-300 relative group overflow-hidden",
-                                paymentMethod === method.id
-                                    ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20 -translate-y-1"
-                                    : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50 hover:border-border"
-                            )}
-                        >
-                            <method.icon className={cn("h-5 w-5", paymentMethod === method.id ? "text-white" : method.color)} />
-                            <span className="text-[8px] font-black tracking-widest uppercase">{method.label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                <div className="flex gap-4 min-h-[72px]">
-                    <Button
-                        disabled={cart.length === 0 || isProcessing}
-                        onClick={handleCheckout}
-                        className={cn(
-                            "flex-1 h-auto text-[13px] font-black tracking-widest rounded-[1.5rem] shadow-2xl transition-all gap-4 uppercase py-6",
-                            isDebtBlocked
-                                ? "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
-                                : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 text-white"
-                        )}
-                    >
-                        {isDebtBlocked ? <AlertCircle className="h-6 w-6" /> : (isProcessing ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />)}
-                        {isDebtBlocked ? "Müşteri Seçilmelidir" : (isProcessing ? "İşleniyor..." : "Tamamla & Fiş Yazdır")}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="h-auto w-16 rounded-[1.5rem] border-2 border-border/50 shrink-0 p-0 hover:bg-muted hover:border-border transition-all"
-                    >
-                        <Printer className="h-6 w-6 text-muted-foreground" />
-                    </Button>
-                </div>
+                <CheckoutSummary
+                    subtotal={totalItemsAmount}
+                    tax={tax}
+                    total={total}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    loyaltyEnabled={loyaltyEnabled}
+                    totalPoints={totalPoints}
+                    pointValueTl={pointValueTl}
+                    applyLoyaltyDiscount={applyLoyaltyDiscount}
+                    setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
+                    loyaltyDiscountAmount={loyaltyDiscountAmount}
+                    onCheckout={handleCheckout}
+                    isProcessing={isProcessing}
+                    isDebtBlocked={isDebtBlocked}
+                    isCompact={true}
+                />
             </div>
 
             {lastSale && (

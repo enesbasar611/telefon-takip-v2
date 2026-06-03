@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { SERVICE_STATUS_GROUPS } from "@/lib/constants/service";
 
 import { getIndustryLabel } from "@/lib/industry-utils";
 
@@ -54,8 +55,8 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
     const serviceLabel = getIndustryLabel(shop, "serviceTicket");
     const assetLabel = getIndustryLabel(shop, "customerAsset");
 
-    const activeTickets = tickets.filter((t: any) => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(t.status));
-    const readyTickets = tickets.filter((t: any) => t.status === "READY");
+    const activeTickets = tickets.filter((t: any) => SERVICE_STATUS_GROUPS.ACTIVE.includes(t.status));
+    const readyTickets = tickets.filter((t: any) => SERVICE_STATUS_GROUPS.READY.includes(t.status));
     const deliveredTickets = tickets.filter((t: any) => t.status === "DELIVERED");
     const cancelledTickets = tickets.filter((t: any) => t.status === "CANCELLED");
 
@@ -99,7 +100,7 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                     <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={activeTickets}
-                            allowedStatuses={["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"]}
+                            allowedStatuses={SERVICE_STATUS_GROUPS.ACTIVE}
                             shop={shop}
                         />
                     </div>

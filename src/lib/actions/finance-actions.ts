@@ -339,7 +339,13 @@ export async function updateManualTransaction(
 
     const oldTx = await prisma.transaction.findUnique({
       where: { id, shopId },
-      include: { attachments: true }
+      select: { 
+        id: true,
+        amount: true, 
+        type: true,
+        financeAccountId: true,
+        attachments: { select: { id: true, url: true, name: true } }
+      }
     });
 
     if (!oldTx) return { success: false, error: "İşlem bulunamadı." };
@@ -644,10 +650,19 @@ export async function getDailySession() {
     const session = await prisma.dailySession.findFirst({
       where: { status: "OPEN", shopId },
       orderBy: { createdAt: "desc" },
-      include: {
-        openedBy: true,
+      select: {
+        id: true,
+        openingBalance: true,
+        status: true,
+        openedBy: { select: { id: true, name: true } },
         transactions: {
-          include: { financeAccount: true }
+          select: { 
+            id: true, 
+            amount: true, 
+            type: true,
+            description: true,
+            financeAccount: { select: { name: true, type: true } }
+          }
         }
       }
     });
@@ -693,7 +708,13 @@ export async function closeDailySession(id: string, actualBalance: number, notes
 
     const session = await prisma.dailySession.findUnique({
       where: { id },
-      include: { transactions: true }
+      select: { 
+        id: true,
+        openingBalance: true,
+        transactions: { 
+          select: { amount: true, type: true }
+        }
+      }
     });
 
     if (!session) return { success: false, error: "Oturum bulunamadı." };
@@ -1032,7 +1053,14 @@ export async function deleteTransaction(id: string) {
     await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findUnique({
         where: { id, shopId },
-        include: { financeAccount: true, user: true }
+        select: { 
+          id: true,
+          amount: true, 
+          type: true,
+          description: true,
+          financeAccount: { select: { name: true } },
+          user: { select: { name: true } }
+        }
       });
 
       if (!transaction) throw new Error("İşlem bulunamadı.");

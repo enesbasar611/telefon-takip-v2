@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History as HistoryIcon, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { getRecentTransactions, getDashboardFinancialSummary } from "@/lib/actio
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
-export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols?: number, rows?: number, shopId?: string }) {
+export function RecentTransactionsStream({ cols = 12, rows = 4, shopId, onDataStatus }: { cols?: number, rows?: number, shopId?: string, onDataStatus?: (isEmpty: boolean) => void }) {
     const isVerySmall = cols < 8;
     const isShort = rows < 3;
 
@@ -28,6 +29,12 @@ export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols
         refetchOnWindowFocus: false,
         refetchOnMount: false,
     });
+
+    useEffect(() => {
+        if (!isLoading && onDataStatus) {
+            onDataStatus(!data || data.length === 0);
+        }
+    }, [data, isLoading, onDataStatus]);
 
     const { data: summary } = useQuery({
         queryKey: ["dashboard-financial-summary", shopId || ""],
@@ -118,34 +125,45 @@ export function RecentTransactionsStream({ cols = 12, rows = 4, shopId }: { cols
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20">
-                            {items.map((t: any) => (
-                                <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
-                                    <td className={cn("py-3", isVerySmall ? "px-4" : "px-8")}>
-                                        <div className={cn("text-foreground tracking-tight line-clamp-1", isVerySmall ? "text-xs" : "text-sm")}>
-                                            {t.customer?.name || t.sale?.customer?.name || (t.description.includes('SATIŞ') ? 'Hızlı Satış' : 'Genel İşlem')}
-                                        </div>
-                                        {!isShort && <div className="text-[9px] text-muted-foreground/40 mt-1 uppercase tracking-tighter font-medium">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>}
-                                    </td>
-                                    {!isVerySmall && <td className="px-6 py-3 text-[10px] text-muted-foreground lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>}
-                                    <td className="px-6 py-3">
-                                        <RevealFinancial amount={t.amount} className={cn("tracking-tight", isVerySmall ? "text-xs" : "text-sm")} />
-                                    </td>
-                                    {!isVerySmall && (
-                                        <td className="px-8 py-3 text-right">
-                                            <Badge variant="outline" className={cn(
-                                                "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg border-none shadow-sm transition-all",
-                                                t.paymentMethod === 'DEBT'
-                                                    ? 'bg-amber-500/10 text-amber-500'
-                                                    : t.type === 'INCOME'
-                                                        ? 'bg-emerald-500/10 text-emerald-500'
-                                                        : 'bg-destructive/10 text-destructive'
-                                            )}>
-                                                {formatStatus(t)}
-                                            </Badge>
+                            {items.length > 0 ? (
+                                items.map((t: any) => (
+                                    <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
+                                        <td className={cn("py-3", isVerySmall ? "px-4" : "px-8")}>
+                                            <div className={cn("text-foreground tracking-tight line-clamp-1", isVerySmall ? "text-xs" : "text-sm")}>
+                                                {t.customer?.name || t.sale?.customer?.name || (t.description.includes('SATIŞ') ? 'Hızlı Satış' : 'Genel İşlem')}
+                                            </div>
+                                            {!isShort && <div className="text-[9px] text-muted-foreground/40 mt-1 uppercase tracking-tighter font-medium">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>}
                                         </td>
-                                    )}
+                                        {!isVerySmall && <td className="px-6 py-3 text-[10px] text-muted-foreground lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>}
+                                        <td className="px-6 py-3">
+                                            <RevealFinancial amount={t.amount} className={cn("tracking-tight", isVerySmall ? "text-xs" : "text-sm")} />
+                                        </td>
+                                        {!isVerySmall && (
+                                            <td className="px-8 py-3 text-right">
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg border-none shadow-sm transition-all",
+                                                    t.paymentMethod === 'DEBT'
+                                                        ? 'bg-amber-500/10 text-amber-500'
+                                                        : t.type === 'INCOME'
+                                                            ? 'bg-emerald-500/10 text-emerald-500'
+                                                            : 'bg-destructive/10 text-destructive'
+                                                )}>
+                                                    {formatStatus(t)}
+                                                </Badge>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="py-20 text-center opacity-20">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <HistoryIcon className="h-10 w-10 mb-2" />
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Henüz işlem bulunmuyor</p>
+                                        </div>
+                                    </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>

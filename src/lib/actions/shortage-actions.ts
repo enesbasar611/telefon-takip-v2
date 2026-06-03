@@ -313,7 +313,8 @@ export async function markShortageAsTaken(id: string, isTaken: boolean, supplier
       }
     });
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -335,7 +336,8 @@ export async function bulkMarkShortageAsTaken(ids: string[], isTaken: boolean, s
       }
     });
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -369,7 +371,8 @@ export async function markShortageAsNotFound(id: string, isNotFound: boolean) {
       }
     });
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -414,7 +417,8 @@ export async function bulkMarkShortageAsNotFound(ids: string[], isNotFound: bool
       })
     );
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -548,7 +552,8 @@ export async function addShortageItems(items: Array<{
       }
     }
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     revalidatePath("/stok");
     revalidatePath("/stok/hareketler");
@@ -590,7 +595,8 @@ export async function updateShortageQuantity(id: string, quantity: number) {
       where: { id, shopId },
       data: { quantity }
     });
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -616,7 +622,8 @@ export async function bulkUpdateShortageQuantity(ids: string[], delta: number) {
       }
     });
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -953,7 +960,8 @@ export async function deleteShortageItem(id: string, force = false) {
     await prisma.shortageItem.delete({
       where: { id, shopId }
     });
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -998,7 +1006,8 @@ export async function deleteShortageItems(ids: string[], force = false) {
         shopId
       }
     });
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -1205,7 +1214,8 @@ export async function finishCourierDay(
       }
     });
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return {
       success: true,
@@ -1264,7 +1274,8 @@ export async function bulkAssignProductsToCourier(productIds: string[], courierI
       )
     );
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     revalidatePath("/stok");
     return { success: true, count: results.length };
@@ -1291,7 +1302,8 @@ export async function clearAllShortages() {
     // Auto-sync zero stock products after cleanup as requested
     await syncZeroStockShortages();
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -1344,7 +1356,8 @@ export async function syncZeroStockShortages() {
       });
     }
 
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true, count: productsToCreate.length };
   } catch (error) {

@@ -47,6 +47,10 @@ import {
     Lock,
     Grid3x3,
     Sparkles,
+    Check,
+    Zap,
+    Target,
+    Timer,
     RotateCcw
 } from "lucide-react";
 import { getLoyaltyTier } from "@/lib/loyalty-utils";
@@ -96,15 +100,17 @@ interface ServiceManagementModalProps {
     isQuickDeliver?: boolean;
 }
 
-const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: string; bg: string }> = {
-    PENDING: { label: "Beklemede", color: "text-muted-foreground", dot: "bg-slate-400", bg: "bg-slate-400/10" },
-    APPROVED: { label: "Onaylandı", color: "text-blue-400", dot: "bg-blue-400", bg: "bg-blue-400/10" },
-    REPAIRING: { label: "Tamirde", color: "text-amber-400", dot: "bg-amber-400", bg: "bg-amber-400/10" },
-    WAITING_PART: { label: "Parça Bekliyor", color: "text-purple-400", dot: "bg-purple-400", bg: "bg-purple-400/10" },
-    READY: { label: "Hazır", color: "text-emerald-400", dot: "bg-emerald-400", bg: "bg-emerald-400/10" },
-    DELIVERED: { label: "Teslim Edildi", color: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500/10" },
-    CANCELLED: { label: "İptal Edildi", color: "text-rose-500", dot: "bg-rose-500", bg: "bg-rose-500/10" },
+const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: string; bg: string; icon: any }> = {
+    PENDING: { label: "Beklemede", color: "text-slate-400", dot: "bg-slate-400", bg: "bg-slate-400/10", icon: Clock },
+    APPROVED: { label: "Onaylandı", color: "text-blue-400", dot: "bg-blue-400", bg: "bg-blue-400/10", icon: CheckCircle2 },
+    REPAIRING: { label: "Tamirde", color: "text-amber-400", dot: "bg-amber-400", bg: "bg-amber-400/10", icon: Wrench },
+    WAITING_PART: { label: "Parça Bekliyor", color: "text-purple-400", dot: "bg-purple-400", bg: "bg-purple-400/10", icon: Box },
+    READY: { label: "Hazır", color: "text-emerald-400", dot: "bg-emerald-400", bg: "bg-emerald-400/10", icon: Sparkles },
+    DELIVERED: { label: "Teslim Edildi", color: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500/10", icon: ShoppingBag },
+    CANCELLED: { label: "İptal Edildi", color: "text-rose-500", dot: "bg-rose-500", bg: "bg-rose-500/10", icon: XCircle },
 };
+
+const statusOrder: ServiceStatus[] = ["PENDING", "APPROVED", "REPAIRING", "READY", "DELIVERED"];
 
 export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose, isQuickDeliver }: ServiceManagementModalProps) {
     const queryClient = useQueryClient();
@@ -372,6 +378,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             const messageToUse = techNote.trim() || `Durum güncellendi: ${statusConfig[statusToUse].label}`;
             await updateServiceStatus(ticket.id, statusToUse, "CASH", messageToUse);
             toast.success("Kayıt güncellendi.");
+
+            // Auto Trigger Notification if status changed
+            if (selectedStatus && selectedStatus !== ticket.status) {
+                setTimeout(() => setWhatsappModalOpen(true), 500);
+            }
+
             setTechNote("");
             setSelectedStatus("");
             queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
@@ -391,6 +403,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             const label = statusConfig[newStatus]?.label || newStatus;
             await updateServiceStatus(ticket.id, newStatus, paymentMethod, `Durum güncellendi: ${label}`, discountAmount);
             toast.success(`Durum: ${label}`);
+
+            // Auto Trigger Notification
+            setTimeout(() => setWhatsappModalOpen(true), 500);
+
             queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
             queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
             refreshTicket();
@@ -433,673 +449,551 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-full md:max-w-[98vw] md:w-[1400px] h-full md:h-[95vh] bg-background border-border/50 p-0 overflow-hidden flex flex-col shadow-2xl md:rounded-[2.5rem]">
-                <div className="relative h-20 md:h-24 flex items-center justify-between px-5 md:px-10 bg-card/30 backdrop-blur-xl border-b border-border/50 shrink-0 z-50">
-                    <div className="flex items-center gap-4 md:gap-8">
+            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-[#0A0A0B] border-white/5 p-0 overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[3rem]">
+                {/* Premium Header */}
+                <div className="relative h-20 md:h-28 flex items-center justify-between px-6 md:px-12 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-white/[0.05] shrink-0 z-50">
+                    <div className="flex items-center gap-6 md:gap-10">
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
-                                <span className="text-[10px] md:text-xs text-blue-500">Servis Kaydı</span>
-                                <span className="h-0.5 w-0.5 md:h-1 md:w-1 rounded-full bg-slate-700" />
-                                <span className="text-[10px] md:text-xs font-medium text-muted-foreground/80">#{ticket.ticketNumber}</span>
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
+                                    <span className="text-[10px] font-bold text-blue-500 tracking-wider">#{ticket.ticketNumber}</span>
+                                </div>
+                                <span className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-widest">
+                                    {format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}
+                                </span>
                             </div>
-                            <h2 className="font-medium text-lg md:text-3xl text-foreground flex items-center gap-2 md:gap-3 truncate max-w-[150px] md:max-w-none">
-                                {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
+                            <h2 className="font-bold text-xl md:text-3xl text-white flex items-center gap-3">
+                                {ticket.deviceBrand} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">{ticket.deviceModel}</span>
                             </h2>
-                        </div>
-                        <div className={cn(
-                            "px-3 md:px-6 py-1.5 md:py-2.5 rounded-xl md:rounded-2xl border border-border/50 flex items-center gap-2 md:gap-3 transition-all",
-                            statusConfig[ticket.status as ServiceStatus]?.bg
-                        )}>
-                            <div className={cn("h-2 w-2 md:h-3 md:w-3 rounded-full shadow-[0_0_15px_currentColor]", statusConfig[ticket.status as ServiceStatus]?.dot)} />
-                            <span className={cn("text-[10px] md:text-xs", statusConfig[ticket.status as ServiceStatus]?.color)}>
-                                {statusConfig[ticket.status as ServiceStatus]?.label}
-                            </span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-4">
-                        {!isQuickDeliver && ticket.status !== "READY" && ticket.status !== "DELIVERED" && (
+                    {/* Visual Timeline Standard (Header) */}
+                    <div className="hidden xl:flex items-center gap-2 px-8 border-x border-white/[0.05]">
+                        {statusOrder.map((status, idx) => {
+                            const config = statusConfig[status];
+                            const isCurrent = ticket.status === status;
+                            const isPast = statusOrder.indexOf(ticket.status as ServiceStatus) > idx;
+
+                            return (
+                                <div key={status} className="flex items-center">
+                                    <div className={cn(
+                                        "flex flex-col items-center gap-1.5 transition-all duration-700 relative",
+                                        isCurrent ? "opacity-100 scale-110" : isPast ? "opacity-60" : "opacity-25"
+                                    )}>
+                                        {isCurrent && (
+                                            <div className="absolute -top-3 h-1 w-full bg-blue-500 blur-sm animate-pulse rounded-full" />
+                                        )}
+                                        <div className={cn(
+                                            "h-10 w-10 rounded-xl flex items-center justify-center border transition-all duration-500",
+                                            isCurrent ? "bg-blue-500 border-blue-400 text-white shadow-[0_0_25px_rgba(59,130,246,0.5)]" :
+                                                isPast ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+                                                    "bg-white/5 border-white/10 text-white/40"
+                                        )}>
+                                            {isPast ? <Check className="h-4 w-4" /> : <config.icon className="h-4 w-4" />}
+                                        </div>
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-center max-w-[50px] leading-tight">
+                                            {config.label}
+                                        </span>
+                                    </div>
+                                    {idx < statusOrder.length - 1 && (
+                                        <div className="flex flex-col items-center mx-2 mb-4">
+                                            <div className={cn(
+                                                "w-6 h-[2px] rounded-full transition-colors duration-1000",
+                                                isPast ? "bg-emerald-500/30" : "bg-white/5"
+                                            )} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex items-center gap-3 md:gap-6">
+                        {!isQuickDeliver && !["READY", "DELIVERED", "CANCELLED"].includes(ticket.status) && (
                             <Button
                                 onClick={() => handleStatusUpdate("READY")}
-                                className="h-10 md:h-12 bg-white text-black hover:bg-white/90 text-[10px] md:text-xs px-4 md:px-8 rounded-xl md:rounded-2xl gap-2 md:gap-3 shadow-2xl transition-all active:scale-95"
+                                className="h-10 md:h-14 bg-white text-black hover:bg-zinc-200 text-xs font-bold px-6 md:px-10 rounded-2xl gap-3 shadow-xl transform transition-all active:scale-95"
                             >
-                                <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" />
-                                <span className="hidden md:inline">Servisi Tamamla</span>
-                                <span className="md:hidden">Tamam</span>
+                                <Sparkles className="h-4 w-4 text-blue-600 animate-pulse" />
+                                <span className="hidden md:inline uppercase tracking-widest">Tamamla</span>
                             </Button>
                         )}
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-rose-500/10 text-rose-500"
+                            className="h-10 w-10 md:h-14 md:w-14 rounded-2xl hover:bg-rose-500/10 text-rose-500/50 hover:text-rose-500 transition-colors"
                         >
                             <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col md:grid md:grid-cols-[300px_1fr_380px] overflow-y-auto md:overflow-hidden p-4 md:p-6 gap-6 bg-background custom-scrollbar">
+                <div className="flex-1 flex flex-col md:grid md:grid-cols-[400px_1fr] overflow-hidden bg-[#0A0A0B]">
+                    {/* Left Pane: Identity & Context */}
+                    <div className="border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar bg-white/[0.01]">
+                        <div className="p-8 space-y-10">
+                            {/* Device Context */}
+                            <section className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                        <Smartphone className="h-4 w-4 text-blue-500" />
+                                    </div>
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Cihaz Kimliği</h3>
+                                </div>
 
-                    <div className="w-full md:w-[300px] flex flex-col gap-4 shrink-0">
-                        <div className="bg-white/[0.02] border border-border/50 rounded-[2rem] p-6 space-y-6">
-                            <div className="flex items-center gap-2 mb-2">
-                                <ScanLine className="h-3.5 w-3.5 text-blue-500" />
-                                <h3 className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">Müşteri & Cihaz</h3>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-sm">
-                                    <p className="text-[10px]  text-muted-foreground/80 uppercase mb-1">Cihaz</p>
-                                    <p className="text-sm  text-foreground leading-tight font-medium">{ticket.deviceBrand} {ticket.deviceModel}</p>
-                                    <p className="text-xs text-muted-foreground/60 mt-1 font-medium italic">{ticket.imei || "IMEI Yok"}</p>
+                                <div className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 space-y-7 shadow-inner">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Donanım</p>
+                                        <p className="text-xl font-bold text-white leading-tight">
+                                            {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
+                                        </p>
+                                        <p className="text-xs font-mono text-white/40 tracking-widest mt-1">
+                                            {ticket.imei || "IMEI TANIMSIZ"}
+                                        </p>
+                                    </div>
 
                                     {ticket.devicePassword && (
-                                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                                            <div className="flex items-center gap-2">
-                                                <Lock className="h-3 w-3 text-amber-500" />
-                                                <span className="text-[10px] uppercase tracking-widest text-slate-500">Cihaz Erişimi</span>
+                                        <div className="pt-7 border-t border-white/[0.05] space-y-5">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Lock className="h-3 w-3 text-amber-500" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Erişim Yetkisi</span>
+                                                </div>
+                                                <span className="text-[8px] px-2 py-0.5 rounded bg-white/5 text-white/40 font-mono">SECURE</span>
                                             </div>
 
                                             {ticket.devicePassword.startsWith("DESEN:") ? (
-                                                <div className="space-y-3">
-                                                    <div className="bg-accent/40 rounded-2xl p-2 border border-blue-500/10 inline-block">
-                                                        <PatternLock
-                                                            readOnly
-                                                            width={120}
-                                                            height={120}
-                                                            initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
-                                                            className="opacity-80"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-2 p-3 bg-blue-500/5 rounded-xl border border-blue-500/10">
-                                                        <Grid3x3 className="h-3.5 w-3.5 text-blue-500" />
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] text-blue-500/60 uppercase">Ekran Deseni</span>
-                                                            <span className="text-xs font-bold tracking-[0.2em] text-blue-600 dark:text-blue-400">
-                                                                {ticket.devicePassword.replace("DESEN:", "").split(",").join("-")}
-                                                            </span>
-                                                        </div>
+                                                <div className="p-6 bg-black/40 rounded-[2rem] border border-white/5 flex flex-col items-center gap-5">
+                                                    <PatternLock
+                                                        readOnly
+                                                        width={140}
+                                                        height={140}
+                                                        initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
+                                                        className="opacity-90"
+                                                    />
+                                                    <div className="px-5 py-2.5 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex items-center gap-3">
+                                                        <Grid3x3 className="h-4 w-4 text-blue-500" />
+                                                        <span className="text-xs font-bold tracking-[0.4em] text-blue-400">
+                                                            {ticket.devicePassword.replace("DESEN:", "").split(",").join("-")}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-3 p-3 bg-amber-500/5 rounded-xl border border-amber-500/10">
-                                                    <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                                        <Hash className="h-4 w-4 text-amber-500" />
+                                                <div className="p-5 bg-amber-500/5 rounded-[2rem] border border-amber-500/10 flex items-center gap-5">
+                                                    <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-xl shadow-amber-500/5">
+                                                        <Hash className="h-6 w-6 text-amber-500" />
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[9px] text-amber-500/60 uppercase">Kilit Şifresi</span>
-                                                        <span className="text-sm font-bold text-amber-600 dark:text-amber-200 tracking-wider">
-                                                            {ticket.devicePassword}
-                                                        </span>
+                                                        <span className="text-[9px] text-amber-500/40 uppercase font-bold tracking-widest">KİLİT ŞİFRESİ</span>
+                                                        <span className="text-2xl font-bold text-amber-200 tracking-widest leading-none mt-1">{ticket.devicePassword}</span>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     )}
                                 </div>
+                            </section>
 
-                                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
-                                    <div className="min-w-0">
-                                        <p className="text-[10px]  text-emerald-500/50 uppercase mb-1">Müşteri</p>
-                                        <p className="text-sm  text-emerald-400 truncate">{ticket.customer?.name}</p>
-                                        <p className="text-xs  text-emerald-600 mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
+                            {/* Customer Context */}
+                            <section className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                        <User className="h-4 w-4 text-emerald-500" />
+                                    </div>
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Müşteri Profili</h3>
+                                </div>
+
+                                <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-7 flex items-center justify-between group cursor-pointer hover:bg-emerald-500/10 transition-all shadow-lg active:scale-[0.98]">
+                                    <div className="space-y-2 min-w-0">
+                                        <p className="text-[10px] font-extrabold text-emerald-500/40 uppercase tracking-widest">Sahibi</p>
+                                        <p className="text-xl font-bold text-white truncate">{ticket.customer?.name}</p>
+                                        <p className="text-sm font-medium text-emerald-500/60 font-mono tracking-tighter">{formatPhone(ticket.customer?.phone)}</p>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 text-emerald-500 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/10"
+                                        className="h-14 w-14 rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all shadow-xl shadow-emerald-500/10"
                                         onClick={() => setWhatsappModalOpen(true)}
                                     >
-                                        <MessageCircle className="h-4 w-4" />
+                                        <MessageCircle className="h-6 w-6" />
                                     </Button>
                                 </div>
+                            </section>
 
-                                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                                    <p className="text-[10px]  text-blue-500/50 uppercase mb-2">Teknisyen</p>
+                            {/* Staff Assignment */}
+                            <section className="space-y-5">
+                                <div className="flex items-center gap-3 px-1">
+                                    <h3 className="text-[10px] font-extrabold uppercase tracking-[0.3em] text-white/30">SORUMLU TEKNİSYEN</h3>
+                                </div>
+                                <div className="p-1.5 bg-white/[0.03] border border-white/5 rounded-[2rem] shadow-inner">
                                     <Select
                                         value={ticket.technician?.id || ""}
                                         onValueChange={handleAssignTech}
                                         disabled={!!ticket.technicianId && !isAdmin}
                                     >
-                                        <SelectTrigger className="h-10 bg-card border-border/50 text-xs  text-foreground rounded-xl px-4 disabled:opacity-75">
-                                            <SelectValue placeholder="Teknisyen Seçin" />
+                                        <SelectTrigger className="h-14 bg-transparent border-none text-sm text-white/80 rounded-[1.5rem] px-6 focus:ring-2 focus:ring-blue-500/20">
+                                            <SelectValue placeholder="Teknisyen Atanmamış" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-background border-border text-foreground rounded-xl">
+                                        <SelectContent className="bg-[#0A0A0B] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-xl">
                                             {staff.map(s => (
-                                                <SelectItem key={s.id} value={s.id} className="text-xs  py-2.5">
-                                                    {s.name} {s.surname}
+                                                <SelectItem key={s.id} value={s.id} className="py-4 px-4 rounded-xl focus:bg-white/5 cursor-pointer">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-[10px] font-bold text-blue-400">
+                                                            {s.name[0]}{s.surname[0]}
+                                                        </div>
+                                                        <span className="font-bold text-white/70">{s.name} {s.surname}</span>
+                                                    </div>
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-amber-500/5 border border-amber-500/10 rounded-[2rem] p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                                <h3 className="font-medium text-[10px]  uppercase tracking-widest text-amber-500/80">Arıza Detayı</h3>
-                            </div>
-                            <p className="text-xs text-amber-600 dark:text-amber-200/70 font-medium leading-relaxed italic">
-                                "{ticket.problemDesc}"
-                            </p>
+                            </section>
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-6 min-w-0">
-                        <div className="bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 flex flex-col gap-6 md:gap-8 shrink-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                                <div className="space-y-3">
-                                    <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">Parça Ekle</p>
-                                    <div className="relative group">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-                                        <Input
-                                            placeholder="Ürün adı veya SKU..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="h-12 bg-background border-border/50 pl-12 pr-6 rounded-2xl text-xs font-medium focus:border-blue-500/30"
-                                        />
-                                        {searchQuery && (
-                                            <div className="absolute top-full left-0 right-0 mt-3 bg-card border border-border rounded-3xl shadow-2xl z-[100] max-h-[400px] overflow-y-auto p-2 backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
-                                                {searchResults.length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        <p className="text-[9px]  text-slate-600 uppercase tracking-widest px-4 py-2">Eşleşen Ürünler</p>
-                                                        {searchResults.map(p => (
-                                                            <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-4 flex items-center justify-between hover:bg-accent/10 active:bg-accent/20 rounded-2xl transition-all group/item border border-transparent hover:border-border/50">
-                                                                <div className="flex flex-col text-left gap-1">
-                                                                    <span className="text-sm  text-foreground group-hover/item:text-blue-500 transition-colors">{p.name}</span>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={cn(
-                                                                            "text-[10px]  px-2 py-0.5 rounded-md",
-                                                                            p.stock > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                                                                        )}>
-                                                                            Stok: {p.stock}
-                                                                        </span>
-                                                                        <span className="text-[10px] text-muted-foreground/80 font-medium">{p.sku}</span>
+                    {/* Right Pane: Workshop & Workflow (Merged from Center & Right) */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-10">
+                            {/* Problem Highlight */}
+                            <div className="p-10 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.02] to-transparent border border-amber-500/20 rounded-[3rem] relative overflow-hidden group shadow-2xl">
+                                <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
+                                    <AlertCircle className="h-32 w-32 text-amber-500" />
+                                </div>
+                                <div className="flex items-center gap-3 mb-6">
+                                    <Activity className="h-4 w-4 text-amber-500 animate-pulse" />
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500/40">MÜŞTERİ ARIZA BEYANI</h3>
+                                </div>
+                                <p className="text-xl md:text-2xl font-bold text-amber-100/90 leading-relaxed italic tracking-tight">
+                                    "{ticket.problemDesc}"
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-10">
+                                {/* Center Pane: Workshop */}
+                                <div className="space-y-10">
+                                    {/* Parts Search */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-1">
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">PARÇA YÖNETİMİ</h3>
+                                            {searchQuery && <span className="text-[10px] text-blue-500 animate-pulse font-bold uppercase">Arama Aktif</span>}
+                                        </div>
+                                        <div className="relative group">
+                                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within:text-blue-500 transition-colors" />
+                                            <Input
+                                                placeholder="Ürün adı, SKU veya kategori..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="h-16 bg-white/[0.03] border-white/5 pl-16 pr-8 rounded-3xl text-sm font-bold text-white placeholder:text-white/10 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all"
+                                            />
+                                            {searchQuery && (
+                                                <div className="absolute top-full left-0 right-0 mt-4 bg-[#111112] border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] max-h-[500px] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
+                                                    <div className="p-4 max-h-[400px] overflow-y-auto custom-scrollbar space-y-2">
+                                                        {searchResults.length > 0 ? (
+                                                            searchResults.map(p => (
+                                                                <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-5 flex items-center justify-between hover:bg-white/5 active:scale-[0.98] rounded-[1.5rem] transition-all group/item border border-transparent hover:border-white/5">
+                                                                    <div className="flex flex-col text-left gap-1.5">
+                                                                        <span className="text-sm font-bold text-white/80 group-hover/item:text-blue-400 transition-colors">{p.name}</span>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className={cn(
+                                                                                "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter",
+                                                                                p.stock > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                                            )}>
+                                                                                STOK: {p.stock}
+                                                                            </div>
+                                                                            <span className="text-[10px] text-white/20 font-mono italic">{p.sku}</span>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    <span className="text-sm  text-blue-500">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
-                                                                    <ArrowRightCircle className="h-4 w-4 text-slate-700 group-hover/item:text-blue-500 group-hover/item:translate-x-1 transition-all" />
-                                                                </div>
-                                                            </button>
-                                                        ))}
+                                                                    <div className="flex flex-col items-end gap-1">
+                                                                        <span className="text-sm font-black text-blue-500">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
+                                                                        <ArrowRight className="h-4 w-4 text-white/10 group-hover/item:text-blue-500 group-hover/item:translate-x-1 transition-all" />
+                                                                    </div>
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="p-12 text-center space-y-4">
+                                                                <Box className="h-12 w-12 text-white/5 mx-auto" />
+                                                                <p className="text-xs font-bold text-white/20 uppercase tracking-widest">Arama sonucu bulunamadı</p>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div className="p-8 text-center space-y-2">
-                                                        <Box className="h-8 w-8 text-slate-700 mx-auto opacity-20" />
-                                                        <p className="text-[11px]  text-muted-foreground/80">Ürün bulunamadı</p>
-                                                    </div>
-                                                )}
 
-                                                <div className="mt-2 pt-2 border-t border-border/50">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedProduct(null);
                                                             setIsAddingManual(true);
                                                             setManualPart(prev => ({ ...prev, name: searchQuery }));
                                                         }}
-                                                        className="w-full p-4 flex items-center gap-4 hover:bg-blue-500/5 rounded-2xl transition-all group/new text-left border border-dashed border-blue-500/10 hover:border-blue-500/30"
+                                                        className="w-full p-6 flex items-center gap-4 bg-blue-600 hover:bg-blue-500 transition-all group/new text-left"
                                                     >
-                                                        <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                                                            <Plus className="h-5 w-5" />
+                                                        <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                                                            <Plus className="h-6 w-6" />
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-xs  text-blue-400 uppercase tracking-widest">Yeni Parça Olarak Ekle</span>
-                                                            <span className="text-[10px] text-muted-foreground/80 font-medium">"{searchQuery}" ürününü tedarikçiden borç ile ekle</span>
+                                                            <span className="text-xs font-black text-white uppercase tracking-[0.2em]">SİSTEM DIŞI EKLE</span>
+                                                            <span className="text-[10px] text-white/60 font-medium">Parçayı tedarikçiden borç olarak temin et</span>
                                                         </div>
+                                                        <ArrowRightCircle className="h-6 w-6 text-white ml-auto group-hover:translate-x-1 transition-transform" />
                                                     </button>
                                                 </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+
+                                    {/* Used Parts List */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-1">
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">KULLANILAN MATERYALLER</h3>
+                                            <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                                <span className="text-[10px] font-black text-emerald-500 tabular-nums">₺{formatCurrency(partsTotal)}</span>
                                             </div>
-                                        )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
+                                            {ticket.usedParts?.length === 0 ? (
+                                                <div className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-20">
+                                                    <Box className="h-10 w-10 mb-2" />
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest">Henüz parça eklenmedi</p>
+                                                </div>
+                                            ) : (
+                                                ticket.usedParts?.map((p: any) => (
+                                                    <div key={p.id} className="group relative p-6 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] hover:bg-white/[0.04] transition-all flex flex-col md:flex-row md:items-center gap-6">
+                                                        <div className="flex items-center gap-5 flex-1 min-w-0">
+                                                            <div className="h-16 w-16 rounded-[1.5rem] bg-white/[0.03] flex items-center justify-center border border-white/[0.05] shadow-lg group-hover:scale-105 transition-transform group-hover:text-blue-500">
+                                                                <Box className="h-8 w-8 text-blue-500/40" />
+                                                            </div>
+                                                            <div className="min-w-0 space-y-1">
+                                                                <p className="text-base font-bold text-white/90 truncate">{p.product?.name || p.name}</p>
+                                                                <p className="text-[10px] font-mono text-white/20 tracking-tighter uppercase">{p.product?.sku || "ÖZEL KALEM"}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-6 border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[8px] font-black text-white/10 uppercase text-center tracking-widest">Maliyet</span>
+                                                                <PriceInput
+                                                                    value={Number(p.costPrice)}
+                                                                    onChange={(v) => handleUpdatePart(p.id, { costPrice: v })}
+                                                                    className="h-10 w-28 bg-black/40 border-white/10 text-amber-500/80 font-bold text-center text-xs rounded-xl"
+                                                                />
+                                                            </div>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="text-[8px] font-black text-white/10 uppercase text-center tracking-widest">Satış</span>
+                                                                <PriceInput
+                                                                    value={Number(p.unitPrice)}
+                                                                    onChange={(v) => handleUpdatePart(p.id, { unitPrice: v })}
+                                                                    className="h-10 w-28 bg-black/40 border-white/10 text-emerald-500 font-bold text-center text-xs rounded-xl"
+                                                                />
+                                                            </div>
+                                                            <Button onClick={() => handleRemovePart(p.id)} variant="ghost" size="icon" className="h-10 w-10 text-rose-500/10 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all self-end">
+                                                                <Trash2 className="h-5 w-5" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <Dialog open={isAddingManual} onOpenChange={(val) => { if (!val) { setIsAddingManual(false); setSelectedProduct(null); } }}>
-                                    <DialogContent
-                                        overlayClassName="bg-black/20 backdrop-blur-[2px]"
-                                        className="w-full md:max-w-xl h-full md:h-auto md:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden shadow-2xl md:rounded-[2.5rem] flex flex-col"
-                                    >
-                                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-8 custom-scrollbar">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-xl shadow-blue-500/10">
-                                                            <ShoppingBag className="h-5 w-5" />
-                                                        </div>
-                                                        <h2 className="font-medium text-xl text-foreground tracking-tight">Tedarikçiden Parça Temini</h2>
-                                                    </div>
-                                                    <p className="text-[11px] text-muted-foreground/80 font-medium ml-1">Stokta olmayan veya yeni bir parçayı borç ile sisteme ekleyin.</p>
-                                                </div>
-                                                <Button variant="ghost" size="icon" onClick={() => { setIsAddingManual(false); setSelectedProduct(null); }} className="rounded-2xl hover:bg-white/5 text-muted-foreground/80">
-                                                    <X className="h-5 w-5" />
-                                                </Button>
+                                {/* Right Side: Actions & Logs */}
+                                <div className="space-y-10 border-l border-white/5 pl-0 xl:pl-10">
+                                    {/* Status & Technical Note */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between px-1">
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">İŞLEM MERKEZİ</h3>
+                                            {selectedStatus && <span className="text-[10px] text-amber-500 animate-bounce font-black uppercase">Onay Bekliyor</span>}
+                                        </div>
+
+                                        <div className="p-8 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] space-y-7">
+                                            <div className="space-y-3">
+                                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Akış Durumu</p>
+                                                <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val as ServiceStatus)}>
+                                                    <SelectTrigger className="h-14 bg-black/40 border-white/10 rounded-2xl text-xs font-bold text-white/80 focus:ring-blue-500/20">
+                                                        <SelectValue placeholder="Durumu güncelle..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-[#0A0A0B] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-3xl shadow-2xl">
+                                                        {Object.entries(statusConfig).map(([key, config]) => (
+                                                            <SelectItem key={key} value={key} className="py-4 px-4 rounded-xl focus:bg-white/5 cursor-pointer">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={cn("h-2.5 w-2.5 rounded-full shadow-[0_0_10px_currentColor]", config.dot)} />
+                                                                    <span className="font-bold text-white/70">{config.label}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
 
-                                            <div className="space-y-6">
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Ürün Bilgisi</p>
-                                                    <div className="relative group">
-                                                        <Box className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-                                                        <Input
-                                                            placeholder="Ürün adı..."
-                                                            value={manualPart.name}
-                                                            onChange={(e) => setManualPart({ ...manualPart, name: e.target.value })}
-                                                            className="h-14 bg-card border-border/50 pl-12 pr-6 rounded-2xl text-sm text-foreground transition-all focus:border-blue-500/30"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between px-1">
-                                                            <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em]">Tedarikçi</p>
-                                                            <Link
-                                                                href="/tedarikciler?action=create"
-                                                                target="_blank"
-                                                                className="text-[9px]  text-blue-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-1 transition-colors"
-                                                            >
-                                                                Yeni Ekle <ArrowRight className="h-2 w-2" />
-                                                            </Link>
-                                                        </div>
-                                                        <Select value={manualPart.supplierId} onValueChange={(v) => setManualPart({ ...manualPart, supplierId: v })}>
-                                                            <SelectTrigger className="h-14 bg-accent/20 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
-                                                                <SelectValue placeholder="Tedarikçi Seçin" />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-card border-border text-foreground rounded-2xl overflow-hidden">
-                                                                {suppliers.map(s => (
-                                                                    <SelectItem key={s.id} value={s.id} className="p-4 focus:bg-accent transition-colors cursor-pointer border-b border-border/50 last:border-0">
-                                                                        <div className="flex flex-col gap-0.5">
-                                                                            <span className="">{s.name}</span>
-                                                                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
-                                                                                <span>₺{Number(s.balance).toLocaleString()}</span>
-                                                                                <span className="h-1 w-1 rounded-full bg-slate-700" />
-                                                                                <span>${Number(s.balanceUsd || 0).toLocaleString()}</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Para Birimi</p>
-                                                        <div className="grid grid-cols-2 p-1 bg-black/40 border border-border/50 rounded-2xl h-14">
-                                                            <button
-                                                                onClick={() => setManualPart({ ...manualPart, currency: "TRY" })}
-                                                                className={cn(
-                                                                    "rounded-xl text-[10px]  uppercase tracking-widest transition-all",
-                                                                    manualPart.currency === "TRY" ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-slate-600 hover:text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                TL (₺)
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setManualPart({ ...manualPart, currency: "USD" })}
-                                                                className={cn(
-                                                                    "rounded-xl text-[10px]  uppercase tracking-widest transition-all",
-                                                                    manualPart.currency === "USD" ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "text-slate-600 hover:text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                USD ($)
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 px-1">
-                                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">GÜNCEL KUR: ₺{rates.usd.toFixed(2)}</p>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 rounded-lg hover:bg-accent/50 text-blue-500"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            fetchRates();
-                                                            toast.success("Kurlar güncellendi.");
-                                                        }}
-                                                    >
-                                                        <RotateCcw className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Maliyet (Alış)</p>
-                                                        <div className="relative group">
-                                                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm  text-slate-700 group-focus-within:text-blue-500 transition-colors">
-                                                                {manualPart.currency === "TRY" ? "₺" : "$"}
-                                                            </span>
-                                                            <Input
-                                                                type="number"
-                                                                placeholder="0.00"
-                                                                value={manualPart.currency === "USD" ? manualPart.buyPriceUsd : manualPart.buyPrice}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value;
-                                                                    if (manualPart.currency === "USD") {
-                                                                        setManualPart({ ...manualPart, buyPriceUsd: val, buyPrice: String(Number(val) * rates.usd) });
-                                                                    } else {
-                                                                        setManualPart({ ...manualPart, buyPrice: val, buyPriceUsd: String(Number(val) / rates.usd) });
-                                                                    }
-                                                                }}
-                                                                className="h-14 bg-accent/20 border-border/50 pl-12 pr-6 rounded-2xl text-sm  text-foreground transition-all focus:border-blue-500/30 tabular-nums"
-                                                            />
-                                                        </div>
-                                                        {manualPart.currency === "USD" && (
-                                                            <p className="text-[10px] text-blue-500/80 mt-2  uppercase tracking-widest pl-1">
-                                                                ≈ ₺{Math.round(Number(manualPart.buyPrice)).toLocaleString()} (Güncel Kur)
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px]  text-slate-600 uppercase tracking-[0.2em] ml-1">Garanti Süresi</p>
-                                                        <Select value={manualPart.warrantyType} onValueChange={(v) => setManualPart({ ...manualPart, warrantyType: v })}>
-                                                            <SelectTrigger className="h-14 bg-accent/20 border-border/50 text-sm  text-foreground/90 rounded-2xl px-6">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-card border-border text-foreground rounded-2xl">
-                                                                <SelectItem value="15_DAYS" className="p-4">15 Gün</SelectItem>
-                                                                <SelectItem value="1_MONTH" className="p-4">1 Ay</SelectItem>
-                                                                <SelectItem value="3_MONTHS" className="p-4">3 Ay</SelectItem>
-                                                                <SelectItem value="6_MONTHS" className="p-4">6 Ay</SelectItem>
-                                                                <SelectItem value="MANUAL" className="p-4">Özel (Gün)</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                {manualPart.warrantyType === "MANUAL" && (
-                                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                                        <p className="text-[10px]  text-slate-600 uppercase tracking-widest ml-1">Garanti Günü</p>
-                                                        <Input
-                                                            type="number"
-                                                            placeholder="Örn: 90"
-                                                            value={manualPart.warrantyValue}
-                                                            onChange={(e) => setManualPart({ ...manualPart, warrantyValue: e.target.value })}
-                                                            className="h-14 bg-accent/20 border-border/50 px-6 rounded-2xl text-sm  text-foreground focus:border-blue-500/30"
-                                                        />
+                                            <div className="relative group">
+                                                <Textarea
+                                                    placeholder="Operasyon notu ekleyin..."
+                                                    value={techNote}
+                                                    onChange={(e) => setTechNote(e.target.value)}
+                                                    className="h-32 bg-black/40 border-white/10 rounded-2xl p-5 text-sm font-medium text-white/80 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all resize-none placeholder:text-white/10"
+                                                />
+                                                {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
+                                                    <div className="absolute bottom-4 right-4 animate-in zoom-in-95 fade-in duration-300">
+                                                        <Button
+                                                            onClick={handleSaveNoteAndStatus}
+                                                            disabled={isSavingNote}
+                                                            className="h-10 px-6 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl gap-3 shadow-2xl shadow-blue-500/20 group transform transition-all active:scale-95"
+                                                        >
+                                                            {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 group-hover:scale-110" />}
+                                                            KAYDET
+                                                        </Button>
                                                     </div>
                                                 )}
                                             </div>
-
-                                            <div className="pt-4">
-                                                <Button
-                                                    onClick={handleCreateAndAddPart}
-                                                    disabled={loading}
-                                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white  text-xs uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-blue-500/20 transition-all active:scale-95 group"
-                                                >
-                                                    {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
-                                                        <div className="flex items-center gap-3">
-                                                            <span>Borç Yaz ve Servise Ekle</span>
-                                                            <ArrowRightCircle className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                                                        </div>
-                                                    )}
-                                                </Button>
-                                                <p className="text-[9px] text-slate-600 text-center mt-6  uppercase tracking-widest opacity-50">
-                                                    * Bu işlem tedarikçi bakiyesini artırır ve ürün maliyetini işler.
-                                                </p>
-                                            </div>
                                         </div>
-                                    </DialogContent>
-                                </Dialog>
-
-                                <div className="space-y-3">
-                                    <p className="text-[10px]  text-muted-foreground/80 uppercase tracking-widest ml-1">Durumu Güncelle</p>
-                                    <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val as ServiceStatus)}>
-                                        <SelectTrigger className="h-12 bg-background border-border/50 rounded-2xl text-xs  text-foreground">
-                                            <SelectValue placeholder="Durum seçin..." />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-background border-border text-foreground rounded-2xl p-1 z-[100]">
-                                            {Object.entries(statusConfig).map(([key, config]) => (
-                                                <SelectItem key={key} value={key} className="text-[10px]  py-3 focus:bg-accent rounded-xl">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn("h-2 w-2 rounded-full", config.dot)} />
-                                                        <span>{config.label}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="relative">
-                                <Textarea
-                                    placeholder="İşlem notu veya teknik detay giriniz..."
-                                    value={techNote}
-                                    onChange={(e) => setTechNote(e.target.value)}
-                                    className="h-20 bg-background border-border/50 rounded-2xl p-4 text-xs font-medium focus:border-blue-500/30 resize-none placeholder:text-muted-foreground/50"
-                                />
-                                {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
-                                    <Button
-                                        onClick={handleSaveNoteAndStatus}
-                                        disabled={isSavingNote}
-                                        className="absolute bottom-3 right-3 h-8 px-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-[10px]  uppercase tracking-widest gap-2 shadow-xl"
-                                    >
-                                        {isSavingNote ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Kaydet
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex-1 bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 flex flex-col overflow-hidden shadow-sm min-h-[400px]">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <ShoppingBag className="h-3.5 w-3.5 text-blue-500" />
-                                    <h3 className="font-medium text-[10px]  uppercase tracking-widest text-muted-foreground/80">Parça Listesi</h3>
-                                </div>
-                                <span className="text-xs  text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/10">₺{formatCurrency(partsTotal)}</span>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pr-2">
-                                {ticket.usedParts?.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center opacity-20">
-                                        <Box className="h-10 w-10 mb-2 text-slate-600" />
-                                        <p className="text-[10px]  uppercase tracking-widest">Parça Yok</p>
                                     </div>
-                                ) : (
-                                    ticket.usedParts?.map((p: any) => (
-                                        <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-border/50 group hover:bg-white/[0.04] transition-all">
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <div className="h-10 w-10 rounded-xl bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10 text-blue-500">
-                                                    <Box className="h-5 w-5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-medium text-foreground/90 truncate">{p.product?.name || p.name || "Bilinmeyen Parça"}</p>
-                                                    <p className="text-[9px]  text-muted-foreground uppercase tracking-tighter mt-0.5">{p.product?.sku || "SKU-NONE"}</p>
-                                                </div>
-                                            </div>
 
-                                            <div className="flex items-center justify-between md:justify-end gap-3 md:px-2 border-t md:border-t-0 border-border/30 pt-3 md:pt-0">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <span className="text-[8px]  text-slate-700 uppercase">Maliyet (Alış)</span>
-                                                    <div className="relative w-32">
-                                                        <PriceInput
-                                                            value={Number(p.costPrice)}
-                                                            onChange={(v) => handleUpdatePart(p.id, { costPrice: v })}
-                                                            className="h-8 bg-accent/20 border-border/50 text-right  text-[11px] text-amber-600 dark:text-amber-500/60 rounded-lg pr-3 pl-8"
-                                                        />
-                                                    </div>
-                                                </div>
+                                    {/* Timeline Context */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between px-1">
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">DİJİTAL SEYİR DEFTERİ</h3>
+                                            <span className="text-[9px] font-bold text-white/20 uppercase bg-white/5 px-3 py-1 rounded-full">{ticket.logs?.length || 0} ADIM</span>
+                                        </div>
 
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <span className="text-[8px]  text-slate-700 uppercase">Satış (Birim)</span>
-                                                    <div className="relative w-32">
-                                                        <PriceInput
-                                                            value={Number(p.unitPrice)}
-                                                            onChange={(v) => handleUpdatePart(p.id, { unitPrice: v })}
-                                                            className="h-8 bg-accent/40 border-border/50 text-right  text-[11px] text-emerald-600 dark:text-emerald-500 rounded-lg pr-3 pl-8"
-                                                        />
-                                                    </div>
-                                                </div>
+                                        <div className="max-h-[400px] overflow-y-auto no-scrollbar relative p-2 pr-4 space-y-8">
+                                            {/* Journey Line with Animation */}
+                                            <div className="absolute left-[34px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/80 via-white/[0.05] to-transparent shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
 
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <span className="text-[8px]  text-slate-700 uppercase">Garanti</span>
-                                                    <Select
-                                                        defaultValue={p.warrantyDays ? `D${p.warrantyDays}` : `M${p.warrantyMonths}`}
-                                                        onValueChange={(v) => {
-                                                            if (v.startsWith('D')) handleUpdatePart(p.id, { warrantyDays: Number(v.slice(1)), warrantyMonths: 0 });
-                                                            else handleUpdatePart(p.id, { warrantyMonths: Number(v.slice(1)), warrantyDays: 0 as any });
-                                                        }}
+                                            {ticket.logs?.map((log: any, i: number) => {
+                                                const isStatusLog = log.message.includes("Durum güncellendi");
+                                                return (
+                                                    <div key={log.id}
+                                                        className={cn(
+                                                            "relative flex gap-6 group transform transition-all duration-500",
+                                                            i === 0 ? "translate-x-0" : "hover:translate-x-1"
+                                                        )}
                                                     >
-                                                        <SelectTrigger className="h-8 bg-accent/20 border-border/50 text-[10px]  text-blue-500 dark:text-blue-400 px-3 w-24 rounded-lg">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-background border-border text-foreground">
-                                                            <SelectItem value="D15">15 Gün</SelectItem>
-                                                            <SelectItem value="M1">1 Ay</SelectItem>
-                                                            <SelectItem value="M3">3 Ay</SelectItem>
-                                                            <SelectItem value="M6">6 Ay</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <Button onClick={() => handleRemovePart(p.id)} variant="ghost" size="icon" className="h-8 w-8 text-rose-500/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg mt-4">
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
+                                                        <div className={cn(
+                                                            "h-14 w-14 rounded-2xl border flex items-center justify-center shrink-0 z-10 transition-all duration-500",
+                                                            i === 0 ? "bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)] scale-110" :
+                                                                isStatusLog ? "bg-amber-600/10 border-amber-500/20 text-amber-500" :
+                                                                    "bg-zinc-900 border-white/5 group-hover:border-white/20 group-hover:bg-zinc-800"
+                                                        )}>
+                                                            {i === 0 ? <Zap className="h-5 w-5 text-white animate-pulse" /> :
+                                                                isStatusLog ? <Timer className="h-4 w-4" /> :
+                                                                    <Target className="h-4 w-4 text-white/20" />}
+                                                        </div>
+                                                        <div className="flex flex-col gap-2 pt-1 flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className={cn("text-[9px] font-black uppercase tracking-[0.25em]", i === 0 ? "text-blue-400" : "text-white/20")}>
+                                                                    {format(new Date(log.createdAt), "dd MMM, HH:mm", { locale: tr })}
+                                                                </span>
+                                                                {i === 0 && (
+                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 rounded-full border border-blue-500/20">
+                                                                        <div className="h-1 w-1 rounded-full bg-blue-500 animate-ping" />
+                                                                        <span className="text-[8px] text-blue-500 font-black uppercase">AKTİF ADIM</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className={cn(
+                                                                "p-5 rounded-[1.8rem] border transition-all duration-500",
+                                                                i === 0 ? "bg-blue-500/5 border-blue-500/20 shadow-[0_10px_40px_-10px_rgba(59,130,246,0.2)]" : "bg-white/[0.01] border-white/5 group-hover:bg-white/[0.03] group-hover:border-white/10"
+                                                            )}>
+                                                                <p className={cn("text-xs leading-relaxed font-semibold", i === 0 ? "text-white" : "text-white/40 group-hover:text-white/70 transition-colors")}>
+                                                                    {log.message}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Workflow Timeline & Payment */}
-                    <div className="w-full md:w-[380px] flex flex-col gap-4 shrink-0">
-                        <div className="flex-1 bg-card border border-border/50 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-7 flex flex-col overflow-hidden shadow-sm min-h-[300px]">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <Activity className="h-4 w-4 text-blue-500" />
-                                    <h3 className="font-medium text-xs uppercase tracking-[0.2em] text-muted-foreground/80">Servis Akışı</h3>
+                                    </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-md">{ticket.logs?.length || 0} ADIM</span>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pr-1 relative">
-                                {/* Connecting Line */}
-                                <div className="absolute left-[19px] top-6 bottom-6 w-px bg-gradient-to-b from-blue-500/50 via-border to-transparent" />
-
-                                {ticket.logs?.map((log: any, i: number) => {
-                                    const isStatusLog = log.message.includes("Durum güncellendi");
-                                    const isPartAdd = log.message.includes("Parça eklendi");
-                                    const isPartRemove = log.message.includes("Parça çıkarıldı");
-                                    const isPriceUpdate = log.message.includes("Fiyat güncellendi");
-
-                                    return (
-                                        <div key={log.id} className="relative pl-10 group">
-                                            <div className={cn(
-                                                "absolute left-2.5 top-1.5 h-3 w-3 rounded-full border-2 border-background z-10 transition-all",
-                                                i === 0 ? "bg-blue-500 scale-125 shadow-[0_0_10px_rgba(59,130,246,0.3)]" : "bg-muted",
-                                                isStatusLog && i !== 0 ? "bg-amber-500" : "",
-                                                (isPartAdd || isPartRemove || isPriceUpdate) && "bg-purple-500"
-                                            )} />
-
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className={cn(
-                                                    "text-[8px] uppercase tracking-widest",
-                                                    i === 0 ? "text-blue-500 font-bold" : "text-muted-foreground/60"
-                                                )}>
-                                                    {format(new Date(log.createdAt), "dd MMM, HH:mm", { locale: tr })}
-                                                </span>
-                                                <div className={cn(
-                                                    "p-3 rounded-xl border transition-all",
-                                                    i === 0 ? "bg-blue-500/5 border-blue-500/20" : "bg-muted/30 border-border/50 group-hover:bg-muted/50"
-                                                )}>
-                                                    <p className={cn(
-                                                        "text-[10px] leading-relaxed tracking-tight",
-                                                        i === 0 ? "text-foreground font-medium" : "text-muted-foreground"
-                                                    )}>
-                                                        {log.message}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
                             </div>
                         </div>
 
-                        {/* Financial Area - Moved to Right Column */}
-                        <div className="bg-card border-t border-border/80 rounded-[2rem] p-5 md:p-6 flex flex-col gap-5 shrink-0 shadow-lg">
-                            <div className="flex items-center justify-between px-1">
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">İşçilik</p>
-                                    <PriceInput
-                                        value={laborCost}
-                                        onChange={(v) => {
-                                            setLaborCost(v);
-                                            updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
-                                        }}
-                                        className="h-9 w-24 bg-muted/50 border-border/50 rounded-xl px-3 text-xs text-emerald-600 font-bold"
-                                    />
+                        {/* Financial Footer Workstation */}
+                        <div className="h-32 md:h-40 bg-black/60 border-t border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
+                            <div className="flex items-center gap-10">
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] ml-1">KODLAMA & İŞÇİLİK</p>
+                                    <div className="relative group">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">₺</div>
+                                        <PriceInput
+                                            value={laborCost}
+                                            onChange={(v) => {
+                                                setLaborCost(v);
+                                                updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
+                                            }}
+                                            className="h-14 w-44 bg-white/5 border-white/10 rounded-2xl pl-10 pr-6 text-lg font-black text-white focus:ring-blue-500/20"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <p className="text-[10px] text-blue-500/60 uppercase tracking-widest">TOPLAM TUTAR</p>
-                                    <p className="text-2xl text-foreground leading-none font-bold tabular-nums">₺{formatCurrency(grandTotal)}</p>
+
+                                <div className="hidden md:block h-12 w-px bg-white/[0.03]" />
+
+                                <div className="space-y-1.5 flex flex-col items-center md:items-start">
+                                    <p className="text-[10px] font-black text-blue-500/40 uppercase tracking-[0.3em]">HAKEDİŞ ÖZETİ</p>
+                                    <div className="flex items-baseline gap-3">
+                                        <span className="text-3xl md:text-5xl font-black text-white tracking-tighter tabular-nums">₺{formatCurrency(grandTotal)}</span>
+                                        {applyLoyaltyDiscount && (
+                                            <span className="text-sm font-bold text-rose-500/60 line-through">₺{formatCurrency(subtotal)}</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-4 w-full md:w-auto">
                                 {loyaltyTier && loyaltyTier.name !== "STANDART" && (
-                                    <div
+                                    <button
                                         onClick={() => setApplyLoyaltyDiscount(!applyLoyaltyDiscount)}
                                         className={cn(
-                                            "w-full px-4 py-2 rounded-xl border flex items-center justify-between cursor-pointer transition-all",
+                                            "h-16 px-8 rounded-3xl border transition-all flex flex-col items-center justify-center gap-1 group",
                                             applyLoyaltyDiscount
-                                                ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
-                                                : "bg-muted/50 border-border/50 text-muted-foreground hover:bg-muted"
+                                                ? "bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.3)] text-white"
+                                                : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <Sparkles className={cn("h-3.5 w-3.5", applyLoyaltyDiscount ? "text-blue-500 animate-pulse" : "text-muted-foreground")} />
-                                            <span className="text-[10px] font-bold uppercase">SADAKAT %{loyaltyTier.name === "PLATİN" ? 20 : 15}</span>
+                                            <Sparkles className={cn("h-4 w-4", applyLoyaltyDiscount ? "text-white" : "text-white/40")} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">SADAKAT %{loyaltyTier.name === "PLATİN" ? 20 : 15}</span>
                                         </div>
-                                        {applyLoyaltyDiscount && <span className="text-[10px] font-bold">-₺{formatCurrency(loyaltyDiscountAmount)}</span>}
-                                    </div>
+                                        {applyLoyaltyDiscount && <span className="text-[9px] font-bold opacity-60">-₺{formatCurrency(loyaltyDiscountAmount)} İndirim</span>}
+                                    </button>
                                 )}
 
-                                <div className="flex gap-2 relative">
+                                <div className="flex gap-3 relative flex-1 md:flex-none">
                                     {(!hasNewModifications && ticket.status === "DELIVERED") && (
-                                        <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] z-10 rounded-xl flex items-center justify-center border border-dashed border-border">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-background px-2">Tahsilat Yapıldı</span>
+                                        <div className="absolute inset-0 bg-black/60 shadow-inner backdrop-blur-md z-[60] rounded-[2rem] flex items-center justify-center border border-dashed border-white/20">
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                                <span className="text-xs font-black text-white uppercase tracking-[0.2em]">İŞLEM TAHSİL EDİLDİ</span>
+                                            </div>
                                         </div>
                                     )}
                                     <Button
                                         onClick={() => handleStatusUpdate("DELIVERED", "CASH", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
                                         disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
                                         className={cn(
-                                            "flex-1 h-12 text-[10px] uppercase font-bold rounded-xl gap-2 transition-all",
+                                            "h-16 px-10 rounded-3xl transition-all font-black text-[11px] uppercase tracking-widest gap-4",
                                             ticket.status === "READY"
-                                                ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-                                                : "bg-muted text-muted-foreground"
+                                                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xl shadow-emerald-500/20"
+                                                : "bg-white/5 border border-white/5 text-white/20 cursor-not-allowed"
                                         )}
                                     >
-                                        <CreditCard className="h-4 w-4" /> Tahsil & Teslim
+                                        <CreditCard className="h-5 w-5" /> TAHSİL & TESLİM
                                     </Button>
                                     <Button
                                         onClick={() => handleStatusUpdate("DELIVERED", "DEBT", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
                                         disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
-                                        variant="outline"
                                         className={cn(
-                                            "flex-1 h-12 text-[10px] uppercase font-bold rounded-xl gap-2 transition-all",
+                                            "h-16 px-10 rounded-3xl transition-all font-black text-[11px] uppercase tracking-widest gap-4",
                                             ticket.status === "READY"
-                                                ? "border-amber-500/50 text-amber-600 dark:text-amber-500 hover:bg-amber-500 hover:text-white"
-                                                : "bg-muted text-muted-foreground border-transparent"
+                                                ? "bg-amber-600 hover:bg-amber-500 text-white shadow-2xl shadow-amber-500/20"
+                                                : "bg-white/5 border border-white/5 text-white/20 cursor-not-allowed"
                                         )}
                                     >
-                                        <Wallet className="h-4 w-4" /> Veresiye
+                                        <Wallet className="h-5 w-5" /> VERESİYE
                                     </Button>
                                 </div>
-                                {ticket.status !== "READY" && ticket.status !== "DELIVERED" && (
-                                    <p className="text-[9px] text-center text-muted-foreground/60 italic mt-1 font-medium">
-                                        Tahsilat için durumu "Hazır" yapmalısınız.
-                                    </p>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -1167,7 +1061,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </Dialog>
+        </Dialog >
     );
 }
 

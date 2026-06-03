@@ -111,6 +111,9 @@ export async function createDebt(data: {
     const shopId = await getShopId();
     const userId = await getUserId();
 
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(data.customerId);
+
     const debt = await prisma.$transaction(async (tx) => {
       // 1. Check if customer has balance (prepayment) to apply
       const customer = await tx.customer.findUnique({
@@ -215,12 +218,20 @@ export async function createDebt(data: {
       return newDebt;
     });
 
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(data.customerId);
+
     revalidatePath("/veresiye");
     revalidatePath("/stok");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
     revalidateTag(`dashboard-${shopId}`);
-    return { success: true, debt: serializePrisma(debt) };
+    return {
+      success: true,
+      debt: serializePrisma(debt),
+      before: beforeSummary,
+      after: afterSummary
+    };
   } catch (error) {
     console.error("createDebt error:", error);
     return { success: false, error: "Borç kaydı oluşturulamadı." };
@@ -237,20 +248,36 @@ export async function deleteDebt(debtId: string) {
 
     if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
 
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(debt.customerId);
+
     await prisma.debt.delete({
       where: { id: debtId, shopId }
     });
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
 
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(debt.customerId);
+
     await recordAuditLog({
       action: "DELETE",
-      entityType: "CUSTOMER",
-      entityId: debt.customerId,
-      entityName: debt.customer?.name,
-      message: `${debt.customer?.name || 'Müşteri'} için olan ${debt.amount} TL tutarındaki borç kaydı silindi.`,
-      details: { amount: debt.amount, customerId: debt.customerId }
+      entityType: "FINANCE",
+      entityId: debtId,
+      entityName: beforeSummary?.name,
+      message: `${beforeSummary?.name} müşterisine ait ${debt.amount}${debt.currency} tutarındaki borç kaydı silindi.`,
+      details: {
+        debt,
+        before: beforeSummary,
+        after: afterSummary
+      }
     });
+
+    return {
+      success: true,
+      before: beforeSummary,
+      after: afterSummary
+    };
 
     return { success: true };
   } catch (error) {
@@ -269,6 +296,9 @@ export async function updateDebt(data: {
     const shopId = await getShopId();
     const existing = await prisma.debt.findUnique({ where: { id: data.id, shopId } });
     if (!existing) return { success: false, error: "Kayıt bulunamadı." };
+
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(existing.customerId);
 
     const debtAmount = normalizeMoney(data.amount);
     if (debtAmount <= 0) return { success: false, error: "Geçerli bir borç tutarı giriniz." };
@@ -290,9 +320,31 @@ export async function updateDebt(data: {
       }
     });
 
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(existing.customerId);
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "FINANCE",
+      entityId: data.id,
+      entityName: beforeSummary?.name,
+      message: `${beforeSummary?.name} müşterisine ait borç güncellendi: ${existing.amount}${existing.currency} -> ${debtAmount}${data.currency}`,
+      details: {
+        beforeDebt: existing,
+        afterDebt: debt,
+        beforeSummary,
+        afterSummary
+      }
+    });
+
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
-    return { success: true, debt: serializePrisma(debt) };
+    return {
+      success: true,
+      debt: serializePrisma(debt),
+      before: beforeSummary,
+      after: afterSummary
+    };
   } catch (error) {
     console.error("updateDebt error:", error);
     return { success: false, error: "Borç kaydı güncellenemedi." };
@@ -312,6 +364,10 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
     if (!debt) return { success: false, error: "Borç kaydı bulunamadı." };
 
     const currentRemaining = clampRemainingAmount(debt.remainingAmount, debt.amount);
+
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(debt.customerId);
+
     const appliedPayment = Math.min(paymentAmount, currentRemaining);
     const excessPayment = Math.max(0, paymentAmount - appliedPayment);
     const newRemaining = clampRemainingAmount(currentRemaining - appliedPayment, debt.amount);
@@ -384,12 +440,21 @@ export async function collectDebtPayment(debtId: string, paymentAmount: number, 
       });
     });
 
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(debt.customerId);
+
     revalidatePath("/veresiye");
     revalidatePath("/satis/kasa");
     revalidatePath("/servis");
     revalidatePath("/musteriler");
     revalidateTag(`dashboard-${shopId}`);
-    return { success: true };
+    return {
+      success: true,
+      before: beforeSummary,
+      after: afterSummary,
+      paidAmount: paymentAmount,
+      currency: debt.currency || "TRY"
+    };
   } catch (error) {
     console.error("collectDebtPayment error:", error);
     return { success: false, error: "Tahsilat kaydedilemedi." };
@@ -471,40 +536,37 @@ export async function collectGlobalCustomerPayment(data: {
     }
 
     const usdRate = initialUsdRate || 32.5;
-    let remainingPayment = paymentAmount;
 
-    // Pre-fetch customer info to avoid complex logic inside transaction
-    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-    const customerName = customer?.name || customerId;
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(customerId);
+
+    let remainingPayment = paymentAmount;
 
     await prisma.$transaction(async (tx) => {
       for (const debt of unpaidDebts) {
-        if (remainingPayment <= 0.001) break; // Use a small epsilon
+        if (remainingPayment <= 0.001) break;
 
         let amountToApplyFromPayment = 0;
         let amountToReduceFromDebt = 0;
 
         const debtRemaining = clampRemainingAmount(debt.remainingAmount, debt.amount);
 
-        // Case 1: Same currency
         if (debt.currency === paymentCurrency) {
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemaining);
           amountToReduceFromDebt = amountToApplyFromPayment;
         }
-        // Case 2: Paying TRY for USD debt
         else if (debt.currency === "USD" && paymentCurrency === "TRY") {
           const debtRemainingInTRY = Math.round(debtRemaining * usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInTRY);
           amountToReduceFromDebt = Math.round(amountToApplyFromPayment / usdRate);
         }
-        // Case 3: Paying USD for TRY debt
         else if (debt.currency === "TRY" && paymentCurrency === "USD") {
           const debtRemainingInUSD = Math.round(debtRemaining / usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInUSD);
           amountToReduceFromDebt = Math.round(amountToApplyFromPayment * usdRate);
         }
 
-        if (amountToReduceFromDebt > 0.001) { // Only update if significant
+        if (amountToReduceFromDebt > 0.001) {
           const newRemaining = clampRemainingAmount(debtRemaining - amountToReduceFromDebt, debt.amount);
           await tx.debt.update({
             where: { id: debt.id },
@@ -517,7 +579,6 @@ export async function collectGlobalCustomerPayment(data: {
         }
       }
 
-      // 1.5 Handle excess payment (Emanet/Bakiye)
       if (remainingPayment > 0.01 && !ignoreExcess) {
         const balanceField = paymentCurrency === "USD" ? "balanceUsd" : "balance";
         await tx.customer.update({
@@ -526,7 +587,6 @@ export async function collectGlobalCustomerPayment(data: {
         });
       }
 
-      // Record the transaction
       let targetAccountId = accountId;
       if (!targetAccountId) {
         const type = paymentMethod === "CASH" ? "CASH" : paymentMethod === "CARD" ? "POS" : "BANK";
@@ -542,7 +602,7 @@ export async function collectGlobalCustomerPayment(data: {
           type: "INCOME",
           amount: paymentAmount,
           currency: paymentCurrency,
-          description: notes || `Yapılan Ödeme (${format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })})`,
+          description: notes || `${beforeSummary?.name || 'Müşteri'} Tahsilatı`,
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,
@@ -560,25 +620,35 @@ export async function collectGlobalCustomerPayment(data: {
       }
     });
 
-    let totalRemainingTRY = 0;
-    let totalRemainingUSD = 0;
-    const remainingDebts = await prisma.debt.findMany({
-      where: { customerId, shopId, isPaid: false }
-    });
-    for (const d of remainingDebts) {
-      const remaining = clampRemainingAmount(d.remainingAmount, d.amount);
-      if (d.currency === "USD") totalRemainingUSD += remaining;
-      else totalRemainingTRY += remaining;
-    }
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(customerId);
 
-    if (!customerId) {
-      return { success: false, error: "Müşteri ID bulunamadı." };
-    }
+    // 3. Record Audit Log
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "FINANCE",
+      entityId: customerId,
+      entityName: beforeSummary?.name || customerId,
+      message: `${beforeSummary?.name} müşterisinden ${paymentAmount}${paymentCurrency} tahsilat yapıldı.`,
+      details: {
+        paymentAmount,
+        paymentCurrency,
+        before: beforeSummary,
+        after: afterSummary,
+        notes
+      }
+    });
+
+    revalidatePath("/veresiye");
+    revalidatePath(`/musteriler/${customerId}`);
+    revalidateTag(`dashboard-${shopId}`);
 
     return {
       success: true,
-      remainingTRY: Math.round(totalRemainingTRY),
-      remainingUSD: Math.round(totalRemainingUSD)
+      before: beforeSummary,
+      after: afterSummary,
+      paidAmount: paymentAmount,
+      currency: paymentCurrency
     };
   } catch (error: any) {
     console.error("collectGlobalCustomerPayment error:", error);
@@ -742,10 +812,15 @@ export async function deleteCustomerPayment(transactionId: string) {
       return { success: false, error: "İşlem veya müşteri bulunamadı." };
     }
 
-    const { customerId, amount, financeAccountId } = transaction;
-    let amountToRestore = Number(amount);
+    const { customerId, amount } = transaction;
+
+    // 1. Capture Balance BEFORE
+    const beforeSummary = await getCustomerDebtSummary(customerId);
 
     await prisma.$transaction(async (tx) => {
+      let amountToRestore = Number(amount);
+      const { financeAccountId } = transaction;
+
       // 1. Restore Debts (Start from most recently modified)
       const debtsToRestore = await tx.debt.findMany({
         where: { customerId, shopId },
@@ -758,39 +833,37 @@ export async function deleteCustomerPayment(transactionId: string) {
         const paidAmount = Number(debt.amount) - Number(debt.remainingAmount);
         if (paidAmount <= 0) continue;
 
+        // Simplify currency handling for restoration (assume match or simple rate)
+        // Since we didn't store the exact rate of the original payment in the debt row,
+        // we use a best-effort approach.
         const restoreForThisDebt = Math.min(amountToRestore, paidAmount);
 
         await tx.debt.update({
           where: { id: debt.id },
           data: {
             remainingAmount: { increment: restoreForThisDebt },
-            isPaid: false // If we restore any amount, it's definitely not fully paid anymore
+            isPaid: false
           }
         });
 
         amountToRestore -= restoreForThisDebt;
       }
 
-      // 1.5 Handle Balance Restoration
       const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
       const isBalancePayment = !financeAccountId && (transaction.description?.includes("Bakiye") || transaction.description?.includes("Emanet"));
 
       if (isBalancePayment) {
-        // If this was a payment FROM balance, deleting it should return the money TO balance
         await tx.customer.update({
           where: { id: customerId },
           data: { [balanceField]: { increment: amount } }
         });
       } else if (amountToRestore > 0.01) {
-        // If this was a normal payment, any excess was added to balance as credit.
-        // Restoring the payment means we must remove that added credit.
         await tx.customer.update({
           where: { id: customerId },
           data: { [balanceField]: { decrement: amountToRestore } }
         });
       }
 
-      // 2. Decrement Account Balance
       if (financeAccountId) {
         await tx.financeAccount.update({
           where: { id: financeAccountId },
@@ -798,26 +871,34 @@ export async function deleteCustomerPayment(transactionId: string) {
         });
       }
 
-      // 3. Delete Transaction
       await tx.transaction.delete({
         where: { id: transactionId }
       });
     });
 
+    // 2. Capture Balance AFTER
+    const afterSummary = await getCustomerDebtSummary(customerId);
+
     revalidatePath("/veresiye");
-    revalidatePath("/satis/kasa");
     revalidatePath(`/musteriler/${customerId}`);
+    revalidateTag(`dashboard-${shopId}`);
 
     await recordAuditLog({
       action: "DELETE",
-      entityType: "CUSTOMER",
-      entityId: customerId,
-      entityName: transaction.customer?.name,
-      message: `${transaction.customer?.name || 'Müşteri'} tarafından yapılan ${transaction.amount} TL tutarındaki tahsilat geri alındı/silindi.`,
-      details: { amount: transaction.amount, currency: transaction.currency, customerId }
+      entityType: "FINANCE",
+      entityId: transactionId,
+      entityName: beforeSummary?.name,
+      message: `${beforeSummary?.name || 'Müşteri'} tahsilat kaydı (${amount}${transaction.currency}) sildi/iptal etti.`,
+      details: {
+        amount: transaction.amount,
+        currency: transaction.currency,
+        before: beforeSummary,
+        after: afterSummary,
+        transaction
+      }
     });
 
-    return { success: true };
+    return { success: true, before: beforeSummary, after: afterSummary };
   } catch (error: any) {
     console.error("deleteCustomerPayment error:", error);
     return { success: false, error: error?.message || "İşlem geri alınamadı." };
@@ -838,7 +919,8 @@ export async function updateCustomerPayment(
 
     if (!transaction || !transaction.customerId) return { success: false, error: "İşlem bulunamadı." };
 
-    const customer = await prisma.customer.findUnique({ where: { id: transaction.customerId } });
+    const customerId = transaction.customerId;
+    const beforeSummary = await getCustomerDebtSummary(customerId);
     const oldAmount = Number(transaction.amount);
     const diff = newAmount - oldAmount; // Change in the payment currency
     const txCurrency = transaction.currency || "TRY";
@@ -980,7 +1062,7 @@ export async function updateCustomerPayment(
         } else if (diff < 0) {
           // Less money paid: reduce from balance first (if there was excess), then restore debt
           let remainingRestore = Math.abs(diff);
-          const currentBalance = Number(customer?.[balanceField] || 0);
+          const currentBalance = Number(beforeSummary?.[balanceField] || 0);
 
           if (currentBalance > 0) {
             const reductionFromBalance = Math.min(remainingRestore, currentBalance);
@@ -1062,9 +1144,50 @@ export async function updateCustomerPayment(
     revalidatePath("/veresiye");
     revalidatePath(`/musteriler/${transaction.customerId}`);
 
-    return { success: true };
+    const afterSummary = await getCustomerDebtSummary(transaction.customerId);
+
+    return { success: true, before: beforeSummary, after: afterSummary };
   } catch (error: any) {
     console.error("updateCustomerPayment error:", error);
     return { success: false, error: error?.message || "Güncelleme yapılamadı." };
+  }
+}
+
+/**
+ * Calculates a comprehensive summary of a customer's debt and balance.
+ */
+export async function getCustomerDebtSummary(customerId: string) {
+  try {
+    const shopId = await getShopId();
+    const [customer, debts] = await Promise.all([
+      prisma.customer.findUnique({
+        where: { id: customerId }
+      }),
+      prisma.debt.findMany({
+        where: { customerId, shopId, isPaid: false }
+      })
+    ]);
+
+    if (!customer) throw new Error("Customer not found");
+
+    let totalTRY = 0;
+    let totalUSD = 0;
+
+    debts.forEach(d => {
+      const remaining = Number(d.remainingAmount || 0);
+      if (d.currency === "USD") totalUSD += remaining;
+      else totalTRY += remaining;
+    });
+
+    return {
+      totalRemainingTRY: Math.round(totalTRY),
+      totalRemainingUSD: Number(totalUSD.toFixed(2)),
+      balance: Number(customer.balance || 0),
+      balanceUsd: Number(customer.balanceUsd || 0),
+      name: customer.name
+    };
+  } catch (error) {
+    console.error("getCustomerDebtSummary error:", error);
+    return null;
   }
 }

@@ -14,19 +14,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, User, AlertCircle, Sparkles, Wrench } from "lucide-react";
+import { PlusCircle, Loader2, User, AlertCircle, Sparkles, Wrench, Lock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
 import { usePathname, useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PatternLock } from "@/components/ui/pattern-lock";
-import { Trash, CheckCircle2, Grid } from "lucide-react";
+import { Trash, CheckCircle2, Grid, Zap } from "lucide-react";
 
 interface CreateServiceModalProps {
   trigger?: ReactNode;
@@ -57,6 +57,7 @@ export function CreateServiceModal({
   const [showMissingRequired, setShowMissingRequired] = useState(false);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
+  const [isSimpleMode, setIsSimpleMode] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -89,9 +90,9 @@ export function CreateServiceModal({
   const missingRequiredFields = [
     { key: "customerName", label: "Ad soyad", missing: !String(customerName ?? "").trim() },
     { key: "customerPhone", label: "Telefon numarası", missing: phoneDigits.length < 10 },
-    { key: "deviceBrand", label: getIndustryLabel(shop, "brandLabel"), missing: !String(deviceBrand ?? "").trim() },
-    { key: "deviceModel", label: getIndustryLabel(shop, "modelLabel"), missing: !String(deviceModel ?? "").trim() },
-    { key: "problemDesc", label: getIndustryLabel(shop, "problemDesc"), missing: !String(problemDesc ?? "").trim() },
+    { key: "deviceBrand", label: getIndustryLabel(shop, "brandLabel"), missing: !isSimpleMode && !String(deviceBrand ?? "").trim() },
+    { key: "deviceModel", label: getIndustryLabel(shop, "modelLabel"), missing: !isSimpleMode && !String(deviceModel ?? "").trim() },
+    { key: "problemDesc", label: getIndustryLabel(shop, "problemDesc"), missing: !isSimpleMode && !String(problemDesc ?? "").trim() },
     { key: "estimatedCost", label: "Tutar", missing: !Number.isFinite(estimatedCostValue) || estimatedCostValue <= 0 },
   ].filter((field) => field.missing);
   const canCompleteService = missingRequiredFields.length === 0;
@@ -134,10 +135,10 @@ export function CreateServiceModal({
           customerName: data.customerName,
           customerPhone: data.customerPhone,
           customerEmail: data.customerEmail,
-          deviceBrand,
-          deviceModel,
+          deviceBrand: isSimpleMode && !deviceBrand ? "GENEL" : deviceBrand,
+          deviceModel: isSimpleMode && !deviceModel ? "HIZLI İŞLEM" : deviceModel,
           imei,
-          problemDesc: data.problemDesc,
+          problemDesc: isSimpleMode && !data.problemDesc ? "Hızlı Servis İşlemi" : data.problemDesc,
           estimatedCost: Number(data.estimatedCost),
           devicePassword: data.devicePassword,
           attributes,
@@ -243,16 +244,30 @@ export function CreateServiceModal({
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
             <div className="p-5 md:p-8 bg-card/50 border-b border-border/50">
               <DialogHeader>
-                <DialogTitle className="font-medium text-xl md:text-2xl">{getIndustryLabel(shop, "serviceTicket")} Kaydı</DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="font-medium text-xl md:text-2xl">{isSimpleMode ? "Hızlı İşlem Kaydı" : getIndustryLabel(shop, "serviceTicket") + " Kaydı"}</DialogTitle>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsSimpleMode(!isSimpleMode)}
+                    className={cn(
+                      "h-8 rounded-full gap-2 text-[10px] font-black tracking-widest uppercase transition-all px-4",
+                      isSimpleMode ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-primary/5 text-muted-foreground border border-border/50"
+                    )}
+                  >
+                    <Zap className={cn("h-3 w-3", isSimpleMode ? "text-amber-500" : "text-muted-foreground")} />
+                    {isSimpleMode ? "Basit Mod Aktif" : "Basit Mod"}
+                  </Button>
+                </div>
                 <DialogDescription className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-widest mt-1">
-                  Kayıt oluşturmak için bilgileri eksiksiz doldurun.
+                  {isSimpleMode ? "Hızlı işlemler için temel bilgileri girin." : "Kayıt oluşturmak için bilgileri eksiksiz doldurun."}
                 </DialogDescription>
               </DialogHeader>
             </div>
 
             <div className="p-5 md:p-8 space-y-6 overflow-y-auto flex-1 scrollbar-hide">
-              {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Customer Info - Always side by side */}
+              <div className="grid grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2 relative">
                   <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
                   <div className="relative">
@@ -322,57 +337,63 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Dynamic Industry Fields — from FormFactory */}
-              <FormFactory
-                fields={industryFields}
-                register={register}
-                control={control}
-                errors={errors}
-                twoCol={true}
-                onPatternClick={() => setIsPatternModalOpen(true)}
-              />
+              {/* Dynamic Industry Fields — hidden in simple mode */}
+              {!isSimpleMode && (
+                <FormFactory
+                  fields={industryFields}
+                  register={register}
+                  control={control}
+                  errors={errors}
+                  twoCol={true}
+                  onPatternClick={() => setIsPatternModalOpen(true)}
+                />
+              )}
 
-              {/* Problem Description */}
+              {/* Problem Description — simplified in simple mode */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center mb-1">
                   <Label htmlFor="problemDesc" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
-                    {getIndustryLabel(shop, "problemDesc").toUpperCase()} <span className="text-red-500">*</span>
+                    {getIndustryLabel(shop, "problemDesc").toUpperCase()} {!isSimpleMode && <span className="text-red-500">*</span>}
                   </Label>
-                  <Button type="button" size="sm" variant="outline"
-                    className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px] font-bold"
-                    onClick={handleAIDiagnosis} disabled={isDiagnosticPending}
-                  >
-                    {isDiagnosticPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                    BAŞAR AI ANALİZ
-                  </Button>
+                  {!isSimpleMode && (
+                    <Button type="button" size="sm" variant="outline"
+                      className="h-8 rounded-full bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 gap-2 text-[10px] font-bold"
+                      onClick={handleAIDiagnosis} disabled={isDiagnosticPending}
+                    >
+                      {isDiagnosticPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      BAŞAR AI ANALİZ
+                    </Button>
+                  )}
                 </div>
                 <div className="relative">
                   <AlertCircle className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="problemDesc" {...register("problemDesc", { required: "Arıza açıklaması gereklidir" })}
-                    placeholder="Arıza detaylarını buraya yazın..." className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm" />
+                  <Input id="problemDesc" {...register("problemDesc", { required: !isSimpleMode ? "Arıza açıklaması gereklidir" : false })}
+                    placeholder={isSimpleMode ? "İşlem özeti (İsteğe bağlı)..." : "Arıza detaylarını buraya yazın..."} className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm" />
                 </div>
                 {errors.problemDesc && <p className="text-[10px] text-red-500 ml-1">{errors.problemDesc.message as string}</p>}
               </div>
 
-              {/* Accessories / Parts Received */}
-              <div className="space-y-3">
-                <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Aksesuar / Emanet Parçalar</Label>
-                <div className="flex flex-wrap gap-2">
-                  {getIndustryAccessories(shop).map((item) => (
-                    <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-xl px-4 py-2.5 transition-all">
-                      <Checkbox
-                        className="rounded-sm border-muted-foreground/40 h-4 w-4"
-                        onCheckedChange={(checked) => {
-                          const current = watch("accessories") || [];
-                          if (checked) setValue("accessories", [...current, item]);
-                          else setValue("accessories", current.filter((i: string) => i !== item));
-                        }}
-                      />
-                      <span className="text-[13px] font-medium whitespace-nowrap">{item}</span>
-                    </Label>
-                  ))}
+              {/* Accessories / Parts Received — hidden in simple mode */}
+              {!isSimpleMode && (
+                <div className="space-y-3">
+                  <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Aksesuar / Emanet Parçalar</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {getIndustryAccessories(shop).map((item) => (
+                      <Label key={item} className="font-medium inline-flex items-center gap-2 cursor-pointer bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-xl px-4 py-2.5 transition-all">
+                        <Checkbox
+                          className="rounded-sm border-muted-foreground/40 h-4 w-4"
+                          onCheckedChange={(checked) => {
+                            const current = watch("accessories") || [];
+                            if (checked) setValue("accessories", [...current, item]);
+                            else setValue("accessories", current.filter((i: string) => i !== item));
+                          }}
+                        />
+                        <span className="text-[13px] font-medium whitespace-nowrap">{item}</span>
+                      </Label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* AI Diagnostic Result */}
               {diagnosticResult && (
@@ -414,6 +435,34 @@ export function CreateServiceModal({
                       <p className="text-[11px] text-blue-900/80 dark:text-blue-100/80 leading-relaxed italic">"{diagnosticResult.summaryReport}"</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Simple Mode: Device Password */}
+              {isSimpleMode && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <Label htmlFor="devicePassword" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Cihaz Şifresi</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-sm bg-muted/40 border-border/50 gap-2 text-[9px] font-bold"
+                      onClick={() => setIsPatternModalOpen(true)}
+                    >
+                      <Grid className="h-3 w-3" />
+                      DESEN ÇİZ
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="devicePassword"
+                      {...register("devicePassword")}
+                      placeholder="Şifre veya Pin..."
+                      className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm"
+                    />
+                  </div>
                 </div>
               )}
 

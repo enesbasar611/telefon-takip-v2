@@ -2,7 +2,7 @@ import { LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
 
 interface PageHeaderProps {
-    title: string;
+    title: string | ReactNode;
     description: string | ReactNode;
     icon: LucideIcon;
     iconColor?: string;
@@ -13,6 +13,7 @@ interface PageHeaderProps {
     }[];
     actions?: ReactNode;
     badge?: ReactNode;
+    className?: string;
 }
 
 export function PageHeader({
@@ -23,22 +24,23 @@ export function PageHeader({
     iconBgColor = "bg-blue-500/10",
     actions,
     badge,
+    className,
 }: PageHeaderProps) {
     return (
-        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-4 md:mb-6 px-4 md:px-0">
+        <div className={`flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-4 md:mb-6 px-4 md:px-0 ${className || ""}`}>
             <div className="flex items-start gap-4 flex-1 min-w-0">
-                <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl ${iconBgColor} flex items-center justify-center border border-border/50 shadow-sm shrink-0`}>
+                <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl ${iconBgColor} flex items-center justify-center border border-border/50 shadow-sm shrink-0 animate-pulse-soft`}>
                     <Icon className={`h-5 w-5 md:h-6 md:w-6 ${iconColor}`} />
                 </div>
                 <div className="space-y-1 md:space-y-1.5 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <h1 className="font-bold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-none truncate">
+                        <h1 className="font-extrabold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-none truncate">
                             {title}
                         </h1>
                         {badge && <div className="shrink-0">{badge}</div>}
                     </div>
                     {description && (
-                        <div className="text-xs md:text-sm text-slate-500 dark:text-muted-foreground/80 max-w-2xl font-medium break-words">
+                        <div className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-2xl font-bold tracking-tight leading-relaxed">
                             {description}
                         </div>
                     )}

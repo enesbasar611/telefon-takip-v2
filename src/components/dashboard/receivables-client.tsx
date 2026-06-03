@@ -285,9 +285,9 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                                     )}
                                 </>
                             ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-40">
-                                    <Users className="h-16 w-16 mb-4 stroke-[1.5]" />
-                                    <p className="text-sm font-bold tracking-tight">Kayıtlı alacak bulunmuyor</p>
+                                <div className="flex-1 flex flex-col items-center justify-center py-6 text-center opacity-40">
+                                    <Users className="h-10 w-10 mb-2 stroke-[1.5]" />
+                                    <p className="text-[10px] font-bold tracking-tight uppercase">Kayıtlı alacak bulunmuyor</p>
                                 </div>
                             )}
                         </div>

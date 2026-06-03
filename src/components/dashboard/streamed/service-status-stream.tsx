@@ -26,7 +26,7 @@ const statusLabels: Record<string, string> = {
     CANCELLED: "İptal edildi",
 };
 
-export function ServiceStatusStream({ title = "Servis Durumu", cols = 8, rows = 4 }: { title?: string, cols?: number, rows?: number }) {
+export function ServiceStatusStream({ title = "Servis Durumu", cols = 8, rows = 4, onDataStatus }: { title?: string, cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
     const isVerySmall = cols < 8;
     const isShort = rows < 3;
 
@@ -34,7 +34,12 @@ export function ServiceStatusStream({ title = "Servis Durumu", cols = 8, rows = 
         queryKey: ["dashboard-service-metrics"],
         queryFn: async () => {
             const serviceMetricsRaw = await getServiceMetrics();
-            return serializePrisma(serviceMetricsRaw);
+            const data = serializePrisma(serviceMetricsRaw);
+            if (onDataStatus) {
+                const total = (data || []).reduce((acc: number, m: any) => acc + (m.value || 0), 0);
+                onDataStatus(!data || data.length === 0 || total === 0);
+            }
+            return data;
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,

@@ -55,6 +55,10 @@ import { getSettings } from "@/lib/actions/setting-actions";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { ProductCard } from "./parts/product-card";
+import { CartItem } from "./parts/cart-item";
+import { CustomerSelector } from "./parts/customer-selector";
+import { CheckoutSummary } from "./parts/checkout-summary";
 
 export function POSInterface({ initialSaleId }: {
   initialSaleId?: string;
@@ -99,7 +103,8 @@ export function POSInterface({ initialSaleId }: {
     }
   }, [initialSale]);
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [displaySearchTerm, setDisplaySearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [cart, setCart] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -144,15 +149,22 @@ export function POSInterface({ initialSaleId }: {
     }
   }, [searchParams, customers]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(displaySearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [displaySearchTerm]);
+
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.barcode && p.barcode.includes(searchTerm)) ||
-        (p.category?.name && p.category.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (p.barcode && p.barcode.includes(debouncedSearchTerm)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchTerm, selectedCategory]);
+  }, [products, debouncedSearchTerm, selectedCategory]);
 
   // ?fullscreen=true paramını yakala ve state'i ayarla
   useEffect(() => {
@@ -182,24 +194,12 @@ export function POSInterface({ initialSaleId }: {
     }
   };
 
-  const handleCreateCustomer = async () => {
-    const rawPhone = newCustomer.phone.replace(/\D/g, "");
-    if (!newCustomer.name || newCustomer.name.length < 2) {
-      toast({ title: "Eksik Bilgi", description: "Lütfen müşteri adı ve soyadı girin.", variant: "destructive" });
-      return;
-    }
-    if (rawPhone.length !== 10 || !rawPhone.startsWith("5")) {
-      toast({ title: "Hatalı Numara", description: "Geçerli bir telefon numarası girin (5xx xxx xxxx).", variant: "destructive" });
-      return;
-    }
-
+  const handleQuickCreateCustomer = async (name: string) => {
     setIsCreatingCustomer(true);
     try {
-      const res = await createCustomer({ name: newCustomer.name, phone: newCustomer.phone });
+      const res = await createCustomer({ name, phone: "" });
       if (res.success && res.customer) {
-        toast({ title: "Başarılı", description: "Yeni müşteri sisteme kaydedildi ve seçildi." });
-
-        // Safely update the query cache instead of mutating the local array
+        toast({ title: "Başarılı", description: "Yeni müşteri kaydedildi." });
         queryClient.setQueryData(["pos-initial-data"], (old: any) => {
           if (!old) return old;
           return {
@@ -207,16 +207,12 @@ export function POSInterface({ initialSaleId }: {
             customers: [res.customer, ...old.customers]
           };
         });
-
         setSelectedCustomerId(res.customer.id);
-        setIsNewCustomerOpen(false);
-        setNewCustomer({ name: "", phone: "" });
-        queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] }); // Fetch new list naturally
-      } else {
-        toast({ title: "Hata", description: res.error || "Müşteri oluşturulamadı.", variant: "destructive" });
+        setCustomerSearch(name);
+        queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
       }
-    } catch (error) {
-      toast({ title: "Hata", description: "Sistem hatası oluştu.", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Hata", variant: "destructive", description: "Hızlı kayıt yapıalamadı." });
     } finally {
       setIsCreatingCustomer(false);
     }
@@ -300,7 +296,7 @@ export function POSInterface({ initialSaleId }: {
     }
 
     addToCart(product);
-    setSearchTerm("");
+    setDisplaySearchTerm("");
     toast({ title: "Başarılı", description: `${product.name} sepete eklendi.` });
     return product;
   };
@@ -461,7 +457,7 @@ export function POSInterface({ initialSaleId }: {
 
           // 3. UI Cleanup
           setCart([]);
-          setSearchTerm("");
+          setDisplaySearchTerm("");
           setSelectedCustomerId(undefined);
           // 4. Invalidate to seamlessly update server state without reload
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
@@ -527,10 +523,10 @@ export function POSInterface({ initialSaleId }: {
                 <Input
                   placeholder="Ürün adı veya barkod okut..."
                   className="pl-12 pr-12 bg-muted/30 border-border/40 h-14 sm:h-12 rounded-2xl text-sm sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={displaySearchTerm}
+                  onChange={(e) => setDisplaySearchTerm(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && addBarcodeMatchToCart(searchTerm)) {
+                    if (e.key === "Enter" && addBarcodeMatchToCart(displaySearchTerm)) {
                       e.preventDefault();
                     }
                   }}
@@ -589,52 +585,22 @@ export function POSInterface({ initialSaleId }: {
               <div className="h-full w-full flex items-center justify-center">
                 <Loader2 className="h-10 w-10 text-primary animate-spin opacity-50" />
               </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                <Package className="h-12 w-12 mb-4" />
+                <p className="text-sm font-bold tracking-widest uppercase">Ürün Bulunamadı</p>
+              </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {filteredProducts.map((product) => {
-                  const productCurrency = getCartItemCurrency(product);
-                  const displayPrice = getCartDisplayPrice(product);
-                  const priceStr = formatCurrency(displayPrice);
-                  // Standardized font size for price to avoid truncation
-                  const priceSizeClass = "text-lg sm:text-xl font-black";
-
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => addToCart(product)}
-                      disabled={(product.stock ?? 0) <= 0}
-                      className="flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]"
-                    >
-                      {/* Top Row: Category & Stock */}
-                      <div className="flex items-start justify-between gap-2 mb-auto z-10">
-                        <div className="text-[8px] sm:text-[10px] text-primary flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity min-w-0 flex-1">
-                          <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-                          <span className="truncate">
-                            {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
-                          </span>
-                        </div>
-                        <div className="shrink-0 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full bg-emerald-500/10 text-[8px] sm:text-[10px] font-bold text-emerald-600 border border-emerald-500/20 shadow-sm transition-transform group-hover:scale-105">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1" />
-                          {product.stock}
-                        </div>
-                      </div>
-
-                      {/* Bottom Row: Price & Title */}
-                      <div className="flex flex-col gap-0 z-10 w-full mt-auto">
-                        <div className="text-[11px] sm:text-[13px] font-bold text-muted-foreground/80 mb-0">
-                          {getEquivalentDisplay(product)}
-                        </div>
-                        <div className={cn("text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible drop-shadow-sm", priceSizeClass)}>
-                          {getCartCurrencySymbol(product)}{priceStr}
-                        </div>
-                        <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em] mt-1">
-                          {product.name}
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
-                    </button>
-                  );
-                })}
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAdd={addToCart}
+                    getEquivalentDisplay={getEquivalentDisplay}
+                    getCartCurrencySymbol={getCartCurrencySymbol}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -651,187 +617,26 @@ export function POSInterface({ initialSaleId }: {
                 <ShoppingCart className="h-5 w-5 text-primary" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl  text-foreground">Aktif <span className="text-primary">Sepet</span></span>
-                <p className="text-[10px] text-muted-foreground ">{cart.length} Ürün Seçildi</p>
+                <span className="text-xl text-foreground">Aktif <span className="text-primary">Sepet</span></span>
+                <p className="text-[10px] text-muted-foreground">{cart.length} Ürün Seçildi</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-10 rounded-full text-[10px]  text-rose-500 hover:bg-rose-500/10 px-6 border border-rose-500/40">
+            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-10 rounded-full text-[10px] text-rose-500 hover:bg-rose-500/10 px-6 border border-rose-500/40">
               BOŞALT
             </Button>
           </div>
 
           <div className="p-8 border-b border-border/40 bg-muted/5">
-            <div className="flex items-center justify-between mb-4">
-              <Label className="font-medium text-[11px]  text-muted-foreground tracking-[0.2em]">MÜŞTERİ BİLGİSİ</Label>
-              <Dialog open={isNewCustomerOpen} onOpenChange={setIsNewCustomerOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" className="h-8 px-4 rounded-full text-[10px]  text-primary bg-primary/10 border border-primary/20 flex items-center gap-2 group hover:bg-primary hover:text-white transition-all">
-                    <UserPlus className="h-3 w-3" /> YENİ EKLE
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-card border border-border/50 text-foreground shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
-                  <div className="px-8 py-8 border-b border-border/40 flex flex-col gap-2 bg-muted/20">
-                    <DialogTitle className="font-black text-xl uppercase tracking-tight">Hızlı Müşteri Kaydı</DialogTitle>
-                    <DialogDescription className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
-                      Aktif sepete atamak için sisteme anında müşteri tanımlayın.
-                    </DialogDescription>
-                  </div>
-                  <div className="p-8 space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="c-name" className="font-medium text-xs font-semibold text-muted-foreground">Ad Soyad / Firma Adı <span className="text-rose-500">*</span></Label>
-                      <Input
-                        id="c-name"
-                        placeholder="Örn: Ahmet Yılmaz"
-                        value={newCustomer.name}
-                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                        className="bg-white/[0.03] border-border rounded-xl h-11 text-sm focus-visible:ring-1 focus-visible:ring-blue-500/50"
-                      />
-                    </div>
-                    <PhoneInput
-                      label="Telefon Numarası (Opsiyonel)"
-                      id="c-phone"
-                      value={newCustomer.phone}
-                      onChange={(val: string) => setNewCustomer({ ...newCustomer, phone: val })}
-                      className="bg-white/[0.03] border-border h-11"
-                    />
-                  </div>
-                  <div className="px-6 py-4 bg-white/[0.02] border-t border-border flex justify-end gap-3">
-                    <Button type="button" variant="ghost" className="h-10 px-5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-white" onClick={() => setIsNewCustomerOpen(false)}>
-                      İptal
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleCreateCustomer}
-                      disabled={isCreatingCustomer}
-                      className="h-10 px-6 rounded-lg text-xs  bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                    >
-                      {isCreatingCustomer ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                      Müşteriyi Kaydet ve Seç
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <Popover open={isCustomerOpen} onOpenChange={(open) => {
-              setIsCustomerOpen(open);
-              if (open) {
-                setCustomerSearch("");
-                setTimeout(() => customerSearchRef.current?.focus(), 50);
-              }
-            }}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between bg-background border border-border/60 h-14 rounded-2xl text-[14px] font-medium text-foreground shadow-sm hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20 px-6 transition-all group"
-                >
-                  <span className={cn(
-                    "truncate",
-                    !selectedCustomerId || selectedCustomerId === "null"
-                      ? "text-muted-foreground text-[13px]"
-                      : "text-foreground"
-                  )}>
-                    {selectedCustomerId && selectedCustomerId !== "null"
-                      ? customers.find((c: any) => c.id === selectedCustomerId)?.name ?? "Müşteri Seçiniz (Hızlı Satış)"
-                      : "Müşteri Seçiniz (Hızlı Satış)"}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {selectedCustomerId && selectedCustomerId !== "null" && (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); setSelectedCustomerId(undefined); }}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); setSelectedCustomerId(undefined); } }}
-                        className="h-5 w-5 rounded-full bg-muted/60 hover:bg-rose-500/20 hover:text-rose-500 flex items-center justify-center transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </span>
-                    )}
-                    <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", isCustomerOpen && "rotate-180")} />
-                  </div>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="p-0 bg-card border border-border/60 rounded-[1.5rem] shadow-2xl overflow-hidden"
-                style={{ width: "var(--radix-popover-trigger-width)" }}
-                align="start"
-                sideOffset={6}
-              >
-                {/* Arama Input */}
-                <div className="p-3 border-b border-border/40">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      ref={customerSearchRef}
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e) => setCustomerSearch(e.target.value)}
-                      placeholder="Müşteri adı veya telefon..."
-                      className="w-full bg-background border border-border/40 rounded-xl h-10 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
-                    />
-                  </div>
-                </div>
-                {/* Liste */}
-                <div className="max-h-64 overflow-y-auto custom-scrollbar p-2">
-                  {/* Varsayılan seçenek */}
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedCustomerId("null"); setIsCustomerOpen(false); }}
-                    className={cn(
-                      "w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium transition-all hover:bg-muted/60",
-                      (!selectedCustomerId || selectedCustomerId === "null") && "bg-primary/10 text-primary"
-                    )}
-                  >
-                    {(!selectedCustomerId || selectedCustomerId === "null") && <Check className="h-3.5 w-3.5 shrink-0" />}
-                    <span className={(!selectedCustomerId || selectedCustomerId === "null") ? "" : "pl-5"}>Varsayılan (İsimsiz)</span>
-                  </button>
-                  {/* Filtrelenmiş müşteriler */}
-                  {customers
-                    .filter((c: any) => {
-                      if (!customerSearch) return true;
-                      const s = customerSearch.toLocaleLowerCase("tr-TR").trim();
-                      const nameMatch = c.name?.toLocaleLowerCase("tr-TR").includes(s);
-                      const phoneSearch = s.replace(/\D/g, "");
-                      const phoneValue = (c.phone || "").replace(/\D/g, "");
-                      const phoneMatch = phoneSearch && phoneValue.includes(phoneSearch);
-                      return nameMatch || phoneMatch;
-                    })
-                    .map((c: any) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => { setSelectedCustomerId(c.id); setIsCustomerOpen(false); }}
-                        className={cn(
-                          "w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] transition-all hover:bg-primary/5 border-b border-border/10 last:border-none",
-                          selectedCustomerId === c.id && "bg-primary/10"
-                        )}
-                      >
-                        {selectedCustomerId === c.id
-                          ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                          : <span className="w-3.5 shrink-0" />}
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-medium text-foreground/90 truncate">{c.name}</span>
-                          {c.phone && (
-                            <span className="text-[10px] text-blue-500 leading-none">{formatPhone(c.phone)}</span>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                  }
-                  {customers.filter((c: any) => {
-                    if (!customerSearch) return false;
-                    const s = customerSearch.toLowerCase();
-                    return (
-                      c.name?.toLowerCase().includes(s) ||
-                      c.phone?.replace(/\D/g, "").includes(s.replace(/\D/g, ""))
-                    );
-                  }).length === 0 && customerSearch && (
-                      <p className="text-center py-6 text-[11px] text-muted-foreground/60">Sonuç bulunamadı</p>
-                    )}
-                </div>
-              </PopoverContent>
-            </Popover>
+            <CustomerSelector
+              customers={customers}
+              selectedCustomerId={selectedCustomerId}
+              setSelectedCustomerId={setSelectedCustomerId}
+              customerSearch={customerSearch}
+              setCustomerSearch={setCustomerSearch}
+              onNewCustomer={handleQuickCreateCustomer}
+              isProcessing={isCreatingCustomer}
+            />
           </div>
-
 
           {/* Cart Items */}
           <div className="flex-none overflow-y-auto p-0 custom-scrollbar relative max-h-[48vh]">
@@ -842,160 +647,41 @@ export function POSInterface({ initialSaleId }: {
                     <ShoppingCart className="h-16 w-16 mb-4 opacity-[0.03] text-foreground" />
                     <ShoppingCart className="h-8 w-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 text-primary" />
                   </div>
-                  <p className=" text-[9px] opacity-40">Sepetiniz şu an boş</p>
+                  <p className="text-[9px] opacity-40">Sepetiniz şu an boş</p>
                 </div>
               ) : (
                 cart.map((item) => (
-                  <div key={item.id} className="p-6 flex items-center justify-between hover:bg-muted/30 transition-colors group border-b border-border/40 last:border-none gap-6">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[15px]  text-foreground block leading-tight mb-1 truncate">{item.name}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex items-center rounded-xl border border-primary/35 bg-primary/10 px-2 py-1.5 shadow-sm transition-all group-hover:border-primary/60 group-hover:bg-primary/15">
-                          <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol(item)}</span>
-                          <input
-                            type="number"
-                            value={getCartDisplayPrice(item)}
-                            onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
-                            className="bg-transparent border-none text-[14px] text-primary font-black focus:ring-0 w-24 pl-5 py-0 h-auto"
-                            title="Sepet fiyatı değiştirilebilir"
-                          />
-                        </div>
-                        <div className="flex flex-col leading-none">
-                          <span className="text-[11px] font-bold text-muted-foreground/80">
-                            {getEquivalentDisplay(item)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 flex-shrink-0">
-                      <div className="flex items-center bg-muted/40 rounded-full p-1 border border-border/40">
-                        <button
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-white transition-all active:scale-95"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="text-[14px]  text-foreground w-10 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-all active:scale-95"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <button
-                        className="h-10 w-10 rounded-full bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-500/40 active:scale-95 group-hover:shadow-lg group-hover:shadow-rose-500/10"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <CartItem
+                    key={item.id}
+                    item={item}
+                    updateQuantity={updateQuantity}
+                    updatePrice={updatePrice}
+                    removeFromCart={removeFromCart}
+                    getCartCurrencySymbol={getCartCurrencySymbol}
+                    getEquivalentDisplay={getEquivalentDisplay}
+                  />
                 ))
               )}
             </div>
           </div>
 
-          {/* Checkout Section */}
-          <div className="p-6 bg-muted/5 border-t border-border/40">
-            <div className="grid grid-cols-4 gap-3 mb-5">
-              {[
-                { id: "CASH", label: "NAKİT", icon: Banknote },
-                { id: "CREDIT_CARD", label: "KART", icon: CreditCard },
-                { id: "BANK_TRANSFER", label: "HAVALE", icon: Landmark },
-                { id: "DEBT", label: "VERESİYE", icon: History }
-              ].map((method) => (
-                <Button
-                  key={method.id}
-                  variant="ghost"
-                  className={cn(
-                    "h-16 flex flex-col gap-1.5 rounded-2xl border transition-all p-0 group",
-                    paymentMethod === method.id
-                      ? "bg-primary text-primary-foreground border-primary shadow-xl shadow-primary/20 scale-105"
-                      : "bg-muted/10 text-muted-foreground border-border/20 hover:bg-muted hover:border-border/50"
-                  )}
-                  onClick={() => setPaymentMethod(method.id)}
-                >
-                  <method.icon className={cn("h-5 w-5 transition-transform group-hover:scale-110", paymentMethod === method.id ? "text-primary-foreground" : "text-muted-foreground/60")} />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
-                </Button>
-              ))}
-            </div>
-
-            {loyaltyEnabled && totalPoints > 0 && (
-              <div className="mb-5 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-bold text-primary flex items-center gap-2">
-                      CÜZDAN BAKİYESİ KULLAN
-                    </div>
-                    <div className="text-[9px] text-muted-foreground mt-0.5">
-                      Müşterinin {totalPoints} Puanı ({formatCurrency(totalPoints * pointValueTl)} TL değeri) var.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {applyLoyaltyDiscount && (
-                    <span className="text-[10px] font-bold text-emerald-500">- ₺{formatCurrency(loyaltyDiscountAmount)}</span>
-                  )}
-                  <Checkbox
-                    checked={applyLoyaltyDiscount}
-                    onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
-                    className="h-6 w-6 rounded-lg border-primary/50 data-[state=checked]:bg-primary"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between px-2">
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
-                <div className="flex flex-col items-end gap-0">
-                  <div className="flex items-center gap-2">
-                    {loyaltyDiscountAmount > 0 && (
-                      <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
-                    )}
-                    <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
-                      ({getEquivalentDisplay({ sellPrice: finalTotal })})
-                    </span>
-                  </div>
-                  <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">₺{formatCurrency(finalTotal)}</span>
-                </div>
-              </div>
-
-              <Button
-                className={cn(
-                  "h-14 sm:h-16 w-full text-[13px] sm:text-[14px] font-bold gap-3 sm:gap-4 rounded-2xl sm:rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98] whitespace-normal text-center leading-tight",
-                  paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
-                    ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
-                    : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
-                )}
-                disabled={cart.length === 0 || isProcessing}
-                onClick={handleCheckout}
-              >
-                {isProcessing ? (
-                  <div className="flex items-center gap-3">
-                    <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>İŞLENİYOR...</span>
-                  </div>
-                ) : (
-                  <>
-                    <span className="flex-1">
-                      {paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
-                        ? "MÜŞTERİ SEÇMENİZ GEREKİYOR (VERESİYE)"
-                        : "SATIŞI TAMAMLA & FİŞ YAZDIR"}
-                    </span>
-                    {paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")
-                      ? <AlertCircle className="h-5 w-5 shrink-0" />
-                      : <CheckCircle className="h-5 w-5 shrink-0" />}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <CheckoutSummary
+            subtotal={subtotal}
+            tax={0} // Tax calculation can be added if needed, setting 0 for now
+            total={finalTotal}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            loyaltyEnabled={loyaltyEnabled}
+            totalPoints={totalPoints}
+            pointValueTl={pointValueTl}
+            applyLoyaltyDiscount={applyLoyaltyDiscount}
+            setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
+            loyaltyDiscountAmount={loyaltyDiscountAmount}
+            onCheckout={handleCheckout}
+            isProcessing={isProcessing}
+            isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
+            getEquivalentDisplay={(item) => getEquivalentDisplay(item)}
+          />
         </div>
       </div>
 
@@ -1022,6 +708,7 @@ export function POSInterface({ initialSaleId }: {
   );
 
   if (!mounted) return null;
+
   if (isFullscreen && typeof document !== "undefined") {
     return createPortal(content, document.body);
   }

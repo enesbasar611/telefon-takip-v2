@@ -221,16 +221,30 @@ export async function createCustomerMuted(data: {
 }) {
   try {
     const shopId = await getShopId();
+    const sanitizedPhone = formatPhoneRaw(data.phone || "");
+
+    // 1. Check if customer already exists by phone in this shop
+    if (sanitizedPhone) {
+      const existing = await prisma.customer.findFirst({
+        where: { shopId, phone: sanitizedPhone }
+      });
+      if (existing) {
+        // Return success with existing customer to prevent duplicates
+        return { success: true, customer: serializePrisma(existing), alreadyExisted: true };
+      }
+    }
+
+    // 2. Create new if not found
     const customer = await prisma.customer.create({
       data: {
         ...data,
         name: formatProperCase(data.name),
-        phone: formatPhoneRaw(data.phone || ""),
+        phone: sanitizedPhone,
         shopId,
       }
     });
-    // No revalidatePath to prevent router cache purge and silent page reload
-    return { success: true, customer: serializePrisma(customer) };
+
+    return { success: true, customer: serializePrisma(customer), alreadyExisted: false };
   } catch (error) {
     console.error("Error creating customer:", error);
     return { success: false, error: "Müşteri oluşturulurken hata oluştu." };

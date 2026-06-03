@@ -81,6 +81,7 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency }: StatW
                 usdValue={usdValue}
                 outOfStockCount={outOfStockCount}
                 defaultCurrency={defaultCurrency}
+                isLoading={isLoading}
                 onClick={() => setIsOpen(true)}
             />
             <StatDetailModal

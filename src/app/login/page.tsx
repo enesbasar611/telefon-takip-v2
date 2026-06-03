@@ -50,7 +50,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black p-4 relative overflow-hidden text-white font-sans">
+        <div className="min-h-screen min-h-[100dvh] flex items-start md:items-center justify-center bg-black px-4 py-8 md:py-4 relative overflow-y-auto text-white font-sans">
             {/* Pure Dark Atmosphere */}
             <div className="fixed inset-0 bg-black -z-20" />
 
@@ -59,15 +59,15 @@ export default function LoginPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="flex flex-col items-center mb-10 text-center"
+                    className="flex flex-col items-center mb-6 md:mb-10 text-center"
                 >
                     <div className="relative group">
                         <div className="absolute inset-0 bg-violet-600 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                        <div className="relative h-20 w-20 bg-[#111] rounded-3xl flex items-center justify-center mb-6 border border-border shadow-2xl">
-                            <Smartphone className="h-10 w-10 text-violet-500" />
+                        <div className="relative h-16 w-16 md:h-20 md:w-20 bg-[#111] rounded-3xl flex items-center justify-center mb-4 md:mb-6 border border-border shadow-2xl">
+                            <Smartphone className="h-8 w-8 md:h-10 md:w-10 text-violet-500" />
                         </div>
                     </div>
-                    <h1 className="font-medium text-4xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent">
+                    <h1 className="font-medium text-3xl md:text-4xl font-extrabold mb-3 tracking-tight bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent">
                         BAŞAR TEKNİK
                     </h1>
                     <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-border rounded-full">
@@ -83,13 +83,13 @@ export default function LoginPage() {
                 >
                     <Card className="border-border/50 bg-[#0A0A0A]/60 backdrop-blur-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] overflow-hidden">
                         <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-violet-600 to-transparent opacity-50" />
-                        <CardHeader className="text-center pt-10 pb-6">
-                            <CardTitle className="font-medium text-2xl  text-white tracking-tight">Giriş Yap</CardTitle>
+                        <CardHeader className="text-center pt-8 md:pt-10 pb-4 md:pb-6">
+                            <CardTitle className="font-medium text-xl md:text-2xl  text-white tracking-tight">Giriş Yap</CardTitle>
                             <CardDescription className="text-muted-foreground/80 text-sm mt-2">
                                 Dükkan yönetimine başlamak için Google hesabınızı kullanın
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="px-10 pb-10 flex flex-col gap-6">
+                        <CardContent className="px-6 md:px-10 pb-8 md:pb-10 flex flex-col gap-5 md:gap-6">
                             {/* Credentials Form */}
                             <form onSubmit={handleCredentialsLogin} className="space-y-4">
                                 <div className="space-y-2">
@@ -116,7 +116,7 @@ export default function LoginPage() {
                                 </div>
                                 <Button
                                     type="submit"
-                                    className="w-full h-14 bg-violet-600 text-white hover:bg-violet-700 rounded-2xl  transition-all active:scale-95 shadow-xl shadow-violet-600/20"
+                                    className="w-full h-12 md:h-14 bg-violet-600 text-white hover:bg-violet-700 rounded-2xl  transition-all active:scale-95 shadow-xl shadow-violet-600/20"
                                     disabled={isLoading}
                                 >
                                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Giriş Yap"}
@@ -135,7 +135,7 @@ export default function LoginPage() {
                             {/* Direct Google Sign-In Button */}
                             <Button
                                 type="button"
-                                className="w-full h-14 bg-[#111] border border-white/10 text-white hover:bg-white/5 hover:border-white/20 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl group"
+                                className="w-full h-12 md:h-14 bg-[#111] border border-white/10 text-white hover:bg-white/5 hover:border-white/20 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl group"
                                 onClick={handleGoogleLogin}
                                 disabled={isLoading}
                             >
@@ -161,11 +161,11 @@ export default function LoginPage() {
                         </CardContent>
                     </Card>
 
-                    <p className="text-center mt-8 text-[11px] text-slate-600 font-medium uppercase tracking-widest px-4 leading-relaxed">
+                    <p className="text-center mt-6 md:mt-8 text-[11px] text-slate-600 font-medium uppercase tracking-widest px-4 leading-relaxed">
                         Bu sistem sadece yetkili personel kullanımı içindir. <br /> Tüm işlemler kayıt altına alınmaktadır.
                     </p>
 
-                    <div className="flex justify-center gap-6 mt-6">
+                    <div className="flex justify-center gap-6 mt-4 md:mt-6 pb-4">
                         <a href="/privacy-policy" className="text-[10px] text-slate-700 hover:text-slate-400 transition-colors uppercase tracking-widest font-medium underline underline-offset-4">Gizlilik Politikası</a>
                         <a href="/terms" className="text-[10px] text-slate-700 hover:text-slate-400 transition-colors uppercase tracking-widest font-medium underline underline-offset-4">Kullanım Koşulları</a>
                     </div>

@@ -1,11 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model Shop {
@@ -159,6 +159,7 @@ model Customer {
   isEInvoiceUser Boolean?  @default(false) // EDM CheckUser sonucu: true=e-Fatura, false=e-Arsiv
 
   @@unique([shopId, phone])
+  @@index([shopId, taxNumber])
 }
 
 model ServiceTicket {
@@ -530,6 +531,13 @@ model Transaction {
   supplier         Supplier?       @relation("SupplierToTransaction", fields: [supplierId], references: [id])
   shop             Shop            @relation(fields: [shopId], references: [id])
   user             User            @relation(fields: [userId], references: [id])
+
+  @@index([shopId])
+  @@index([createdAt])
+  @@index([category])
+  @@index([customerId])
+  @@index([debtId])
+  @@index([financeAccountId])
 }
 
 model Attachment {

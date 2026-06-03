@@ -38,8 +38,30 @@ export function StatCard({
     usdValue,
     defaultCurrency,
     outOfStockCount,
+    isLoading
 }: any) {
     const Icon = IconMap[iconId] || ShoppingCart;
+
+    if (isLoading) {
+        return (
+            <div className="h-full w-full">
+                <Card className="rounded-[1.5rem] bg-card/40 border border-border/20 h-full animate-pulse overflow-hidden">
+                    <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
+                        <div className="flex justify-between items-start">
+                            <div className="h-10 w-10 bg-muted/60 rounded-xl" />
+                            <div className="h-5 w-12 bg-muted/40 rounded-full" />
+                        </div>
+                        <div className="space-y-3 mt-4">
+                            <div className="h-3 w-16 bg-muted/30 rounded-md" />
+                            <div className="h-8 w-24 bg-muted/50 rounded-lg" />
+                            <div className="h-3 w-32 bg-muted/20 rounded-md" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     const showUSD = defaultCurrency === "USD" && usdValue !== undefined && usdValue !== null;
 
     const displayValue = showUSD
@@ -51,33 +73,33 @@ export function StatCard({
             <Card
                 onClick={onClick}
                 className={cn(
-                    "rounded-[2rem] bg-card border border-border/40 transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-primary/5 cursor-pointer active:scale-95 h-full",
-                    "@min-w-[400px]:rounded-[3rem]"
+                    "rounded-[1.5rem] bg-card/60 backdrop-blur-xl border border-border/40 transition-all duration-300 hover:-translate-y-1.5 group relative overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-primary/5 cursor-pointer active:scale-[0.98] h-full",
+                    "@min-w-[400px]:rounded-[2rem]"
                 )}>
-                <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full relative z-10 font-sans">
-                    <Icon className="absolute -bottom-1 -right-1 h-20 w-20 opacity-[0.03] -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110" />
+                <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full relative z-10 font-sans">
+                    <Icon className="absolute -bottom-2 -right-2 h-24 w-24 opacity-[0.02] -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110" />
 
                     <div className="flex items-start justify-between relative">
                         <div className={cn(
-                            "p-3 rounded-2xl border border-border/50 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6",
+                            "p-2.5 rounded-xl border border-border/50 shadow-sm transition-all duration-500 group-hover:scale-105 group-hover:rotate-3",
                             bgClass
                         )}>
-                            <Icon className={cn("h-6 w-6", colorClass)} />
+                            <Icon className={cn("h-5 w-5", colorClass)} />
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-end gap-1.5">
                             {showUSD && (
-                                <span className="text-[min(2.5cqw,10px)] @min-w-[300px]:text-[10px] bg-blue-500/10 px-[2cqw] py-[1cqw] @min-w-[300px]:px-3 @min-w-[300px]:py-1.5 rounded-full border border-blue-500/20 text-blue-500 tracking-tighter uppercase font-bold">
+                                <span className="text-[9px] bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20 text-blue-500 tracking-tighter uppercase font-bold">
                                     USD
                                 </span>
                             )}
                             {trend && !showUSD && (
-                                <span className="text-[min(2.5cqw,10px)] @min-w-[300px]:text-[10px] bg-emerald-500/10 px-[2cqw] py-[1cqw] @min-w-[300px]:px-3 @min-w-[300px]:py-1.5 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase">
-                                    {trend} Δ
+                                <span className="text-[9px] bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase font-bold">
+                                    {trend}
                                 </span>
                             )}
                             {badge && (
                                 <span className={cn(
-                                    "text-[min(2.5cqw,10px)] @min-w-[300px]:text-[10px] px-[2cqw] py-[1cqw] @min-w-[300px]:px-3 @min-w-[300px]:py-1.5 rounded-full border border-border/50 tracking-tighter uppercase shadow-sm",
+                                    "text-[9px] px-2.5 py-1 rounded-full border border-border/50 tracking-tighter uppercase font-bold shadow-sm",
                                     colorClass,
                                     bgClass
                                 )}>
@@ -87,45 +109,43 @@ export function StatCard({
                         </div>
                     </div>
 
-                    <div className="mt-4 relative">
-                        <p className="text-[10px] mb-1.5 text-muted-foreground/60 tracking-[0.2em] uppercase font-semibold">{label}</p>
-                        <div className="flex items-baseline gap-3 flex-wrap">
+                    <div className="mt-2 relative">
+                        <p className="text-[9px] mb-1 text-muted-foreground/50 tracking-[0.15em] uppercase font-bold">{label}</p>
+                        <div className="flex items-baseline gap-2 flex-wrap">
                             {outOfStockCount !== undefined ? (
-                                <div className="flex items-baseline gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <h3 className="text-4xl tracking-tighter font-black text-amber-500">{value}</h3>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 mt-1">Kritik</span>
+                                <div className="flex items-baseline gap-2">
+                                    <div className="flex flex-col items-start">
+                                        <h3 className="text-2xl tracking-tighter font-black text-amber-500">{value}</h3>
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-amber-500/60">Kritik</span>
                                     </div>
-                                    <div className="h-10 w-px bg-border/60 mx-1" />
-                                    <div className="flex flex-col items-center">
-                                        <h3 className="text-4xl tracking-tighter font-black text-rose-500">{outOfStockCount}</h3>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-rose-500 mt-1">Biten</span>
+                                    <div className="h-6 w-px bg-border/40 mx-1 self-center" />
+                                    <div className="flex flex-col items-start">
+                                        <h3 className="text-2xl tracking-tighter font-black text-rose-500">{outOfStockCount}</h3>
+                                        <span className="text-[7px] font-black uppercase tracking-widest text-rose-500/60">Biten</span>
                                     </div>
                                 </div>
                             ) : typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
                                 <RevealFinancial
                                     amount={displayValue}
                                     prefix={displayValue.startsWith('$') || displayValue.startsWith('₺') ? "" : "₺"}
-                                    className={cn("text-3xl tracking-tight font-bold", colorClass)}
+                                    className={cn("text-2xl tracking-tight font-bold", colorClass)}
                                 />
                             ) : (
-                                <h3 className={cn("text-4xl tracking-tighter font-black", colorClass)}>{displayValue}</h3>
+                                <h3 className={cn("text-2xl tracking-tighter font-black", colorClass)}>{displayValue}</h3>
                             )}
 
-                            {/* TL secondary value when USD mode is active - Moved next to value */}
                             {showUSD && value && (
-                                <p className="text-[11px] text-muted-foreground/30 tracking-tight font-medium pb-1.5 italic">
+                                <p className="text-[10px] text-muted-foreground/30 tracking-tight font-medium pb-1 italic">
                                     ({value} TL)
                                 </p>
                             )}
                         </div>
-                        {/* Normal subValue */}
+
                         {!showUSD && subValue && (
-                            <p className="text-[min(2.5cqw,11px)] @min-w-[300px]:text-[11px] text-muted-foreground/50 mt-[1cqh] @min-w-[300px]:mt-2 tracking-tight">{subValue}</p>
+                            <p className="text-[10px] text-muted-foreground/40 mt-1 tracking-tight font-medium leading-tight">{subValue}</p>
                         )}
-                        {/* subValue always shown below the TL line */}
                         {showUSD && subValue && (
-                            <p className="text-[min(2cqw,10px)] @min-w-[300px]:text-[10px] text-muted-foreground/35 mt-0.5 tracking-tight">{subValue}</p>
+                            <p className="text-[9px] text-muted-foreground/30 mt-0.5 tracking-tight font-medium leading-tight">{subValue}</p>
                         )}
                     </div>
                 </CardContent>

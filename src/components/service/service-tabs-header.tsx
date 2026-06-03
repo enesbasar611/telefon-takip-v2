@@ -6,7 +6,7 @@ import { getShop } from "@/lib/actions/setting-actions";
 import { getIndustryLabel } from "@/lib/industry-utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { TechnicalServiceAnalysisModal } from "@/components/service/technical-service-analysis-modal";
-import { Zap, Sparkles } from "lucide-react";
+import { Zap } from "lucide-react";
 
 export function ServiceTabsHeader() {
     const { data: tickets = [] } = useQuery({
@@ -25,7 +25,6 @@ export function ServiceTabsHeader() {
 
     const activeCount = tickets.filter((t: any) => ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"].includes(t.status)).length;
     const serviceLabel = getIndustryLabel(shop, "serviceTicket");
-    const assetLabel = getIndustryLabel(shop, "customerAsset");
 
     return (
         <PageHeader
@@ -34,18 +33,15 @@ export function ServiceTabsHeader() {
             icon={Zap}
             badge={
                 <div className="flex items-center gap-3">
-                    <TechnicalServiceAnalysisModal />
-                    <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                        <span className="relative flex h-2 w-2">
+                    <div className="flex items-center gap-2.5 bg-emerald-500/[0.08] px-4 py-2 rounded-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)] transition-all hover:bg-emerald-500/[0.12] group">
+                        <div className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span className="text-[10px]  text-emerald-500 uppercase tracking-wider">{activeCount} Aktif İşlem</span>
+                        </div>
+                        <span className="text-[10px] font-black text-emerald-400/90 uppercase tracking-[0.1em]">{activeCount} AKTİF İŞLEM</span>
                     </div>
 
-                    <button className="flex items-center gap-2 bg-[#111111] hover:bg-[#18181A] px-3 py-1 rounded-full border border-[#333333] transition-colors group">
-                        <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-                        <span className="text-[10px]  text-white uppercase tracking-wider">BAŞAR AI İLE {assetLabel.toLocaleUpperCase('tr-TR')} GİRİŞİ</span>
-                    </button>
+                    <TechnicalServiceAnalysisModal />
                 </div>
             }
         />

@@ -72,7 +72,6 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       subItems: [
         { label: `Yeni ${labels.customerAsset} Girişi`, href: "/servis/yeni" },
         { label: `${labels.serviceTicket} Merkezi`, href: "/servis" },
-        { label: `${labels.serviceTicket} Listesi`, href: "/servis/liste" },
       ]
     },
     {
@@ -176,7 +175,7 @@ export function Sidebar({ className, user, shop, onNavigate }: {
   const industryConfig = getIndustryConfig(shop?.industry);
 
   return (
-    <div className={cn("flex h-screen w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
+    <div className={cn("flex h-full w-64 flex-col bg-background border-r border-border/50 z-20 overflow-hidden", className)}>
       <div className="flex h-28 items-center px-4 border-b border-border/50 flex-shrink-0 bg-gradient-to-br from-primary/10 via-background to-transparent relative overflow-hidden group">
         {/* Subtle Decorative Background Glow */}
         <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 blur-[50px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />

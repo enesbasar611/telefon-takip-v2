@@ -38,6 +38,10 @@ import {
     ArrowLeftRight,
     Eye
 } from "lucide-react";
+
+import { VeresiyeToolbar } from './veresiye/veresiye-toolbar';
+import { VeresiyePaymentSummaryModal, type PaymentSummary } from './veresiye/veresiye-payment-summary-modal';
+import { VeresiyePaymentModal } from './veresiye/veresiye-payment-modal';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,6 +65,10 @@ import { getAccounts } from "@/lib/actions/finance-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { getCustomerById } from "@/lib/actions/customer-actions";
+import { VeresiyeStats } from "./veresiye/veresiye-stats";
+import { VeresiyeAnalysisSide } from "./veresiye/veresiye-analysis-side";
+import { VeresiyeCustomerCard } from "./veresiye/veresiye-customer-card";
+import { VeresiyeEmptyState } from "./veresiye/veresiye-empty-state";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -391,8 +399,15 @@ export function VeresiyeClient({
 
         startTransition(async () => {
             const res = await deleteCustomerPayment(txId);
-            if (res.success) {
-                toast.success("Tahsilat geri alındı. Borç bakiyeleri güncellendi.");
+            if (res.success && res.before && res.after) {
+                const diffTRY = res.after.totalRemainingTRY - res.before.totalRemainingTRY;
+                const diffUSD = res.after.totalRemainingUSD - res.before.totalRemainingUSD;
+
+                let impactMsg = "Tahsilat geri alındı.";
+                if (diffTRY > 0) impactMsg += ` Borç: +₺${diffTRY.toLocaleString('tr-TR')}`;
+                if (diffUSD > 0) impactMsg += ` Borç: +$${diffUSD.toLocaleString('tr-TR')}`;
+
+                toast.success(impactMsg);
                 invalidateReceivables();
                 router.refresh();
             } else {
@@ -411,8 +426,8 @@ export function VeresiyeClient({
                 editTxNotes,
                 rates?.usd || 32.5
             );
-            if (res.success) {
-                toast.success("Tahsilat güncellendi.");
+            if (res.success && res.after) {
+                toast.success(`Tahsilat güncellendi. Yeni Borç: ₺${res.after.totalRemainingTRY.toLocaleString('tr-TR')}${res.after.totalRemainingUSD > 0 ? ` + $${res.after.totalRemainingUSD.toLocaleString('tr-TR')}` : ""}`);
                 setEditingTransaction(null);
                 invalidateReceivables();
                 router.refresh();
@@ -422,15 +437,7 @@ export function VeresiyeClient({
         });
     };
 
-    const [paymentSummary, setPaymentSummary] = useState<{
-        customerId: string;
-        customerName: string;
-        items: string[];
-        paidAmount: number;
-        currency: string;
-        remainingTRY: number;
-        remainingUSD: number;
-    } | null>(null);
+    const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
 
     const [statementModalOpen, setStatementModalOpen] = useState(false);
 
@@ -715,51 +722,56 @@ export function VeresiyeClient({
                 ignoreExcess: ignoreBalance
             });
 
-            if (res.success) {
+            if (res.success && res.before && res.after) {
                 toast.success("Ödeme başarıyla tahsil edildi.");
                 invalidateReceivables();
                 setNeedsRefresh(true);
 
                 // Trigger whatsapp receipt if customer has phone
                 if (paymentCustomer.phone) {
-                    setNeedsRefresh(true);
-                    setWhatsappCustomer(paymentCustomer);
-                    const paidText = paymentCurrency === "USD" ? `$${amount.toLocaleString('tr-TR')}` : `₺${amount.toLocaleString('tr-TR')}`;
+                    const { before, after, paidAmount, currency } = res;
+                    const isUSD = currency === "USD";
+                    const symbol = isUSD ? "$" : "₺";
+
                     let msg = `*${paymentCustomer.name} - Tahsilat Makbuzu*\n\n`;
-                    msg += `✅ *Ödeme Alındı:* ${paidText}\n\n`;
+                    msg += `✅ *Ödeme Alındı:* ${symbol}${paidAmount.toLocaleString('tr-TR')}\n`;
+                    msg += `📅 *Tarih:* ${format(new Date(), "dd.MM.yyyy HH:mm")}\n\n`;
 
-                    const paidItems = selectedDebtIds.length > 0
-                        ? paymentCustomer?.debtItems.filter((d: any) => selectedDebtIds.includes(d.id))
-                        : [];
+                    msg += `*📊 Borç Durum Özeti:*\n`;
+                    msg += `--------------------\n`;
 
-                    if (paidItems.length > 0) {
-                        msg += `*Ödeme Detayı:*\n`;
-                        const sortedPaidItems = [...paidItems].sort((a, b) =>
-                            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                        );
-                        sortedPaidItems.forEach((d: any) => {
-                            msg += `• ${d.notes || 'Borç'}: ${d.currency === 'USD' ? '$' : '₺'}${Number(d.amount).toLocaleString('tr-TR')}\n`;
-                        });
+                    const beforeTotal = before.totalRemainingTRY + (before.totalRemainingUSD * (rates?.usd || 32.5));
+                    const afterTotal = after.totalRemainingTRY + (after.totalRemainingUSD * (rates?.usd || 32.5));
+
+                    if (before.totalRemainingTRY > 0 || after.totalRemainingTRY > 0) {
+                        msg += `*Türk Lirası (₺):*\n`;
+                        msg += `• Önceki Bakiye: ₺${before.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+                        msg += `• Ödenen Tutarı: ${!isUSD ? '₺' + paidAmount.toLocaleString('tr-TR') : '-'}\n`;
+                        msg += `• Kalan Bakiye: ₺${after.totalRemainingTRY.toLocaleString('tr-TR')}\n\n`;
+                    }
+
+                    if (before.totalRemainingUSD > 0 || after.totalRemainingUSD > 0) {
+                        msg += `*Amerikan Doları ($):*\n`;
+                        msg += `• Önceki Bakiye: $${before.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+                        msg += `• Ödenen Tutarı: ${isUSD ? '$' + paidAmount.toLocaleString('tr-TR') : '-'}\n`;
+                        msg += `• Kalan Bakiye: $${after.totalRemainingUSD.toLocaleString('tr-TR')}\n\n`;
+                    }
+
+                    if (after.balance > 0 || after.balanceUsd > 0) {
+                        msg += `*🎁 Emanet Bakiye:*\n`;
+                        if (after.balance > 0) msg += `• TL Emanet: ₺${after.balance.toLocaleString('tr-TR')}\n`;
+                        if (after.balanceUsd > 0) msg += `• USD Emanet: $${after.balanceUsd.toLocaleString('tr-TR')}\n`;
                         msg += `\n`;
                     }
 
-                    msg += `*🔴 Toplam Güncel Borç:*\n`;
-                    if ((res.remainingTRY || 0) > 0) {
-                        msg += `₺${(res.remainingTRY ?? 0).toLocaleString('tr-TR')} (~$${Math.round((res.remainingTRY ?? 0) / (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
-                    }
-                    if ((res.remainingUSD || 0) > 0) {
-                        msg += `$${(res.remainingUSD ?? 0).toLocaleString('tr-TR')} (~₺${Math.round((res.remainingUSD ?? 0) * (rates?.usd || 32.5)).toLocaleString('tr-TR')})\n`;
-                    }
-
-                    if ((res.remainingTRY || 0) <= 0 && (res.remainingUSD || 0) <= 0) {
-                        msg += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
+                    msg += `--------------------\n`;
+                    if (after.totalRemainingTRY <= 0 && after.totalRemainingUSD <= 0) {
+                        msg += `✅ *Borcunuz tamamen kapanmıştır.* Teşekkür ederiz.\n`;
                     } else {
-                        const total = (res.remainingTRY || 0) + ((res.remainingUSD || 0) * (rates?.usd || 32.5));
-                        msg += `--------------------\n`;
-                        msg += `*Genel Toplam:* ₺${Math.round(total).toLocaleString('tr-TR')}\n`;
+                        msg += `*GÜNCEL TOPLAM:* ₺${Math.round(afterTotal).toLocaleString('tr-TR')}\n`;
                     }
 
-                    msg += `\n_İyi çalışmalar._`;
+                    msg += `\n_Hayırlı işler dileriz._`;
 
                     setWhatsappMessageContent(msg);
                     setWhatsappModalOpen(true);
@@ -771,13 +783,15 @@ export function VeresiyeClient({
                     : ["Genel Tahsilat"];
 
                 setPaymentSummary({
-                    customerId: paymentCustomer.customerId,
+                    customerId: paymentCustomer.customerId || paymentCustomer.id,
                     customerName: paymentCustomer.name,
                     items: itemsNames,
                     paidAmount: amount,
                     currency: paymentCurrency,
-                    remainingTRY: res.remainingTRY || 0,
-                    remainingUSD: res.remainingUSD || 0
+                    previousTRY: res.before.totalRemainingTRY,
+                    previousUSD: res.before.totalRemainingUSD,
+                    remainingTRY: res.after.totalRemainingTRY,
+                    remainingUSD: res.after.totalRemainingUSD
                 });
 
                 setPaymentCustomer(null);
@@ -794,11 +808,19 @@ export function VeresiyeClient({
 
     const handleDeleteDebt = async (debtId: string) => {
         if (!confirm("Bu borç kaydını kalıcı olarak silmek istediğinize emin misiniz?")) return;
+
         startTransition(async () => {
             const { deleteDebt } = await import("@/lib/actions/debt-actions");
             const res = await deleteDebt(debtId);
-            if (res.success) {
-                toast.success("Borç kaydı başarıyla silindi.");
+            if (res.success && res.before && res.after) {
+                const diffTRY = res.before.totalRemainingTRY - res.after.totalRemainingTRY;
+                const diffUSD = res.before.totalRemainingUSD - res.after.totalRemainingUSD;
+
+                let impactMsg = "Borç silindi.";
+                if (diffTRY > 0) impactMsg += ` ₺${diffTRY.toLocaleString('tr-TR')} düşüldü.`;
+                if (diffUSD > 0) impactMsg += ` $${diffUSD.toLocaleString('tr-TR')} düşüldü.`;
+
+                toast.success(impactMsg);
                 invalidateReceivables();
                 if (historyCustomer) {
                     setHistoryCustomer({
@@ -1279,35 +1301,13 @@ export function VeresiyeClient({
             />
 
             <LayoutCustomizer sectionKey="veresiye_stats" settings={settings} onUpdate={() => router.refresh()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {statsData.map((stat: any, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            onClick={() => {
-                                setStatsModalType(stat.type);
-                                setStatsModalOpen(true);
-                            }}
-                            className="cursor-pointer"
-                        >
-                            <Card className="border-none bg-muted/40 backdrop-blur-2xl shadow-xl shadow-black/5 overflow-hidden rounded-[2.5rem] group hover:bg-muted/50 transition-all duration-500 border border-border">
-                                <CardHeader className="flex flex-row items-center justify-between px-8 pt-8 pb-2">
-                                    <CardTitle className="text-[10px] font-black  uppercase tracking-[0.2em] text-muted-foreground/70">{stat.title}</CardTitle>
-                                    <div className={cn("p-4 rounded-2xl transition-all duration-500 group-hover:scale-110", stat.bg, stat.color)}>
-                                        <stat.icon className="w-5 h-5" />
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="px-8 pb-8">
-                                    <div className="text-3xl font-black text-foreground tabular-nums tracking-tighter mb-1">{stat.value}</div>
-                                    <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{stat.subValue}</p>
-                                </CardContent>
-                                <div className={cn("absolute bottom-0 left-0 w-full h-1 opacity-0 group-hover:opacity-100 transition-opacity", stat.bg)} />
-                            </Card>
-                        </motion.div>
-                    ))}
-                </div>
+                <VeresiyeStats
+                    statsData={statsData}
+                    onStatClick={(type) => {
+                        setStatsModalType(type as any);
+                        setStatsModalOpen(true);
+                    }}
+                />
             </LayoutCustomizer>
 
             {/* --- Main Section --- */}
@@ -1315,167 +1315,24 @@ export function VeresiyeClient({
 
                 {/* Left Sidebar: Aging Analysis & Insights */}
                 <LayoutCustomizer sectionKey="veresiye_analysis" settings={settings} onUpdate={() => router.refresh()} className="lg:col-span-3">
-                    <div className="space-y-10">
-                        <Card className="border-none bg-muted/30 backdrop-blur-3xl shadow-2xl shadow-black/5 overflow-hidden rounded-[2.5rem] border border-border">
-                            <CardHeader className="px-8 pt-8 pb-4">
-                                <CardTitle className="font-medium text-[10px]  uppercase flex items-center gap-4 text-muted-foreground/80">
-                                    <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
-                                    ANALİZ MERKEZİ
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-8 px-8 pb-10 pt-4">
-                                {[
-                                    { label: "0 - 30 GÜNLÜK", amount: aging['0-30'].amount, percent: aging['0-30'].percentage, color: "indigo" },
-                                    { label: "31 - 60 GÜNLÜK", amount: aging['31-60'].amount, percent: aging['31-60'].percentage, color: "amber" },
-                                    { label: "60 GÜN+ KRİTİK", amount: aging['60+'].amount, percent: aging['60+'].percentage, color: "rose" }
-                                ].map((g, i) => (
-                                    <div key={i} className="space-y-4">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-[10px]  text-muted-foreground/80 uppercase">{g.label}</span>
-                                            <span className={cn("text-xs  tabular-nums", `text-${g.color}-500 px-3 py-1 rounded-full bg-${g.color}-500/10 border border-${g.color}-500/10`)}>
-                                                {defaultCurrency === 'USD' ? '$' : '₺'}{Math.round(g.amount).toLocaleString('tr-TR')}
-                                            </span>
-                                        </div>
-                                        <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-[2px]">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${g.percent}%` }}
-                                                transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 + (i * 0.2) }}
-                                                className={cn("h-full rounded-full relative overflow-hidden", `bg-${g.color}-500`)}
-                                            >
-                                                <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                            </motion.div>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <div className="p-6 bg-muted/20 rounded-[1.5rem] border border-border relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-500">
-                                    <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 dark:opacity-5 transition-all duration-700">
-                                        <AlertCircle className="w-24 h-24 text-indigo-500 -rotate-12" />
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground  italic leading-relaxed relative z-10 antialiased">
-                                        "{aging['60+'].percentage > 30 ? 'Dikkat seviyesi yüksek! Ödeme süresi geciken alacaklar nakit akışını zorlayabilir. ' : 'Portföy sağlığı stabil. 60 gün üzeri alacak payınız güvenli baremde. '} Mevcut risk oranı: %{Math.round(aging['60+'].percentage)}"
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* AI Insight Card: Futuristic */}
-                        <motion.div whileHover={{ y: -8, scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                            <Card className="border-none bg-indigo-600 shadow-[0_20px_50px_rgba(79,70,229,0.3)] text-white overflow-hidden rounded-[2.5rem] relative group cursor-pointer border border-border/50">
-                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all duration-700 group-hover:scale-125">
-                                    <CalendarClock className="w-32 h-32 rotate-12" />
-                                </div>
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent)] pointer-events-none" />
-                                <CardHeader className="px-8 pt-10 pb-4">
-                                    <CardTitle className="font-medium text-[10px]  uppercase flex items-center gap-3 opacity-90">
-                                        <TrendingDown className="w-4 h-4" />
-                                        AI PROJEKSİYON
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="px-8 pb-12 pt-2">
-                                    <h3 className="font-medium text-2xl  leading-tight mb-4 uppercase">Ay Sonu Tahsilat Öngörüsü</h3>
-                                    <p className="text-sm  leading-relaxed opacity-80 antialiased">
-                                        Algoritmik analiz, toplam alacaklarınızın <span className="underline decoration-white/40 underline-offset-8">%{Math.max(10, 100 - Math.round(aging['60+'].percentage))}</span>'lik kısmının mevcut tahsilat ivmesiyle bu dönem içinde kasaya gireceğini öngörüyor.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    </div>
+                    <VeresiyeAnalysisSide aging={aging} defaultCurrency={defaultCurrency} />
                 </LayoutCustomizer>
 
                 {/* Right: Premium Customer Table */}
                 <LayoutCustomizer sectionKey="veresiye_table" settings={settings} onUpdate={() => router.refresh()} className={cn(isAnalysisHidden ? "lg:col-span-12" : "lg:col-span-9")}>
                     <div className="space-y-8">
-                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 px-2">
-                            <div className="space-y-2">
-                                <h2 className="font-medium text-3xl text-foreground uppercase">Müşteri Portföyü</h2>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[10px]  text-muted-foreground/80 opacity-80">Aktif alacaklar ve cari hareketler listesi</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto mt-2">
-                                <div className="relative group flex-1 md:flex-none md:w-80">
-                                    <div className="absolute inset-0 bg-indigo-500/5 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
-                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/80 group-focus-within:text-indigo-400 transition-colors z-20" />
-                                    <Input
-                                        placeholder="İsim veya telefon numarası..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-14 h-14 bg-muted/50 border-border shadow-2xl rounded-2xl focus-visible:ring-indigo-500/20 focus-visible:bg-muted transition-all text-sm text-foreground relative z-10"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 relative z-10">
-                                <Select value={debtFilter} onValueChange={(val: any) => setDebtFilter(val)}>
-                                    <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
-                                        <SelectValue placeholder="Borç Filtresi" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">TÜM MÜŞTERİLER</SelectItem>
-                                        <SelectItem value="hasDebt">BORCU OLANLAR</SelectItem>
-                                        <SelectItem value="noDebt">BORCU OLMAYANLAR</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
-                                    <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
-                                        <SelectValue placeholder="Sıralama" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="newest">YENİDEN ESKİYE</SelectItem>
-                                        <SelectItem value="oldest">ESKİDEN YENİYE</SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
-                                    {(['all', 'overdue', 'tracking'] as const).map((s) => (
-                                        <button
-                                            key={s}
-                                            onClick={() => handleFilterChange(s)}
-                                            className={cn(
-                                                "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all",
-                                                filterStatus === s
-                                                    ? "bg-background dark:bg-zinc-800 text-indigo-600 shadow-sm"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                            )}
-                                        >
-                                            {s === 'all' ? 'Tümü' : s === 'overdue' ? 'Gecikenler' : 'Takip'}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* View Toggle Buttons */}
-                                <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
-                                    <button
-                                        onClick={() => handleViewModeChange('list')}
-                                        className={cn(
-                                            "p-2 rounded-lg transition-all",
-                                            viewMode === 'list'
-                                                ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
-                                                : "text-muted-foreground hover:text-foreground"
-                                        )}
-                                        title="Liste Görünümü"
-                                    >
-                                        <List className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleViewModeChange('grid')}
-                                        className={cn(
-                                            "p-2 rounded-lg transition-all",
-                                            viewMode === 'grid'
-                                                ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
-                                                : "text-muted-foreground hover:text-foreground"
-                                        )}
-                                        title="Izgara Görünümü"
-                                    >
-                                        <LayoutGrid className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <VeresiyeToolbar
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            debtFilter={debtFilter}
+                            onDebtFilterChange={(val: any) => setDebtFilter(val)}
+                            sortOrder={sortOrder}
+                            onSortOrderChange={(val: any) => setSortOrder(val)}
+                            filterStatus={filterStatus}
+                            onFilterStatusChange={handleFilterChange}
+                            viewMode={viewMode}
+                            onViewModeChange={handleViewModeChange}
+                        />
 
                         <Card className="bg-muted/20 backdrop-blur-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-border relative z-10 min-h-[600px]">
                             <div className={cn("transition-all duration-500 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
@@ -1488,243 +1345,61 @@ export function VeresiyeClient({
                                     )}>
                                         <AnimatePresence mode="popLayout">
                                             {aggregatedData.map((item, idx) => (
-                                                <React.Fragment key={item.customerId}>
-                                                    <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: idx * 0.03 }}
-                                                            className={cn(
-                                                                "group relative transition-all overflow-hidden cursor-pointer",
-                                                                viewMode === 'list'
-                                                                    ? "p-4 md:px-8 py-4 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/5 border-b border-border/5"
-                                                                    : "p-3 md:p-4 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-md shadow-md hover:shadow-xl hover:border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3",
-                                                                selectedCustomerIds.includes(item.customerId) && (viewMode === 'list' ? "bg-indigo-500/[0.04] dark:bg-indigo-500/10" : "ring-1 ring-indigo-500/50 bg-indigo-500/[0.02]"),
-                                                                (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? (viewMode === 'list' ? "bg-emerald-500/[0.04]" : "border-emerald-500/20") : (viewMode === 'list' ? "bg-rose-500/[0.04]" : "border-rose-500/20"),
-                                                                viewMode === 'list' && idx === aggregatedData.length - 1 && "border-b-0"
-                                                            )}
-                                                        >
-                                                            {/* Status Color Strip */}
-                                                            <div className={cn(
-                                                                "absolute left-0 top-0 bottom-0 w-[4px] transition-all group-hover:w-[6px]",
-                                                                (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0) ? "bg-emerald-500" : "bg-rose-500"
-                                                            )} />
-
-                                                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                                                <div className="shrink-0 relative flex items-center gap-3">
-                                                                    <div
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setSelectedCustomerIds(prev =>
-                                                                                prev.includes(item.customerId)
-                                                                                    ? prev.filter(id => id !== item.customerId)
-                                                                                    : [...prev, item.customerId]
-                                                                            );
-                                                                        }}
-                                                                        className={cn(
-                                                                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
-                                                                            selectedCustomerIds.includes(item.customerId)
-                                                                                ? "bg-indigo-500 border-indigo-500 shadow-md"
-                                                                                : "border-border bg-card group-hover:border-indigo-500/50"
-                                                                        )}
-                                                                    >
-                                                                        {selectedCustomerIds.includes(item.customerId) && <CheckCircle2 className="w-3 h-3 text-white" />}
-                                                                    </div>
-                                                                    <div
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setPortfolioCustomer(item);
-                                                                            handleFetchPortfolio(item.customerId);
-                                                                        }}
-                                                                        className={cn(
-                                                                            "w-8 h-8 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border",
-                                                                            (item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0)
-                                                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/10"
-                                                                                : "bg-rose-500/10 text-rose-600 border-rose-500/10"
-                                                                        )}
-                                                                    >
-                                                                        <User className="w-4 h-4" />
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex flex-col min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <h3 className={cn("font-bold text-foreground tracking-tight truncate", viewMode === 'grid' ? "text-sm" : "text-sm md:text-base")}>{item.name}</h3>
-                                                                        {viewMode === 'list' && (
-                                                                            <div className="flex flex-wrap gap-1.5 shrink-0">
-                                                                                {item.totalRemainingTRY > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">TL BORCU</span>}
-                                                                                {item.totalRemainingUSD > 0 && <span className="px-3 py-1 bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-rose-500/10">USD BORCU</span>}
-                                                                                {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && !item.balance && !item.balanceUsd && (
-                                                                                    <span className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-black rounded-full uppercase tracking-[0.1em] border-none shadow-lg shadow-emerald-500/20 flex items-center gap-1">
-                                                                                        <CheckCircle2 className="w-2.5 h-2.5" /> BORCU YOKTUR
-                                                                                    </span>
-                                                                                )}
-                                                                                {(item.balance > 0 || item.balanceUsd > 0) && (
-                                                                                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-black rounded-full uppercase tracking-tighter border border-emerald-500/10">EMANET BAKİYE</span>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 opacity-80">
-                                                                        <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                            <Phone className="w-3 h-3 text-muted-foreground/70" /> {item.phone || 'Sayı Yok'}
-                                                                        </span>
-                                                                        <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                                            <Calendar className="w-3 h-3 text-muted-foreground/70" /> {new Date(item.lastActivity).toLocaleDateString('tr-TR')} <span className="opacity-40 text-[10px]">{new Date(item.lastActivity).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                        </span>
-                                                                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 uppercase tracking-widest">
-                                                                            {item.debtCount} KALEM
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className={cn("flex flex-row items-center gap-4", viewMode === 'list' && "md:min-w-[150px]")}>
-                                                                <div className="flex flex-row items-center gap-3">
-                                                                    {item.totalRemainingTRY > 0 && (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                                ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                                                                ${(item.totalRemainingTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                    {item.totalRemainingUSD > 0 && (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                                ${item.totalRemainingUSD.toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                                                                ₺{Math.round(item.totalRemainingUSD * usdRate).toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                    {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && !item.balance && !item.balanceUsd && (
-                                                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">ÖDENDİ</span>
-                                                                    )}
-                                                                    {item.balance > 0 && (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                                - ₺{item.balance.toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">TL Emanet</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {item.balanceUsd > 0 && (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                                                                - ${item.balanceUsd.toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">USD Emanet</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && viewMode === 'list' && (
-                                                                        <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
-                                                                            <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
-                                                                            <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">
-                                                                                ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if (!item.phone) {
-                                                                                toast.error("Bu müşteriye ait bir telefon numarası bulunmuyor. Lütfen düzenleyerek ekleyin.");
-                                                                                return;
-                                                                            }
-                                                                            handleWhatsAppMessage(item);
-                                                                        }}
-                                                                        title="WhatsApp'tan Ekstre Gönder"
-                                                                        className={cn("rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                    >
-                                                                        <MessageCircle className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={async (e) => {
-                                                                            e.stopPropagation();
-                                                                            const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
-                                                                            try {
-                                                                                const res = await getCustomerStatement(item.customerId);
-                                                                                if (res.success) {
-                                                                                    const combined = [
-                                                                                        ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                                                                        ...(res.transactions || []).map((t: any) => ({
-                                                                                            ...t,
-                                                                                            type: 'PAYMENT',
-                                                                                            notes: t.notes || 'Tahsilat / Ödeme',
-                                                                                            amount: t.amount,
-                                                                                            remainingAmount: t.amount // Use amount as value
-                                                                                        }))
-                                                                                    ];
-                                                                                    setReceiptCustomer(item);
-                                                                                    setReceiptDebts(combined);
-                                                                                    toast.success("Hesap dökümü yüklendi.", { id: toastId });
-                                                                                } else {
-                                                                                    toast.error("Hata: " + res.error, { id: toastId });
-                                                                                }
-                                                                            } catch (err) {
-                                                                                toast.error("Bağlantı hatası.", { id: toastId });
-                                                                            }
-                                                                        }}
-                                                                        title="Borç Fişi Yazdır / WhatsApp"
-                                                                        className={cn("rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                    >
-                                                                        <Receipt className={viewMode === 'grid' ? "w-3.5 h-3.5" : "w-4 h-4"} />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            openCustomerStatement(item);
-                                                                        }}
-                                                                        title="Detayları Gör"
-                                                                        className={cn("rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/10 transition-all p-0 flex shrink-0", viewMode === 'grid' ? "h-8 w-8" : "h-9 w-9")}
-                                                                    >
-                                                                        <Eye className={viewMode === 'grid' ? "w-4 h-4" : "w-5 h-5"} />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setPaymentCustomer(item);
-                                                                            setPaymentCurrency("TRY");
-                                                                            setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
-                                                                        }}
-                                                                        className={cn("rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 uppercase font-bold tracking-widest transition-all shadow-lg shadow-emerald-500/10", viewMode === 'grid' ? "h-8 px-2 text-[8px]" : "h-9 px-4 text-[9px]")}
-                                                                    >
-                                                                        Ödeme
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className={cn("absolute right-4 top-1/2 -translate-y-1/2 transition-all duration-300", viewMode === 'grid' ? "opacity-0" : "opacity-0 group-hover:opacity-100")}>
-                                                                <ChevronDown className="w-5 h-5 text-muted-foreground/30 -rotate-90" />
-                                                            </div>
-                                                        </motion.div>
-                                                    </AddDebtModal>
-                                                </React.Fragment>
+                                                <VeresiyeCustomerCard
+                                                    key={item.customerId}
+                                                    item={item}
+                                                    idx={idx}
+                                                    viewMode={viewMode}
+                                                    usdRate={usdRate}
+                                                    rates={rates}
+                                                    isSelected={selectedCustomerIds.includes(item.customerId)}
+                                                    onSelect={(id) => {
+                                                        setSelectedCustomerIds(prev =>
+                                                            prev.includes(id)
+                                                                ? prev.filter(x => x !== id)
+                                                                : [...prev, id]
+                                                        );
+                                                    }}
+                                                    onWhatsApp={handleWhatsAppMessage}
+                                                    onReceipt={async (item) => {
+                                                        const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
+                                                        try {
+                                                            const res = await getCustomerStatement(item.customerId);
+                                                            if (res.success) {
+                                                                const combined = [
+                                                                    ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                                    ...(res.transactions || []).map((t: any) => ({
+                                                                        ...t,
+                                                                        type: 'PAYMENT',
+                                                                        notes: t.notes || 'Tahsilat / Ödeme',
+                                                                        amount: t.amount,
+                                                                        remainingAmount: t.amount
+                                                                    }))
+                                                                ];
+                                                                setReceiptCustomer(item);
+                                                                setReceiptDebts(combined);
+                                                                toast.success("Hesap dökümü yüklendi.", { id: toastId });
+                                                            } else {
+                                                                toast.error("Hata: " + res.error, { id: toastId });
+                                                            }
+                                                        } catch (err) {
+                                                            toast.error("Bağlantı hatası.", { id: toastId });
+                                                        }
+                                                    }}
+                                                    onDetail={openCustomerStatement}
+                                                    onPayment={(item) => {
+                                                        setPaymentCustomer(item);
+                                                        setPaymentCurrency("TRY");
+                                                        setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
+                                                    }}
+                                                />
                                             ))}
                                         </AnimatePresence>
                                     </div>
                                 )}
 
-                                {aggregatedData.length === 0 && !isPending && (
-                                    <div className="flex-1 flex flex-col items-center justify-center py-40 gap-8 grayscale opacity-40">
-                                        <div className="w-32 h-32 bg-white/5 rounded-[3rem] flex items-center justify-center border border-border/50 shadow-2xl">
-                                            <CheckCircle2 className="w-14 h-14 text-muted-foreground/80" />
-                                        </div>
-                                        <div className="text-center space-y-3 px-6">
-                                            <h3 className="font-medium text-2xl text-foreground uppercase">Borç Kaydı Yok</h3>
-                                            <p className="text-[10px]  text-muted-foreground/80 max-w-sm mx-auto leading-relaxed">Şu anda seçili filtrelere uygun herhangi bir alacak kaydı bulunmuyor.</p>
-                                        </div>
-                                    </div>
-                                )}
+                                {aggregatedData.length === 0 && !isPending && <VeresiyeEmptyState />}
+
                             </div>
 
                             {/* Bottom Decoration */}
@@ -1735,234 +1410,34 @@ export function VeresiyeClient({
             </div>
 
             {/* --- Payment Dialogs --- */}
-            < AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) { setPaymentCustomer(null); setPaymentAmount(""); setPaymentNotes(""); setPaymentMethod("CASH"); setSelectedAccountId(""); setIgnoreBalance(false); } }}>
-                <AlertDialogContent className="fixed z-[100] w-full max-w-[95vw] md:max-w-[600px] h-auto max-h-[95vh] bg-card border border-border/50 p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] shadow-2xl flex flex-col transition-all duration-500">
-                    {/* Header */}
-                    <div className="p-6 md:p-8 bg-gradient-to-br from-emerald-500/10 via-card to-card border-b border-border/50 relative overflow-hidden shrink-0">
-                        <div className="absolute top-0 right-0 p-6 opacity-[0.04]"><Wallet className="w-28 h-28 rotate-12" /></div>
-                        <div className="md:hidden w-12 h-1 bg-border rounded-full mx-auto mb-4" />
-                        <AlertDialogHeader className="relative z-10">
-                            <AlertDialogTitle className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tight">TAHSİLAT İŞLEMİ</AlertDialogTitle>
-                            <AlertDialogDescription className="text-muted-foreground text-sm font-medium pt-2 flex flex-wrap items-center gap-2">
-                                <span className="font-bold text-foreground">{paymentCustomer?.name}</span> için ödeme •
-                                <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold">₺{paymentCustomer?.totalRemainingTRY?.toLocaleString('tr-TR')}</span>
-                                {paymentCustomer?.totalRemainingUSD > 0 && (
-                                    <span className="px-2.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold">
-                                        ${paymentCustomer?.totalRemainingUSD?.toLocaleString('tr-TR')}
-                                    </span>
-                                )}
-                                {paymentCustomer?.balance > 0 && (
-                                    <span className="px-2.5 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-[10px] font-bold">
-                                        Emanet: ₺{paymentCustomer.balance.toLocaleString('tr-TR')}
-                                    </span>
-                                )}
-                                {paymentCustomer?.balanceUsd > 0 && (
-                                    <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-bold">
-                                        Emanet: ${paymentCustomer.balanceUsd.toLocaleString('tr-TR')}
-                                    </span>
-                                )}
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-6 md:p-8 space-y-8 overflow-y-auto flex-1 scrollbar-hide">
-                        {/* Currency Switch */}
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">ÖDEME BİRİMİ</Label>
-                            <div className="flex bg-muted/50 dark:bg-muted/30 p-1.5 rounded-2xl h-14 border border-border/50">
-                                <button onClick={() => handleCurrencySwitch("TRY")} className={cn("flex-1 text-xs font-bold rounded-xl transition-all duration-200", paymentCurrency === "TRY" ? "bg-card text-emerald-600 dark:text-emerald-400 shadow-sm border border-border/50" : "text-muted-foreground hover:text-foreground")}>TÜRK LİRASI (₺)</button>
-                                <button onClick={() => handleCurrencySwitch("USD")} className={cn("flex-1 text-xs font-bold rounded-xl transition-all duration-200", paymentCurrency === "USD" ? "bg-card text-blue-600 dark:text-blue-400 shadow-sm border border-border/50" : "text-muted-foreground hover:text-foreground")}>DOLAR ($)</button>
-                            </div>
-                        </div>
-
-                        {/* Amount Input */}
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">ÖDEME TUTARI</Label>
-                            <div className="relative group overflow-hidden rounded-2xl bg-muted/30 dark:bg-muted/20 border-2 border-border/60 focus-within:border-emerald-500/40 transition-all">
-                                <span className={cn(
-                                    "absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black transition-all duration-300",
-                                    paymentCurrency === "USD" ? "text-blue-500" : "text-emerald-500"
-                                )}>{paymentCurrency === "USD" ? '$' : '₺'}</span>
-                                <Input
-                                    type="number"
-                                    value={paymentAmount}
-                                    onChange={(e) => {
-                                        setPaymentAmount(e.target.value);
-                                        setIgnoreBalance(false);
-                                    }}
-                                    placeholder="0.00"
-                                    className="pl-16 pr-8 h-20 bg-transparent border-none text-3xl font-black focus-visible:ring-0 tabular-nums text-foreground"
-                                />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => {
-                                            const total = paymentCurrency === 'TRY'
-                                                ? (paymentCustomer?.totalRemainingTRY + (paymentCustomer?.totalRemainingUSD * (rates?.usd || 32.5)))
-                                                : (paymentCustomer?.totalRemainingUSD + (paymentCustomer?.totalRemainingTRY / (rates?.usd || 32.5)));
-                                            setPaymentAmount(String(Math.ceil(total)));
-                                            setIgnoreBalance(true);
-                                        }}
-                                        className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[10px] font-black transition-all uppercase tracking-wider shadow-sm hover:shadow-emerald-500/20"
-                                    >
-                                        BORCU KAPAT
-                                    </Button>
-                                </div>
-                            </div>
-                            {paymentCurrency === 'TRY' && paymentCustomer?.totalRemainingUSD > 0 && (
-                                <p className="text-[10px] text-muted-foreground italic px-1">
-                                    Not: Tutar önce TL borçlarına, artan kısım güncel kurdan ($1 = ₺{rates?.usd || 32.5}) çevrilerek Dolar borçlarına sayılır.
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Notes */}
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">AÇIKLAMA (OPSİYONEL)</Label>
-                            <Input
-                                value={paymentNotes}
-                                onChange={(e) => setPaymentNotes(e.target.value)}
-                                placeholder="Tahsilat için ek açıklama yazın..."
-                                className="h-12 bg-muted/30 dark:bg-muted/20 border border-border/50 rounded-xl px-5 focus-visible:ring-1 focus-visible:ring-indigo-500/20 text-sm text-foreground placeholder:text-muted-foreground/50"
-                            />
-                        </div>
-
-                        {/* Payment Method */}
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">ÖDEME YÖNTEMİ</Label>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[
-                                    { id: 'CASH', label: 'Nakit', icon: Wallet, desc: 'Nakit Kasa' },
-                                    { id: 'CARD', label: 'Kart', icon: CreditCard, desc: 'POS / Banka' },
-                                    { id: 'TRANSFER', label: 'Havale/EFT', icon: RefreshCcw, desc: 'Banka Hesabı' }
-                                ].map((method) => (
-                                    <button
-                                        key={method.id}
-                                        type="button"
-                                        onClick={() => {
-                                            setPaymentMethod(method.id as any);
-                                            const fa = accounts.filter((acc: any) =>
-                                                method.id === 'CASH' ? acc.type === 'CASH' :
-                                                    method.id === 'CARD' ? (acc.type === 'POS' || acc.type === 'BANK') :
-                                                        (acc.type === 'BANK')
-                                            );
-                                            if (fa.length > 0) setSelectedAccountId(fa[0].id);
-                                            else setSelectedAccountId("");
-                                        }}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center h-[4.5rem] gap-1.5 rounded-2xl border-2 transition-all duration-300 cursor-pointer",
-                                            paymentMethod === method.id
-                                                ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/25 scale-[1.03]"
-                                                : "bg-card border-border/60 text-muted-foreground hover:border-indigo-500/30 hover:bg-muted/30"
-                                        )}
-                                    >
-                                        <method.icon className="w-5 h-5" />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Account Selection */}
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={paymentMethod}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 8 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-3"
-                            >
-                                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">
-                                    {paymentMethod === 'CASH' ? 'KASA SEÇİMİ' : paymentMethod === 'CARD' ? 'POS / HESAP SEÇİMİ' : 'BANKA HESABI SEÇİMİ'}
-                                </Label>
-                                {(() => {
-                                    const filteredAccounts = accounts.filter((acc: any) =>
-                                        paymentMethod === 'CASH' ? acc.type === 'CASH' :
-                                            paymentMethod === 'CARD' ? (acc.type === 'POS' || acc.type === 'BANK') :
-                                                (acc.type === 'BANK')
-                                    );
-
-                                    if (filteredAccounts.length === 0) {
-                                        const isCash = paymentMethod === 'CASH';
-                                        return (
-                                            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-col gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                                                    <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                                                        {isCash ? 'NAKİT KASA BULUNAMADI' : 'BANKA / POS HESABI BULUNAMADI'}
-                                                    </span>
-                                                </div>
-                                                <p className="text-[10px] font-medium text-amber-700/80 dark:text-amber-300/70 pl-6">
-                                                    Tahsilat yapabilmek için Finans panelinden {isCash ? 'bir nakit kasa' : 'bir banka veya POS hesabı'} oluşturmalısınız.
-                                                </p>
-                                                {!isCash && (
-                                                    <p className="text-[9px] italic text-amber-600/60 dark:text-amber-400/50 pl-6 mt-1">
-                                                        * Havale/EFT işlemleri için en az bir banka hesabı gereklidir. Şimdilik sadece nakit kasa kullanabilirsiniz.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div className="space-y-2">
-                                            {filteredAccounts.map((acc: any) => (
-                                                <button
-                                                    key={acc.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedAccountId(acc.id)}
-                                                    className={cn(
-                                                        "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left",
-                                                        selectedAccountId === acc.id
-                                                            ? "bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/40 shadow-sm"
-                                                            : "bg-card border-border/50 hover:border-border hover:bg-muted/20"
-                                                    )}
-                                                >
-                                                    <div className={cn(
-                                                        "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-                                                        selectedAccountId === acc.id
-                                                            ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                                                            : "bg-muted/50 text-muted-foreground"
-                                                    )}>
-                                                        {acc.type === 'CASH' ? <Wallet className="w-5 h-5" /> : acc.type === 'POS' ? <CreditCard className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={cn("text-sm font-bold truncate", selectedAccountId === acc.id ? "text-indigo-600 dark:text-indigo-400" : "text-foreground")}>{acc.name}</p>
-                                                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{acc.type === 'CASH' ? 'Nakit Kasa' : acc.type === 'POS' ? 'POS Cihazı' : 'Banka Hesabı'}</p>
-                                                    </div>
-                                                    <div className="text-right shrink-0">
-                                                        <p className="text-xs font-bold text-muted-foreground tabular-nums">₺{Number(acc.balance).toLocaleString('tr-TR')}</p>
-                                                        <p className="text-[9px] text-muted-foreground/60">Bakiye</p>
-                                                    </div>
-                                                    {selectedAccountId === acc.id && (
-                                                        <div className="h-6 w-6 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
-                                                            <CheckCircle2 className="h-4 w-4 text-white" />
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    );
-                                })()}
-                            </motion.div>
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="p-4 md:p-6 flex flex-col md:flex-row gap-3 border-t border-border/50 bg-muted/5 shrink-0">
-                        <AlertDialogCancel className="h-12 flex-1 rounded-2xl border border-border bg-card text-muted-foreground text-[10px] font-black uppercase tracking-widest hover:bg-muted/50 transition-all">Vazgeç</AlertDialogCancel>
-                        <Button
-                            onClick={handleCollectPayment}
-                            disabled={isPending || !selectedAccountId}
-                            className="h-12 flex-[2] rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600 border-none shadow-lg shadow-emerald-500/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
-                        >
-                            {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Tahsilatı Tamamla"}
-                        </Button>
-                    </div>
-                </AlertDialogContent>
-            </AlertDialog >
+            <VeresiyePaymentModal
+                paymentCustomer={paymentCustomer}
+                onClose={() => setPaymentCustomer(null)}
+                paymentAmount={paymentAmount}
+                onAmountChange={setPaymentAmount}
+                paymentCurrency={paymentCurrency}
+                onCurrencyChange={(curr) => handleCurrencySwitch(curr as "TRY" | "USD")}
+                paymentMethod={paymentMethod}
+                onMethodChange={(method) => {
+                    setPaymentMethod(method);
+                    const fa = accounts.filter((acc: any) =>
+                        method === "CASH" ? acc.type === "CASH" :
+                            method === "CARD" ? (acc.type === "POS" || acc.type === "BANK") :
+                                (acc.type === "BANK")
+                    );
+                    if (fa.length > 0) setSelectedAccountId(fa[0].id);
+                    else setSelectedAccountId("");
+                }}
+                paymentNotes={paymentNotes}
+                onNotesChange={setPaymentNotes}
+                selectedAccountId={selectedAccountId}
+                onAccountChange={setSelectedAccountId}
+                accounts={accounts}
+                isPending={isPending}
+                onConfirm={handleCollectPayment}
+                rates={rates}
+                setIgnoreBalance={setIgnoreBalance}
+            />
 
             <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); } }}>
                 <AlertDialogContent
@@ -2599,106 +2074,42 @@ export function VeresiyeClient({
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* --- Payment Summary Confirmation Dialog --- */}
-            <AlertDialog open={!!paymentSummary} onOpenChange={(o) => {
-                if (!o) {
-                    setPaymentSummary(null);
-                }
-            }}>
-                <AlertDialogContent className="max-w-[500px] bg-background dark:bg-[#0f172a] rounded-[2.5rem] p-0 overflow-hidden shadow-2xl border-none">
-                    <div className="p-8 bg-emerald-500 text-white flex flex-col items-center gap-4 text-center">
-                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-10 h-10 text-white" />
-                        </div>
-                        <div className="space-y-1">
-                            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">Tahsilat Başarılı</AlertDialogTitle>
-                            <p className="text-emerald-50 opacity-90 text-sm">Ödeme kaydı başarıyla oluşturuldu ve borçlardan düşüldü.</p>
-                        </div>
-                    </div>
-                    <div className="p-8 space-y-6">
-                        <div className="space-y-3">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">ÖDEME YAPILAN KALEMLER</span>
-                            <div className="space-y-1.5">
-                                {paymentSummary?.items.map((it, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
-                                        <FileText className="w-3.5 h-3.5 text-emerald-500" />
-                                        {it}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white !text-white shadow-lg shadow-emerald-500/20">
-                                <span className="block text-[9px] font-black uppercase tracking-widest mb-1 opacity-80 !text-white">Tahsil Edilen</span>
-                                <span className="text-xl font-black font-mono !text-white">
-                                    {paymentSummary?.currency === 'USD' ? '$' : '₺'}{Math.round(paymentSummary?.paidAmount ?? 0).toLocaleString('tr-TR')}
-                                </span>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-indigo-500 dark:bg-indigo-600 text-white !text-white shadow-lg shadow-indigo-500/20">
-                                <span className="block text-[9px] font-black uppercase tracking-widest mb-1 opacity-80 !text-white">Kalan Bakiye (TRY)</span>
-                                <span className="text-xl font-black font-mono !text-white">
-                                    ₺{Math.round(paymentSummary?.remainingTRY ?? 0).toLocaleString('tr-TR')}
-                                </span>
-                            </div>
-                        </div>
-
-                        {(paymentSummary?.remainingUSD ?? 0) > 0 && (
-                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-500/20">
-                                <span className="block text-[9px] font-bold text-blue-400 dark:text-blue-300 uppercase tracking-widest mb-1">Kalan Bakiye (USD)</span>
-                                <span className="text-lg font-black text-blue-600 dark:text-blue-400 font-mono">
-                                    ${Math.round(paymentSummary?.remainingUSD ?? 0).toLocaleString('tr-TR')}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                    <div className="p-6 bg-slate-50 dark:bg-[#1a2231] border-t border-slate-100 dark:border-white/5 flex gap-3">
-                        <Button
-                            variant="outline"
-                            disabled={isPending}
-                            onClick={async () => {
-                                if (paymentSummary) {
-                                    startTransition(async () => {
-                                        const res = await getCustomerStatement(paymentSummary.customerId);
-                                        if (res.success) {
-                                            setNeedsRefresh(true);
-                                            const cust = debts.find((d: any) => d.customerId === paymentSummary.customerId)?.customer;
-                                            if (cust) {
-                                                setReceiptCustomer(cust);
-                                                // Prepare merged list for receipt: Debt records + Transaction records
-                                                const mergedDebts = [
-                                                    ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                                    ...(res.transactions || []).map((t: any) => ({
-                                                        ...t,
-                                                        type: 'PAYMENT',
-                                                        amount: t.amount,
-                                                        createdAt: t.createdAt,
-                                                        description: t.description || 'Tahsilat'
-                                                    }))
-                                                ];
-                                                setReceiptDebts(mergedDebts);
-                                                setReceiptShowPaid(true); // Always show paid records for a payment receipt
-                                            }
-                                        }
-                                        setPaymentSummary(null);
+            <VeresiyePaymentSummaryModal
+                paymentSummary={paymentSummary}
+                onClose={() => setPaymentSummary(null)}
+                isPending={isPending}
+                onPrintReceipt={async () => {
+                    if (paymentSummary) {
+                        startTransition(async () => {
+                            const res = await getCustomerStatement(paymentSummary.customerId);
+                            if (res.success) {
+                                setNeedsRefresh(true);
+                                const cust = (aggregatedData as any).find((d: any) => d.customerId === paymentSummary.customerId);
+                                if (cust) {
+                                    setReceiptCustomer({
+                                        id: cust.customerId || cust.id,
+                                        name: cust.name,
+                                        phone: cust.phone || ""
                                     });
+                                    const mergedDebts = [
+                                        ...(res.debts || []).map((d: any) => ({ ...d, type: "DEBT" })),
+                                        ...(res.transactions || []).map((t: any) => ({
+                                            ...t,
+                                            type: "PAYMENT",
+                                            amount: t.amount,
+                                            createdAt: t.createdAt,
+                                            description: t.description || "Tahsilat"
+                                        }))
+                                    ];
+                                    setReceiptDebts(mergedDebts);
+                                    setReceiptShowPaid(true);
                                 }
-                            }}
-                            className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs gap-2"
-                        >
-                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                                <>
-                                    <Printer className="w-4 h-4" />
-                                    Fiş Yazdır
-                                </>
-                            )}
-                        </Button>
-                        <Button onClick={() => {
+                            }
                             setPaymentSummary(null);
-                        }} className="flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-widest text-xs">Tamam</Button>
-                    </div>
-                </AlertDialogContent>
-            </AlertDialog>
+                        });
+                    }
+                }}
+            />
 
             {/* --- WhatsApp Confirm Modal --- */}
             {

@@ -6,10 +6,18 @@ import { serializePrisma } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 
-export function SmartInsightsStream({ cols = 8, rows = 4, shopId }: { cols?: number, rows?: number, shopId?: string }) {
+export function SmartInsightsStream({ cols = 8, rows = 4, shopId, onDataStatus }: { cols?: number, rows?: number, shopId?: string, onDataStatus?: (isEmpty: boolean) => void }) {
     const { data, isLoading } = useQuery({
         queryKey: ["dashboard-smart-insights", shopId || ""],
-        queryFn: async () => serializePrisma(await getDashboardStats(shopId || "")),
+        queryFn: async () => {
+            const dataRaw = await getDashboardStats(shopId || "");
+            const data = serializePrisma(dataRaw);
+            if (onDataStatus) {
+                // Usually not empty if we have any stats, but let's check
+                onDataStatus(!data || Object.keys(data).length === 0);
+            }
+            return data;
+        },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,

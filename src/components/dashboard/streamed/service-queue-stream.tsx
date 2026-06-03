@@ -1,3 +1,6 @@
+"use client";
+
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { cn, serializePrisma } from "@/lib/utils";
 import { getRecentSales } from "@/lib/actions/dashboard-actions";
-import { getShopId } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
     PENDING: "#94a3b8",      // Grey
@@ -27,11 +30,26 @@ const statusLabels: Record<string, string> = {
     CANCELLED: "İptal edildi",
 };
 
-export async function ServiceQueueStream({ title = "Servis Kuyruğu" }: { title?: string }) {
-    const shopId = await getShopId(false);
-    if (!shopId) return null;
-    const recentTicketsRaw = await getRecentSales(shopId, 5);
-    const recentTickets = serializePrisma(recentTicketsRaw);
+export function ServiceQueueStream({ title = "Servis Kuyruğu", shopId, onDataStatus }: { title?: string, shopId?: string, onDataStatus?: (isEmpty: boolean) => void }) {
+    const { data: recentTickets = [], isLoading } = useQuery({
+        queryKey: ["dashboard-service-queue", shopId || ""],
+        queryFn: async () => {
+            if (!shopId) return [];
+            const recentTicketsRaw = await getRecentSales(shopId, 5);
+            return serializePrisma(recentTicketsRaw);
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+    });
+
+    useEffect(() => {
+        if (!isLoading && onDataStatus) {
+            onDataStatus(!recentTickets || recentTickets.length === 0);
+        }
+    }, [recentTickets, isLoading, onDataStatus]);
+
+    if (isLoading) return <Card className="h-full border border-border/40 bg-card rounded-[2rem] animate-pulse" />;
 
     return (
         <Card className="h-auto flex flex-col border border-border/40 shadow-xl overflow-hidden rounded-[2rem] bg-card transition-all duration-500 animate-in fade-in">
@@ -96,14 +114,12 @@ export async function ServiceQueueStream({ title = "Servis Kuyruğu" }: { title?
                         )}
                     </>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-20">
-                        <Smartphone className="h-12 w-12 mb-2" />
-                        <p className="text-xs font-bold uppercase tracking-widest">Kuyruk Boş</p>
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-8">
+                        <Smartphone className="h-10 w-10 mb-2" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest">Kuyruk Boş</p>
                     </div>
                 )}
             </CardContent>
         </Card>
     );
 }
-
-

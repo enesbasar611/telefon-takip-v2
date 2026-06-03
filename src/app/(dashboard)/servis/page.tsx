@@ -1,5 +1,5 @@
 import { ServiceTabsController } from "@/components/service/service-tabs-controller";
-import { ServiceTabsHeader } from "../../../components/service/service-tabs-header";
+import { ServiceTabsHeader } from "@/components/service/service-tabs-header";
 
 export default function ServisMerkeziPage() {
   return (
@@ -9,6 +9,3 @@ export default function ServisMerkeziPage() {
     </div>
   );
 }
-
-
-

@@ -1,12 +1,13 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Package, LayoutGrid, LayoutList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTopProducts } from "@/lib/actions/dashboard-actions";
 import { useQuery } from "@tanstack/react-query";
 
-export function TopProductsStream({ viewMode = 'grid', shopId, cols = 8, rows = 2 }: { viewMode?: 'grid' | 'list', shopId?: string, cols?: number, rows?: number }) {
+export function TopProductsStream({ viewMode = 'grid', shopId, cols = 8, rows = 2, onDataStatus }: { viewMode?: 'grid' | 'list', shopId?: string, cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
     const isSmall = cols < 8;
     const isVerySmall = cols < 6;
     const isShort = rows < 2;
@@ -16,12 +17,18 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 8, rows = 
         queryKey: ["dashboard-top-products", shopId || "", limit],
         queryFn: async () => {
             if (!shopId) return [];
-            return getTopProducts(shopId, limit);
+            return await getTopProducts(shopId, limit);
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
     });
+
+    useEffect(() => {
+        if (!isLoading && onDataStatus) {
+            onDataStatus(!topProducts || topProducts.length === 0);
+        }
+    }, [topProducts, isLoading, onDataStatus]);
 
     if (isLoading) {
         return (

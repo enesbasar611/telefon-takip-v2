@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, formatPhone } from "@/lib/utils";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { STATUS_CONFIG } from "@/lib/constants/service";
 import Link from "next/link";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -53,15 +54,7 @@ interface ServiceTableProps {
   shop?: any;
 }
 
-const statusMap: Record<ServiceStatus, { label: string; color: string; icon: any; glow: string }> = {
-  PENDING: { label: "BEKLEMEDE", color: "text-gray-500 bg-gray-500/10 border-gray-500/20", icon: Clock, glow: "" },
-  APPROVED: { label: "ONAYLANDI", color: "text-blue-500 bg-blue-500/10 border-blue-500/20", icon: CheckCircle2, glow: "" },
-  REPAIRING: { label: "TAMİRDE", color: "text-orange-500 bg-orange-500/10 border-orange-500/20", icon: WrenchIcon, glow: "" },
-  WAITING_PART: { label: "PARÇA BEKLİYOR", color: "text-purple-500 bg-purple-500/10 border-purple-500/20", icon: PackageIcon, glow: "" },
-  READY: { label: "HAZIR", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle, glow: "shadow-emerald-500/20" },
-  DELIVERED: { label: "TESLİM EDİLDİ", color: "text-blue-500 bg-blue-500/10 border-blue-500/20 ", icon: CheckCircle, glow: "shadow-blue-500/30 animate-pulse" },
-  CANCELLED: { label: "İPTAL EDİLDİ", color: "text-rose-500 bg-rose-500/10 border-rose-500/20", icon: XCircle, glow: "" },
-};
+const statusMap = STATUS_CONFIG;
 
 export function ServiceTable({ data, shop }: ServiceTableProps) {
   const [isPending, startTransition] = useTransition();
@@ -161,7 +154,7 @@ export function ServiceTable({ data, shop }: ServiceTableProps) {
                 </TableCell>
                 <TableCell className="p-0 md:py-6 md:h-[70px] flex md:table-cell justify-between items-center mb-3 md:mb-0">
                   <span className="text-[10px] md:hidden text-muted-foreground uppercase tracking-widest">DURUM</span>
-                  <Badge className={`${statusMap[ticket.status as ServiceStatus].color} ${statusMap[ticket.status as ServiceStatus].glow} border-none text-[10px] px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold`} variant="outline">
+                  <Badge className={cn(statusMap[ticket.status as ServiceStatus].color, statusMap[ticket.status as ServiceStatus].glow, "border-none text-[10px] px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold")} variant="outline">
                     {statusMap[ticket.status as ServiceStatus].label}
                   </Badge>
                 </TableCell>

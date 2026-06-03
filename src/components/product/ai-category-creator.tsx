@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { parseCategoryTreeWithAI, AICategoryNode } from "@/lib/actions/gemini-actions";
 import { createCategory } from "@/lib/actions/category-actions";
-import { createProduct, addInventoryStock } from "@/lib/actions/product-actions";
+import { createProduct, addInventoryStock, bulkCreateAIInventory } from "@/lib/actions/product-actions";
 import {
     Sparkles, Loader2, FolderPlus, CheckCircle2,
     AlertTriangle, RotateCcw, ArrowRight, Folder, Package, ChevronRight
@@ -51,9 +51,11 @@ type NodeRow = AICategoryNode & {
 };
 
 const EXAMPLES = [
-    "Şarj Aletleri > Type-C > 27W — 10 adet şarj aleti, alış 100 TL satış 500 TL",
-    "Ekranlar > Samsung > Galaxy S24 hayalet cam, 5 adet, alış 55 satış 120",
-    "Piller > iPhone Batarya > iPhone 11, 12, 13, 14 her biri 8 adet alış 180 satış 350",
+    "Şarj Aletleri > Type-C > 27W — 12 adet şarj başlığı, alış 10 dolar satış 500 TL, raf A-1",
+    "Ekranlar > Samsung > Galaxy S24 Ultra Orijinal Ekran, 2 adet, alış 4500 satış 7500",
+    "Aksesuarlar > Kılıf > iPhone 15 Pro Max Lansman Kılıf (Siyah, Mavi, Kırmızı), her birinden 5 adet, alış 80 satış 250",
+    "Teknik Servis > Yedek Parça > iPhone 11-14 Arası Bataryalar, her modelden 10 adet, alış 150 satış 450",
+    "Kırılmaz Cam > Hayalet Cam > iPhone 13 Pro, 20 adet, alış 20 TL satış 100 TL"
 ];
 
 const getAIPriceDisplay = (price: number, usdPrice?: number | null) => {
@@ -111,103 +113,54 @@ export function AICategoryCreator({
 
     const handleSaveAll = () => {
         startSave(async () => {
-            // Accumulate created categories for this session to resolve parentIds
-            const createdMap: Record<string, string> = {}; // name → id
-            // Seed with existing categories
-            categories.forEach(c => { createdMap[c.name.toLowerCase()] = c.id; });
+            // Set all to saving
+            setRows(prev => prev.map(r => ({
+                ...r,
+                _catStatus: "saving",
+                _prodStatuses: r.products.map(() => "saving" as const)
+            })));
 
-            const updatedCats: Category[] = [...categories];
-            const updatedProds: Product[] = [...allProducts];
+            const res = await bulkCreateAIInventory(rows);
 
-            for (const row of rows) {
-                if (row._catStatus === "saved" || row._catStatus === "skipped") continue;
-
-                setRows(prev => prev.map(r => r._id === row._id ? { ...r, _catStatus: "saving" } : r));
-
-                // Resolve parentId
-                const parentId = row.parentName
-                    ? createdMap[row.parentName.toLowerCase()] || undefined
-                    : undefined;
-
-                // Check if category already exists
-                const existingCat = categories.find(c =>
-                    c.name.toLowerCase() === row.name.toLowerCase() &&
-                    (parentId ? c.parentId === parentId : !c.parentId)
-                );
-
-                let catId: string;
-                if (existingCat) {
-                    catId = existingCat.id;
-                    createdMap[row.name.toLowerCase()] = catId;
-                    setRows(prev => prev.map(r => r._id === row._id ? { ...r, _catStatus: "skipped", _catId: catId } : r));
-                } else {
-                    const res = await createCategory({ name: row.name, parentId });
-                    if (!res.success || !res.category) {
-                        setRows(prev => prev.map(r => r._id === row._id ? { ...r, _catStatus: "error" } : r));
-                        continue;
-                    }
-                    catId = (res.category as Category).id;
-                    createdMap[row.name.toLowerCase()] = catId;
-                    updatedCats.push(res.category as Category);
-                    setRows(prev => prev.map(r => r._id === row._id ? { ...r, _catStatus: "saved", _catId: catId } : r));
-                }
-
-                // Save products for this category
-                for (let pi = 0; pi < row.products.length; pi++) {
-                    const p = row.products[pi];
-                    setRows(prev => prev.map(r => {
-                        if (r._id !== row._id) return r;
-                        const ps = [...r._prodStatuses]; ps[pi] = "saving";
-                        return { ...r, _prodStatuses: ps };
-                    }));
-
-                    const pRes = await createProduct({
-                        name: p.name,
-                        categoryId: catId,
-                        buyPrice: p.buyPrice,
-                        buyPriceUsd: p.buyPriceUsd ?? null,
-                        sellPrice: p.sellPrice,
-                        sellPriceUsd: p.sellPriceUsd ?? null,
-                        stock: p.stock,
-                        criticalStock: p.criticalStock,
-                        barcode: p.barcode,
-                        location: p.location,
-                        attributes: {
-                            priceCurrency: p.buyPriceUsd || p.sellPriceUsd ? "USD" : "TRY"
-                        }
-                    });
-
-                    let pStatus: "saved" | "error" = pRes.success ? "saved" : "error";
-
-                    if (pRes.success && pRes.product) {
-                        updatedProds.push(pRes.product as Product);
-                    }
-
-                    // If duplicate, try adding stock
-                    if (!pRes.success && (pRes as any).isDuplicate && (pRes as any).product) {
-                        const existingProdId = (pRes as any).product.id;
-                        const addRes = await addInventoryStock(existingProdId, p.stock, "AI Çoklu Ekle (Mevcut Ürün)");
-                        if (addRes.success) {
-                            pStatus = "saved";
-                            // Update existing product in state
-                            const index = updatedProds.findIndex(up => up.id === existingProdId);
-                            if (index !== -1) {
-                                updatedProds[index] = { ...updatedProds[index], stock: updatedProds[index].stock + p.stock };
-                            }
-                        }
-                    }
-
-                    setRows(prev => prev.map(r => {
-                        if (r._id !== row._id) return r;
-                        const ps = [...r._prodStatuses]; ps[pi] = pStatus;
-                        return { ...r, _prodStatuses: ps };
-                    }));
-                }
+            if (!res.success) {
+                toast.error(res.error || "Toplu kayıt sırasında hata oluştu.");
+                setRows(prev => prev.map(r => ({
+                    ...r,
+                    _catStatus: "error",
+                    _prodStatuses: r.products.map(() => "error" as const)
+                })));
+                return;
             }
 
-            onCategoriesUpdated(updatedCats);
-            onProductsUpdated(updatedProds);
-            toast.success("Tüm işlemler tamamlandı!");
+            // Successfully created/updated
+            const newCategories = res.categories as Category[];
+            const newProducts = res.products as Product[];
+
+            // Update local state to reflect saved status
+            setRows(prev => prev.map(r => ({
+                ...r,
+                _catStatus: "saved",
+                _prodStatuses: r.products.map(() => "saved" as const)
+            })));
+
+            // Merge with existing data
+            const finalCats = [...categories];
+            newCategories.forEach(nc => {
+                const idx = finalCats.findIndex(c => c.id === nc.id);
+                if (idx === -1) finalCats.push(nc);
+                else finalCats[idx] = nc;
+            });
+
+            const finalProds = [...allProducts];
+            newProducts.forEach(np => {
+                const idx = finalProds.findIndex(p => p.id === np.id);
+                if (idx === -1) finalProds.push(np);
+                else finalProds[idx] = np;
+            });
+
+            onCategoriesUpdated(finalCats);
+            onProductsUpdated(finalProds);
+            toast.success(`${newCategories.length} kategori ve ${newProducts.length} ürün başarıyla işlendi!`);
         });
     };
 

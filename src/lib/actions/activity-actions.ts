@@ -44,10 +44,10 @@ export async function getUnifiedHistory(options: {
         const where: Prisma.TransactionWhereInput = {
             shopId,
             OR: searchTerm ? [
-                { description: { contains: searchTerm } },
-                { customer: { name: { contains: searchTerm } } },
-                { sale: { saleNumber: { contains: searchTerm } } },
-                { customer: { phone: { contains: searchTerm } } }
+                { description: { contains: searchTerm, mode: 'insensitive' } },
+                { customer: { name: { contains: searchTerm, mode: 'insensitive' } } },
+                { sale: { saleNumber: { contains: searchTerm, mode: 'insensitive' } } },
+                { customer: { phone: { contains: searchTerm, mode: 'insensitive' } } }
             ] : undefined
         };
 

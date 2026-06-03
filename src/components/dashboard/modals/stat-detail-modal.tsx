@@ -210,75 +210,82 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className={cn(
-                "border-border/40 p-0 overflow-hidden bg-background/80 dark:bg-zinc-950/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl transition-all",
-                type === "CRITICAL_STOCK" ? "sm:max-w-[800px]" : "sm:max-w-[600px]"
+                "border-border/40 p-0 overflow-hidden bg-background/95 dark:bg-zinc-900/98 backdrop-blur-3xl rounded-[2rem] shadow-2xl transition-all",
+                type === "CRITICAL_STOCK" ? "sm:max-w-4xl" : "sm:max-w-2xl"
             )}>
                 <div className={cn("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r",
-                    type === "TOTAL_DEBTS" ? "from-indigo-500 to-purple-600" :
-                        type === "COLLECTIONS" ? "from-amber-500 to-orange-600" :
+                    type === "TOTAL_DEBTS" ? "from-indigo-500 to-violet-600" :
+                        type === "COLLECTIONS" ? "from-amber-500 to-orange-500" :
                             type === "CRITICAL_STOCK" ? "from-rose-500 to-red-600" :
-                                "from-blue-600 to-indigo-600"
+                                "from-emerald-500 to-teal-600"
                 )} />
 
-                <div className="p-10">
-                    <DialogHeader className="mb-8 p-0">
+                <div className="p-0">
+                    <DialogHeader className="p-8 pb-4">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner",
+                            <div className="flex items-center gap-5">
+                                <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center border border-border/40 shadow-inner",
                                     config.color.replace("text-", "bg-").replace("-500", "-500/10").replace("-600", "-600/10")
                                 )}>
                                     <Icon className={cn("h-7 w-7", config.color)} />
                                 </div>
-                                <div>
-                                    <DialogTitle className="font-medium text-2xl  tracking-tight uppercase">
-                                        {selectedSupplier ? "ÖDEME YAP: " + selectedSupplier.name : config.title}
+                                <div className="space-y-1">
+                                    <DialogTitle className="font-bold text-2xl tracking-tight uppercase text-foreground">
+                                        {selectedSupplier ? "BORÇ ÖDEMESİ: " + selectedSupplier.name : config.title}
                                     </DialogTitle>
-                                    <DialogDescription className="text-[11px]  text-muted-foreground mt-1 uppercase tracking-widest opacity-70">
-                                        {selectedSupplier ? "BORÇ ÖDEME SİHİRBAZI" : "Sistem Kayıtları ve Detaylı Analiz"}
+                                    <DialogDescription className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] opacity-60">
+                                        {selectedSupplier ? "Finansal İÅŸlem Kaydı" : "Sistem Analizleri ve Raporlama"}
                                     </DialogDescription>
                                 </div>
                             </div>
                             {!selectedSupplier ? (
                                 <Link href={config.route}>
-                                    <Button variant="outline" className="rounded-xl h-9 text-[10px]  uppercase tracking-widest px-4 border-border/40 hover:bg-muted transition-all">
-                                        TÜMÜNE GİT <ChevronRight className="ml-1 h-3 w-3" />
+                                    <Button variant="outline" className="rounded-2xl h-10 text-[9px] font-black uppercase tracking-widest px-6 border-border/40 hover:bg-muted/50 transition-all shadow-sm">
+                                        TÜM KAYITLAR <ChevronRight className="ml-2 h-3 w-3" />
                                     </Button>
                                 </Link>
                             ) : (
-                                <Button variant="ghost" onClick={() => setSelectedSupplier(null)} className="rounded-full h-10 w-10 p-0 text-muted-foreground hover:text-foreground">
-                                    <ArrowRight className="h-5 w-5 rotate-180" />
+                                <Button variant="ghost" onClick={() => setSelectedSupplier(null)} className="rounded-full h-12 w-12 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                                    <ArrowRight className="h-6 w-6 rotate-180" />
                                 </Button>
                             )}
                         </div>
                     </DialogHeader>
 
                     {selectedSupplier ? (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                            <div className="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-[10px]  text-muted-foreground uppercase opacity-60">TOPLAM GÜNCEL BORÇ</span>
-                                    <span className="text-xl  text-indigo-500 tracking-tight">₺{Number(selectedSupplier.balance).toLocaleString('tr-TR')}</span>
+                        <div className="p-8 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="p-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 shadow-inner">
+                                <div className="flex justify-between items-end mb-6">
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em]">GÜNCEL BAKİYE</span>
+                                        <h2 className="text-3xl font-black text-indigo-500 tracking-tighter">
+                                            ₺{Number(selectedSupplier.balance).toLocaleString('tr-TR')}
+                                        </h2>
+                                    </div>
+                                    <Badge variant="outline" className="rounded-full px-4 py-1 text-[10px] border-indigo-500/30 text-indigo-500 font-bold bg-indigo-500/5">
+                                        VADE: BUGÜN
+                                    </Badge>
                                 </div>
-                                <div className="space-y-4 pt-4 border-t border-indigo-500/10">
-                                    <div className="space-y-2">
-                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">ÖDEME YAPILACAK HESAP</Label>
-                                        <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-6 pt-6 border-t border-indigo-500/10">
+                                    <div className="space-y-3">
+                                        <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">ÖDEME KANALI</Label>
+                                        <div className="grid grid-cols-2 gap-3">
                                             {accounts.map((acc) => (
                                                 <button
                                                     key={acc.id}
                                                     onClick={() => setSelectedAccountId(acc.id)}
                                                     className={cn(
-                                                        "p-3 rounded-xl border text-left transition-all relative overflow-hidden group",
+                                                        "p-4 rounded-2xl border text-left transition-all relative overflow-hidden group",
                                                         activeAccountId === acc.id
-                                                            ? "bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-600/20"
-                                                            : "bg-background border-border/40 hover:border-indigo-500/30"
+                                                            ? "bg-indigo-600 border-indigo-500 shadow-xl shadow-indigo-600/20 text-white"
+                                                            : "bg-background border-border/40 hover:border-indigo-500/30 text-foreground"
                                                     )}
                                                 >
-                                                    <div className={cn("text-[10px]  uppercase tracking-tighter mb-1", selectedAccountId === acc.id ? "text-white" : "text-foreground")}>{acc.name}</div>
-                                                    <div className={cn("text-xs ", selectedAccountId === acc.id ? "text-indigo-100" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
+                                                    <div className="text-[10px] font-black uppercase tracking-tight mb-1 opacity-80">{acc.name}</div>
+                                                    <div className={cn("text-sm font-black tracking-tight", activeAccountId === acc.id ? "text-white" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
                                                     {activeAccountId === acc.id && (
-                                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                                            <CheckCircle2 className="h-4 w-4 text-white" />
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                            <CheckCircle2 className="h-5 w-5 text-white/50" />
                                                         </div>
                                                     )}
                                                 </button>
@@ -286,40 +293,54 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">ÖDEME TUTARI (₺)</Label>
-                                        <input
-                                            type="number"
-                                            value={paymentAmount}
-                                            onChange={(e) => setPaymentAmount(e.target.value)}
-                                            placeholder="Tutar giriniz..."
-                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm  focus:border-indigo-500 focus:outline-none transition-all"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">ÖDEME TUTARI (₺)</Label>
+                                            <div className="relative">
+                                                <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40" />
+                                                <input
+                                                    type="number"
+                                                    value={paymentAmount}
+                                                    onChange={(e) => setPaymentAmount(e.target.value)}
+                                                    placeholder="0.00"
+                                                    className="w-full h-14 bg-background border border-border/40 rounded-2xl pl-12 pr-4 text-lg font-black focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none transition-all placeholder:text-muted-foreground/20"
+                                                />
+                                            </div>
+                                        </div>
 
-                                    <div className="space-y-2">
-                                        <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest">AÇIKLAMA (OPSİYONEL)</Label>
-                                        <input
-                                            type="text"
-                                            value={paymentDescription}
-                                            onChange={(e) => setPaymentDescription(e.target.value)}
-                                            placeholder="Ödeme notu..."
-                                            className="w-full h-12 bg-background border border-border/40 rounded-xl px-4 text-sm  focus:border-indigo-500 focus:outline-none transition-all"
-                                        />
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">AÇIKLAMA</Label>
+                                            <input
+                                                type="text"
+                                                value={paymentDescription}
+                                                onChange={(e) => setPaymentDescription(e.target.value)}
+                                                placeholder="İşlem notu..."
+                                                className="w-full h-14 bg-background border border-border/40 rounded-2xl px-5 text-sm font-medium focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none transition-all placeholder:text-muted-foreground/20"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <Button
-                                onClick={handlePayDebt}
-                                disabled={paying || !paymentAmount}
-                                className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-xs  uppercase tracking-widest shadow-xl shadow-indigo-600/30 transition-all active:scale-[0.98]"
-                            >
-                                {paying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CreditCard className="h-5 w-5 mr-2" />}
-                                ÖDEMEYİ ONAYLA VE TAMAMLA
-                            </Button>
+                            <div className="flex gap-4">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSelectedSupplier(null)}
+                                    className="h-14 rounded-2xl px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-muted/50"
+                                >
+                                    VAZGEÇ
+                                </Button>
+                                <Button
+                                    onClick={handlePayDebt}
+                                    disabled={paying || !paymentAmount}
+                                    className="flex-1 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-indigo-600/30 transition-all active:scale-[0.98]"
+                                >
+                                    {paying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CreditCard className="h-5 w-5 mr-2" />}
+                                    ÖDEMEYİ TAMAMLA
+                                </Button>
+                            </div>
                         </div>
                     ) : (
-                        <ScrollArea className="h-[400px] pr-4 relative">
+                        <ScrollArea className="h-[500px] relative">
                             {isBackgroundFetching && (
                                 <div className="absolute top-0 right-0 z-50 p-2">
                                     <Loader2 className="h-4 w-4 animate-spin text-primary opacity-50" />
@@ -339,7 +360,7 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                     <p className="text-xs  tracking-widest">Henüz bir kayıt bulunamadı</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-4 px-6 pb-6">
                                     {type === "TOTAL_DEBTS" && (
                                         <div className="space-y-4">
                                             {data.map((supplier: any) => (
@@ -658,9 +679,3 @@ const LayoutDashboard = (props: any) => (
         <rect width="7" height="5" x="3" y="15" rx="1" />
     </svg>
 );
-
-
-
-
-
-
