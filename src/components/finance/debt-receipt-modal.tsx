@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { getReceiptSettings } from "@/lib/actions/receipt-settings";
 
 import { cn } from "@/lib/utils";
 
@@ -36,8 +37,7 @@ interface DebtReceiptModalProps {
     logoUrl?: string;
 }
 
-const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid, logoUrl }: any) => {
-    // Totals always show current balance (unpaid only)
+const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid, logoUrl, settings }: any) => {
     const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
 
     const totalTRY = unpaidDebts
@@ -51,23 +51,19 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
     const currentUsdRate = Number(rates?.usd) || 34.5;
     const portfolioTotal = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
 
-    // Determine relevant timeframe for payments if showPaid is false
     const unpaid = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
     const earliestDate = unpaid.length > 0
         ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Filter items to display
     const displayDebts = debts.filter((d: any) => {
         if (showPaid) return true;
         if (d.type === 'PAYMENT') {
-            // Show recent payments (within 30 days or since oldest unpaid debt)
             return new Date(d.createdAt) >= earliestDate;
         }
         return !d.isPaid;
     });
 
-    // Group items by date and sort within group
     const groups = displayDebts
         .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
         .reduce((groups: any, item: any) => {
@@ -80,26 +76,31 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
         }, {});
 
     const sortedDates = Object.keys(groups);
+    const currentPaperSize = settings?.paperSize || "72mm";
 
     return (
         <div
-            className="bg-white p-4 w-[384px] font-mono text-black relative"
-            style={{ width: '384px', minWidth: '384px' }}
+            className={cn(
+                "bg-white font-mono text-black relative",
+                currentPaperSize === "58mm" ? "w-[58mm] p-1" :
+                    currentPaperSize === "80mm" ? "w-[80mm] p-4" :
+                        "w-[72mm] p-3"
+            )}
+            style={{ width: currentPaperSize, boxSizing: "border-box" }}
         >
-            {/* Top Right Date */}
-            <div className="absolute top-4 right-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                {format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })}
-            </div>
-
             {/* Header */}
             <div className="text-center pb-4 border-b-2 border-black mb-4 mt-2">
+                {/* Date in Flow */}
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mb-4 text-right">
+                    {format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })}
+                </div>
                 {logoUrl && (
                     <div className="mb-2 flex justify-center">
                         <img src={logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-150" />
                     </div>
                 )}
                 <h1 className="text-lg font-black uppercase tracking-widest text-black mb-0.5">{shopName || "TELEFON DÜNYASI"}</h1>
-                <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] mb-2">HESAP EKSTRESİ</p>
+                <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] mb-2">{settings?.subtitle || "HESAP EKSTRESİ"}</p>
 
                 <div className="mt-2">
                     <p className="text-sm font-black text-black uppercase tracking-tight inline-block border-b-4 border-black pb-1">
@@ -144,9 +145,9 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 
                             <table className="w-full border-collapse border border-slate-200 rounded-md overflow-hidden shadow-sm">
                                 <thead>
-                                    <tr className="bg-black text-[9px] font-black text-white uppercase tracking-widest">
-                                        <th className="border border-black px-2 py-1.5 text-left">İŞLEM / DETAY</th>
-                                        <th className="border border-black px-2 py-1.5 text-right w-24">TUTAR</th>
+                                    <tr className="bg-black text-[9px] font-black text-white uppercase tracking-widest border border-black">
+                                        <th className="border border-white/40 px-2 py-1.5 text-left font-black">İŞLEM / DETAY</th>
+                                        <th className="border border-white/40 px-2 py-1.5 text-right w-20 font-black">TUTAR</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -240,11 +241,11 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                 </div>
             </div>
 
-            {/* Minimal Footer */}
-            <div className="mt-4 text-center">
-                <p className="text-[9px] font-black text-black uppercase tracking-[0.2em] mb-0.5">{shopName}</p>
-                {shopPhone && <p className="text-[8px] font-black text-black">{shopPhone}</p>}
-                <div className="w-8 h-0.5 bg-black mx-auto rounded-full mt-3" />
+            {/* Footer Section */}
+            <div className="mt-8 text-center pt-4 border-t-2 border-dashed border-black">
+                <p className="text-[10px] font-black text-black uppercase mb-1">{settings?.footer || "TEŞEKKÜRLER"}</p>
+                <p className="text-[8px] font-black text-black opacity-60 italic">{settings?.website || "v2.basarteknik.com"}</p>
+                <div className="w-8 h-0.5 bg-black mx-auto rounded-full mt-4" />
             </div>
         </div>
     );
@@ -254,6 +255,199 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
     const receiptRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPaid, setShowPaid] = useState(initialShowPaid);
+    const [settings, setSettings] = useState<any>(null);
+
+    useEffect(() => {
+        if (open) {
+            getReceiptSettings("debt").then(setSettings);
+        }
+    }, [open]);
+
+    const handlePrint = useCallback(() => {
+        if (!receiptRef.current) return;
+
+        const currentPaperSize = settings?.paperSize || "72mm";
+        const content = receiptRef.current.innerHTML;
+        const w = window.open("", "_blank");
+        if (!w) return;
+
+        w.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Borç Ekstresi - ${customer.name}</title>
+                    <style>
+                        @page { 
+                            size: ${currentPaperSize} auto; 
+                            margin: 0; 
+                        }
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                            height: auto !important;
+                            width: ${currentPaperSize};
+                            background: white;
+                            -webkit-print-color-adjust: exact;
+                        }
+                        body { 
+                            font-family: 'Courier New', Courier, monospace;
+                        }
+                        .receipt-container { 
+                            width: 100%;
+                            padding: 0;
+                            margin: 0;
+                            display: block;
+                            box-sizing: border-box;
+                        }
+                        
+                        /* Layout Utilities */
+                        .flex { display: flex; }
+                        .justify-between { justify-content: space-between; }
+                        .justify-center { justify-content: center; }
+                        .flex-col { flex-direction: column; }
+                        .items-center { align-items: center; }
+                        .items-start { align-items: flex-start; }
+                        .items-end { align-items: flex-end; }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .text-left { text-align: left; }
+                        .font-black { font-weight: 900; }
+                        .font-bold { font-weight: bold; }
+                        .font-normal { font-weight: normal; }
+                        .uppercase { text-transform: uppercase; }
+                        .italic { font-style: italic; }
+                        .mt-1 { margin-top: 2px; }
+                        .mt-2 { margin-top: 4px; }
+                        .mt-3 { margin-top: 6px; }
+                        .mt-4 { margin-top: 10px; }
+                        .mt-8 { margin-top: 20px; }
+                        .mb-0\\.5 { margin-bottom: 2px; }
+                        .mb-1 { margin-bottom: 2px; }
+                        .mb-1\\.5 { margin-bottom: 3px; }
+                        .mb-2 { margin-bottom: 4px; }
+                        .mb-4 { margin-bottom: 8px; }
+                        .mb-6 { margin-bottom: 12px; }
+                        .pb-1 { padding-bottom: 2px; }
+                        .pb-4 { padding-bottom: 8px; }
+                        .pt-1\\.5 { padding-top: 3px; }
+                        .pt-3 { padding-top: 6px; }
+                        .pt-4 { padding-top: 10px; }
+                        .px-1 { padding-left: 2px; padding-right: 2px; }
+                        .px-2 { padding-left: 4px; padding-right: 4px; }
+                        .py-0\\.5 { padding-top: 1px; padding-bottom: 1px; }
+                        .py-1 { padding-top: 2px; padding-bottom: 2px; }
+                        .py-1\\.5 { padding-top: 3px; padding-bottom: 3px; }
+                        .py-2 { padding-top: 4px; padding-bottom: 4px; }
+                        .p-4 { padding: 4mm; }
+                        .p-3 { padding: 3mm; }
+                        .p-1 { padding: 1mm; }
+                        .gap-0 { gap: 0; }
+                        .gap-1 { gap: 2px; }
+                        .gap-0\\.5 { gap: 1px; }
+                        .gap-1\\.5 { gap: 3px; }
+                        .gap-2 { gap: 4px; }
+                        .space-y-0\\.5 > * + * { margin-top: 1px; }
+                        .space-y-4 > * + * { margin-top: 8px; }
+                        .border-b-2 { border-bottom: 1.5px solid black; }
+                        .border-b-4 { border-bottom: 3px solid black; }
+                        .border-t-2 { border-top: 1.5px solid black; }
+                        .border { border: 1px solid #e2e8f0; }
+                        .border-black { border-color: black; }
+                        .border-white\\/40 { border-color: rgba(255, 255, 255, 0.4); }
+                        .border-dashed { border-style: dashed; }
+                        .border-collapse { border-collapse: collapse; }
+                        .w-full { width: 100%; }
+                        .w-3 { width: 12px; }
+                        .w-6 { width: 24px; }
+                        .w-8 { width: 32px; }
+                        .w-20 { width: 80px; }
+                        .h-3 { height: 12px; }
+                        .h-0\\.5 { height: 2px; }
+                        .h-\\[1px\\] { height: 1px; }
+                        .h-10 { height: 35px; }
+                        .min-h-\\[50px\\] { min-height: 50px; }
+                        .grayscale { filter: grayscale(1); }
+                        .contrast-150 { filter: contrast(1.5); }
+                        .tabular-nums { font-variant-numeric: tabular-nums; }
+                        .mx-auto { margin-left: auto; margin-right: auto; }
+                        .rounded-full { border-radius: 9999px; }
+                        .rounded-sm { border-radius: 2px; }
+                        .rounded-md { border-radius: 4px; }
+                        .rounded-lg { border-radius: 6px; }
+                        .overflow-hidden { overflow: hidden; }
+                        .shrink-0 { flex-shrink: 0; }
+                        .inline-block { display: inline-block; }
+                        .break-words { word-break: break-word; }
+                        .whitespace-normal { white-space: normal; }
+                        .whitespace-nowrap { white-space: nowrap; }
+                        .align-middle { vertical-align: middle; }
+                        .relative { position: relative; }
+                        .absolute { position: absolute; }
+                        .top-4 { top: 8px; }
+                        .right-4 { right: 8px; }
+                        .opacity-60 { opacity: 0.6; }
+
+                        .bg-white { background: white; }
+                        .bg-black { background: black; }
+                        .bg-slate-100 { background: #f1f5f9; }
+                        .bg-emerald-50 { background: #ecfdf5; }
+                        .bg-emerald-100 { background: #d1fae5; }
+                        .text-white { color: white; }
+                        .text-black { color: black; }
+                        .text-slate-400 { color: #94a3b8; }
+                        .text-slate-900 { color: #0f172a; }
+                        .text-emerald-600 { color: #059669; }
+                        .text-emerald-700 { color: #047857; }
+                        .text-rose-600 { color: #e11d48; }
+                        .border-slate-200 { border-color: #e2e8f0; }
+                        .border-slate-300 { border-color: #cbd5e1; }
+                        .border-slate-400 { border-color: #94a3b8; }
+                        .border-emerald-100 { border-color: #d1fae5; }
+                        .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+                        /* Absolute Font Sizes for Thermal Printers */
+                        .text-lg { font-size: 11pt !important; }
+                        .text-sm { font-size: 10pt !important; }
+                        .text-xs { font-size: 9pt !important; }
+                        .text-\\[6px\\] { font-size: 5pt !important; }
+                        .text-\\[6\\.5px\\] { font-size: 5.5pt !important; }
+                        .text-\\[7px\\] { font-size: 6pt !important; }
+                        .text-\\[8px\\] { font-size: 7pt !important; }
+                        .text-\\[9px\\] { font-size: 7.5pt !important; }
+                        .text-\\[10px\\] { font-size: 8.5pt !important; }
+                        .text-\\[11px\\] { font-size: 9.5pt !important; }
+                        
+                        .leading-tight { line-height: 1.1; }
+                        .leading-none { line-height: 1; }
+                        .tracking-widest { letter-spacing: 0.1em; }
+                        .tracking-tighter { letter-spacing: -0.05em; }
+                        .tracking-tight { letter-spacing: -0.025em; }
+                        .tracking-\\[0\\.1em\\] { letter-spacing: 0.1em; }
+                        .tracking-\\[0\\.3em\\] { letter-spacing: 0.3em; }
+
+                        /* SVG icons in print */
+                        svg { display: none !important; }
+
+                        @media print {
+                            body { background: white; }
+                            .print-hide { display: none !important; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-container">
+                        ${content}
+                    </div>
+                </body>
+            </html>
+        `);
+
+        w.document.close();
+        setTimeout(() => {
+            w.print();
+            w.close();
+        }, 300);
+    }, [settings?.paperSize, customer.name]);
 
     const generateImage = useCallback(async () => {
         if (!receiptRef.current) return null;
@@ -314,34 +508,6 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
         if (waWindow) waWindow.focus();
     }, [generateImage, customer]);
 
-    const handlePrint = useCallback(async () => {
-        const blob = await generateImage();
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const w = window.open("", "_blank");
-        if (!w) return;
-        w.document.write(`<!DOCTYPE html><html><head><title>Borç Ekstresi</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; width: 100%; display: flex; justify-content: center; }
-  img { 
-    display: block; 
-    width: 58mm; 
-    height: auto; 
-    page-break-inside: avoid;
-    image-rendering: pixelated;
-  }
-  @page { size: 58mm auto; margin: 0; }
-  @media print {
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    img { width: 58mm; }
-  }
-</style>
-</head><body><img src="${url}" /></body></html>`);
-        w.document.close();
-        setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 600);
-    }, [generateImage]);
-
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-[500px] p-0 gap-0 bg-background border-none rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -367,16 +533,17 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
 
                 {/* Preview Area */}
                 <div className="bg-muted/10 p-8">
-                    <div className="max-h-[55vh] overflow-y-auto rounded-3xl border border-border bg-white shadow-2xl custom-scrollbar shadow-black/5">
+                    <div className="max-h-[55vh] overflow-y-auto rounded-3xl border border-border bg-white shadow-2xl custom-scrollbar shadow-black/5 flex justify-center py-8">
                         <div ref={receiptRef}>
                             <ReceiptContent
                                 customer={customer}
                                 debts={debts}
-                                shopName={shopName}
-                                shopPhone={shopPhone}
+                                shopName={settings?.title || shopName}
+                                shopPhone={settings?.phone || shopPhone}
                                 rates={rates}
                                 showPaid={showPaid}
-                                logoUrl={logoUrl}
+                                logoUrl={settings?.logoUrl || logoUrl}
+                                settings={settings}
                             />
                         </div>
                     </div>

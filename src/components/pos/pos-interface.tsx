@@ -243,12 +243,12 @@ export function POSInterface({ initialSaleId }: {
 
     if (itemCurrency === "USD") {
       const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
-      const tlEquiv = Math.round(priceUsd * usdRate);
-      return `(₺${tlEquiv.toLocaleString("tr-TR")})`;
+      const tlEquiv = priceUsd * usdRate;
+      return `(₺${tlEquiv.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
     } else {
       const priceTl = Number(product.sellPrice || 0);
-      const usdEquiv = Math.round(priceTl / usdRate);
-      return `($${usdEquiv})`;
+      const usdEquiv = priceTl / usdRate;
+      return `($${usdEquiv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
     }
   }, [exchangeRates, settingsData]);
 
@@ -327,7 +327,7 @@ export function POSInterface({ initialSaleId }: {
         return {
           ...item,
           sellPriceUsd: newPrice,
-          sellPrice: Math.ceil(newPrice * rate),
+          sellPrice: newPrice * rate,
         };
       }
       return item;
@@ -409,7 +409,7 @@ export function POSInterface({ initialSaleId }: {
     return Math.min(maxPointsDiscount, subtotal);
   }, [applyLoyaltyDiscount, totalPoints, subtotal, pointValueTl, loyaltyEnabled]);
 
-  const usedPoints = Math.ceil(loyaltyDiscountAmount / pointValueTl);
+  const usedPoints = Math.floor(loyaltyDiscountAmount / pointValueTl);
 
   const finalTotal = subtotal - loyaltyDiscountAmount;
 

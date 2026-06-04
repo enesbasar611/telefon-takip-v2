@@ -41,7 +41,7 @@ export function LiveTicketPreview({ technicians }: LiveTicketPreviewProps) {
                 {/* Glow Effect */}
                 <div className="absolute -inset-4 bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-border/30 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden group-hover:border-primary/20 transition-all duration-500">
+                <div className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl border border-border/30 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden group-hover:border-primary/20 transition-all duration-500">
                     {/* Card Header Design */}
                     <div className="h-28 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent flex items-center justify-between px-8 relative overflow-hidden">
                         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white dark:from-white via-transparent to-transparent" />

@@ -88,6 +88,12 @@ export const getProducts = cache(async function getProducts(options: {
         { name: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { barcode: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { category: { name: { contains: search, mode: 'insensitive' } } },
+        { deviceInfo: { color: { contains: search, mode: 'insensitive' } } },
+        { deviceInfo: { capacity: { contains: search, mode: 'insensitive' } } },
+        { deviceInfo: { serialNumber: { contains: search, mode: 'insensitive' } } },
+        { deviceInfo: { imei: { contains: search, mode: 'insensitive' } } }
       ];
     }
 
@@ -498,7 +504,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
         name: productFields.name ? formatTitleCase(productFields.name) : undefined,
         barcode: productFields.barcode ? formatUppercase(productFields.barcode) : undefined,
         sku: productFields.sku ? formatUppercase(productFields.sku) : undefined,
-        buyPrice: data.buyPrice !== undefined ? Math.ceil(Number(data.buyPrice)) : undefined,
+        buyPrice: data.buyPrice !== undefined ? Number(data.buyPrice) : undefined,
         buyPriceUsd: data.buyPriceUsd !== undefined ? (data.buyPriceUsd ? Number(data.buyPriceUsd) : null) : undefined,
         sellPrice: productFields.sellPrice ? Number(productFields.sellPrice) : undefined,
         sellPriceUsd: data.sellPriceUsd !== undefined ? (data.sellPriceUsd ? Number(data.sellPriceUsd) : null) : undefined,

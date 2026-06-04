@@ -35,6 +35,7 @@ export async function getReceiptSettings(type: string = "pos") {
                     website: shop?.website || "v2.basarteknik.com",
                     footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
                     terms: type === "service" ? serviceTerms : null,
+                    paperSize: "72mm",
                 },
             });
             return serializePrisma(defaultSettings);

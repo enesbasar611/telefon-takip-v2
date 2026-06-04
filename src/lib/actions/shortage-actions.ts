@@ -199,7 +199,11 @@ export async function getGlobalShortageList(dateStr?: string) {
 
     // 2. Get low stock products — app-level filter (Prisma field references cannot be used in lte comparisons)
     const allTrackedProducts = await prisma.product.findMany({
-      where: { shopId, criticalStock: { gt: 0 } }, // only products with a defined critical threshold
+      where: {
+        shopId,
+        criticalStock: { gt: 0 },
+        hideFromShortage: false
+      }, // only products with a defined critical threshold and not hidden
       include: {
         shortageItems: {
           where: { isResolved: false }
@@ -664,7 +668,7 @@ export async function approveShortageItem(
     };
     const toTryPrice = (value?: number) => {
       const safeValue = Number(value) || 0;
-      return stockCurrency === "TRY" ? safeValue : Math.ceil(safeValue * getCurrencyRate(stockCurrency));
+      return stockCurrency === "TRY" ? safeValue : safeValue * getCurrencyRate(stockCurrency);
     };
 
     await prisma.$transaction(async (tx) => {
@@ -801,9 +805,9 @@ export async function approveShortageItem(
         // Fiyat hesaplama (USD/TL dönüşümü)
         let unitPriceTL = customPrice || Number(product.sellPrice);
         if (currency === "USD") {
-          unitPriceTL = Math.ceil(unitPriceTL * rates.usd);
+          unitPriceTL = unitPriceTL * rates.usd;
         } else if (currency === "EUR") {
-          unitPriceTL = Math.ceil(unitPriceTL * rates.eur);
+          unitPriceTL = unitPriceTL * rates.eur;
         }
 
         const totalAmount = unitPriceTL * safeQuantity;
@@ -945,6 +949,17 @@ export async function deleteShortageItem(id: string, force = false) {
     }
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+    // Handle alert items (statically generated from low stock products)
+    if (id.startsWith("alert-")) {
+      const productId = id.replace("alert-", "");
+      await prisma.product.update({
+        where: { id: productId, shopId },
+        data: { hideFromShortage: true }
+      });
+      revalidatePath("/kurye");
+      return { success: true };
+    }
+
     const item = await prisma.shortageItem.findUnique({
       where: { id, shopId },
       select: { id: true, name: true, isTaken: true, isResolved: true }
@@ -980,32 +995,45 @@ export async function deleteShortageItems(ids: string[], force = false) {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
 
-    if (!force) {
-      const takenWithoutStock = await prisma.shortageItem.findMany({
-        where: {
-          id: { in: ids },
-          shopId,
-          isTaken: true,
-          isResolved: false
-        },
-        select: { id: true, name: true }
-      });
+    const alertIds = ids.filter(id => id.startsWith("alert-"));
+    const realIds = ids.filter(id => !id.startsWith("alert-"));
 
-      if (takenWithoutStock.length > 0) {
-        return {
-          success: false,
-          needsStockApproval: true,
-          error: `${takenWithoutStock.length} alınan ürünün stok kaydı yapılmamış.`
-        };
-      }
+    if (alertIds.length > 0) {
+      const productIds = alertIds.map(id => id.replace("alert-", ""));
+      await prisma.product.updateMany({
+        where: { id: { in: productIds }, shopId },
+        data: { hideFromShortage: true }
+      });
     }
 
-    await prisma.shortageItem.deleteMany({
-      where: {
-        id: { in: ids },
-        shopId
+    if (realIds.length > 0) {
+      if (!force) {
+        const takenWithoutStock = await prisma.shortageItem.findMany({
+          where: {
+            id: { in: realIds },
+            shopId,
+            isTaken: true,
+            isResolved: false
+          },
+          select: { id: true, name: true }
+        });
+
+        if (takenWithoutStock.length > 0) {
+          return {
+            success: false,
+            needsStockApproval: true,
+            error: `${takenWithoutStock.length} alınan ürünün stok kaydı yapılmamış.`
+          };
+        }
       }
-    });
+
+      await prisma.shortageItem.deleteMany({
+        where: {
+          id: { in: realIds },
+          shopId
+        }
+      });
+    }
     revalidateTag(`shortage-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");

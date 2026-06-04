@@ -109,9 +109,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
         if (currency === "USD") {
             if (storedCurrency === "USD" && storedForeignPrice > 0) {
-                return Math.round(Number(storedForeignPrice));
+                return Number(storedForeignPrice);
             }
-            return Math.round(sellPriceTry / usdRate);
+            return sellPriceTry / usdRate;
         }
 
         return sellPriceTry;
@@ -202,7 +202,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
         const timer = setTimeout(async () => {
             setIsSearchingProducts(true);
             try {
-                const results = await getProducts({ search: itemTitle, pageSize: 5 });
+                const results = await getProducts({ search: itemTitle, pageSize: 20 });
                 setProductSuggestions(results.products || []);
             } catch (error) {
                 console.error("Product search error:", error);
@@ -256,7 +256,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
         const quantity = Math.max(1, Math.floor(Number(itemQuantity) || 1));
         const unitAmount = Number(itemAmount);
         const totalAmount = unitAmount * quantity;
-        const converted = itemCurrency === "USD" ? Math.round(totalAmount * usdRate) : totalAmount;
+        const converted = itemCurrency === "USD" ? totalAmount * usdRate : totalAmount;
 
         const newItem: DebtDraftItem = {
             id: Math.random().toString(36).substr(2, 9),
@@ -354,7 +354,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
                         const total = finalAfter.totalRemainingTRY + (finalAfter.totalRemainingUSD * usdRate);
                         message += `--------------------\n`;
-                        message += `*Genel Toplam:* ₺${Math.round(total).toLocaleString('tr-TR')}\n`;
+                        message += `*Genel Toplam:* ₺${total.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}\n`;
                     }
 
                     message += `\n_Hayırlı işler dileriz._`;

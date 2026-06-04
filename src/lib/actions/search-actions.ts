@@ -85,8 +85,8 @@ export async function globalSearchAction(query: string) {
         ? Number(p.sellPriceUsd)
         : priceTl / usdRate;
 
-      const tlStr = `₺${Math.round(priceTl).toLocaleString("tr-TR")}`;
-      const usdStr = `$${Math.round(priceUsd)}`;
+      const tlStr = `₺${priceTl.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+      const usdStr = `$${priceUsd.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
       // Varsayılan para birimine göre sıralama
       const priceSubtitle = isUsdDefault

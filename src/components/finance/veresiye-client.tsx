@@ -102,6 +102,7 @@ import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { AddDebtModal } from "./add-debt-modal";
+import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { DebtReceiptModal } from "./debt-receipt-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import {
@@ -202,7 +203,7 @@ const getSafeDebtRemaining = (debt: any) => {
     const remaining = Number(debt?.remainingAmount);
     if (!Number.isFinite(amount) || amount <= 0) return 0;
     if (!Number.isFinite(remaining)) return 0;
-    return Math.round(Math.min(Math.max(remaining, 0), amount));
+    return Math.min(Math.max(remaining, 0), amount);
 };
 
 export function VeresiyeClient({
@@ -288,6 +289,7 @@ export function VeresiyeClient({
 
     // New History & Portfolio Modals
     const [historyCustomer, setHistoryCustomer] = useState<any>(null);
+    const [historySearchTerm, setHistorySearchTerm] = useState("");
     const [historyPage, setHistoryPage] = useState(1);
     const historyItemsPerPage = 5;
 
@@ -310,6 +312,9 @@ export function VeresiyeClient({
 
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
 
+    const [bulkReturnModalOpen, setBulkReturnModalOpen] = useState(false);
+    const [bulkReturnInitialData, setBulkReturnInitialData] = useState<any>(null);
+
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
 
@@ -326,6 +331,56 @@ export function VeresiyeClient({
         queryClient.invalidateQueries({ queryKey: ["todayCollected"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+    };
+
+    const handleBulkReturn = () => {
+        if (selectedDebtIds.length === 0) return;
+
+        const debtsToProcess = (statementData?.debts || []).filter((d: any) => selectedDebtIds.includes(d.id));
+        const returnItems: any[] = [];
+
+        debtsToProcess.forEach((debt: any) => {
+            const debtCurrency = debt.currency || "TRY";
+            if (debt.sale?.items && debt.sale.items.length > 0) {
+                debt.sale.items.forEach((si: any) => {
+                    returnItems.push({
+                        productId: si.productId,
+                        name: si.product?.name || si.productName || "Ürün",
+                        quantity: si.quantity,
+                        refundAmount: Number(si.unitPrice) * si.quantity,
+                        refundCurrency: debtCurrency,
+                        unitPrice: Number(si.unitPrice),
+                        saleNumber: debt.sale?.saleNumber,
+                        soldAt: debt.sale?.createdAt,
+                        debtId: debt.id,
+                        saleId: debt.saleId,
+                    });
+                });
+            } else {
+                // Manuel borç ise (direkt borç satırı)
+                returnItems.push({
+                    productId: debt.productId || "",
+                    name: debt.notes || "Ürün İadesi",
+                    quantity: 1,
+                    refundAmount: getSafeDebtRemaining(debt),
+                    refundCurrency: debtCurrency,
+                    debtId: debt.id,
+                });
+            }
+        });
+
+        if (returnItems.length === 0) {
+            toast.error("İade edilecek ürün bulunamadı.");
+            return;
+        }
+
+        setBulkReturnInitialData({
+            sourceType: "CUSTOMER",
+            sourceId: historyCustomer?.customerId || historyCustomer?.id,
+            sourceName: historyCustomer?.name,
+            items: returnItems
+        });
+        setBulkReturnModalOpen(true);
     };
 
     // Queries
@@ -422,7 +477,7 @@ export function VeresiyeClient({
         startTransition(async () => {
             const res = await updateCustomerPayment(
                 editingTransaction.id,
-                Math.round(Number(editTxAmount)),
+                Number(editTxAmount),
                 editTxNotes,
                 rates?.usd || 32.5
             );
@@ -696,6 +751,7 @@ export function VeresiyeClient({
     const openCustomerStatement = async (item: any) => {
         setHistoryCustomer(item);
         setHistoryPage(1);
+        setHistorySearchTerm("");
         setSelectedDebtIds([]);
     };
 
@@ -1390,7 +1446,7 @@ export function VeresiyeClient({
                                                     onPayment={(item) => {
                                                         setPaymentCustomer(item);
                                                         setPaymentCurrency("TRY");
-                                                        setPaymentAmount(String(Math.ceil(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5)))));
+                                                        setPaymentAmount((item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toFixed(2));
                                                     }}
                                                 />
                                             ))}
@@ -1448,9 +1504,18 @@ export function VeresiyeClient({
                             <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
                                 <Users className="w-5 h-5" />
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1 ml-3">
                                 <h3 className="text-sm font-black text-foreground uppercase tracking-tight truncate">{historyCustomer?.name}</h3>
                                 <p className="text-[10px] text-muted-foreground font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
+                            </div>
+                            <div className="mx-4 flex-1 max-w-xs relative group hidden sm:block">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+                                <Input
+                                    value={historySearchTerm}
+                                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                                    placeholder="İşlem veya ürün ara..."
+                                    className="pl-9 h-9 bg-muted/20 border-border/50 rounded-xl text-[11px] focus:bg-background transition-all"
+                                />
                             </div>
                         </div>
                         {/* Icon-only action buttons with tooltips */}
@@ -1571,10 +1636,28 @@ export function VeresiyeClient({
                     <div className="px-6 md:px-8 py-4 overflow-y-auto flex-1 space-y-2 scrollbar-hide">
                         {(() => {
                             const debtsToDisplay = statementData?.debts || (historyCustomer as any)?.debtItems || [];
-                            const items = [
+                            let items = [
                                 ...debtsToDisplay.map((d: any) => ({ ...d, listType: 'DEBT' })),
                                 ...((statementData?.transactions || []) as any[]).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, listType: 'PAYMENT' }))
                             ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                            if (historySearchTerm) {
+                                const lowQuery = normalizeSearchText(historySearchTerm);
+                                items = items.filter((item: any) => {
+                                    const notesMatch = normalizeSearchText(item.notes || item.description || "").includes(lowQuery);
+                                    const dateMatch = format(new Date(item.createdAt), "dd.MM.yyyy", { locale: tr }).includes(historySearchTerm);
+                                    let productsMatch = false;
+                                    if (item.sale?.items) {
+                                        productsMatch = item.sale.items.some((si: any) =>
+                                            normalizeSearchText(si.product?.name || si.productName || "").includes(lowQuery) ||
+                                            normalizeSearchText(si.product?.barcode || "").includes(lowQuery) ||
+                                            normalizeSearchText(si.product?.sku || "").includes(lowQuery) ||
+                                            (si.product?.deviceInfo?.imei && normalizeSearchText(si.product.deviceInfo.imei).includes(lowQuery))
+                                        );
+                                    }
+                                    return notesMatch || productsMatch || dateMatch;
+                                });
+                            }
 
                             const isDataLoading = !statementData;
 
@@ -1802,6 +1885,16 @@ export function VeresiyeClient({
                                     className="h-9 px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
                                 >
                                     Seçilenleri Öde
+                                </Button>
+                            )}
+                            {selectedDebtIds.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleBulkReturn}
+                                    className="h-9 px-4 rounded-xl border-orange-500/30 text-orange-600 hover:bg-orange-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                                >
+                                    <ArrowLeftRight className="w-3 h-3" />
+                                    Seçilenleri İade Et
                                 </Button>
                             )}
                         </div>
@@ -2413,6 +2506,16 @@ export function VeresiyeClient({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <AddReturnModal
+                open={bulkReturnModalOpen}
+                onOpenChange={setBulkReturnModalOpen}
+                initialData={bulkReturnInitialData}
+                onSuccess={() => {
+                    invalidateReceivables();
+                    setSelectedDebtIds([]);
+                }}
+            />
         </div>
     );
 }

@@ -1475,13 +1475,27 @@ export function CourierDashboardClient({
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 10 }}
+                                            onClick={() => isSelectionMode && toggleSelect(s.id)}
                                             className={cn(
-                                                "flex items-center justify-between p-4 border transition-all rounded-2xl group/item",
+                                                "flex items-center justify-between p-4 border transition-all rounded-2xl group/item cursor-pointer",
                                                 s.isAlert
                                                     ? "bg-red-500/5 dark:bg-red-500/5 border-red-500/10 hover:bg-red-500/10"
-                                                    : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:bg-orange-500/10 hover:border-orange-500/30"
+                                                    : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:bg-orange-500/10 hover:border-orange-500/30",
+                                                selectedIds.includes(s.id) && "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5"
                                             )}
                                         >
+                                            {isSelectionMode && (
+                                                <div
+                                                    className={cn(
+                                                        "mr-4 h-6 w-6 rounded-lg flex items-center justify-center transition-all border shrink-0",
+                                                        selectedIds.includes(s.id)
+                                                            ? "bg-blue-500 border-blue-500 text-black shadow-lg shadow-blue-500/20"
+                                                            : "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-white/10"
+                                                    )}
+                                                >
+                                                    {selectedIds.includes(s.id) && <Check className="h-4 w-4" />}
+                                                </div>
+                                            )}
                                             <div className="flex-1 min-w-0 pr-4">
                                                 <div className="flex items-center gap-2">
                                                     <h4 className={cn(

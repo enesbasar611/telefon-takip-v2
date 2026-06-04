@@ -89,12 +89,12 @@ export function POSCompact({ products: initialProducts, customers, categories }:
 
         if (itemCurrency === "USD") {
             const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
-            const tlEquiv = Math.round(priceUsd * usdRate);
-            return `(₺${tlEquiv.toLocaleString("tr-TR")})`;
+            const tlEquiv = priceUsd * usdRate;
+            return `(₺${tlEquiv.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
         } else {
             const priceTl = Number(product.sellPrice || 0);
-            const usdEquiv = Math.round(priceTl / usdRate);
-            return `($${usdEquiv})`;
+            const usdEquiv = priceTl / usdRate;
+            return `($${usdEquiv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
         }
     }, [exchangeRates, settingsData]);
 

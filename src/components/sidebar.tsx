@@ -211,11 +211,11 @@ export function Sidebar({ className, user, shop, onNavigate }: {
               }}
             />
           </motion.div>
-          <div className="flex flex-col flex-1 min-w-0 items-start text-left">
-            <h1 className="text-[17px] font-black tracking-tight text-slate-800 dark:text-white leading-none uppercase truncate group-hover:text-primary transition-colors duration-300">
+          <div className="flex flex-col flex-1 min-w-0 items-start text-left justify-center">
+            <h1 className="text-[15px] font-black tracking-tighter text-slate-800 dark:text-white leading-[1.2] uppercase transition-all duration-300 group-hover:text-primary line-clamp-2 break-words">
               {shop?.name || "BAŞAR TEKNİK"}
             </h1>
-            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1.5 leading-none truncate block">
+            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] mt-1 leading-none truncate block w-full">
               {industryConfig?.name || "ERP SİSTEMİ"}
             </span>
           </div>

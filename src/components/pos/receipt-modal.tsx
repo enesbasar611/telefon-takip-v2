@@ -31,7 +31,118 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     }
   }, [isOpen]);
 
-  if (!sale) return null;
+  const currentPaperSize = settings?.paperSize || "72mm";
+
+  const handlePrint = useCallback(() => {
+    if (!sale || !receiptRef.current) return;
+
+    const content = receiptRef.current.innerHTML;
+    const w = window.open("", "_blank");
+    if (!w) return;
+
+    w.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Satış Fişi - ${sale.saleNumber}</title>
+          <style>
+            @page { 
+              size: ${currentPaperSize} auto; 
+              margin: 0; 
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              height: auto !important;
+              width: ${currentPaperSize};
+              background: white;
+              -webkit-print-color-adjust: exact;
+            }
+            body { 
+              font-family: 'Courier New', Courier, monospace;
+            }
+            .receipt-container { 
+              width: 100%;
+              padding: 2mm 4mm;
+              box-sizing: border-box;
+              background: white;
+              color: black;
+              margin: 0;
+              display: block;
+            }
+            
+            /* Layout Utilities */
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .justify-center { justify-content: center; }
+            .flex-col { flex-direction: column; }
+            .flex-1 { flex: 1; }
+            .items-center { align-items: center; }
+            .items-baseline { align-items: baseline; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-black { font-weight: 900; }
+            .font-bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
+            .mt-0\\.5 { margin-top: 2px; }
+            .mt-1 { margin-top: 2px; }
+            .mb-1 { margin-bottom: 2px; }
+            .mb-2 { margin-bottom: 4px; }
+            .mb-3 { margin-bottom: 6px; }
+            .pb-3 { padding-bottom: 6px; }
+            .pt-1 { padding-top: 2px; }
+            .pt-3 { padding-top: 6px; }
+            .gap-2 { gap: 4px; }
+            .border-b-2 { border-bottom: 1.5px solid black; }
+            .border-t-2 { border-top: 1.5px solid black; }
+            .border-dashed { border-style: dashed; }
+            .w-full { width: 100%; }
+            .w-20 { width: 80px; }
+            .shrink-0 { flex-shrink: 0; }
+            .break-words { word-break: break-word; }
+            .whitespace-normal { white-space: normal; }
+            .whitespace-nowrap { white-space: nowrap; }
+            .grayscale { filter: grayscale(1); }
+            .contrast-150 { filter: contrast(1.5); }
+            .h-10 { height: 35px; }
+            .space-y-1 > * + * { margin-top: 2px; }
+            .space-y-1\\.5 > * + * { margin-top: 3px; }
+
+            /* Absolute Font Sizes for Thermal Printers */
+            .text-lg { font-size: 11pt !important; }
+            .text-sm { font-size: 10pt !important; }
+            .text-xs { font-size: 9pt !important; }
+            .text-\\[8px\\] { font-size: 7pt !important; }
+            .text-\\[9px\\] { font-size: 7.5pt !important; }
+            .text-\\[10px\\] { font-size: 8.5pt !important; }
+            .text-\\[11px\\] { font-size: 9pt !important; }
+            .text-\\[13px\\] { font-size: 10pt !important; }
+            
+            .leading-tight { line-height: 1.1; }
+            .leading-relaxed { line-height: 1.4; }
+            .tracking-widest { letter-spacing: 0.1em; }
+            .tracking-wider { letter-spacing: 0.05em; }
+
+            @media print {
+              body { background: white; }
+              .print-hide { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-container">
+            ${content}
+          </div>
+        </body>
+      </html>
+    `);
+
+    w.document.close();
+    setTimeout(() => {
+      w.print();
+      w.close();
+    }, 300);
+  }, [currentPaperSize, sale?.saleNumber]);
 
   const generateImage = useCallback(async () => {
     if (!receiptRef.current) return null;
@@ -40,7 +151,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
       const html2canvasModule = await import("html2canvas");
       const html2canvas = html2canvasModule.default;
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 4, // Higher scale for extreme clarity on thermal
+        scale: 4,
         backgroundColor: "#ffffff",
         logging: false,
         useCORS: true,
@@ -56,36 +167,8 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     }
   }, []);
 
-  const handlePrint = useCallback(async () => {
-    const blob = await generateImage();
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>Satış Fişi</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; width: 100%; display: flex; justify-content: center; }
-  img { 
-    display: block; 
-    width: 58mm; /* Force 58mm width */
-    height: auto; 
-    page-break-inside: avoid;
-    image-rendering: pixelated; /* Keeps text edges sharp */
-  }
-  @page { size: 58mm auto; margin: 0; }
-  @media print {
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { background: white; }
-    img { width: 58mm; height: auto; margin: 0; }
-  }
-</style>
-</head><body><img src="${url}" /></body></html>`);
-    w.document.close();
-    setTimeout(() => { w.print(); }, 500);
-  }, [generateImage]);
-
   const handleDownload = useCallback(async () => {
+    if (!sale) return;
     const blob = await generateImage();
     if (!blob) return;
     const url = URL.createObjectURL(blob);
@@ -94,7 +177,9 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     a.download = `fis-${sale.saleNumber || "satis"}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
-  }, [generateImage, sale.saleNumber]);
+  }, [generateImage, sale?.saleNumber]);
+
+  if (!sale) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -136,11 +221,14 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             </div>
           </div>
 
-          <div className="bg-slate-50 p-4 flex justify-center border-y border-border/40">
+          <div className="bg-slate-50 dark:bg-slate-900/20 p-4 flex justify-center border-y border-border/40 rounded-2xl">
             <div
               ref={receiptRef}
-              className="bg-white p-4 w-[384px] font-mono text-[11px] leading-relaxed text-black shadow-lg"
-              style={{ width: '384px', minWidth: '384px' }} // Standard POS58 width
+              className={`bg-white p-4 font-mono text-[11px] leading-relaxed text-black shadow-lg ${currentPaperSize === "58mm" ? "w-[58mm]" :
+                currentPaperSize === "80mm" ? "w-[80mm]" :
+                  "w-[72mm]"
+                }`}
+              style={{ width: currentPaperSize }}
             >
               {/* Header */}
               <div className="text-center border-b-2 border-black pb-3 mb-3">

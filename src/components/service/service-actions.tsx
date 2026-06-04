@@ -1,10 +1,8 @@
 "use client";
 
-import { TechnicalServiceAnalysisModal } from "@/components/service/technical-service-analysis-modal";
 import { CreateServiceModal } from "@/components/service/create-service-modal";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles } from "lucide-react";
-import { getIndustryLabel } from "@/lib/industry-utils";
+import { Plus } from "lucide-react";
 
 interface ServiceActionsProps {
     shop?: any;

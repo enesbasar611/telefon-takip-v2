@@ -92,14 +92,11 @@ export function QuickCreateProductModal({
             let buyPriceUsd = currency === "USD" ? finalBuyPrice : null;
 
             if (currency === "USD") {
-                finalBuyPrice = Math.ceil(finalBuyPrice * exchangeRates.usd);
-                finalSellPrice = Math.ceil(finalSellPrice * exchangeRates.usd);
+                finalBuyPrice = finalBuyPrice * exchangeRates.usd;
+                finalSellPrice = finalSellPrice * exchangeRates.usd;
             } else if (currency === "EUR") {
-                finalBuyPrice = Math.ceil(finalBuyPrice * exchangeRates.eur);
-                finalSellPrice = Math.ceil(finalSellPrice * exchangeRates.eur);
-            } else {
-                finalBuyPrice = Math.ceil(finalBuyPrice);
-                finalSellPrice = Math.ceil(finalSellPrice);
+                finalBuyPrice = finalBuyPrice * exchangeRates.eur;
+                finalSellPrice = finalSellPrice * exchangeRates.eur;
             }
 
             const result = await createProduct({

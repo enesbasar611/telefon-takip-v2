@@ -542,7 +542,7 @@ export default function NewServicePage() {
   };
 
   // ── Stable style constants (Apple SaaS Compact Style) ─────────────────
-  const cardClass = "bg-card/40 dark:bg-slate-900/40 backdrop-blur-md p-6 rounded-[2.5rem] border border-border/40 dark:border-white/5 shadow-sm transition-all hover:border-primary/20 hover:shadow-xl group/card relative overflow-hidden";
+  const cardClass = "bg-card/40 dark:bg-slate-900/60 backdrop-blur-md p-6 md:p-8 rounded-[2.5rem] border border-border/40 dark:border-white/5 shadow-sm transition-all hover:border-primary/20 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] group/card relative overflow-hidden";
   const labelClass = "text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] mb-2 block ml-1 transition-colors group-hover/card:text-primary";
 
   const getInputClass = useCallback((fieldName: string) => cn(
@@ -557,61 +557,47 @@ export default function NewServicePage() {
       <div className="max-w-7xl mx-auto px-4 md:px-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <PageHeader
-            title={
-              <div className="flex items-center gap-4">
-                <motion.div
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="flex items-center gap-3"
-                >
-                  <span className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                    Yeni {getIndustryLabel(shop, "serviceTicket")} Kaydı
-                  </span>
-                </motion.div>
-                <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                  <div className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </div>
-                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">SİSTEM CANLI</span>
-                </div>
-              </div>
-            }
-            description={`${getIndustryLabel(shop, "serviceTicket")} işlemlerini başlatmak için gerekli bilgileri doldurun.`}
+            title="Yeni Servis Kaydı"
+            description="Teknik servis işlemlerini başlatmak için gerekli bilgileri doldurun."
             icon={Wrench}
             className="mb-0"
             actions={
               <div className="flex items-center gap-4">
                 <div
-                  className="relative flex items-center p-1 bg-muted/20 dark:bg-black/40 rounded-2xl border border-border/40 dark:border-white/5 backdrop-blur-xl cursor-pointer select-none min-w-[200px]"
+                  className="relative flex items-center p-1 bg-muted/20 dark:bg-slate-900/60 rounded-2xl border border-border/40 dark:border-white/5 backdrop-blur-xl cursor-pointer select-none"
                   onClick={() => {
                     const newMode = !isSimpleMode;
                     setIsSimpleMode(newMode);
                     localStorage.setItem("service_simple_mode", String(newMode));
+                    toast({
+                      title: newMode ? "Hızlı Mod" : "Detaylı Mod",
+                      description: newMode ? "Sadece temel bilgiler gösteriliyor." : "Tüm detaylı alanlar erişilebilir.",
+                      variant: "default"
+                    });
                   }}
                 >
                   <motion.div
                     className={cn(
                       "absolute inset-y-1 rounded-xl shadow-lg",
-                      isSimpleMode ? "bg-orange-500 shadow-orange-500/20" : "bg-blue-600 shadow-blue-600/20"
+                      isSimpleMode ? "bg-orange-500" : "bg-blue-600"
                     )}
                     initial={false}
                     animate={{
-                      x: isSimpleMode ? 0 : 96,
-                      width: 96,
+                      x: isSimpleMode ? 0 : 80,
+                      width: 80,
                     }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
 
-                  <div className="relative flex w-full">
+                  <div className="relative flex w-[160px]">
                     <div className={cn(
-                      "flex-1 flex items-center justify-center py-2 text-[11px] font-black tracking-widest transition-colors duration-300 z-10",
+                      "flex-1 flex items-center justify-center py-2 text-[9px] font-black tracking-widest transition-colors duration-300 z-10",
                       isSimpleMode ? "text-white" : "text-muted-foreground"
                     )}>
                       HIZLI
                     </div>
                     <div className={cn(
-                      "flex-1 flex items-center justify-center py-2 text-[11px] font-black tracking-widest transition-colors duration-300 z-10",
+                      "flex-1 flex items-center justify-center py-2 text-[9px] font-black tracking-widest transition-colors duration-300 z-10",
                       !isSimpleMode ? "text-white" : "text-muted-foreground"
                     )}>
                       DETAYLI

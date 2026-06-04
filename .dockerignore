@@ -3,6 +3,7 @@ node_modules
 .git
 .env
 .env.local
+.env.production
 .vercel
 README.md
 Dockerfile*
@@ -28,3 +29,7 @@ build_output.log
 ts_errors.txt
 dev-server.log
 dev-server.err.log
+
+# Geçici yedekleri alma ama normal migrations klasörüne dokunma!
+prisma/migrations.bak
+*.bak

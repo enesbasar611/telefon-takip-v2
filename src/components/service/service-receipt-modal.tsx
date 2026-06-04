@@ -63,10 +63,8 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                             margin: 0;
                             padding: 0;
                             height: auto !important;
-                            min-height: 0 !important;
                             width: ${currentPaperSize};
                             background: white;
-                            overflow: hidden;
                             -webkit-print-color-adjust: exact;
                         }
                         body { 
@@ -80,9 +78,6 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                             color: black;
                             margin: 0;
                             display: block;
-                            page-break-inside: avoid;
-                            page-break-after: avoid;
-                            page-break-before: avoid;
                         }
                         
                         /* Layout Utilities */
@@ -257,7 +252,7 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between border-t-2 border-black pt-4 items-center mb-6">
+                                <div className="flex justify-between border-t-2 border-black pt-4 items-center mb-4">
                                     <span className="font-bold text-xs uppercase text-black">TAHMİNİ TUTAR:</span>
                                     {isEditing ? (
                                         <div className="flex items-center gap-1">
@@ -272,6 +267,10 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                                     ) : (
                                         <span className="font-bold text-2xl text-black">₺{formatCurrency(editableTicket.estimatedCost)}</span>
                                     )}
+                                </div>
+
+                                <div className="mb-6 flex flex-col items-center gap-2">
+                                    <Barcode value={editableTicket.ticketNumber} height={40} fontSize={10} />
                                 </div>
 
                                 <div className="text-center pt-4 border-t-2 border-black border-dashed">

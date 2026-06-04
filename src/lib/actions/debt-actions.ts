@@ -10,7 +10,7 @@ import { recordAuditLog } from "./audit-actions";
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
-  return Math.round(amount);
+  return amount;
 };
 
 const clampRemainingAmount = (remaining: unknown, amount: unknown) => {
@@ -556,14 +556,14 @@ export async function collectGlobalCustomerPayment(data: {
           amountToReduceFromDebt = amountToApplyFromPayment;
         }
         else if (debt.currency === "USD" && paymentCurrency === "TRY") {
-          const debtRemainingInTRY = Math.round(debtRemaining * usdRate);
+          const debtRemainingInTRY = parseFloat((debtRemaining * usdRate).toFixed(2));
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInTRY);
-          amountToReduceFromDebt = Math.round(amountToApplyFromPayment / usdRate);
+          amountToReduceFromDebt = parseFloat((amountToApplyFromPayment / usdRate).toFixed(2));
         }
         else if (debt.currency === "TRY" && paymentCurrency === "USD") {
-          const debtRemainingInUSD = Math.round(debtRemaining / usdRate);
+          const debtRemainingInUSD = parseFloat((debtRemaining / usdRate).toFixed(2));
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInUSD);
-          amountToReduceFromDebt = Math.round(amountToApplyFromPayment * usdRate);
+          amountToReduceFromDebt = parseFloat((amountToApplyFromPayment * usdRate).toFixed(2));
         }
 
         if (amountToReduceFromDebt > 0.001) {

@@ -16,7 +16,7 @@ import { useEffect, useTransition } from "react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { formatProperCase, formatUppercase } from "@/lib/formatters";
 import { useRouter } from "next/navigation";
-import { getShopInfo } from "@/lib/actions/receipt-settings";
+import { getShopInfo, getReceiptSettings } from "@/lib/actions/receipt-settings";
 
 interface DeviceReceiptModalProps {
     device: any;
@@ -225,7 +225,7 @@ function ThermalReceipt({
             id="receipt-content-thermal"
             className="font-mono text-black"
             style={{
-                width: "58mm", // Standard POS58 width
+                width: "72mm", // Default, overridden by print styles
                 background: "#fff",
                 color: "#000",
                 padding: "2mm",
@@ -271,6 +271,7 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
     const [formType, setFormType] = useState<FormType>("purchase");
     const [printFormat, setPrintFormat] = useState<PrintFormat>("a4");
     const [shopInfo, setShopInfo] = useState<any>(null);
+    const [receiptSettings, setReceiptSettings] = useState<any>(null);
 
     // Sync with defaultOpen
     useEffect(() => {
@@ -296,6 +297,7 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
             }
         };
         fetchShop();
+        getReceiptSettings("device").then(setReceiptSettings);
     }, []);
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
@@ -369,6 +371,8 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
         });
     };
 
+    const thermalPaperSize = receiptSettings?.paperSize || "72mm";
+
     const handlePrint = () => {
         const contentId = printFormat === "a4" ? "receipt-content-a4" : "receipt-content-thermal";
         const content = document.getElementById(contentId);
@@ -384,7 +388,7 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
           <title>${formType === "purchase" ? "Alış-Satış Sözleşmesi" : "Belge"}</title>
           <style>
             @page { 
-              size: ${isA4 ? "A4" : "58mm auto"}; 
+              size: ${isA4 ? "A4" : `${thermalPaperSize} auto`}; 
               margin: 0; 
             }
             body { 
@@ -398,7 +402,7 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
               color: black !important;
             }
             #receipt-content-thermal {
-              width: 58mm !important;
+              width: ${thermalPaperSize} !important;
               padding: 4mm !important;
             }
           </style>
@@ -544,13 +548,13 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                                 </div>
                                 <div className="flex items-center bg-card rounded-lg p-1 border border-border">
                                     <button onClick={() => setPrintFormat("a4")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'a4' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>A4 Standart</button>
-                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>58mm Termal</button>
+                                    <button onClick={() => setPrintFormat("thermal")} className={`px-3 py-1.5 rounded-md text-[10px]  transition-all ${printFormat === 'thermal' ? 'bg-slate-700 text-white' : 'text-muted-foreground/80'}`}>{thermalPaperSize} Termal</button>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 bg-[#05070A] overflow-auto p-10 flex justify-center items-start custom-scrollbar">
-                            <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : 'w-[58mm]'}`}>
+                            <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : thermalPaperSize === '58mm' ? 'w-[58mm]' : thermalPaperSize === '80mm' ? 'w-[80mm]' : 'w-[72mm]'}`}>
                                 {printFormat === "a4" ? (
                                     <A4Receipt device={device} formType={formType} date={now} customer={customer} expert={expert} shopInfo={shopInfo} />
                                 ) : (

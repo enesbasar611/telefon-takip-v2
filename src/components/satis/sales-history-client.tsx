@@ -96,7 +96,9 @@ export function SalesHistoryClient({
         if (op.type !== 'SALE') return;
         setReceiptLoading(op.id);
         try {
-            const sale = await getSaleById(op.id);
+            // op.id is the transaction ID, but for sales we need the actual sale ID
+            const targetId = op.saleId || op.id;
+            const sale = await getSaleById(targetId);
             if (sale) setReceiptSale(sale);
         } catch (e) {
             console.error("Failed to load sale for receipt", e);
