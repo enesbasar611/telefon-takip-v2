@@ -52,22 +52,42 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
     const portfolioTotal = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
 
     const unpaid = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
-    const earliestDate = unpaid.length > 0
-        ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const earliestDate = (() => {
+        if (unpaid.length === 0) return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const sorted = [...unpaid].sort((a: any, b: any) => {
+            const da = new Date(a.createdAt).getTime();
+            const db = new Date(b.createdAt).getTime();
+            if (isNaN(da)) return 1;
+            if (isNaN(db)) return -1;
+            return da - db;
+        });
+        const first = new Date(sorted[0].createdAt);
+        return !isNaN(first.getTime()) ? first : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    })();
 
     const displayDebts = debts.filter((d: any) => {
         if (showPaid) return true;
         if (d.type === 'PAYMENT') {
-            return new Date(d.createdAt) >= earliestDate;
+            const date = new Date(d.createdAt);
+            if (isNaN(date.getTime())) return false;
+            return date >= earliestDate;
         }
         return !d.isPaid;
     });
 
     const groups = displayDebts
-        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .sort((a: any, b: any) => {
+            const da = new Date(a.createdAt).getTime();
+            const db = new Date(b.createdAt).getTime();
+            if (isNaN(da)) return 1;
+            if (isNaN(db)) return -1;
+            return da - db;
+        })
         .reduce((groups: any, item: any) => {
-            const date = format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr });
+            const date = (() => {
+                const d = new Date(item.createdAt);
+                return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
+            })();
             if (!groups[date]) {
                 groups[date] = [];
             }

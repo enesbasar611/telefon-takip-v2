@@ -27,6 +27,7 @@ interface CheckoutSummaryProps {
     isDebtBlocked?: boolean; // When DEBT selected but no customer
     isCompact?: boolean;
     getEquivalentDisplay?: (val: any) => string;
+    defaultCurrency?: string;
 }
 
 export const CheckoutSummary = ({
@@ -45,8 +46,10 @@ export const CheckoutSummary = ({
     onCheckout,
     isDebtBlocked = false,
     isCompact = false,
-    getEquivalentDisplay
+    getEquivalentDisplay,
+    defaultCurrency = "TRY"
 }: CheckoutSummaryProps) => {
+    const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
     const paymentMethods = [
         { id: "CASH", label: "NAKİT", icon: Banknote, color: "text-emerald-500", bg: "bg-emerald-500/10" },
         { id: "CREDIT_CARD", label: "KART", icon: CreditCard, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -60,7 +63,7 @@ export const CheckoutSummary = ({
                 <div className="bg-muted/30 border-2 border-border/40 p-5 rounded-[1.75rem] space-y-4">
                     <div className="flex justify-between items-center px-1">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
-                        <span className="text-xs font-black text-foreground/70 tabular-nums">₺{subtotal.toLocaleString('tr-TR')}</span>
+                        <span className="text-xs font-black text-foreground/70 tabular-nums">{currencySymbol}{subtotal.toLocaleString('tr-TR')}</span>
                     </div>
                     <div className="flex justify-between items-center px-1">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
@@ -70,9 +73,9 @@ export const CheckoutSummary = ({
                         <span className="text-xs font-black text-foreground tracking-[0.1em] uppercase leading-none">ÖDENECEK TUTAR</span>
                         <div className="flex flex-col items-end">
                             {loyaltyDiscountAmount > 0 && (
-                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- ₺{formatCurrency(loyaltyDiscountAmount)}</Badge>
+                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / 34.5)}</Badge>
                             )}
-                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">₺{total.toLocaleString('tr-TR')}</span>
+                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">{currencySymbol}{total.toLocaleString('tr-TR')}</span>
                         </div>
                     </div>
                 </div>
@@ -192,15 +195,15 @@ export const CheckoutSummary = ({
                     <div className="flex flex-col items-end gap-0">
                         <div className="flex items-center gap-2">
                             {loyaltyDiscountAmount > 0 && (
-                                <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">₺{formatCurrency(subtotal)}</span>
+                                <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">{currencySymbol}{formatCurrency(subtotal)}</span>
                             )}
                             {getEquivalentDisplay && (
                                 <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
-                                    ({getEquivalentDisplay({ sellPrice: total })})
+                                    ({getEquivalentDisplay({ sellPrice: total * (defaultCurrency === 'USD' ? 34.5 : 1) })})
                                 </span>
                             )}
                         </div>
-                        <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">₺{formatCurrency(total)}</span>
+                        <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">{currencySymbol}{formatCurrency(total)}</span>
                     </div>
                 </div>
 

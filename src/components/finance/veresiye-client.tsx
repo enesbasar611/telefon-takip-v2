@@ -976,7 +976,10 @@ export function VeresiyeClient({
             const orderedUniqueDates: string[] = [];
 
             combined.forEach(item => {
-                const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                const dateKey = (() => {
+                    const d = new Date(item.date);
+                    return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
+                })();
                 if (!dateGroups[dateKey]) {
                     dateGroups[dateKey] = [];
                     orderedUniqueDates.push(dateKey);
@@ -1092,7 +1095,10 @@ export function VeresiyeClient({
                 const orderedUniqueDates: string[] = [];
 
                 combined.forEach(item => {
-                    const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                    const dateKey = (() => {
+                        const d = new Date(item.date);
+                        return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
+                    })();
                     if (!dateGroups[dateKey]) {
                         dateGroups[dateKey] = [];
                         orderedUniqueDates.push(dateKey);
@@ -1538,9 +1544,21 @@ export function VeresiyeClient({
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const data = [
-                                        ...statementData.debts.map((d: any) => ({ Tarih: format(new Date(d.createdAt), "dd.MM.yyyy"), İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" })),
-                                        ...statementData.transactions.map((t: any) => ({ Tarih: format(new Date(t.createdAt), "dd.MM.yyyy"), İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" }))
-                                    ].sort((a, b) => new Date(b.Tarih).getTime() - new Date(a.Tarih).getTime());
+                                        ...statementData.debts.map((d: any) => {
+                                            const date = new Date(d.createdAt);
+                                            const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
+                                            return { Tarih: dateStr, İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" };
+                                        }),
+                                        ...statementData.transactions.map((t: any) => {
+                                            const date = new Date(t.createdAt);
+                                            const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
+                                            return { Tarih: dateStr, İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" };
+                                        })
+                                    ].sort((a, b) => {
+                                        if (a.Tarih === "-" || b.Tarih === "-") return 0;
+                                        // Standard sort might be tricky with strings but we'll keep it simple for now as it was before
+                                        return b.Tarih.localeCompare(a.Tarih);
+                                    });
                                     const XLSX = await import("xlsx");
                                     const ws = XLSX.utils.json_to_sheet(data);
                                     const wb = XLSX.utils.book_new();
@@ -1570,7 +1588,10 @@ export function VeresiyeClient({
                                     const dateGroups: { [key: string]: any[] } = {};
                                     const orderedUniqueDates: string[] = [];
                                     combined.forEach(item => {
-                                        const dateKey = format(item.date, "dd MMM yyyy", { locale: tr }).toUpperCase();
+                                        const dateKey = (() => {
+                                            const d = new Date(item.date);
+                                            return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
+                                        })();
                                         if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; orderedUniqueDates.push(dateKey); }
                                         dateGroups[dateKey].push(item);
                                     });
@@ -1708,7 +1729,12 @@ export function VeresiyeClient({
                                                     <div className="flex flex-col gap-1">
                                                         <span className="text-xs font-black text-foreground uppercase tracking-tight">{item.notes || "İsimsiz Borç"}</span>
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
+                                                                {(() => {
+                                                                    const d = new Date(item.createdAt);
+                                                                    return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
+                                                                })()}
+                                                            </span>
                                                             {item.sale && (
                                                                 <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 rounded-full font-black border border-indigo-500/10">POS SATIŞI</span>
                                                             )}
@@ -1828,7 +1854,12 @@ export function VeresiyeClient({
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{item.description || "Tahsilat"}</span>
-                                                        <span className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">{format(new Date(item.createdAt), "dd MMM yyyy", { locale: tr })}</span>
+                                                        <span className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">
+                                                            {(() => {
+                                                                const d = new Date(item.createdAt);
+                                                                return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
+                                                            })()}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="text-right flex items-center gap-3">
@@ -2119,7 +2150,9 @@ export function VeresiyeClient({
                                                         )}
                                                     </div>
                                                     <span className="block text-xs md:text-sm font-bold text-foreground truncate">{item.saleNumber || item.ticketNumber || item.deviceModel || item.notes || "Belirtilmemiş İşlem"}</span>
-                                                    <span className="block text-[10px] text-muted-foreground mt-0.5">{item.formattedDate.toLocaleDateString('tr-TR')}</span>
+                                                    <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                                        {!isNaN(item.formattedDate.getTime()) ? item.formattedDate.toLocaleDateString('tr-TR') : "-"}
+                                                    </span>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end">
                                                     <span className={cn("text-base md:text-lg font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600" : "text-foreground")}>
@@ -2369,7 +2402,10 @@ export function VeresiyeClient({
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[8px] font-bold text-muted-foreground/60 flex items-center gap-1 shrink-0">
-                                                        {format(new Date(item.createdAt), "dd.MM.yy", { locale: tr })}
+                                                        {(() => {
+                                                            const d = new Date(item.createdAt);
+                                                            return !isNaN(d.getTime()) ? format(d, "dd.MM.yy", { locale: tr }) : "-";
+                                                        })()}
                                                     </span>
                                                     <div className="w-0.5 h-0.5 rounded-full bg-border" />
                                                     <span className="text-[8px] font-medium text-muted-foreground/50 truncate max-w-[150px] italic">
@@ -2435,14 +2471,18 @@ export function VeresiyeClient({
                                 onClick={async () => {
                                     // Excel Export for stats
                                     const XLSX = await import("xlsx");
-                                    const data = statsModalData.map((item: any) => ({
-                                        Müşteri: item.customer?.name,
-                                        Tarih: format(new Date(item.createdAt), "dd.MM.yyyy HH:mm"),
-                                        İşlem: item.description || item.notes || "-",
-                                        ÖdemeYöntemi: item.paymentMethod || "-",
-                                        Tutar: item.amount || 0,
-                                        Döviz: item.currency || "TRY"
-                                    }));
+                                    const data = statsModalData.map((item: any) => {
+                                        const date = new Date(item.createdAt);
+                                        const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy HH:mm") : "-";
+                                        return {
+                                            Müşteri: item.customer?.name,
+                                            Tarih: dateStr,
+                                            İşlem: item.description || item.notes || "-",
+                                            ÖdemeYöntemi: item.paymentMethod || "-",
+                                            Tutar: item.amount || 0,
+                                            Döviz: item.currency || "TRY"
+                                        };
+                                    });
                                     const ws = XLSX.utils.json_to_sheet(data);
                                     const wb = XLSX.utils.book_new();
                                     XLSX.utils.book_append_sheet(wb, ws, "Detayli_Liste");

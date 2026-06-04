@@ -227,10 +227,16 @@ export function FinansClient({
                                         sortedData.map((t) => (
                                             <TableRow key={t.id} className="border-border/10 hover:bg-muted/5 transition-colors group">
                                                 <TableCell className="py-4 pl-8">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[11px] ">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</span>
-                                                        <span className="text-[9px] text-muted-foreground ">{format(new Date(t.createdAt), "HH:mm")}</span>
-                                                    </div>
+                                                    {(() => {
+                                                        const date = new Date(t.createdAt);
+                                                        const isValid = !isNaN(date.getTime());
+                                                        return (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[11px] ">{isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}</span>
+                                                                <span className="text-[9px] text-muted-foreground ">{isValid ? format(date, "HH:mm") : "-"}</span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1">

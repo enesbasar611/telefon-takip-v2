@@ -164,7 +164,11 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                             </div>
                             <div className="flex items-center gap-5 mt-2">
                                 <p className="text-[11px] text-muted-foreground  flex items-center gap-2 uppercase tracking-tighter">
-                                    <Calendar className="h-3.5 w-3.5 text-emerald-500/60" /> {format(new Date(session.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}
+                                    <Calendar className="h-3.5 w-3.5 text-emerald-500/60" />
+                                    {(() => {
+                                        const date = new Date(session.createdAt);
+                                        return !isNaN(date.getTime()) ? format(date, "dd MMMM yyyy HH:mm", { locale: tr }) : "-";
+                                    })()}
                                 </p>
                                 <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
                                 <p className="text-[11px] text-muted-foreground  flex items-center gap-2 uppercase tracking-tighter">

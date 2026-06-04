@@ -218,39 +218,48 @@ export function POSInterface({ initialSaleId }: {
     }
   };
 
+  const defaultCurrency = useMemo(() => {
+    return settingsData?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
+  }, [settingsData]);
+
+  const usdRate = useMemo(() => {
+    return Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
+  }, [exchangeRates, settingsData]);
+
+  const eurRate = useMemo(() => {
+    return Number(exchangeRates?.EUR || settingsData?.find((s: any) => s.key === "exchange_rate_eur")?.value || 37.0);
+  }, [exchangeRates, settingsData]);
+
   function getCartItemCurrency(item: any): "TRY" | "USD" | "EUR" {
     const storedCurrency = item?.attributes?.priceCurrency;
     if (storedCurrency === "USD" || storedCurrency === "EUR") return storedCurrency;
     return item?.sellPriceUsd ? "USD" : "TRY";
   }
 
-  function getCartCurrencySymbol(item: any) {
-    const itemCurrency = getCartItemCurrency(item);
-    if (itemCurrency === "USD") return "$";
-    if (itemCurrency === "EUR") return "€";
+  const getCartCurrencySymbol = useCallback(() => {
+    if (defaultCurrency === "USD") return "$";
+    if (defaultCurrency === "EUR") return "€";
     return "₺";
-  }
+  }, [defaultCurrency]);
 
-  function getCartDisplayPrice(item: any) {
-    return getCartItemCurrency(item) === "TRY"
-      ? Number(item.sellPrice || 0)
-      : Number(item.sellPriceUsd || item.sellPrice || 0);
-  }
+  const getCartDisplayPrice = useCallback((item: any) => {
+    if (defaultCurrency === "USD") {
+      return item.sellPriceUsd || (item.sellPrice / usdRate);
+    } else if (defaultCurrency === "EUR") {
+      return (item.sellPrice / eurRate);
+    }
+    return item.sellPrice || 0;
+  }, [defaultCurrency, usdRate, eurRate]);
 
   const getEquivalentDisplay = useCallback((product: any) => {
-    const itemCurrency = getCartItemCurrency(product);
-    const usdRate = Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
-
-    if (itemCurrency === "USD") {
-      const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
-      const tlEquiv = priceUsd * usdRate;
-      return `(₺${tlEquiv.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
-    } else {
+    if (defaultCurrency === "USD") {
       const priceTl = Number(product.sellPrice || 0);
-      const usdEquiv = priceTl / usdRate;
-      return `($${usdEquiv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
+      return `(₺${priceTl.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
+    } else {
+      const priceUsd = Number(product.sellPriceUsd || (product.sellPrice / usdRate) || 0);
+      return `($${priceUsd.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
     }
-  }, [exchangeRates, settingsData]);
+  }, [defaultCurrency, usdRate]);
 
   const addToCart = useCallback((product: any) => {
     if (products.length === 0) return;
@@ -319,20 +328,24 @@ export function POSInterface({ initialSaleId }: {
   const updatePrice = useCallback((id: string, newPrice: number) => {
     setCart((prev) => prev.map((item) => {
       if (item.id === id) {
-        const priceCurrency = getCartItemCurrency(item);
-        if (priceCurrency === "TRY") {
+        if (defaultCurrency === "USD") {
+          return {
+            ...item,
+            sellPriceUsd: newPrice,
+            sellPrice: newPrice * usdRate,
+          };
+        } else if (defaultCurrency === "EUR") {
+          return {
+            ...item,
+            sellPrice: newPrice * eurRate,
+          };
+        } else {
           return { ...item, sellPrice: newPrice };
         }
-        const rate = priceCurrency === "EUR" ? exchangeRates?.eur || 37 : exchangeRates?.usd || 34;
-        return {
-          ...item,
-          sellPriceUsd: newPrice,
-          sellPrice: newPrice * rate,
-        };
       }
       return item;
     }));
-  }, [exchangeRates]);
+  }, [defaultCurrency, usdRate, eurRate]);
 
   const removeFromCart = useCallback((id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
@@ -396,6 +409,12 @@ export function POSInterface({ initialSaleId }: {
     return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
   }, [cart]);
 
+  const displaySubtotal = useMemo(() => {
+    if (defaultCurrency === "USD") return subtotal / usdRate;
+    if (defaultCurrency === "EUR") return subtotal / eurRate;
+    return subtotal;
+  }, [subtotal, defaultCurrency, usdRate, eurRate]);
+
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
     return customers.find((c) => c.id === selectedCustomerId);
@@ -412,6 +431,12 @@ export function POSInterface({ initialSaleId }: {
   const usedPoints = Math.floor(loyaltyDiscountAmount / pointValueTl);
 
   const finalTotal = subtotal - loyaltyDiscountAmount;
+
+  const displayTotal = useMemo(() => {
+    if (defaultCurrency === "USD") return finalTotal / usdRate;
+    if (defaultCurrency === "EUR") return finalTotal / eurRate;
+    return finalTotal;
+  }, [finalTotal, defaultCurrency, usdRate, eurRate]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -599,6 +624,7 @@ export function POSInterface({ initialSaleId }: {
                     onAdd={addToCart}
                     getEquivalentDisplay={getEquivalentDisplay}
                     getCartCurrencySymbol={getCartCurrencySymbol}
+                    displayPrice={getCartDisplayPrice(product)}
                   />
                 ))}
               </div>
@@ -659,6 +685,7 @@ export function POSInterface({ initialSaleId }: {
                     removeFromCart={removeFromCart}
                     getCartCurrencySymbol={getCartCurrencySymbol}
                     getEquivalentDisplay={getEquivalentDisplay}
+                    displayPrice={getCartDisplayPrice(item)}
                   />
                 ))
               )}
@@ -666,9 +693,9 @@ export function POSInterface({ initialSaleId }: {
           </div>
 
           <CheckoutSummary
-            subtotal={subtotal}
+            subtotal={displaySubtotal}
             tax={0} // Tax calculation can be added if needed, setting 0 for now
-            total={finalTotal}
+            total={displayTotal}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
             loyaltyEnabled={loyaltyEnabled}
@@ -681,6 +708,7 @@ export function POSInterface({ initialSaleId }: {
             isProcessing={isProcessing}
             isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
             getEquivalentDisplay={(item) => getEquivalentDisplay(item)}
+            defaultCurrency={defaultCurrency}
           />
         </div>
       </div>

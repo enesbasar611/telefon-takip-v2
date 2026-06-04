@@ -10,8 +10,9 @@ interface CartItemProps {
     updateQuantity: (id: string, delta: number) => void;
     updatePrice: (id: string, price: number) => void;
     removeFromCart: (id: string) => void;
-    getCartCurrencySymbol: (item: any) => string;
+    getCartCurrencySymbol: () => string;
     getEquivalentDisplay: (item: any) => string;
+    displayPrice?: number;
     isCompact?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const CartItem = React.memo(({
     removeFromCart,
     getCartCurrencySymbol,
     getEquivalentDisplay,
+    displayPrice,
     isCompact = false
 }: CartItemProps) => {
     if (isCompact) {
@@ -32,10 +34,10 @@ export const CartItem = React.memo(({
                         <h4 className="text-xs font-black text-foreground truncate uppercase tracking-tight">{item.name}</h4>
                         <div className="flex items-center gap-3 mt-2">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl transition-all hover:bg-blue-500/10">
-                                <span className="text-[10px] text-blue-600 font-black">{getCartCurrencySymbol(item)}</span>
+                                <span className="text-[10px] text-blue-600 font-black">{getCartCurrencySymbol()}</span>
                                 <input
                                     type="number"
-                                    value={item.sellPrice}
+                                    value={displayPrice ?? item.sellPrice}
                                     onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
                                     className="bg-transparent border-none text-[11px] text-blue-700 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
                                 />
@@ -70,7 +72,7 @@ export const CartItem = React.memo(({
                     </div>
                     <div className="text-right">
                         <span className="text-sm font-black text-foreground tabular-nums">
-                            {getCartCurrencySymbol(item)}{(item.sellPrice * item.quantity).toLocaleString('tr-TR')}
+                            {getCartCurrencySymbol()}{((displayPrice ?? item.sellPrice) * item.quantity).toLocaleString('tr-TR')}
                         </span>
                     </div>
                 </div>
@@ -85,10 +87,10 @@ export const CartItem = React.memo(({
                 <span className="text-[15px] text-foreground block leading-tight mb-1 truncate">{item.name}</span>
                 <div className="flex items-center gap-3">
                     <div className="relative flex items-center rounded-xl border border-primary/35 bg-primary/10 px-2 py-1.5 shadow-sm transition-all group-hover:border-primary/60 group-hover:bg-primary/15">
-                        <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol(item)}</span>
+                        <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol()}</span>
                         <input
                             type="number"
-                            value={item.sellPrice}
+                            value={displayPrice ?? item.sellPrice}
                             onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
                             className="bg-transparent border-none text-[14px] text-primary font-black focus:ring-0 w-24 pl-5 py-0 h-auto"
                             title="Sepet fiyatı değiştirilebilir"

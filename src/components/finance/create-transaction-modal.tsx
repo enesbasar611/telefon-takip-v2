@@ -126,7 +126,11 @@ export function CreateTransactionModal({
       category: initialCategory || initialData?.category || "GENEL",
       currency: initialData?.currency || "TRY",
       manualCategory: "",
-      date: initialData?.createdAt ? new Date(initialData.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      date: (() => {
+        if (!initialData?.createdAt) return new Date().toISOString().split('T')[0];
+        const date = new Date(initialData.createdAt);
+        return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      })(),
     }
   });
 
@@ -756,7 +760,11 @@ export function CreateTransactionModal({
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] text-foreground truncate uppercase tracking-tighter">{tx.description}</p>
                       <p className="text-[10px] text-muted-foreground/60 transition-colors group-hover:text-muted-foreground uppercase">
-                        {tx.createdAt ? format(new Date(tx.createdAt), "HH:mm") : "--:--"} • {tx.financeAccount?.name || "Bilinmiyor"}
+                        {(() => {
+                          if (!tx.createdAt) return "--:--";
+                          const date = new Date(tx.createdAt);
+                          return !isNaN(date.getTime()) ? format(date, "HH:mm") : "--:--";
+                        })()} • {tx.financeAccount?.name || "Bilinmiyor"}
                       </p>
                     </div>
                     <div className="text-right">

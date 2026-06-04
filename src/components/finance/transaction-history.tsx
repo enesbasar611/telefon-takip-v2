@@ -221,10 +221,20 @@ export function TransactionHistory({
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] ">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</span>
-                                                <span className="text-[9px] text-muted-foreground  opacity-60">{format(new Date(t.createdAt), "HH:mm")}</span>
-                                            </div>
+                                            {(() => {
+                                                const date = new Date(t.createdAt);
+                                                const isValid = !isNaN(date.getTime());
+                                                return (
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[11px] ">
+                                                            {isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}
+                                                        </span>
+                                                        <span className="text-[9px] text-muted-foreground opacity-60">
+                                                            {isValid ? format(date, "HH:mm") : "-"}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-1.5">
@@ -364,7 +374,10 @@ export function TransactionHistory({
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                                            {format(new Date(t.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
+                                            {(() => {
+                                                const date = new Date(t.createdAt);
+                                                return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
+                                            })()}
                                         </span>
                                         <span className="text-[10px] text-blue-500 font-medium uppercase mt-0.5">
                                             {t.financeAccount?.name || 'GENEL KASA'}

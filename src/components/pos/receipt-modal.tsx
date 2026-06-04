@@ -22,12 +22,19 @@ interface ReceiptModalProps {
 
 export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
   const [settings, setSettings] = useState<any>(null);
+  const [defaultCurrency, setDefaultCurrency] = useState<string>("TRY");
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       getReceiptSettings("pos").then(setSettings);
+      import("@/lib/actions/setting-actions").then(m => {
+        m.getSettings().then(s => {
+          const curr = s.find((a: any) => a.key === "defaultCurrency")?.value || "TRY";
+          setDefaultCurrency(curr);
+        });
+      });
     }
   }, [isOpen]);
 
@@ -179,6 +186,8 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
     setTimeout(() => URL.revokeObjectURL(url), 100);
   }, [generateImage, sale?.saleNumber]);
 
+  const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
+
   if (!sale) return null;
 
   return (
@@ -265,7 +274,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
                   <div key={i} className="flex justify-between gap-2">
                     <span className="flex-1 font-black break-words whitespace-normal uppercase text-xs">{item.product?.name}</span>
                     <span className="whitespace-nowrap font-black shrink-0">{item.quantity}x</span>
-                    <span className="font-black shrink-0 text-xs text-right w-20">₺{Number(item.totalPrice).toFixed(2)}</span>
+                    <span className="font-black shrink-0 text-xs text-right w-20">{currencySymbol}{Number(item.totalPrice / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -274,7 +283,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
               <div className="space-y-1 mb-3">
                 <div className="flex justify-between font-black text-sm pt-1">
                   <span>TOPLAM:</span>
-                  <span>₺{Number(sale.finalAmount).toFixed(2)}</span>
+                  <span>{currencySymbol}{Number(sale.finalAmount / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-black text-[9px] uppercase mt-1">
                   <span>ÖDEME:</span>

@@ -9,7 +9,8 @@ interface ProductCardProps {
     product: any;
     onAdd: (product: any) => void;
     getEquivalentDisplay: (product: any) => string;
-    getCartCurrencySymbol: (product: any) => string;
+    getCartCurrencySymbol: () => string;
+    displayPrice?: number;
     isCompact?: boolean;
 }
 
@@ -18,11 +19,12 @@ export const ProductCard = React.memo(({
     onAdd,
     getEquivalentDisplay,
     getCartCurrencySymbol,
+    displayPrice,
     isCompact = false
 }: ProductCardProps) => {
     const stock = product.stock ?? 0;
     const isOutOfStock = stock <= 0;
-    const priceStr = formatCurrency(product.sellPrice || 0);
+    const priceStr = formatCurrency(displayPrice ?? product.sellPrice ?? 0);
 
     if (isCompact) {
         return (
@@ -54,7 +56,7 @@ export const ProductCard = React.memo(({
                 <div className="flex shrink-0 items-center gap-2">
                     <div className="text-right">
                         <span className="text-sm font-black text-foreground tabular-nums">
-                            {getCartCurrencySymbol(product)}{priceStr}
+                            {getCartCurrencySymbol()}{priceStr}
                         </span>
                     </div>
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 shadow-sm transition-all group-hover:bg-blue-600 group-hover:text-white">
@@ -100,7 +102,7 @@ export const ProductCard = React.memo(({
                     {getEquivalentDisplay(product)}
                 </div>
                 <div className="text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible drop-shadow-sm text-lg sm:text-xl font-black">
-                    {getCartCurrencySymbol(product)}{priceStr}
+                    {getCartCurrencySymbol()}{priceStr}
                 </div>
                 <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em] mt-1">
                     {product.name}

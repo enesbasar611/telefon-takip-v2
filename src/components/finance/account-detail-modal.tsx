@@ -318,8 +318,16 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                         {analytics?.transactions.map((t: any) => (
                                             <tr key={t.id} className="hover:bg-muted/10 transition-colors group">
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <p className="text-[11px] ">{format(new Date(t.createdAt), "dd MMM yyyy", { locale: tr })}</p>
-                                                    <p className="text-[9px] font-medium text-muted-foreground mt-0.5">{format(new Date(t.createdAt), "HH:mm")}</p>
+                                                    {(() => {
+                                                        const date = new Date(t.createdAt);
+                                                        const isValid = !isNaN(date.getTime());
+                                                        return (
+                                                            <>
+                                                                <p className="text-[11px] ">{isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}</p>
+                                                                <p className="text-[9px] font-medium text-muted-foreground mt-0.5">{isValid ? format(date, "HH:mm") : "-"}</p>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <p className="text-[11px]  group-hover:text-blue-500 transition-colors">{t.description}</p>
