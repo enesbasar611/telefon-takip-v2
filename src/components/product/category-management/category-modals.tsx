@@ -11,7 +11,7 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Trash2, Package, Info, Loader2 } from "lucide-react";
+import { AlertTriangle, Trash2, Package, Info, Loader2, Sparkles, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category } from "./types";
 
@@ -265,6 +265,76 @@ export function CategoryDeleteModal({
                         )}
                     </div>
                 </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+interface CategoryBulkAddModalProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (e: React.FormEvent) => void;
+    formData: { parentId: string };
+    categories: Category[];
+    bulkNames: string;
+    setBulkNames: (names: string) => void;
+    isPending: boolean;
+}
+
+export function CategoryBulkAddModal({
+    isOpen,
+    onOpenChange,
+    onSubmit,
+    formData,
+    categories,
+    bulkNames,
+    setBulkNames,
+    isPending
+}: CategoryBulkAddModalProps) {
+    const parent = categories.find(c => c.id === formData.parentId);
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="bg-white dark:bg-card border-zinc-200 dark:border-border/50 text-foreground dark:text-white max-w-xl shadow-2xl">
+                <form onSubmit={onSubmit}>
+                    <DialogHeader>
+                        <DialogTitle className="font-bold text-2xl text-indigo-600 dark:text-white tracking-tight italic flex items-center gap-3">
+                            <Sparkles className="h-6 w-6" />
+                            Toplu Alt Varyant Ekle
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-500 dark:text-muted-foreground text-xs font-medium">
+                            <span className="text-indigo-600 dark:text-indigo-400 font-bold uppercase">{parent?.name || "Ana Dizin"}</span> altına birden fazla alt kategori ekleyin.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-6">
+                        <div className="space-y-3">
+                            <Label htmlFor="bulkNames" className="font-bold text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center justify-between">
+                                VARYANT İSİMLERİ
+                                <span className="text-zinc-400 normal-case font-medium">(Virgül veya Alt satır ile ayırın)</span>
+                            </Label>
+                            <textarea
+                                id="bulkNames"
+                                value={bulkNames}
+                                onChange={e => setBulkNames(e.target.value)}
+                                placeholder="Örn: 27W, 33W, 45W, 67W, 120W"
+                                rows={6}
+                                className="w-full bg-zinc-100 dark:bg-black/20 border-zinc-200 dark:border-border/50 px-4 py-3 rounded-xl text-sm font-bold shadow-inner focus:outline-none focus:ring-2 ring-indigo-500/20 resize-none leading-relaxed"
+                            />
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-200 dark:border-indigo-500/10">
+                            <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold leading-relaxed">
+                                💡 İPUCU: Her satıra veya her virgül arasına bir isim yazarak onlarca alt varyantı bir saniyede oluşturabilirsiniz.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">Vazgeç</Button>
+                        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest px-8 h-11 rounded-xl shadow-lg shadow-indigo-500/10" disabled={isPending || !bulkNames.trim()}>
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Varyantları Oluştur"}
+                        </Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );

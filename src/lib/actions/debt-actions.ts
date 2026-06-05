@@ -208,7 +208,8 @@ export async function createDebt(data: {
                 quantity: item.quantity,
                 type: "OUT",
                 notes: `Veresiye Satışı: ${newDebt.id.substring(0, 8)}`,
-                shopId
+                shopId,
+                debtId: newDebt.id
               }
             });
           }

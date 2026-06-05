@@ -367,6 +367,7 @@ model ReturnTicket {
   supplier        Supplier?      @relation(fields: [supplierId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
   shortageItems   ShortageItem[]
+  inventoryMovements InventoryMovement[]
 
   @@unique([shopId, ticketNumber])
 }
@@ -459,11 +460,15 @@ model InventoryMovement {
   createdAt       DateTime       @default(now())
   saleId          String?
   serviceTicketId String?
+  debtId          String?
+  returnTicketId  String?
   shopId          String
   supplierId      String?
   product         Product        @relation(fields: [productId], references: [id])
   sale            Sale?          @relation(fields: [saleId], references: [id])
   serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
+  debt            Debt?          @relation(fields: [debtId], references: [id])
+  returnTicket    ReturnTicket?  @relation(fields: [returnTicketId], references: [id])
   shop            Shop           @relation(fields: [shopId], references: [id])
   supplier        Supplier?      @relation(fields: [supplierId], references: [id])
 }
@@ -641,6 +646,7 @@ model Debt {
   exchangeRate    Decimal?      @db.Decimal(10, 4)
   saleId          String?       @unique
   transactions    Transaction[]
+  inventoryMovements InventoryMovement[]
   customer        Customer      @relation(fields: [customerId], references: [id])
   sale            Sale?         @relation(fields: [saleId], references: [id])
   shop            Shop          @relation(fields: [shopId], references: [id])

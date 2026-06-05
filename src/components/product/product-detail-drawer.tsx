@@ -239,46 +239,65 @@ export function ProductDetailDrawer({
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {movements.map((move: any) => (
-                                                <div key={move.id} className="relative pl-6 border-l border-border/50 py-1">
-                                                    <div className={`absolute left-[-5px] top-3 h-2 w-2 rounded-full border-2 bg-background ${move.quantity > 0 ? "border-emerald-500" : "border-rose-500"
-                                                        }`} />
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <div>
-                                                            <p className="text-[11px]  text-foreground leading-tight">
-                                                                {move.type === "SALE" ? "Satış Yapıldı" :
-                                                                    move.type === "SERVICE_USE" ? "Servis Malzemesi" :
-                                                                        move.type === "PURCHASE" ? "Stok Girişi" : "Stok Güncelleme"}
-                                                            </p>
-                                                            <p className="text-[9px] text-muted-foreground/80  mt-0.5">
-                                                                {format(new Date(move.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
-                                                            </p>
-                                                            {move.notes && (
-                                                                <p className="text-[10px] text-muted-foreground mt-1 italic leading-tight">
-                                                                    "{move.notes}"
+                                            {movements.map((move: any) => {
+                                                const customerName = move.sale?.customer?.name ||
+                                                    move.debt?.customer?.name ||
+                                                    move.serviceTicket?.customer?.name ||
+                                                    move.returnTicket?.customer?.name;
+                                                const isReturn = move.notes?.toLowerCase().includes("iade") || !!move.returnTicketId;
+
+                                                return (
+                                                    <div key={move.id} className="relative pl-6 border-l border-border/50 py-1">
+                                                        <div className={`absolute left-[-5px] top-3 h-2 w-2 rounded-full border-2 bg-background ${move.quantity > 0 ? "border-emerald-500" : "border-rose-500"}`} />
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[11px] font-bold text-foreground leading-tight flex items-center gap-1.5 flex-wrap">
+                                                                    {isReturn ? (
+                                                                        <span className="text-orange-500 font-black">İADE İŞLEMİ</span>
+                                                                    ) : (
+                                                                        <>
+                                                                            {move.type === "SALE" ? "Ürün Satışı" :
+                                                                                move.type === "SERVICE_USE" ? "Serviste Kullanıldı" :
+                                                                                    move.type === "PURCHASE" || move.type === "IN" ? "Stok Girişi" :
+                                                                                        move.type === "OUT" ? "Stok Çıkışı" : "Sistem Güncellemesi"}
+                                                                        </>
+                                                                    )}
                                                                 </p>
-                                                            )}
-                                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                                {(move.sale?.saleNumber || move.serviceTicket?.ticketNumber) && (
-                                                                    <Badge variant="outline" className="text-[8px]  border-border text-muted-foreground/80 uppercase px-1.5 py-0">
-                                                                        #{move.sale?.saleNumber || move.serviceTicket?.ticketNumber}
-                                                                    </Badge>
+                                                                <p className="text-[9px] text-muted-foreground/80 mt-0.5 font-medium">
+                                                                    {format(new Date(move.createdAt), "dd MMMM yyyy, HH:mm", { locale: tr })}
+                                                                </p>
+
+                                                                {move.notes && (
+                                                                    <p className="text-[10px] text-muted-foreground mt-1 bg-muted/30 p-1.5 rounded-lg border border-border/40 italic leading-tight">
+                                                                        {move.notes}
+                                                                    </p>
                                                                 )}
-                                                                {move.type === "SERVICE_USE" && move.serviceTicket?.customer?.name && (
-                                                                    <Badge variant="outline" className="text-[8px]  border-blue-500/10 bg-blue-500/5 text-blue-400 uppercase px-1.5 py-0 flex items-center gap-1">
-                                                                        <Info className="h-2 w-2" /> {move.serviceTicket.customer.name}
-                                                                    </Badge>
-                                                                )}
+
+                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                    {(move.sale?.saleNumber || move.serviceTicket?.ticketNumber) && (
+                                                                        <Badge variant="outline" className="text-[8px] border-border text-muted-foreground/80 uppercase px-1.5 py-0 h-4">
+                                                                            #{move.sale?.saleNumber || move.serviceTicket?.ticketNumber}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {customerName && (
+                                                                        <Badge variant="outline" className="text-[8px] border-blue-500/20 bg-blue-500/5 text-blue-500 uppercase px-1.5 py-0 h-4 flex items-center gap-1">
+                                                                            <Info className="h-2 w-2" /> {customerName}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {move.supplier?.name && (
+                                                                        <Badge variant="outline" className="text-[8px] border-orange-500/20 bg-orange-500/5 text-orange-500 uppercase px-1.5 py-0 h-4">
+                                                                            {move.supplier.name}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className={`flex items-center gap-1 shadow-sm px-2 py-1 rounded-lg text-xs font-bold shrink-0 ${move.quantity > 0 ? "text-emerald-500 bg-emerald-500/5 border border-emerald-500/10" : "text-rose-500 bg-rose-500/5 border border-rose-500/10"}`}>
+                                                                {move.quantity > 0 ? "+" : ""}{move.quantity}
                                                             </div>
                                                         </div>
-                                                        <div className={`flex items-center gap-1  shadow-sm px-2 py-0.5 rounded-lg text-xs ${move.quantity > 0 ? "text-emerald-500 bg-emerald-500/5" : "text-rose-500 bg-rose-500/5"
-                                                            }`}>
-                                                            {move.quantity > 0 ? <Plus className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
-                                                            {Math.abs(move.quantity)}
-                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </ScrollArea>

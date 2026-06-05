@@ -3,7 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, ChevronRight, FolderOpen, Folder } from "lucide-react";
+import { GripVertical, ChevronRight, FolderOpen, Folder, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryNode } from "./types";
 
@@ -16,11 +16,10 @@ interface CategoryItemProps {
     stats: { totalStock: number };
     onSelect: (id: string) => void;
     onToggle: (id: string, e: React.MouseEvent) => void;
-    activeId: string | null;
-    isMobile?: boolean;
+    onAddSub?: (id: string) => void;
 }
 
-export function TreeItem({ node, level, isSelected, isExpanded, hasChildren, stats, onSelect, onToggle, activeId }: CategoryItemProps) {
+export function TreeItem({ node, level, isSelected, isExpanded, hasChildren, stats, onSelect, onToggle, onAddSub }: CategoryItemProps) {
     const {
         attributes,
         listeners,
@@ -113,6 +112,18 @@ export function TreeItem({ node, level, isSelected, isExpanded, hasChildren, sta
                             : "bg-zinc-100 dark:bg-white/[0.02] border-zinc-200 dark:border-border text-muted-foreground/80"
                     )}>
                         {stats.totalStock}
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAddSub?.(node.id);
+                            }}
+                            className="p-1.5 hover:bg-emerald-500/10 text-emerald-500 rounded-lg transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             </div>

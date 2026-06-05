@@ -36,7 +36,8 @@ import {
     RotateCcw,
     Printer,
     ArrowLeftRight,
-    Eye
+    Eye,
+    Check
 } from "lucide-react";
 
 import { VeresiyeToolbar } from './veresiye/veresiye-toolbar';
@@ -315,6 +316,9 @@ export function VeresiyeClient({
     const [bulkReturnModalOpen, setBulkReturnModalOpen] = useState(false);
     const [bulkReturnInitialData, setBulkReturnInitialData] = useState<any>(null);
 
+    const [selectedSaleItemIds, setSelectedSaleItemIds] = useState<string[]>([]);
+    const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
+
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
 
@@ -334,30 +338,33 @@ export function VeresiyeClient({
     };
 
     const handleBulkReturn = () => {
-        if (selectedDebtIds.length === 0) return;
+        if (selectedDebtIds.length === 0 && selectedSaleItemIds.length === 0) return;
 
         const debtsToProcess = (statementData?.debts || []).filter((d: any) => selectedDebtIds.includes(d.id));
         const returnItems: any[] = [];
 
+        // 1. Process selected debts (whole)
         debtsToProcess.forEach((debt: any) => {
             const debtCurrency = debt.currency || "TRY";
             if (debt.sale?.items && debt.sale.items.length > 0) {
                 debt.sale.items.forEach((si: any) => {
-                    returnItems.push({
-                        productId: si.productId,
-                        name: si.product?.name || si.productName || "Ürün",
-                        quantity: si.quantity,
-                        refundAmount: Number(si.unitPrice) * si.quantity,
-                        refundCurrency: debtCurrency,
-                        unitPrice: Number(si.unitPrice),
-                        saleNumber: debt.sale?.saleNumber,
-                        soldAt: debt.sale?.createdAt,
-                        debtId: debt.id,
-                        saleId: debt.saleId,
-                    });
+                    // Avoid double counting if specific items are also selected
+                    if (!selectedSaleItemIds.includes(si.id)) {
+                        returnItems.push({
+                            productId: si.productId,
+                            name: si.product?.name || si.productName || "Ürün",
+                            quantity: si.quantity,
+                            refundAmount: Number(si.unitPrice) * si.quantity,
+                            refundCurrency: debtCurrency,
+                            unitPrice: Number(si.unitPrice),
+                            saleNumber: debt.sale?.saleNumber,
+                            soldAt: debt.sale?.createdAt,
+                            debtId: debt.id,
+                            saleId: debt.saleId,
+                        });
+                    }
                 });
             } else {
-                // Manuel borç ise (direkt borç satırı)
                 returnItems.push({
                     productId: debt.productId || "",
                     name: debt.notes || "Ürün İadesi",
@@ -368,6 +375,30 @@ export function VeresiyeClient({
                 });
             }
         });
+
+        // 2. Process specifically selected sale items
+        if (selectedSaleItemIds.length > 0) {
+            (statementData?.debts || []).forEach((debt: any) => {
+                if (debt.sale?.items) {
+                    debt.sale.items.forEach((si: any) => {
+                        if (selectedSaleItemIds.includes(si.id)) {
+                            returnItems.push({
+                                productId: si.productId,
+                                name: si.product?.name || si.productName || "Ürün",
+                                quantity: si.quantity,
+                                refundAmount: Number(si.unitPrice) * si.quantity,
+                                refundCurrency: debt.currency || "TRY",
+                                unitPrice: Number(si.unitPrice),
+                                saleNumber: debt.sale?.saleNumber,
+                                soldAt: debt.sale?.createdAt,
+                                debtId: debt.id,
+                                saleId: debt.saleId,
+                            });
+                        }
+                    });
+                }
+            });
+        }
 
         if (returnItems.length === 0) {
             toast.error("İade edilecek ürün bulunamadı.");
@@ -420,9 +451,6 @@ export function VeresiyeClient({
     // Tracking Modal State
     const [trackingDebt, setTrackingDebt] = useState<Debt | null>(null);
     const [trackingDate, setTrackingDate] = useState("");
-
-    // Multi-select State for History
-    const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
 
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -753,6 +781,7 @@ export function VeresiyeClient({
         setHistoryPage(1);
         setHistorySearchTerm("");
         setSelectedDebtIds([]);
+        setSelectedSaleItemIds([]);
     };
 
     const handleCollectPayment = async () => {
@@ -1644,10 +1673,41 @@ export function VeresiyeClient({
                                 <Printer className="w-4 h-4" />
                                 <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Fiş Yazdır</span>
                             </button>
+                            {/* Tümünü Seç */}
+                            <button
+                                title="Tümünü Seç"
+                                onClick={() => {
+                                    const selectableDebts = (statementData?.debts || []).filter((d: any) => !d.isPaid);
+                                    const allSelectableIds = selectableDebts.map((d: any) => d.id);
+                                    const allItemIds: string[] = [];
+                                    selectableDebts.forEach((d: any) => {
+                                        if (d.sale?.items) {
+                                            d.sale.items.forEach((si: any) => allItemIds.push(si.id));
+                                        }
+                                    });
+
+                                    if (selectedDebtIds.length === allSelectableIds.length && selectedSaleItemIds.length === allItemIds.length) {
+                                        setSelectedDebtIds([]);
+                                        setSelectedSaleItemIds([]);
+                                    } else {
+                                        setSelectedDebtIds(allSelectableIds);
+                                        setSelectedSaleItemIds(allItemIds);
+                                    }
+                                }}
+                                className={cn(
+                                    "group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all border",
+                                    selectedDebtIds.length > 0 && selectedDebtIds.length === (statementData?.debts?.filter((d: any) => !d.isPaid).length || 0)
+                                        ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
+                                        : "bg-muted/60 text-foreground hover:bg-muted border-border/50"
+                                )}
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Tümünü Seç</span>
+                            </button>
                             {/* Kapat */}
                             <button
                                 title="Kapat"
-                                onClick={() => { setHistoryCustomer(null); setSelectedDebtIds([]); }}
+                                onClick={() => { setHistoryCustomer(null); setSelectedDebtIds([]); setSelectedSaleItemIds([]); }}
                                 className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50 transition-all ml-1"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
@@ -1749,13 +1809,50 @@ export function VeresiyeClient({
                                                                 {item.sale.items.map((si: any, sidx: number) => {
                                                                     const itemCurrency = item.currency || "TRY";
                                                                     const returnAlreadyActive = hasActiveReturn(item.id, item.saleId || item.sale?.id, si.productId);
+                                                                    const isItemUSD = itemCurrency === "USD";
+                                                                    const unitPrice = Number(si.unitPrice);
+                                                                    const altPrice = isItemUSD ? (unitPrice * usdRate) : (unitPrice / usdRate);
+                                                                    const isDefaultUSD = defaultCurrency === "USD";
+
                                                                     return (
-                                                                        <div key={sidx} className="text-[10px] text-muted-foreground flex items-center justify-between gap-2 group/item pr-1">
+                                                                        <div
+                                                                            key={sidx}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (item.isPaid) return;
+                                                                                setSelectedSaleItemIds(prev =>
+                                                                                    prev.includes(si.id) ? prev.filter(id => id !== si.id) : [...prev, si.id]
+                                                                                );
+                                                                            }}
+                                                                            className={cn(
+                                                                                "text-[10px] text-muted-foreground flex items-center justify-between gap-2 group/item pr-1 p-1 rounded-lg transition-all",
+                                                                                selectedSaleItemIds.includes(si.id) ? "bg-indigo-500/10" : "hover:bg-muted/50"
+                                                                            )}
+                                                                        >
                                                                             <div className="flex items-center gap-2 min-w-0">
+                                                                                {!item.isPaid && (
+                                                                                    <div className={cn(
+                                                                                        "w-3 h-3 rounded border flex items-center justify-center transition-all shrink-0",
+                                                                                        selectedSaleItemIds.includes(si.id) ? "bg-indigo-500 border-indigo-500" : "border-border bg-card"
+                                                                                    )}>
+                                                                                        {selectedSaleItemIds.includes(si.id) && <Check className="w-2 h-2 text-white" />}
+                                                                                    </div>
+                                                                                )}
                                                                                 <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
                                                                                 <span className="font-bold text-foreground/80">{si.quantity}x</span>
                                                                                 <span className="truncate max-w-[160px]">{si.product?.name}</span>
-                                                                                <span className="opacity-60 shrink-0">(@ {itemCurrency === "USD" ? "$" : "₺"}{formatCurrency(si.unitPrice)})</span>
+                                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                                    <span className="font-black text-foreground">
+                                                                                        {isDefaultUSD
+                                                                                            ? `$${(isItemUSD ? unitPrice : (unitPrice / usdRate)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                                                            : `₺${Math.round(!isItemUSD ? unitPrice : (unitPrice * usdRate)).toLocaleString("tr-TR")}`}
+                                                                                    </span>
+                                                                                    <span className="text-[9px] font-bold text-muted-foreground/60">
+                                                                                        ({isDefaultUSD
+                                                                                            ? `₺${Math.round(!isItemUSD ? unitPrice : (unitPrice * usdRate)).toLocaleString("tr-TR")}`
+                                                                                            : `$${(isItemUSD ? unitPrice : (unitPrice / usdRate)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
+                                                                                    </span>
+                                                                                </div>
                                                                             </div>
                                                                             {si.product && (
                                                                                 <Button
@@ -1802,9 +1899,18 @@ export function VeresiyeClient({
                                                     <div className="flex flex-col items-end">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{item.isPaid ? "ÖDENDİ" : "KALAN"}:</span>
-                                                            <span className={cn("text-sm font-black tabular-nums", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
-                                                                {item.currency === 'USD' ? '$' : '₺'}{getSafeDebtRemaining(item).toLocaleString('tr-TR')}
-                                                            </span>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className={cn("text-sm font-black tabular-nums leading-none", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
+                                                                    {defaultCurrency === "USD"
+                                                                        ? `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                                        : `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`}
+                                                                </span>
+                                                                <span className="text-[8px] font-bold text-muted-foreground/50 mt-0.5 leading-none">
+                                                                    ({defaultCurrency === "USD"
+                                                                        ? `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`
+                                                                        : `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     {!item.isPaid && (
@@ -1895,22 +2001,34 @@ export function VeresiyeClient({
                         <div className="flex items-center gap-3">
                             <div className="flex flex-col gap-0.5">
                                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">İŞLEM MERKEZİ</span>
-                                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length} Kalem Seçili</span>
+                                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{selectedDebtIds.length + selectedSaleItemIds.length} Kalem Seçili</span>
                             </div>
-                            {selectedDebtIds.length > 0 && (
+                            {(selectedDebtIds.length > 0 || selectedSaleItemIds.length > 0) && (
                                 <Button
                                     onClick={() => {
                                         let sumTRY = 0;
                                         let sumUSD = 0;
+
+                                        // Process Debts
                                         (historyCustomer?.debtItems || []).forEach((d: any) => {
                                             if (selectedDebtIds.includes(d.id)) {
                                                 if (d.currency === 'USD') sumUSD += getSafeDebtRemaining(d);
                                                 else sumTRY += getSafeDebtRemaining(d);
+                                            } else if (d.sale?.items) {
+                                                // Process specific items within non-selected debts
+                                                d.sale.items.forEach((si: any) => {
+                                                    if (selectedSaleItemIds.includes(si.id)) {
+                                                        if (d.currency === 'USD') sumUSD += Number(si.unitPrice) * si.quantity;
+                                                        else sumTRY += Number(si.unitPrice) * si.quantity;
+                                                    }
+                                                });
                                             }
                                         });
+
                                         setPaymentCustomer(historyCustomer);
                                         setPaymentCurrency("TRY");
-                                        setPaymentAmount(String(Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)))));
+                                        const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)));
+                                        setPaymentAmount(String(totalInTRY));
                                         setHistoryCustomer(null);
                                     }}
                                     className="h-9 px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
@@ -1918,7 +2036,7 @@ export function VeresiyeClient({
                                     Seçilenleri Öde
                                 </Button>
                             )}
-                            {selectedDebtIds.length > 0 && (
+                            {(selectedDebtIds.length > 0 || selectedSaleItemIds.length > 0) && (
                                 <Button
                                     variant="outline"
                                     onClick={handleBulkReturn}

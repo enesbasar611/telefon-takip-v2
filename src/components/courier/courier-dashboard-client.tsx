@@ -38,7 +38,8 @@ import {
     User,
     ListTodo,
     X,
-    Truck
+    Truck,
+    RotateCcw
 } from "lucide-react";
 import {
     markShortageAsTaken,
@@ -55,7 +56,9 @@ import {
     bulkMarkShortageAsTaken,
     bulkMarkShortageAsNotFound,
     updateShortageQuantity,
-    bulkUpdateShortageQuantity
+    bulkUpdateShortageQuantity,
+    markProductAsDeadStock,
+    restoreDeadStockProduct
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getCouriers } from "@/lib/actions/shortage-actions";
@@ -167,7 +170,8 @@ export function CourierDashboardClient({
     const [bulkSupplierId, setBulkSupplierId] = useState<string>("none");
     const [isBulkLoading, setIsBulkLoading] = useState(false);
     const [bulkQtyAdd, setBulkQtyAdd] = useState<number>(1);
-    const [pendingFilter, setPendingFilter] = useState<"all" | "critical" | "outOfStock">("all");
+    const [unassignedSearch, setUnassignedSearch] = useState("");
+    const [pendingFilter, setPendingFilter] = useState<"all" | "critical" | "outOfStock" | "deadStock">("all");
 
     // React Query for Tasks
     const { data: tasksData, isLoading: isTasksLoading } = useQuery({
@@ -313,19 +317,32 @@ export function CourierDashboardClient({
         const unassigned = sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId));
 
         const counts = {
-            all: unassigned.length,
+            all: unassigned.filter((s: any) => !s.isDeadStock).length,
             critical: unassigned.filter((s: any) => {
                 const stock = s.product?.stock ?? s.stock ?? 0;
                 const critical = s.product?.criticalStock ?? s.criticalStock ?? 0;
-                return stock > 0 && stock <= critical;
+                return !s.isDeadStock && stock > 0 && stock <= critical;
             }).length,
             outOfStock: unassigned.filter((s: any) => {
                 const stock = s.product?.stock ?? s.stock ?? 0;
-                return stock <= 0;
-            }).length
+                return !s.isDeadStock && stock <= 0;
+            }).length,
+            deadStock: unassigned.filter((s: any) => s.isDeadStock).length
         };
 
         const filtered = unassigned.filter((s: any) => {
+            // Search filter
+            if (unassignedSearch) {
+                const q = unassignedSearch.toLowerCase();
+                const nameMatch = s.name.toLowerCase().includes(q) || (s.notes && s.notes.toLowerCase().includes(q));
+                if (!nameMatch) return false;
+            }
+
+            if (pendingFilter === "deadStock") return !!s.isDeadStock;
+
+            // For other filters, always hide deadStock
+            if (s.isDeadStock) return false;
+
             if (pendingFilter === "all") return true;
             const stock = s.product?.stock ?? s.stock ?? 0;
             const critical = s.product?.criticalStock ?? s.criticalStock ?? 0;
@@ -335,7 +352,7 @@ export function CourierDashboardClient({
         });
 
         return { pendingShortages: filtered, pendingCounts: counts };
-    }, [allShortages, pendingFilter]);
+    }, [allShortages, pendingFilter, unassignedSearch]);
     const nextRouteItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3), [items]);
     const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
 
@@ -1395,28 +1412,47 @@ export function CourierDashboardClient({
                             </div>
                             <div className="flex items-center gap-3">
                                 {isUnassignedOpen && (
-                                    <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl hidden sm:flex border border-white/5" onClick={(e) => e.stopPropagation()}>
-                                        <button
-                                            onClick={() => setPendingFilter("all")}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
-                                                pendingFilter === "all" ? "bg-orange-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
-                                            )}
-                                        >TÜMÜ ({pendingCounts.all})</button>
-                                        <button
-                                            onClick={() => setPendingFilter("critical")}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
-                                                pendingFilter === "critical" ? "bg-amber-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
-                                            )}
-                                        >KRİTİK ({pendingCounts.critical})</button>
-                                        <button
-                                            onClick={() => setPendingFilter("outOfStock")}
-                                            className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
-                                                pendingFilter === "outOfStock" ? "bg-red-500 text-white shadow-lg" : "text-muted-foreground hover:text-white"
-                                            )}
-                                        >BİTENLER ({pendingCounts.outOfStock})</button>
+                                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                        <div className="relative w-48 group hidden md:block">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground group-focus-within:text-orange-500 transition-colors" />
+                                            <input
+                                                type="text"
+                                                placeholder="Ara..."
+                                                value={unassignedSearch}
+                                                onChange={(e) => setUnassignedSearch(e.target.value)}
+                                                className="w-full bg-black/20 border-white/5 rounded-xl pl-8 pr-4 py-1.5 text-[10px] font-black uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-muted-foreground/30"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl hidden sm:flex border border-white/5">
+                                            <button
+                                                onClick={() => setPendingFilter("all")}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                    pendingFilter === "all" ? "bg-orange-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
+                                                )}
+                                            >TÜMÜ ({pendingCounts.all})</button>
+                                            <button
+                                                onClick={() => setPendingFilter("critical")}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                    pendingFilter === "critical" ? "bg-amber-500 text-black shadow-lg" : "text-muted-foreground hover:text-white"
+                                                )}
+                                            >KRİTİK ({pendingCounts.critical})</button>
+                                            <button
+                                                onClick={() => setPendingFilter("outOfStock")}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                    pendingFilter === "outOfStock" ? "bg-red-500 text-white shadow-lg" : "text-muted-foreground hover:text-white"
+                                                )}
+                                            >BİTENLER ({pendingCounts.outOfStock})</button>
+                                            <button
+                                                onClick={() => setPendingFilter("deadStock")}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase",
+                                                    pendingFilter === "deadStock" ? "bg-zinc-500 text-white shadow-lg" : "text-muted-foreground hover:text-white"
+                                                )}
+                                            >ÖLÜ STOK ({pendingCounts.deadStock})</button>
+                                        </div>
                                     </div>
                                 )}
                                 <div className={cn(
@@ -1451,6 +1487,13 @@ export function CourierDashboardClient({
                                         pendingFilter === "outOfStock" ? "bg-red-500 text-white border-red-500" : "bg-white/5 border-white/5 text-muted-foreground"
                                     )}
                                 >BİTENLER ({pendingCounts.outOfStock})</button>
+                                <button
+                                    onClick={() => setPendingFilter("deadStock")}
+                                    className={cn(
+                                        "px-4 py-2 shrink-0 rounded-xl text-[10px] font-black transition-all uppercase border",
+                                        pendingFilter === "deadStock" ? "bg-zinc-500 text-white border-zinc-500" : "bg-white/5 border-white/5 text-muted-foreground"
+                                    )}
+                                >ÖLÜ STOK ({pendingCounts.deadStock})</button>
                             </div>
                         )}
                     </div>
@@ -1478,9 +1521,11 @@ export function CourierDashboardClient({
                                             onClick={() => isSelectionMode && toggleSelect(s.id)}
                                             className={cn(
                                                 "flex items-center justify-between p-4 border transition-all rounded-2xl group/item cursor-pointer",
-                                                s.isAlert
-                                                    ? "bg-red-500/5 dark:bg-red-500/5 border-red-500/10 hover:bg-red-500/10"
-                                                    : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:bg-orange-500/10 hover:border-orange-500/30",
+                                                s.isDeadStock
+                                                    ? "bg-zinc-500/5 border-zinc-500/20 hover:bg-zinc-500/10"
+                                                    : s.isAlert
+                                                        ? "bg-red-500/5 dark:bg-red-500/5 border-red-500/10 hover:bg-red-500/10"
+                                                        : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:bg-orange-500/10 hover:border-orange-500/30",
                                                 selectedIds.includes(s.id) && "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5"
                                             )}
                                         >
@@ -1500,26 +1545,30 @@ export function CourierDashboardClient({
                                                 <div className="flex items-center gap-2">
                                                     <h4 className={cn(
                                                         "text-sm font-black uppercase truncate",
-                                                        s.isAlert ? "text-red-500" : "text-foreground group-hover/item:text-orange-600"
+                                                        s.isDeadStock ? "text-zinc-500" : s.isAlert ? "text-red-500" : "text-foreground group-hover/item:text-orange-600"
                                                     )}>
                                                         {s.name}
                                                     </h4>
-                                                    {s.isAlert && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                                                    {s.isDeadStock ? <AlertCircle className="w-3 h-3 text-zinc-500" /> : s.isAlert && <AlertTriangle className="w-3 h-3 text-red-500" />}
                                                 </div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Badge className={cn(
                                                         "px-2 py-0.5 text-[8px] font-black",
-                                                        (s.product?.stock ?? s.stock ?? 0) <= 0
-                                                            ? "bg-red-500 text-white"
-                                                            : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
-                                                                ? "bg-amber-500 text-black"
-                                                                : "bg-orange-500 text-black"
+                                                        s.isDeadStock
+                                                            ? "bg-zinc-500 text-white"
+                                                            : (s.product?.stock ?? s.stock ?? 0) <= 0
+                                                                ? "bg-red-500 text-white"
+                                                                : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
+                                                                    ? "bg-amber-500 text-black"
+                                                                    : "bg-orange-500 text-black"
                                                     )}>
-                                                        {(s.product?.stock ?? s.stock ?? 0) <= 0
-                                                            ? "BİTTİ"
-                                                            : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
-                                                                ? "KRİTİK"
-                                                                : "EKSİK"}
+                                                        {s.isDeadStock
+                                                            ? "ÖLÜ STOK"
+                                                            : (s.product?.stock ?? s.stock ?? 0) <= 0
+                                                                ? "BİTTİ"
+                                                                : (s.product?.stock ?? s.stock ?? 0) <= (s.product?.criticalStock ?? s.criticalStock ?? 0)
+                                                                    ? "KRİTİK"
+                                                                    : "EKSİK"}
                                                     </Badge>
                                                     <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 font-black border", getPriorityClassName(s.courierPriorityLabel))}>
                                                         {getPriorityLabel(s.courierPriorityLabel)}
@@ -1554,18 +1603,93 @@ export function CourierDashboardClient({
 
                                                 <div className="flex items-center gap-2">
                                                     {isAdmin && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(s.id)}
-                                                            className="h-10 w-10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
-                                                        >
-                                                            <Trash className="h-4 w-4" />
-                                                        </Button>
+                                                        <div className="flex items-center gap-1">
+                                                            {s.isDeadStock ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        const pid = s.productId || s.product?.id;
+                                                                        if (!pid) return;
+                                                                        setLoadingId(s.id);
+                                                                        try {
+                                                                            const res = await restoreDeadStockProduct(pid);
+                                                                            if (res.success) {
+                                                                                toast.success("Ürün listeye geri eklendi.");
+                                                                                queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+                                                                            } else {
+                                                                                toast.error(res.error || "Hata oluştu.");
+                                                                            }
+                                                                        } catch (e) {
+                                                                            toast.error("İşlem sırasında bir hata oluştu.");
+                                                                        } finally {
+                                                                            setLoadingId(null);
+                                                                        }
+                                                                    }}
+                                                                    className="h-10 w-10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl transition-all"
+                                                                    title="Geri Ekle"
+                                                                >
+                                                                    {loadingId === s.id ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <RotateCcw className="h-4 w-4" />
+                                                                    )}
+                                                                </Button>
+                                                            ) : (
+                                                                (s.productId || s.product?.id) && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            const pid = s.productId || s.product?.id;
+                                                                            if (!pid) return;
+                                                                            if (!confirm("Bu ürünü ölü stok olarak işaretlemek istediğinize emin misiniz?\n\nBu işlem ürünü tüm eksik listelerinden gizler ve tekrar manuel ekleyene kadar (veya stok ayarlarından düzeltilene kadar) bir daha göremezsiniz.")) return;
+
+                                                                            setLoadingId(s.id);
+                                                                            try {
+                                                                                const res = await markProductAsDeadStock(pid);
+                                                                                if (res.success) {
+                                                                                    toast.success("Ölü stok olarak işaretlendi.");
+                                                                                    queryClient.invalidateQueries({ queryKey: ["global-shortages"] });
+                                                                                } else {
+                                                                                    toast.error(res.error || "Hata oluştu.");
+                                                                                }
+                                                                            } catch (e) {
+                                                                                toast.error("İşlem sırasında bir hata oluştu.");
+                                                                            } finally {
+                                                                                setLoadingId(null);
+                                                                            }
+                                                                        }}
+                                                                        className="h-10 w-10 text-zinc-500 hover:bg-zinc-500 hover:text-white rounded-xl transition-all"
+                                                                        title="Ölü Stok (Gizle)"
+                                                                    >
+                                                                        {loadingId === s.id ? (
+                                                                            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                                                                        ) : (
+                                                                            <AlertCircle className="h-4 w-4" />
+                                                                        )}
+                                                                    </Button>
+                                                                )
+                                                            )}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(s.id);
+                                                                }}
+                                                                className="h-10 w-10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                                                                title="Listeden Kaldır"
+                                                            >
+                                                                <Trash className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                     <Button
                                                         onClick={() => handleAssignShortcut(s.id)}
-                                                        disabled={assigningId === s.id || (isAdmin && !shortcutCourierId)}
+                                                        disabled={assigningId === s.id || (isAdmin && !shortcutCourierId) || s.isDeadStock}
                                                         size="sm"
                                                         className={cn(
                                                             "h-10 px-4 rounded-xl font-black text-[10px] tracking-widest",

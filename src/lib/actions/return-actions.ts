@@ -177,6 +177,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
               type: "IN",
               notes: `İade Alındı: ${ticket.ticketNumber}`,
               shopId,
+              returnTicketId: ticket.id
             },
           });
         }
@@ -195,6 +196,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
               type: "OUT",
               notes: `İade Yenisiyle Değişim: ${ticket.ticketNumber}`,
               shopId,
+              returnTicketId: ticket.id
             },
           });
 
@@ -228,7 +230,8 @@ export async function processReturn(id: string, action: any, extraNotes?: string
               type: "OUT",
               notes: `Tedarikçiye İade Gönderildi: ${ticket.ticketNumber}`,
               shopId,
-              supplierId: targetSupplierId
+              supplierId: targetSupplierId,
+              returnTicketId: ticket.id
             },
           });
         }

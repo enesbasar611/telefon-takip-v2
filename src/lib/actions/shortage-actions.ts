@@ -180,7 +180,7 @@ export async function getGlobalShortageList(dateStr?: string) {
     const baseWhere = { shopId, assignedToId: null, isResolved: false, ...dateFilter };
 
     // 1. Get manual shortage entries
-    const manualItems = await prisma.shortageItem.findMany({
+    const manualItemsRaw = await prisma.shortageItem.findMany({
       where: baseWhere,
       include: {
         product: true,
@@ -197,7 +197,13 @@ export async function getGlobalShortageList(dateStr?: string) {
       orderBy: { createdAt: "desc" }
     });
 
+    const manualItems = manualItemsRaw.map((item: any) => ({
+      ...item,
+      isDeadStock: !!item.product?.hideFromShortage
+    }));
+
     // 2. Get low stock products — app-level filter (Prisma field references cannot be used in lte comparisons)
+    // ... (rest of the logic)
     const allTrackedProducts = await prisma.product.findMany({
       where: {
         shopId,
@@ -211,28 +217,81 @@ export async function getGlobalShortageList(dateStr?: string) {
         shop: { select: { name: true } }
       }
     });
-    // Filter in application: stock <= criticalStock
+
     const lowStockProducts = allTrackedProducts.filter((p: any) => p.stock <= p.criticalStock);
 
-    // Filter out products that already have a manual shortage entry
     const missingProductAlerts = lowStockProducts
       .filter((p: any) => p.shortageItems.length === 0)
       .map((p: any) => ({
         id: `alert-${p.id}`,
         name: p.name,
-        quantity: 1, // Default to 1 for alerts
+        quantity: 1,
         notes: p.shop?.name ? `${p.shop.name.toUpperCase()} - STOK AZALDI/BİTTİ` : "STOK AZALDI/BİTTİ",
         productId: p.id,
         shopId: p.shopId,
         shopName: p.shop?.name,
         isAlert: true,
+        isDeadStock: false,
         product: p
       }));
 
-    return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts]));
+    // 3. Get dead stock products (hidden from shortage)
+    // BUT only those that DON'T have a manual shortage (to avoid duplicates)
+    // Actually, manual items with hidden products are already marked isDeadStock above.
+    // Here we find hidden products that DON'T have manual entries but SHOULD be listed in dead stock tab.
+    const deadStockProducts = await prisma.product.findMany({
+      where: {
+        shopId,
+        hideFromShortage: true,
+        // Optional: filter out if already in manual items? 
+        // Better: just list alphabetical unique items or let manual ones take precedence?
+      },
+      include: {
+        shop: { select: { name: true } },
+        shortageItems: {
+          where: { isResolved: false, assignedToId: null }
+        }
+      }
+    });
+
+    const deadStockAlerts = deadStockProducts
+      .filter((p: any) => p.shortageItems.length === 0) // Only add pseudo-alerts for products without manual shortages
+      .map((p: any) => ({
+        id: `deadstock-${p.id}`,
+        name: p.name,
+        quantity: 1,
+        notes: "ÖLÜ STOK (GİZLENMİŞ)",
+        productId: p.id,
+        shopId: p.shopId,
+        shopName: p.shop?.name,
+        isAlert: true,
+        isDeadStock: true,
+        product: p
+      }));
+
+    return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts, ...deadStockAlerts]));
   } catch (error) {
     console.error("getGlobalShortageList error:", error);
     return [];
+  }
+}
+
+export async function restoreDeadStockProduct(productId: string) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    await prisma.product.update({
+      where: { id: productId, shopId },
+      data: { hideFromShortage: false }
+    });
+
+    revalidatePath("/kurye");
+    revalidateTag(`shortage-${shopId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Restore dead stock error:", error);
+    return { success: false, error: "İşlem başarısız." };
   }
 }
 
@@ -1096,6 +1155,30 @@ export async function finishMyDay() {
     return { success: true };
   } catch (error) {
     return { success: false, error: "Bildirim gönderilemedi." };
+  }
+}
+
+export async function markProductAsDeadStock(productId: string) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    await prisma.product.update({
+      where: { id: productId, shopId },
+      data: { hideFromShortage: true }
+    });
+
+    // Also delete any active shortage items for this product
+    await prisma.shortageItem.deleteMany({
+      where: { productId, shopId, isResolved: false }
+    });
+
+    revalidatePath("/kurye");
+    revalidateTag(`shortage-${shopId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Mark as dead stock error:", error);
+    return { success: false, error: "İşlem başarısız." };
   }
 }
 

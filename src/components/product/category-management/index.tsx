@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Loader2, Folder, Package, Trash2, Edit2 } from "lucide-react";
+import { Plus, Loader2, Folder, Package, Trash2, Edit2, Sparkles, ChevronRight, GripVertical, MoreVertical, Layout, Info, ArrowUpRight, BarChart3, TrendingUp, AlertTriangle, Search } from "lucide-react";
 import {
     DndContext,
     DragOverlay,
@@ -46,7 +46,7 @@ import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { Category, Product, CategoryNode, PriceCurrency } from "./types";
 import { TreeItem, RootDropZone } from "./tree-item";
 import { ProductTable } from "./product-table";
-import { CategoryAddModal, CategoryEditModal, CategoryDeleteModal } from "./category-modals";
+import { CategoryAddModal, CategoryEditModal, CategoryDeleteModal, CategoryBulkAddModal } from "./category-modals";
 
 export function CategoryManagementContainer() {
     const { data: queryCategories } = useQuery({
@@ -76,12 +76,20 @@ export function CategoryManagementContainer() {
         return (saved as PriceCurrency) || (defaultCurrency as PriceCurrency) || "TRY";
     });
 
+    const [searchQuery, setSearchQuery] = useState("");
+
     useEffect(() => {
         const saved = localStorage.getItem("category_price_currency");
         if (!saved && defaultCurrency) {
             setPriceCurrency(defaultCurrency as PriceCurrency);
         }
     }, [defaultCurrency]);
+
+    // Para birimi değiştiğinde düzenleme verilerini temizle (simge-fiyat uyumsuzluğunu önlemek için)
+    useEffect(() => {
+        setEditingProducts({});
+        setNewProductData({ name: "", buyPrice: 0, sellPrice: 0, stock: 0 });
+    }, [priceCurrency]);
 
     const [selectedCatId, setSelectedCatId] = useState<string | null>(() => {
         if (typeof window !== 'undefined') return localStorage.getItem('category_selected_id');
@@ -109,6 +117,20 @@ export function CategoryManagementContainer() {
     const [deleteMode, setDeleteMode] = useState<"full" | "products">("full");
     const [isPending, startTransition] = useTransition();
 
+    // Resizable Sidebar States
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('category_sidebar_width');
+            return saved ? parseInt(saved, 10) : 320;
+        }
+        return 320;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+
+    // Bulk Add Modal state
+    const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
+    const [bulkNames, setBulkNames] = useState("");
+
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
     useEffect(() => { if (queryCategories) setCategories(queryCategories); }, [queryCategories]);
@@ -121,6 +143,26 @@ export function CategoryManagementContainer() {
 
     useEffect(() => { localStorage.setItem('category_expanded_state', JSON.stringify(expandedNodes)); }, [expandedNodes]);
     useEffect(() => { localStorage.setItem("category_price_currency", priceCurrency); }, [priceCurrency]);
+    useEffect(() => { localStorage.setItem('category_sidebar_width', sidebarWidth.toString()); }, [sidebarWidth]);
+
+    // Resizing logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return;
+            const newWidth = Math.min(Math.max(200, e.clientX - 64), 600); // 64 is likely the main sidebar width
+            setSidebarWidth(newWidth);
+        };
+        const handleMouseUp = () => setIsResizing(false);
+
+        if (isResizing) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing]);
 
     useEffect(() => {
         let timer: any;
@@ -152,6 +194,50 @@ export function CategoryManagementContainer() {
         });
         return roots;
     }, [categoryNodesMap]);
+
+    // Search Filtering Logic
+    const searchFilteredIds = useMemo(() => {
+        if (!searchQuery) return null;
+        const query = searchQuery.toLowerCase();
+        const visibleIds = new Set<string>();
+
+        // Find categories directly matching or containing matching products
+        categories.forEach(cat => {
+            const hasMatchingName = cat.name.toLowerCase().includes(query);
+            const hasMatchingProduct = allProducts.some(p =>
+                p.categoryId === cat.id && p.name.toLowerCase().includes(query)
+            );
+
+            if (hasMatchingName || hasMatchingProduct) {
+                // Add this category and all its ancestors
+                let current: string | null = cat.id;
+                while (current) {
+                    visibleIds.add(current);
+                    const node = categoryNodesMap.get(current);
+                    current = node?.parentId || null;
+                }
+            }
+        });
+
+        // Also if a subfolder is matched, its parents must be visible
+        // (Handled above by the while loop)
+
+        return visibleIds;
+    }, [searchQuery, categories, allProducts, categoryNodesMap]);
+
+    // Auto-expand matched nodes
+    useEffect(() => {
+        if (searchQuery && searchFilteredIds) {
+            const newExpanded: Record<string, boolean> = { ...expandedNodes };
+            searchFilteredIds.forEach(id => {
+                const node = categoryNodesMap.get(id);
+                if (node && node.children.length > 0) {
+                    newExpanded[id] = true;
+                }
+            });
+            setExpandedNodes(newExpanded);
+        }
+    }, [searchQuery, searchFilteredIds]);
 
     const selectedNode = selectedCatId ? categoryNodesMap.get(selectedCatId) : null;
 
@@ -258,7 +344,45 @@ export function CategoryManagementContainer() {
                 toast.success("Kategori eklendi!");
                 setIsAddModalOpen(false);
                 setSelectedCatId(res.category.id);
+                // Expand parent if it was a sub-category
+                if (formData.parentId !== "null") {
+                    setExpandedNodes(prev => ({ ...prev, [formData.parentId]: true }));
+                }
             } else toast.error(res.message);
+        });
+    };
+
+    const handleBulkAddSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const names = bulkNames.split(/[\n,]/).map(n => n.trim()).filter(n => n);
+        if (names.length === 0) return toast.error("En az bir kategori adı girmelisiniz!");
+
+        startTransition(async () => {
+            let successCount = 0;
+            const newAddedCategories: Category[] = [];
+
+            for (const name of names) {
+                const res = await createCategory({
+                    name,
+                    parentId: formData.parentId === "null" ? undefined : formData.parentId
+                });
+                if (res.success && res.category) {
+                    newAddedCategories.push(res.category as Category);
+                    successCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                setCategories(prev => [...prev, ...newAddedCategories]);
+                toast.success(`${successCount} alt varyant başarıyla eklendi!`);
+                setIsBulkAddModalOpen(false);
+                setBulkNames("");
+                if (formData.parentId !== "null") {
+                    setExpandedNodes(prev => ({ ...prev, [formData.parentId]: true }));
+                }
+            } else {
+                toast.error("Hiçbir kategori eklenemedi.");
+            }
         });
     };
 
@@ -373,18 +497,27 @@ export function CategoryManagementContainer() {
         return (
             <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1 w-full relative">
-                    {nodes.map(node => (
-                        <div key={node.id} className="w-full">
-                            <TreeItem
-                                node={node} level={level} isSelected={selectedCatId === node.id}
-                                isExpanded={!!expandedNodes[node.id]} hasChildren={node.children.length > 0}
-                                stats={getCumulativeStats(node.id)} onSelect={setSelectedCatId}
-                                onToggle={(id, e) => { e.stopPropagation(); setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] })); }}
-                                activeId={activeId}
-                            />
-                            {expandedNodes[node.id] && node.children.length > 0 && renderTree(node.children, level + 1)}
-                        </div>
-                    ))}
+                    {nodes.map(node => {
+                        const isVisible = !searchFilteredIds || searchFilteredIds.has(node.id);
+                        if (!isVisible) return null;
+
+                        return (
+                            <div key={node.id} className="w-full">
+                                <TreeItem
+                                    node={node} level={level} isSelected={selectedCatId === node.id}
+                                    isExpanded={!!expandedNodes[node.id]} hasChildren={node.children.length > 0}
+                                    stats={getCumulativeStats(node.id)} onSelect={setSelectedCatId}
+                                    onToggle={(id, e) => { e.stopPropagation(); setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] })); }}
+                                    onAddSub={(id) => {
+                                        setModalTitle(`${node.name} - Alt Varyant Ekle`);
+                                        setFormData({ name: "", parentId: id });
+                                        setIsAddModalOpen(true);
+                                    }}
+                                />
+                                {expandedNodes[node.id] && node.children.length > 0 && renderTree(node.children, level + 1)}
+                            </div>
+                        );
+                    })}
                 </div>
             </SortableContext>
         );
@@ -395,12 +528,43 @@ export function CategoryManagementContainer() {
     return (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex flex-col lg:flex-row min-h-[800px] lg:h-[calc(100vh-140px)] w-full overflow-hidden bg-white/40 dark:bg-background/40 rounded-3xl border border-zinc-200 dark:border-border/50 backdrop-blur-sm shadow-xl">
-                <div className="w-full lg:w-[320px] bg-zinc-50/50 dark:bg-[#0D0D0F] border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-border/50 p-4 lg:p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar">
+                <div
+                    style={{ width: typeof window !== 'undefined' && window.innerWidth > 1024 ? `${sidebarWidth}px` : '100%' }}
+                    className="bg-zinc-50/50 dark:bg-[#0D0D0F] border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-border/50 p-4 lg:p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar relative"
+                >
+                    {/* Resize Handle */}
+                    <div
+                        onMouseDown={() => setIsResizing(true)}
+                        className="hidden lg:block absolute right-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-indigo-500/30 transition-colors z-50"
+                    />
                     <div className="flex flex-col gap-1 mb-6 lg:mb-10 text-left">
                         <h2 className="font-bold text-xl lg:text-2xl text-indigo-600 dark:text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none font-medium">Envanter Hiyerarşisi</p>
                     </div>
                     <div className="flex-1 space-y-2 pb-10">
+                        <div className="relative mb-6">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                            <Input
+                                placeholder="Kategori veya ürün ara..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 h-10 bg-white dark:bg-white/5 border-zinc-200 dark:border-border rounded-xl text-xs"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <Plus className="h-4 w-4 rotate-45" />
+                                </button>
+                            )}
+                        </div>
+                        {searchQuery && searchFilteredIds && (
+                            <div className="mb-4 px-3 py-2 rounded-xl bg-indigo-500/5 border border-indigo-500/20 text-[10px] font-medium text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                                <Search className="h-3 w-3" />
+                                {searchFilteredIds.size} kategori · {allProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length} ürün eşleşti
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 mb-6">
                             <AICategoryCreator
                                 categories={categories} allProducts={allProducts}
@@ -426,6 +590,31 @@ export function CategoryManagementContainer() {
                                     <h2 className="font-bold text-xl lg:text-3xl text-foreground dark:text-white tracking-tight flex items-center gap-3">
                                         {selectedNode.name}
                                         <div className="flex items-center gap-1">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                title="Alt Varyant Ekle"
+                                                className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 text-emerald-500"
+                                                onClick={() => {
+                                                    setModalTitle(`${selectedNode.name} - Alt Varyant Ekle`);
+                                                    setFormData({ name: "", parentId: selectedNode.id });
+                                                    setIsAddModalOpen(true);
+                                                }}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                title="Toplu Alt Varyant Ekle"
+                                                className="h-8 w-8 rounded-lg hover:bg-violet-500/10 text-violet-500"
+                                                onClick={() => {
+                                                    setFormData({ name: "", parentId: selectedNode.id });
+                                                    setIsBulkAddModalOpen(true);
+                                                }}
+                                            >
+                                                <Sparkles className="h-4 w-4" />
+                                            </Button>
                                             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-indigo-500/10 text-indigo-500" onClick={() => { setEditCatId(selectedNode.id); setFormData({ name: selectedNode.name, parentId: selectedNode.parentId || "null" }); setIsEditModalOpen(true); }}><Edit2 className="h-4 w-4" /></Button>
                                             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-red-500/10 text-red-500" onClick={() => { setDeleteCountdown(3); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                                         </div>
@@ -495,7 +684,11 @@ export function CategoryManagementContainer() {
                                                 </div>
                                             )}
                                             <ProductTable
-                                                products={allProducts.filter(p => p.categoryId === selectedCatId)}
+                                                products={allProducts.filter(p => {
+                                                    if (p.categoryId !== selectedCatId) return false;
+                                                    if (searchQuery) return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                                                    return true;
+                                                })}
                                                 editingProducts={editingProducts} setEditingProducts={setEditingProducts}
                                                 savingId={savingId} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
                                                 getCurrencySymbol={getCurrencySymbol} priceCurrency={priceCurrency}
@@ -538,6 +731,7 @@ export function CategoryManagementContainer() {
             <DragOverlay>{activeId ? <div className="bg-[#1A1A1F] border border-indigo-500/50 p-4 rounded-2xl shadow-2xl flex items-center gap-3"><Folder className="h-4 w-4 text-indigo-400" /><p className="text-white text-[13px]">{categories.find(c => c.id === activeId)?.name}</p></div> : null}</DragOverlay>
 
             <CategoryAddModal isOpen={isAddModalOpen} onOpenChange={setIsAddModalOpen} onSubmit={handleAddSubmit} formData={formData} setFormData={setFormData} categories={categories} title={modalTitle} isPending={isPending} />
+            <CategoryBulkAddModal isOpen={isBulkAddModalOpen} onOpenChange={setIsBulkAddModalOpen} onSubmit={handleBulkAddSubmit} formData={formData} categories={categories} bulkNames={bulkNames} setBulkNames={setBulkNames} isPending={isPending} />
             <CategoryEditModal isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen} onSubmit={handleEditSubmit} formData={formData} setFormData={setFormData} categories={categories} editCatId={editCatId} isPending={isPending} />
             <CategoryDeleteModal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onDelete={handleDeleteCategory} categoryName={selectedNode?.name || ""} totalStock={selectedStats.totalStock} deleteMode={deleteMode} setDeleteMode={setDeleteMode} deleteCountdown={deleteCountdown} />
         </DndContext>

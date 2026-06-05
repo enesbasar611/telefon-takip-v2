@@ -275,6 +275,11 @@ export function StockMovementsClient({
                                                     )}>
                                                         {cfg.label}
                                                     </span>
+                                                    {(m.notes?.toLowerCase().includes("iade") || !!m.returnTicketId) && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border bg-orange-500/10 text-orange-400 border-orange-500/20">
+                                                            İADE
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                     {m.notes && (
@@ -287,10 +292,30 @@ export function StockMovementsClient({
                                                             SL-{m.sale.saleNumber}
                                                         </Badge>
                                                     )}
+                                                    {m.debt && (
+                                                        <Badge className="text-[9px] px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20 border rounded-full font-normal">
+                                                            BRÇ-{m.debt.id.slice(-4).toUpperCase()}
+                                                        </Badge>
+                                                    )}
+                                                    {m.returnTicket && (
+                                                        <Badge className="text-[9px] px-2 py-0.5 bg-orange-500/10 text-orange-400 border-orange-500/20 border rounded-full font-normal">
+                                                            İAD-{m.returnTicket.ticketNumber}
+                                                        </Badge>
+                                                    )}
                                                     {m.serviceTicket && (
                                                         <Badge className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border-indigo-500/20 border rounded-full font-normal">
                                                             SRV-{m.serviceTicket.ticketNumber}
                                                         </Badge>
+                                                    )}
+                                                    {(m.sale?.customer?.name || m.debt?.customer?.name || m.serviceTicket?.customer?.name || m.returnTicket?.customer?.name) && (
+                                                        <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
+                                                            {m.sale?.customer?.name || m.debt?.customer?.name || m.serviceTicket?.customer?.name || m.returnTicket?.customer?.name}
+                                                        </span>
+                                                    )}
+                                                    {m.supplier && (
+                                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-500/70 px-1.5 py-0.5 rounded font-medium">
+                                                            Tedarikçi: {m.supplier.name}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

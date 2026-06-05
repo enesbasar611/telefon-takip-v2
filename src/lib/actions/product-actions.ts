@@ -905,7 +905,31 @@ export async function getProductMovements(productId: string) {
           }
         },
         sale: {
-          select: { saleNumber: true }
+          select: {
+            saleNumber: true,
+            customer: {
+              select: { name: true }
+            }
+          }
+        },
+        debt: {
+          select: {
+            id: true,
+            customer: {
+              select: { name: true }
+            }
+          }
+        },
+        returnTicket: {
+          select: {
+            ticketNumber: true,
+            customer: {
+              select: { name: true }
+            }
+          }
+        },
+        supplier: {
+          select: { name: true }
         }
       }
     });
@@ -1018,10 +1042,39 @@ export async function getAllInventoryMovements(options: {
             select: { name: true, sku: true }
           },
           serviceTicket: {
-            select: { ticketNumber: true }
+            select: {
+              ticketNumber: true,
+              customer: {
+                select: { name: true }
+              }
+            }
           },
           sale: {
-            select: { saleNumber: true }
+            select: {
+              saleNumber: true,
+              customer: {
+                select: { name: true }
+              }
+            }
+          },
+          debt: {
+            select: {
+              id: true,
+              customer: {
+                select: { name: true }
+              }
+            }
+          },
+          returnTicket: {
+            select: {
+              ticketNumber: true,
+              customer: {
+                select: { name: true }
+              }
+            }
+          },
+          supplier: {
+            select: { name: true }
           }
         },
         skip: (page - 1) * limit,
