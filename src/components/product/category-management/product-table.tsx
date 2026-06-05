@@ -10,14 +10,15 @@ import { Product, PriceCurrency } from "./types";
 interface ProductTableProps {
     products: Product[];
     editingProducts: Record<string, { name: string; buyPrice: number; sellPrice: number }>;
-    setEditingProducts: (data: any) => void;
+    setEditingProducts: React.Dispatch<React.SetStateAction<Record<string, { name: string; buyPrice: number; sellPrice: number }>>>;
     savingId: string | null;
     onSaveProduct: (id: string) => void;
     onDeleteProduct: (id: string) => void;
     getCurrencySymbol: () => string;
     priceCurrency: PriceCurrency;
+    getCurrencyRate: () => number;
     selectedProductIds: string[];
-    setSelectedProductIds: (ids: string[]) => void;
+    setSelectedProductIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export function ProductTable({
@@ -29,27 +30,39 @@ export function ProductTable({
     onDeleteProduct,
     getCurrencySymbol,
     priceCurrency,
+    getCurrencyRate,
     selectedProductIds,
     setSelectedProductIds
 }: ProductTableProps) {
     const toggleSelection = (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        setSelectedProductIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        setSelectedProductIds((prev: string[]) =>
+            prev.includes(id) ? prev.filter((i: string) => i !== id) : [...prev, id]
         );
     };
 
     return (
         <div className="space-y-4">
             {products.map((product) => {
+                const getDisplayPrice = (val: number, valUsd: number | null | undefined) => {
+                    if (priceCurrency === "TRY") return val;
+                    if (valUsd) return valUsd;
+                    const rate = getCurrencyRate();
+                    return Math.round((val / (rate || 1)) * 100) / 100;
+                };
+
+                const initialBuyPrice = getDisplayPrice(product.buyPrice, product.buyPriceUsd);
+                const initialSellPrice = getDisplayPrice(product.sellPrice, product.sellPriceUsd);
+
                 const editData = editingProducts[product.id] || {
                     name: product.name,
-                    buyPrice: product.buyPrice,
-                    sellPrice: product.sellPrice
+                    buyPrice: initialBuyPrice,
+                    sellPrice: initialSellPrice
                 };
+
                 const hasChanges = editData.name !== product.name ||
-                    editData.buyPrice !== product.buyPrice ||
-                    editData.sellPrice !== product.sellPrice;
+                    editData.buyPrice !== initialBuyPrice ||
+                    editData.sellPrice !== initialSellPrice;
 
                 return (
                     <div

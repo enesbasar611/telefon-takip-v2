@@ -38,7 +38,8 @@ import {
     deleteProduct,
     updateProduct,
     createProduct,
-    getAllProductsForCategoriesUI
+    getAllProductsForCategoriesUI,
+    fixInflatedPrices
 } from "@/lib/actions/product-actions";
 
 import { AICategoryCreator } from "@/components/product/ai-category-creator";
@@ -58,7 +59,7 @@ export function CategoryManagementContainer() {
         queryFn: async () => await getAllProductsForCategoriesUI(),
     });
 
-    const { rates: exchangeRates } = useDashboardData();
+    const { rates: exchangeRates, defaultCurrency } = useDashboardData();
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -72,8 +73,15 @@ export function CategoryManagementContainer() {
     const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>(() => {
         if (typeof window === "undefined") return "TRY";
         const saved = localStorage.getItem("category_price_currency");
-        return (saved as PriceCurrency) || "TRY";
+        return (saved as PriceCurrency) || (defaultCurrency as PriceCurrency) || "TRY";
     });
+
+    useEffect(() => {
+        const saved = localStorage.getItem("category_price_currency");
+        if (!saved && defaultCurrency) {
+            setPriceCurrency(defaultCurrency as PriceCurrency);
+        }
+    }, [defaultCurrency]);
 
     const [selectedCatId, setSelectedCatId] = useState<string | null>(() => {
         if (typeof window !== 'undefined') return localStorage.getItem('category_selected_id');
@@ -135,6 +143,8 @@ export function CategoryManagementContainer() {
         return map;
     }, [categories]);
 
+    const [isFixing, setIsFixing] = useState(false);
+
     const tree = useMemo(() => {
         const roots: CategoryNode[] = [];
         categoryNodesMap.forEach(node => {
@@ -174,7 +184,19 @@ export function CategoryManagementContainer() {
 
     const toTryPrice = (value: number) => {
         const safeValue = Number(value) || 0;
-        return priceCurrency === "TRY" ? safeValue : Math.ceil(safeValue * getCurrencyRate());
+        if (priceCurrency === "TRY") return safeValue;
+
+        const rate = getCurrencyRate();
+        const converted = Math.ceil(safeValue * rate);
+
+        // Güvenlik Kontrolü: Eğer kur 100'den büyükse muhtemelen bir hata vardır (Dolar/Euro için)
+        // Ancak Altın (GA) için kur 3000+ olabilir. Bu yüzden para birimine göre kontrol yapıyoruz.
+        if (priceCurrency === "USD" && rate > 200) {
+            console.error("Hatalı dolar kuru tespit edildi:", rate);
+            return safeValue * 35; // Sabit güvenli kur patlamayı önlemek için
+        }
+
+        return converted;
     };
 
     const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
@@ -412,10 +434,30 @@ export function CategoryManagementContainer() {
                                         <span className="flex items-center gap-1.5"><Package className="h-3 w-3" /> {selectedStats.totalStock} TOPLAM ÜRÜN</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center p-1.5 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-border/50 shadow-inner">
-                                    {(["TRY", "USD"] as PriceCurrency[]).map((cur) => (
-                                        <button key={cur} onClick={() => setPriceCurrency(cur)} className={cn("px-4 py-2 rounded-xl text-[10px] transition-all font-bold", priceCurrency === cur ? "bg-white dark:bg-indigo-500 text-indigo-600 dark:text-black shadow-sm" : "text-muted-foreground hover:text-foreground")}>{cur}</button>
-                                    ))}
+                                <div className="flex items-center p-1.5 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-border/50 shadow-inner gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={async () => {
+                                            if (!confirm("100.000 TL üzerindeki tüm fiyatlar 1000'e bölünecektir. Emin misiniz?")) return;
+                                            setIsFixing(true);
+                                            const res = await fixInflatedPrices();
+                                            if (res.success) {
+                                                toast.success(res.message);
+                                                window.location.reload();
+                                            } else toast.error(res.error);
+                                            setIsFixing(false);
+                                        }}
+                                        disabled={isFixing}
+                                        className="h-8 px-3 text-[9px] font-bold uppercase tracking-widest text-emerald-600 hover:bg-emerald-500/10 border border-emerald-500/20 rounded-xl"
+                                    >
+                                        {isFixing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Fiyatları Onar"}
+                                    </Button>
+                                    <div className="flex bg-zinc-200 dark:bg-border/50 rounded-xl p-0.5">
+                                        {(["TRY", "USD"] as PriceCurrency[]).map((cur) => (
+                                            <button key={cur} onClick={() => setPriceCurrency(cur)} className={cn("px-4 py-2 rounded-xl text-[10px] transition-all font-bold", priceCurrency === cur ? "bg-white dark:bg-indigo-500 text-indigo-600 dark:text-black shadow-sm" : "text-muted-foreground hover:text-foreground")}>{cur}</button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
@@ -457,6 +499,7 @@ export function CategoryManagementContainer() {
                                                 editingProducts={editingProducts} setEditingProducts={setEditingProducts}
                                                 savingId={savingId} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
                                                 getCurrencySymbol={getCurrencySymbol} priceCurrency={priceCurrency}
+                                                getCurrencyRate={getCurrencyRate}
                                                 selectedProductIds={selectedProductIds} setSelectedProductIds={setSelectedProductIds}
                                             />
                                         </div>

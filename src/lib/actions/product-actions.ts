@@ -1484,3 +1484,50 @@ export async function adjustStockById(id: string, quantity: number, notes?: stri
     return { success: false, error: "Stok güncellenemedi." };
   }
 }
+
+export async function fixInflatedPrices() {
+  try {
+    const shopId = await getShopId();
+    // 100.000 TL ve üzeri fiyatlar muhtemelen hatalıdır (1000x bugı)
+    const inflatedProducts = await prisma.product.findMany({
+      where: {
+        shopId,
+        OR: [
+          { buyPrice: { gte: 100000 } },
+          { sellPrice: { gte: 100000 } }
+        ]
+      }
+    });
+
+    if (inflatedProducts.length === 0) {
+      return { success: true, message: "Hatalı fiyatlı ürün bulunamadı." };
+    }
+
+    const updates = inflatedProducts.map(p => {
+      const newBuy = p.buyPrice.toNumber() > 100000 ? p.buyPrice.toNumber() / 1000 : p.buyPrice.toNumber();
+      const newSell = p.sellPrice.toNumber() > 100000 ? p.sellPrice.toNumber() / 1000 : p.sellPrice.toNumber();
+
+      return prisma.product.update({
+        where: { id: p.id },
+        data: {
+          buyPrice: newBuy,
+          sellPrice: newSell
+        }
+      });
+    });
+
+    await prisma.$transaction(updates);
+
+    revalidatePath("/stok");
+    revalidateTag(`products-${shopId}`);
+
+    return {
+      success: true,
+      message: `${inflatedProducts.length} ürünün fiyatı düzeltildi.`,
+      fixedCount: inflatedProducts.length
+    };
+  } catch (error) {
+    console.error("Fiyat düzeltme hatası:", error);
+    return { success: false, error: "Fiyatlar düzeltilemedi." };
+  }
+}

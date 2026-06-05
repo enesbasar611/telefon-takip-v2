@@ -17,19 +17,32 @@ export async function syncAllRates(providedShopId?: string) {
 
     if (!response.ok) throw new Error("API hatası");
     const data = await response.json();
-    const parseTR = (val: string) => val ? val.replace(/\./g, '').replace(',', '.') : null;
+    const parseTR = (val: string) => {
+      if (!val) return null;
+      if (val.includes('.') && val.includes(',')) {
+        return val.replace(/\./g, '').replace(',', '.');
+      }
+      if (val.includes(',')) {
+        return val.replace(',', '.');
+      }
+      return val;
+    };
 
     const usdRateStr = parseTR(data.USD?.Satış);
     const eurRateStr = parseTR(data.EUR?.Satış);
     const gaRateStr = parseTR(data["gram-altin"]?.Satış);
 
-    if (!usdRateStr || isNaN(Number(usdRateStr)) || Number(usdRateStr) < 10) {
-      throw new Error("Invalid rate payload from API");
+    const usdNum = Number(usdRateStr);
+    const eurNum = Number(eurRateStr);
+    const gaNum = Number(gaRateStr);
+
+    if (!usdRateStr || isNaN(usdNum) || usdNum < 10 || usdNum > 150) {
+      throw new Error(`Geçersiz dolar kuru: ${usdRateStr}`);
     }
 
-    const usdRate = usdRateStr;
-    const eurRate = eurRateStr || usdRate; // fallback to usd
-    const gaRate = gaRateStr || "3000";
+    const usdRate = usdNum.toString();
+    const eurRate = (!isNaN(eurNum) && eurNum > 10 && eurNum < 180) ? eurNum.toString() : (usdNum * 1.1).toString();
+    const gaRate = (!isNaN(gaNum) && gaNum > 1000) ? gaNum.toString() : "3000";
 
     await prisma.$transaction([
       prisma.setting.upsert({ where: { shopId_key: { shopId, key: "exchange_rate_usd" } }, update: { value: usdRate }, create: { shopId, key: "exchange_rate_usd", value: usdRate } }),
@@ -39,11 +52,11 @@ export async function syncAllRates(providedShopId?: string) {
     ]);
 
     revalidatePath("/");
-    // Bust the rates cache so the next layout render gets fresh data
     revalidateTag(`rates-${shopId}`);
     revalidateTag("rates");
     return { success: true };
   } catch (error) {
+    console.error("Kur senkronizasyon hatası:", error);
     return { success: false };
   }
 }
