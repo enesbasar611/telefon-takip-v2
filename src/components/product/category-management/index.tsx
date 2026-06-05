@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { PriceInput } from "@/components/ui/price-input";
 
 import {
     createCategory,
@@ -149,16 +150,21 @@ export function CategoryManagementContainer() {
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isResizing) return;
-            const newWidth = Math.min(Math.max(200, e.clientX - 64), 600); // 64 is likely the main sidebar width
+            const maxWidth = window.innerWidth * 0.5;
+            const newWidth = Math.min(Math.max(250, e.clientX - 64), maxWidth);
             setSidebarWidth(newWidth);
         };
         const handleMouseUp = () => setIsResizing(false);
 
         if (isResizing) {
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mouseup', handleMouseUp);
         }
         return () => {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
@@ -532,11 +538,15 @@ export function CategoryManagementContainer() {
                     style={{ width: typeof window !== 'undefined' && window.innerWidth > 1024 ? `${sidebarWidth}px` : '100%' }}
                     className="bg-zinc-50/50 dark:bg-[#0D0D0F] border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-border/50 p-4 lg:p-8 flex flex-col shrink-0 overflow-y-auto no-scrollbar relative"
                 >
-                    {/* Resize Handle */}
                     <div
                         onMouseDown={() => setIsResizing(true)}
-                        className="hidden lg:block absolute right-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-indigo-500/30 transition-colors z-50"
-                    />
+                        className="hidden lg:block absolute -right-1.5 top-0 w-3 h-full cursor-col-resize group z-[100]"
+                    >
+                        <div className={cn(
+                            "absolute right-1.5 top-0 w-[2px] h-full transition-all duration-200",
+                            isResizing ? "bg-indigo-500 scale-x-150" : "bg-transparent group-hover:bg-indigo-500/30"
+                        )} />
+                    </div>
                     <div className="flex flex-col gap-1 mb-6 lg:mb-10 text-left">
                         <h2 className="font-bold text-xl lg:text-2xl text-indigo-600 dark:text-white tracking-tighter uppercase italic">Kategori Ağacı</h2>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none font-medium">Envanter Hiyerarşisi</p>
@@ -664,18 +674,49 @@ export function CategoryManagementContainer() {
                                             </div>
                                             {showQuickAdd && (
                                                 <div className="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/20 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                        <div className="space-y-1.5">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+                                                        <div className="space-y-1.5 lg:col-span-6">
                                                             <Label className="text-[9px] font-bold uppercase tracking-widest pl-1">Ürün Adı</Label>
-                                                            <Input value={newProductData.name} onChange={e => setNewProductData({ ...newProductData, name: e.target.value })} className="h-10 bg-white dark:bg-black/40" />
+                                                            <Input
+                                                                value={newProductData.name}
+                                                                onChange={e => setNewProductData({ ...newProductData, name: e.target.value })}
+                                                                onFocus={e => {
+                                                                    const target = e.target;
+                                                                    setTimeout(() => target.select(), 0);
+                                                                }}
+                                                                className="h-10 bg-white dark:bg-black/40"
+                                                            />
                                                         </div>
-                                                        <div className="space-y-1.5">
+                                                        <div className="space-y-1.5 lg:col-span-2">
                                                             <Label className="text-[9px] font-bold uppercase tracking-widest pl-1">Alış ({priceCurrency})</Label>
-                                                            <Input type="number" value={newProductData.buyPrice} onChange={e => setNewProductData({ ...newProductData, buyPrice: Number(e.target.value) })} className="h-10 bg-white dark:bg-black/40" />
+                                                            <PriceInput
+                                                                value={newProductData.buyPrice}
+                                                                onChange={value => setNewProductData({ ...newProductData, buyPrice: value })}
+                                                                prefix={getCurrencySymbol()}
+                                                                className="h-10 bg-white dark:bg-black/40"
+                                                            />
                                                         </div>
-                                                        <div className="space-y-1.5">
+                                                        <div className="space-y-1.5 lg:col-span-2">
                                                             <Label className="text-[9px] font-bold uppercase tracking-widest pl-1">Satış ({priceCurrency})</Label>
-                                                            <Input type="number" value={newProductData.sellPrice} onChange={e => setNewProductData({ ...newProductData, sellPrice: Number(e.target.value) })} className="h-10 bg-white dark:bg-black/40" />
+                                                            <PriceInput
+                                                                value={newProductData.sellPrice}
+                                                                onChange={value => setNewProductData({ ...newProductData, sellPrice: value })}
+                                                                prefix={getCurrencySymbol()}
+                                                                className="h-10 bg-white dark:bg-black/40"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5 lg:col-span-2">
+                                                            <Label className="text-[9px] font-bold uppercase tracking-widest pl-1">Stok Adedi</Label>
+                                                            <Input
+                                                                type="number"
+                                                                value={newProductData.stock}
+                                                                onChange={e => setNewProductData({ ...newProductData, stock: Number(e.target.value) })}
+                                                                onFocus={e => {
+                                                                    const target = e.target;
+                                                                    setTimeout(() => target.select(), 0);
+                                                                }}
+                                                                className="h-10 bg-white dark:bg-black/40"
+                                                            />
                                                         </div>
                                                     </div>
                                                     <Button onClick={handleQuickAddProduct} disabled={isCreatingProduct} className="w-full bg-indigo-600 text-[11px] font-bold uppercase tracking-widest h-10 rounded-xl shadow-lg shadow-indigo-600/20">
@@ -707,7 +748,16 @@ export function CategoryManagementContainer() {
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
                                                     <Label className="text-[10px] text-muted-foreground uppercase pl-1">ADET MİKTARI</Label>
-                                                    <Input type="number" value={stockToAdd} onChange={e => setStockToAdd(Number(e.target.value))} className="h-12 text-lg font-bold" />
+                                                    <Input
+                                                        type="number"
+                                                        value={stockToAdd}
+                                                        onChange={e => setStockToAdd(Number(e.target.value))}
+                                                        onFocus={e => {
+                                                            const target = e.target;
+                                                            setTimeout(() => target.select(), 0);
+                                                        }}
+                                                        className="h-12 text-lg font-bold"
+                                                    />
                                                 </div>
                                                 <Button className={cn("w-full h-12 text-xs font-bold rounded-2xl shadow-xl", stockMode === "plus" ? "bg-indigo-600" : "bg-red-600")} disabled={isPending || stockToAdd <= 0 || selectedProductIds.length === 0} onClick={handleAddStock}>
                                                     {savingId === "bulk-stock" ? <Loader2 className="h-5 w-5 animate-spin" /> : `İŞLEMİ ONAYLA (${selectedProductIds.length})`}

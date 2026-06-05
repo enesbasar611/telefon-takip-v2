@@ -62,7 +62,11 @@ export const PriceInput = ({ value, onChange, prefix = "₺", className, ...prop
                 className={cn(className, prefix ? "pl-10" : "")}
                 value={displayValue}
                 onChange={handleChange}
-                onFocus={handleFocus}
+                onFocus={(e) => {
+                    handleFocus();
+                    const target = e.target;
+                    setTimeout(() => target.select(), 0);
+                }}
                 onBlur={handleBlur}
                 inputMode="decimal"
             />

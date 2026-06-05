@@ -9,3 +9,8 @@
 - **Resim Yükleme Modülleri:** `fs`, `path` ve `S3` entegrasyonu kullanan tüm dosya yükleme (upload) fonksiyonları.
 - **Dosya İşlemleri:** Az kullanılsa da fatura/makbuz üretimi ve resim işleme kodları korunacak.
 - **İzole Servisler:** Başka dosyalar tarafından sık çağrılmasa da arka planda çalışan cron-job veya yardımcı (utility) fonksiyonlar.
+
+## DB & PRISMA BEST PRACTICES
+- **Local Schema Changes:** `schema.prisma` üzerinde kolon, tablo veya ilişki değişikliği yapıldığında **ASLA** `db push` kullanma.
+- **Migration Workflow:** Doğrudan şu komutu kullan: `npx prisma migrate dev --name <degisiklik_adi>`
+- **Veri Güvenliği:** Bu yöntem yerel geliştirmede veri kaybını önler ve göç geçmişini sağlıklı tutar.

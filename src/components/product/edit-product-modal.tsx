@@ -192,7 +192,12 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                         <div className="grid gap-6">
                             <div className="space-y-2.5">
                                 <Label htmlFor="name" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">{getIndustryLabel(shop, "productLabel")} Adı</Label>
-                                <Input id="name" {...register("name")} className="bg-muted/30 border-border/60 rounded-2xl h-14 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 text-foreground" />
+                                <Input
+                                    id="name"
+                                    {...register("name")}
+                                    onFocus={e => e.target.select()}
+                                    className="bg-muted/30 border-border/60 rounded-2xl h-14 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 text-foreground"
+                                />
                                 {errors.name && <p className="text-[10px] text-rose-500 font-bold ">{String(errors.name.message || "")}</p>}
                             </div>
 
@@ -230,7 +235,12 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                                     <Label htmlFor="barcode" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                         <Barcode className="h-3 w-3" /> Barkod
                                     </Label>
-                                    <Input id="barcode" {...register("barcode")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                                    <Input
+                                        id="barcode"
+                                        {...register("barcode")}
+                                        onFocus={e => e.target.select()}
+                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                    />
                                 </div>
                             </div>
 
@@ -296,13 +306,25 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2.5">
                                     <Label htmlFor="stock" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1">Mevcut Stok</Label>
-                                    <Input id="stock" type="number" {...register("stock")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                                    <Input
+                                        id="stock"
+                                        type="number"
+                                        {...register("stock")}
+                                        onFocus={e => e.target.select()}
+                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                    />
                                 </div>
                                 <div className="space-y-2.5">
                                     <Label htmlFor="criticalStock" className="font-bold text-[10px] text-muted-foreground uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
                                         <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                                     </Label>
-                                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                                    <Input
+                                        id="criticalStock"
+                                        type="number"
+                                        {...register("criticalStock")}
+                                        onFocus={e => e.target.select()}
+                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                    />
                                 </div>
                             </div>
 
@@ -311,7 +333,13 @@ export function EditProductModal({ product, categories, suppliers = [], isOpen, 
                                     <Label htmlFor="location" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">
                                         <MapPin className="h-3.5 w-3.5 text-blue-500" /> Raf / Konum Bilgisi
                                     </Label>
-                                    <Input id="location" {...register("location")} placeholder="Örn: A-12, Arka Depo" className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium" />
+                                    <Input
+                                        id="location"
+                                        {...register("location")}
+                                        placeholder="Örn: A-12, Arka Depo"
+                                        onFocus={e => e.target.select()}
+                                        className="bg-accent/5 border-border/40 rounded-2xl h-14 text-sm font-medium"
+                                    />
                                 </div>
                                 <div className="space-y-2.5">
                                     <Label htmlFor="supplierId" className="font-bold text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-[0.2em] ml-1">

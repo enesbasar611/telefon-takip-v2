@@ -445,7 +445,13 @@ export function CreateProductModal({
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-4">
                   <div className="md:col-span-8 space-y-2">
                     <Label htmlFor="name" className="font-medium text-[12px] font-semibold text-muted-foreground">{getIndustryLabel(shop, "productLabel")} Adı &amp; Kesin Tanımı</Label>
-                    <Input id="name" {...register("name")} placeholder={`Örn: ${getIndustryLabel(shop, "productLabel")} adı / modeli / türü`} className="bg-muted border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input
+                      id="name"
+                      {...register("name")}
+                      placeholder={`Örn: ${getIndustryLabel(shop, "productLabel")} adı / modeli / türü`}
+                      onFocus={e => e.target.select()}
+                      className="bg-muted border-border rounded-xl h-12 px-4 text-[14px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner"
+                    />
                     {errors.name && (
                       <p className="text-[11px] text-rose-500 font-medium">
                         {String(errors.name.message || "")}
@@ -457,7 +463,13 @@ export function CreateProductModal({
                       <Barcode className="h-3.5 w-3.5" /> Barkod No
                     </Label>
                     <div className="relative">
-                      <Input id="barcode" {...register("barcode")} placeholder="Boş bırakılırsa ürün adına göre oluşturulur" className="bg-muted border-border rounded-xl h-12 pl-4 pr-12 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                      <Input
+                        id="barcode"
+                        {...register("barcode")}
+                        placeholder="Boş bırakılırsa ürün adına göre oluşturulur"
+                        onFocus={e => e.target.select()}
+                        className="bg-muted border-border rounded-xl h-12 pl-4 pr-12 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner"
+                      />
                       <Button
                         type="button"
                         variant="ghost"
@@ -560,19 +572,37 @@ export function CreateProductModal({
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                   <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="stock" className="font-medium text-[12px] font-semibold text-muted-foreground">Başlangıç Stoğu</Label>
-                    <Input id="stock" type="number" {...register("stock")} className="bg-muted border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center" />
+                    <Input
+                      id="stock"
+                      type="number"
+                      {...register("stock")}
+                      onFocus={e => e.target.select()}
+                      className="bg-muted border-border rounded-xl h-12 text-[15px]  focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner text-center"
+                    />
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="criticalStock" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Kritik Limit
                     </Label>
-                    <Input id="criticalStock" type="number" {...register("criticalStock")} className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-600 dark:text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center" />
+                    <Input
+                      id="criticalStock"
+                      type="number"
+                      {...register("criticalStock")}
+                      onFocus={e => e.target.select()}
+                      className="bg-rose-500/5 border-rose-500/20 rounded-xl h-12 text-[15px]  text-rose-600 dark:text-rose-200 focus-visible:ring-1 focus-visible:ring-rose-500/50 transition-all shadow-inner text-center"
+                    />
                   </div>
                   <div className="md:col-span-4 space-y-2">
                     <Label htmlFor="location" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-blue-400" /> Raf / Konum
                     </Label>
-                    <Input id="location" {...register("location")} placeholder="Örn: Arka Depo, Orta Çekmece, A-2" className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner" />
+                    <Input
+                      id="location"
+                      {...register("location")}
+                      placeholder="Örn: Arka Depo, Orta Çekmece, A-2"
+                      onFocus={e => e.target.select()}
+                      className="bg-muted border-border rounded-xl h-12 px-4 text-[13px] font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-blue-500/50 transition-all shadow-inner"
+                    />
                   </div>
                   <div className="md:col-span-4 space-y-2">
                     <Label htmlFor="supplierId" className="font-medium text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
