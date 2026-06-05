@@ -1025,36 +1025,53 @@ export function VeresiyeClient({
 
                     const originalAmt = Math.round(item.amount);
                     const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                    const equivFormatted = Math.round(equivalentAmt).toLocaleString('tr-TR');
+                    const equivFormatted = isUSD ? Math.round(equivalentAmt).toLocaleString('tr-TR') : equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    const isDefaultUSD = defaultCurrency === 'USD';
 
                     if (item.type === 'DEBT') {
-                        message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                        if (isDefaultUSD) {
+                            const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
+                            const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
+                            message += `• ${item.notes}: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
+                        } else {
+                            const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
+                            const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
+                            message += `• ${item.notes}: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                        }
                     } else {
-                        message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
+                        if (isDefaultUSD) {
+                            const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
+                            const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
+                            message += `• 🟢 Ödeme: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
+                        } else {
+                            const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
+                            const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
+                            message += `• 🟢 Ödeme: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                        }
                     }
                 });
                 message += `\n`;
             });
 
-            message += `*🔴 Toplam Güncel Borç:*\n`;
+            message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
             const totalTRY = customer.totalRemainingTRY || 0;
             const totalUSD = customer.totalRemainingUSD || 0;
+            const isDefaultUSD = defaultCurrency === 'USD';
 
-            if (totalTRY > 0) {
-                const equivUSD = totalTRY / usdRate;
-                message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${Math.round(equivUSD).toLocaleString('tr-TR')})\n`;
-            }
-            if (totalUSD > 0) {
-                const equivTRY = totalUSD * usdRate;
-                message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
+            if (isDefaultUSD) {
+                const combinedTotalUSD = totalUSD + (totalTRY / usdRate);
+                const combinedTotalTRY = (totalUSD * usdRate) + totalTRY;
+                message += `*$${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')})*\n`;
+            } else {
+                const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
+                const combinedTotalUSD = (totalTRY / usdRate) + totalUSD;
+                message += `*₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')} ($${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})*\n`;
             }
 
             if (totalTRY <= 0 && totalUSD <= 0) {
                 message += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
             } else {
-                const combinedTotal = totalTRY + (totalUSD * usdRate);
-                message += `--------------------\n`;
-                message += `*Genel Toplam:* ₺${Math.round(combinedTotal).toLocaleString('tr-TR')}\n`;
                 message += `\n_İyi çalışmalar._`;
             }
 
@@ -1628,25 +1645,53 @@ export function VeresiyeClient({
                                         message += `*${dateKey}*\n`;
                                         dateGroups[dateKey].forEach(item => {
                                             const isUSD = item.currency === 'USD';
-                                            const symbol = isUSD ? '$' : '₺';
-                                            const equivSymbol = isUSD ? '₺' : '$';
                                             const originalAmt = item.amount;
-                                            const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                                            const equivFormatted = equivSymbol === '$' ? equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(equivalentAmt).toLocaleString('tr-TR');
-                                            if (item.type === 'DEBT') { message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`; }
-                                            else { message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`; }
+                                            const isDefaultUSD = defaultCurrency === 'USD';
+
+                                            if (item.type === 'DEBT') {
+                                                if (isDefaultUSD) {
+                                                    const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
+                                                    const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
+                                                    message += `• ${item.notes}: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
+                                                } else {
+                                                    const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
+                                                    const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
+                                                    message += `• ${item.notes}: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                                                }
+                                            } else {
+                                                if (isDefaultUSD) {
+                                                    const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
+                                                    const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
+                                                    message += `• 🟢 Ödeme: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
+                                                } else {
+                                                    const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
+                                                    const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
+                                                    message += `• 🟢 Ödeme: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+                                                }
+                                            }
                                         });
                                         message += `\n`;
                                     });
-                                    message += `*Toplam Güncel Borç:*\n`;
+                                    message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
                                     const totalTRY = historyCustomer?.totalRemainingTRY || 0;
                                     const totalUSD = historyCustomer?.totalRemainingUSD || 0;
-                                    if (totalTRY > 0) { message += `🔴 ₺${totalTRY.toLocaleString('tr-TR')} (~$${(totalTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`; }
-                                    if (totalUSD > 0) { message += `🔴 $${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(totalUSD * usdRate).toLocaleString('tr-TR')})\n`; }
+                                    const isDefaultUSD = defaultCurrency === 'USD';
+
+                                    if (isDefaultUSD) {
+                                        const combinedTotalUSD = totalUSD + (totalTRY / usdRate);
+                                        const combinedTotalTRY = (totalUSD * usdRate) + totalTRY;
+                                        message += `*$${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')})*\n`;
+                                    } else {
+                                        const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
+                                        const combinedTotalUSD = (totalTRY / usdRate) + totalUSD;
+                                        message += `*₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')} ($${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})*\n`;
+                                    }
+
                                     if (Number(historyCustomer?.balance || 0) > 0) message += `🎁 TL Emanet: ₺${Number(historyCustomer.balance).toLocaleString('tr-TR')}\n`;
                                     if (Number(historyCustomer?.balanceUsd || 0) > 0) message += `🎁 USD Emanet: $${Number(historyCustomer.balanceUsd).toLocaleString('tr-TR')}\n`;
+
                                     if (totalTRY <= 0 && totalUSD <= 0) { message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`; }
-                                    else { const combinedTotalTRY = totalTRY + (totalUSD * usdRate); message += `--------------------\n*Genel Toplam:* ₺${Math.ceil(combinedTotalTRY).toLocaleString('tr-TR')}\n\n_İyi çalışmalar._`; }
+                                    else { message += `\n_İyi çalışmalar._`; }
                                     setWhatsappMessageContent(message);
                                     setWhatsappCustomer(historyCustomer);
                                     setWhatsappModalOpen(true);
@@ -2026,9 +2071,16 @@ export function VeresiyeClient({
                                         });
 
                                         setPaymentCustomer(historyCustomer);
-                                        setPaymentCurrency("TRY");
-                                        const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)));
-                                        setPaymentAmount(String(totalInTRY));
+                                        const isDefaultUSD = defaultCurrency === "USD";
+                                        setPaymentCurrency(isDefaultUSD ? "USD" : "TRY");
+
+                                        if (isDefaultUSD) {
+                                            const totalInUSD = sumUSD + (sumTRY / (rates?.usd || 32.5));
+                                            setPaymentAmount(totalInUSD.toFixed(2));
+                                        } else {
+                                            const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)));
+                                            setPaymentAmount(String(totalInTRY));
+                                        }
                                         setHistoryCustomer(null);
                                     }}
                                     className="h-9 px-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"

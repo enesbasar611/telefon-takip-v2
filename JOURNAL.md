@@ -289,4 +289,15 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
 2026-05-27 - **Veritabanı ve Sayfa Optimizasyonları**
 - **getShopId() Performansı**: JWT senkronizasyonuna 5s/30s TTL mekanizması eklenerek veritabanı hitleri %80 oranında azaltıldı. Super Admin home-shop araması `React.cache` ile sarmalanarak request-local caching sağlandı.
 - **Kategori Sayfası Modernizasyonu**: `/stok/kategoriler` sayfası Next.js metadata ve yeni modüler bileşenlerle modernize edildi.
-- **AI Bağlam İyileştirmesi**: `parseCategoryTreeWithAI` fonksiyonuna mevcut kategoriler bağlam olarak eklenerek AI'nın hiyerarşik doğruluğu artırıldı.
+
+2026-06-05 - **Veresiye Terminali ve Kurye Paneli Final İyileştirmeleri**
+- **Veresiye Terminali**:
+    - WhatsApp hesap özetlerindeki `@` ve `~` işaretleri temizlendi, modern bir parantez içi gösterim `(₺...)` veya `($...)` getirildi.
+    - Varsayılan para birimi (TL/USD) ayarına göre mesaj içeriği ve borçların önceliği otomatik güncellenecek şekilde revize edildi.
+    - "Seçilenleri Öde" butonu güncellendi; artık varsayılan para biriminize göre toplam borç hesaplanıyor ve ödeme ekranına doğru para birimiyle aktarılıyor.
+    - Borç ekstre listesinde tekil ürün seçimi ve bu ürünler üzerinden "Seçilenleri Öde" veya "Seçilenleri İade Et" akışları doğrulandı.
+- **Kurye Paneli**:
+    - "Atanmamış Eksikler" listesine arama (Search) kutusu eklendi.
+    - Ölü stok ürünlerinin aktif eksik adetlerinden (Tümü, Kritik, Bitenler) izole edilmesi sağlandı.
+- **Dosyalar**: `src/components/finance/veresiye-client.tsx`, `src/components/courier/courier-dashboard-client.tsx`, `src/lib/actions/shortage-actions.ts`.
+
