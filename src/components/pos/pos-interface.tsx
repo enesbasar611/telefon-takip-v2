@@ -466,7 +466,8 @@ export function POSInterface({ initialSaleId }: {
             quantity: item.quantity,
             unitPrice: item.sellPrice
           })),
-          totalAmount: finalTotal, // Use finalTotal instead of subtotal
+          totalAmount: finalTotal,
+          currency: defaultCurrency || 'TRY',
           paymentMethod,
           discountAmount: loyaltyDiscountAmount,
           usedPoints

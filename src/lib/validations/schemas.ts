@@ -100,6 +100,7 @@ export const saleSchema = z.object({
         unitPrice: priceSchema,
     })).min(1, "En az bir ürün eklenmelidir"),
     totalAmount: priceSchema,
+    currency: z.string().optional().default("TRY"),
     paymentMethod: z.string(),
     discountAmount: z.coerce.number().optional().default(0),
     usedPoints: z.coerce.number().optional().default(0),

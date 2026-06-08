@@ -147,6 +147,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       await tx.transaction.create({
         data: {
           amount: finalAmount,
+          currency: data.currency || "TRY",
           type: TransactionType.INCOME,
           description: `${saleDescription}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
           paymentMethod: isDebt ? PaymentMethod.DEBT : newSale.paymentMethod,
@@ -174,6 +175,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
             customerId: data.customerId,
             amount: finalAmount,
             remainingAmount: finalAmount,
+            currency: data.currency || "TRY",
             shopId,
             notes: `Satış: ${newSale.saleNumber}`,
             saleId: newSale.id, // Verified in schema.prisma

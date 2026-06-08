@@ -133,13 +133,54 @@ export function formatCurrency(amount: number | string | null | undefined, showS
 }
 
 /**
- * Parses a Turkish formatted number string (e.g. "1.234,56") back to a standard number
+ * Parses a numeric string back to a standard number.
+ * Intelligent enough to handle both Turkish (1.234,56) and International (1,234.56) formats,
+ * or simple inputs with either a dot or a comma as a decimal separator.
  */
-export function parseCurrency(value: string): number {
-  if (!value) return 0;
-  // Remove group separator (dot) and replace decimal separator (comma) with dot
-  const cleaned = value.replace(/\./g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
+export function parseCurrency(value: string | number): number {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return value;
+
+  let str = value.trim();
+  if (!str) return 0;
+
+  // If it has both . and ,
+  if (str.includes(".") && str.includes(",")) {
+    const lastDot = str.lastIndexOf(".");
+    const lastComma = str.lastIndexOf(",");
+
+    if (lastComma > lastDot) {
+      // Turkish format: 1.234,56
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      // International format: 1,234.56
+      str = str.replace(/,/g, "");
+    }
+  } else if (str.includes(",")) {
+    // Only comma: 1234,56 or 1,234
+    // In Turkish context, comma is almost always decimal
+    str = str.replace(",", ".");
+  } else if (str.includes(".")) {
+    // Only dot: 1.234 or 1234.56
+    // Heuristic: if there are exactly 2 digits after the dot, it's likely a decimal (e.g., 5.50)
+    // If there are 3 digits, it could be a thousand separator (e.g., 1.000)
+    const parts = str.split(".");
+    if (parts.length === 2) {
+      const decimals = parts[1];
+      if (decimals.length !== 3) {
+        // Treat as decimal (5.5, 5.50, 5.5000 etc but not 5.500)
+        // Note: 5.500 is ambiguous but we lean towards thousand separator if it's exactly 3
+      } else {
+        // Exactly 3 digits: 1.000 -> treat as thousand separator
+        str = str.replace(/\./g, "");
+      }
+    } else if (parts.length > 2) {
+      // 1.000.000
+      str = str.replace(/\./g, "");
+    }
+  }
+
+  const num = parseFloat(str);
   return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 }
 

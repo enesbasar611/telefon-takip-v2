@@ -151,7 +151,10 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                             </div>
                                             <div className="text-right whitespace-nowrap">
                                                 <div className="text-[11px] font-black text-black">
-                                                    {isPayment ? '-' : ''}{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: item.currency || 'TRY' }).format(item.amount)}
+                                                    {isPayment ? '-' : ''}{new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                        style: 'currency',
+                                                        currency: item.currency || 'TRY'
+                                                    }).format(item.amount)}
                                                 </div>
                                             </div>
                                         </div>
