@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { Loader2, MessageCircle, QrCode, RefreshCw, Wifi, WifiOff, LogOut, CheckCircle2 } from "lucide-react";
+import { Loader2, MessageCircle, QrCode, RefreshCw, Wifi, WifiOff, LogOut, CheckCircle2, Moon, AlertTriangle } from "lucide-react";
 
 interface WhatsAppTabProps {
     formData: Record<string, string>;
@@ -69,6 +69,7 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
         status: string;
         qr?: string;
         error?: string;
+        errorCode?: string;
         me?: { name: string; number: string };
     }>({ status: 'DISCONNECTED' });
     const [loading, setLoading] = useState(false);
@@ -123,6 +124,8 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
     const isConnected = statusData.status === 'CONNECTED';
     const isConnecting = statusData.status === 'CONNECTING';
     const isQr = statusData.status === 'QR';
+    const isSleeping = statusData.status === 'SLEEPING';
+    const isLoggedOut = statusData.errorCode === 'LOGGED_OUT_BY_PHONE';
 
     const isConfirmSaving = savingKeys.has("whatsappConfirmBeforeSend");
 
@@ -133,13 +136,20 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
                 "p-8 rounded-2xl border transition-all space-y-8 shadow-sm",
                 isConnected
                     ? "border-emerald-500/20 bg-emerald-500/5"
-                    : "border-slate-200 dark:border-[#222] bg-white dark:bg-[#111]"
+                    : isSleeping
+                        ? "border-blue-500/20 bg-blue-500/5"
+                        : isLoggedOut
+                            ? "border-red-500/20 bg-red-500/5"
+                            : "border-slate-200 dark:border-[#222] bg-white dark:bg-[#111]"
             )}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         <div className={cn(
                             "w-14 h-14 rounded-xl border flex items-center justify-center transition-all shadow-lg",
-                            isConnected ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-emerald-500/10" : "bg-slate-500/10 border-slate-500/20 text-muted-foreground/80"
+                            isConnected ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-emerald-500/10"
+                                : isSleeping ? "bg-blue-500/10 border-blue-500/20 text-blue-500 shadow-blue-500/10"
+                                    : isLoggedOut ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-red-500/10"
+                                        : "bg-slate-500/10 border-slate-500/20 text-muted-foreground/80"
                         )}>
                             <MessageCircle className="h-7 w-7" />
                         </div>
@@ -204,6 +214,33 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
                                         )}
                                     </div>
                                 </div>
+                            ) : isSleeping ? (
+                                <div className="text-center space-y-4 animate-in zoom-in duration-500">
+                                    <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto shadow-2xl shadow-blue-500/20">
+                                        <Moon className="w-10 h-10 text-blue-500" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-blue-400 font-black text-sm tracking-widest">UYKU MODU</p>
+                                        {statusData.me && (
+                                            <div className="mt-2 text-center">
+                                                <p className="text-white font-bold text-xs">{statusData.me.name}</p>
+                                                <p className="text-blue-500/60 font-mono text-[9px]">+{statusData.me.number}</p>
+                                            </div>
+                                        )}
+                                        <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">Mesaj gönderiminde otomatik uyanacak.</p>
+                                    </div>
+                                </div>
+                            ) : isLoggedOut ? (
+                                <div className="text-center space-y-4 animate-in zoom-in duration-500">
+                                    <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto shadow-2xl shadow-red-500/20">
+                                        <AlertTriangle className="w-10 h-10 text-red-500" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-red-400 font-black text-sm tracking-widest">BAĞLANTI KESİLDİ</p>
+                                        <p className="text-[10px] text-red-400/70 font-medium mt-1 max-w-[200px] mx-auto">Telefonunuzdan bağlı cihazlar kısmından çıkış yapıldı.</p>
+                                        <p className="text-[10px] text-muted-foreground/60 mt-1">Yeniden bağlanmak için "Bağlantıyı Başlat" butonuna tıklayın.</p>
+                                    </div>
+                                </div>
                             ) : isQr && statusData.qr ? (
                                 <div className="p-4 bg-white rounded-2xl animate-in fade-in zoom-in duration-700 shadow-2xl">
                                     <img src={statusData.qr} alt="WhatsApp QR" className="w-full h-full" />
@@ -227,6 +264,23 @@ export function WhatsAppTab({ formData, onChange, savingKeys }: WhatsAppTabProps
                     {/* Operational Settings */}
                     <div className="flex flex-col justify-between py-2 space-y-6">
                         <div className="space-y-6">
+                            <div className="p-5 rounded-2xl bg-slate-50/50 dark:bg-black/40 border border-slate-200 dark:border-border/50 space-y-4 hover:border-blue-500/20 transition-all shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Otomatik Bağlantı (Sistem Başlangıcı)</h4>
+                                        <p className="text-[10px] text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">Uygulama açıldığında veya ilk girişte WhatsApp otomatik bağlanmaya çalışsın mı?</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {savingKeys.has("whatsappAutoInit") && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+                                        <Switch
+                                            checked={formData.whatsappAutoInit === "true"}
+                                            onCheckedChange={(checked) => onChange("whatsappAutoInit", checked ? "true" : "false", true)}
+                                            disabled={savingKeys.has("whatsappAutoInit")}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="p-5 rounded-2xl bg-slate-50/50 dark:bg-black/40 border border-slate-200 dark:border-border/50 space-y-4 hover:border-blue-500/20 transition-all shadow-sm">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">

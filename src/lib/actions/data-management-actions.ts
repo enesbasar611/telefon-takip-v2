@@ -428,7 +428,7 @@ export async function getWhatsAppStatusAction() {
         const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
         return await whatsappManager.getStatus(shopId);
     } catch (error: any) {
-        return { status: "DISCONNECTED", qr: undefined };
+        return { status: "DISCONNECTED" as const, qr: undefined, error: undefined, errorCode: undefined };
     }
 }
 

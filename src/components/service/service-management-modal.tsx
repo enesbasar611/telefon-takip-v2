@@ -76,6 +76,8 @@ import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
 import { assignTechnician } from "@/lib/actions/service-actions";
+import { useQuery } from "@tanstack/react-query";
+import { getSettings, updateSetting } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formatCurrency, parseCurrency } from "@/lib/utils";
@@ -102,10 +104,10 @@ interface ServiceManagementModalProps {
 
 const statusConfig: Record<ServiceStatus, { label: string; color: string; dot: string; bg: string; icon: any }> = {
     PENDING: { label: "Beklemede", color: "text-slate-400", dot: "bg-slate-400", bg: "bg-slate-400/10", icon: Clock },
-    APPROVED: { label: "Onaylandı", color: "text-blue-400", dot: "bg-blue-400", bg: "bg-blue-400/10", icon: CheckCircle2 },
+    APPROVED: { label: "Onaylandı", color: "text-blue-400", dot: "bg-blue-400", bg: "bg-blue-400/10", icon: Check },
     REPAIRING: { label: "Tamirde", color: "text-amber-400", dot: "bg-amber-400", bg: "bg-amber-400/10", icon: Wrench },
     WAITING_PART: { label: "Parça Bekliyor", color: "text-purple-400", dot: "bg-purple-400", bg: "bg-purple-400/10", icon: Box },
-    READY: { label: "Hazır", color: "text-emerald-400", dot: "bg-emerald-400", bg: "bg-emerald-400/10", icon: Sparkles },
+    READY: { label: "Hazır", color: "text-emerald-400", dot: "bg-emerald-400", bg: "bg-emerald-400/10", icon: Check },
     DELIVERED: { label: "Teslim Edildi", color: "text-emerald-500", dot: "bg-emerald-500", bg: "bg-emerald-500/10", icon: ShoppingBag },
     CANCELLED: { label: "İptal Edildi", color: "text-rose-500", dot: "bg-rose-500", bg: "bg-rose-500/10", icon: XCircle },
 };
@@ -144,6 +146,18 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showEnableLoyaltyConfirm, setShowEnableLoyaltyConfirm] = useState(false);
+
+    const { data: settings = [] } = useQuery({
+        queryKey: ["settings"],
+        queryFn: getSettings,
+    });
+
+    const loyaltySettings = useMemo(() => {
+        const enabled = settings.find((s: any) => s.key === "loyalty_enabled")?.value !== "false";
+        const pointValue = Number(settings.find((s: any) => s.key === "loyalty_point_value_tl")?.value) || 5;
+        return { enabled, pointValue };
+    }, [settings]);
 
     const lastDeliveryLog = useMemo(() => {
         return ticket?.logs?.find((log: any) => log.message.includes("Durum güncellendi: Teslim Edildi"));
@@ -325,9 +339,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             let finalBuyPriceUsd = Number(manualPart.buyPriceUsd) || undefined;
 
             if (manualPart.currency === "USD" && manualPart.buyPriceUsd) {
-                finalBuyPrice = Math.round(Number(manualPart.buyPriceUsd) * (rates?.usd || 1) * 100) / 100;
+                finalBuyPrice = Math.round(Number(manualPart.buyPriceUsd) * (rates?.usd || 34.5) * 100) / 100;
             } else if (manualPart.currency === "TRY" && manualPart.buyPrice) {
-                finalBuyPriceUsd = Number(manualPart.buyPrice) / rates.usd;
+                finalBuyPriceUsd = Number(manualPart.buyPrice) / (rates?.usd || 34.5);
             }
 
             let wMonths = 1;
@@ -354,6 +368,16 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
             if (res.success) {
                 toast.success("Tedarikçi borcu oluşturuldu ve parça eklendi.");
+                setIsAddingManual(false);
+                setManualPart({
+                    name: "",
+                    buyPrice: "",
+                    buyPriceUsd: "",
+                    currency: "USD",
+                    supplierId: "",
+                    warrantyType: "1_MONTH",
+                    warrantyValue: ""
+                });
                 setSelectedProduct(null);
                 setSearchQuery("");
                 queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
@@ -374,6 +398,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
         if (!techNote.trim() && !selectedStatus) return;
         setIsSavingNote(true);
         try {
+            // Auto-assign Shop Manager if no technician is assigned
+            if (!ticket.technicianId) {
+                const shopManager = staff.find(s => s.role === "SHOP_MANAGER");
+                if (shopManager) {
+                    await assignTechnician(ticket.id, shopManager.id);
+                }
+            }
+
             const statusToUse = (selectedStatus as ServiceStatus) || ticket.status;
             const messageToUse = techNote.trim() || `Durum güncellendi: ${statusConfig[statusToUse].label}`;
             await updateServiceStatus(ticket.id, statusToUse, "CASH", messageToUse);
@@ -400,6 +432,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const handleStatusUpdate = async (newStatus: ServiceStatus, paymentMethod: string = "CASH", discountAmount: number = 0) => {
         setLoading(true);
         try {
+            // Auto-assign Shop Manager if no technician is assigned
+            if (!ticket.technicianId) {
+                const shopManager = staff.find(s => s.role === "SHOP_MANAGER");
+                if (shopManager) {
+                    await assignTechnician(ticket.id, shopManager.id);
+                }
+            }
+
             const label = statusConfig[newStatus]?.label || newStatus;
             await updateServiceStatus(ticket.id, newStatus, paymentMethod, `Durum güncellendi: ${label}`, discountAmount);
             toast.success(`Durum: ${label}`);
@@ -438,18 +478,21 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const subtotal = Math.round((partsTotal + laborCost) * 100) / 100;
 
     const loyaltyTier = getLoyaltyTier(ticket.customer?.loyaltyPoints || 0);
+
     const loyaltyDiscountAmount = useMemo(() => {
-        if (!applyLoyaltyDiscount || !loyaltyTier) return 0;
-        if (loyaltyTier.name === "PLATİN") return subtotal * 0.20;
-        if (loyaltyTier.name === "ALTIN") return laborCost * 0.15;
-        return 0;
-    }, [applyLoyaltyDiscount, loyaltyTier, subtotal, laborCost]);
+        if (!applyLoyaltyDiscount) return 0;
+        // Sadakat puanını TL değerine çevir
+        const customerPoints = ticket.customer?.loyaltyPoints || 0;
+        const discount = customerPoints * loyaltySettings.pointValue;
+        // İndirim toplam tutardan fazla olamaz
+        return Math.min(discount, subtotal);
+    }, [applyLoyaltyDiscount, ticket.customer?.loyaltyPoints, loyaltySettings.pointValue, subtotal]);
 
     const grandTotal = subtotal - loyaltyDiscountAmount;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-[#0A0A0B] border-white/5 p-0 overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[3rem]">
+            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-[#0F172A] border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[2.5rem] overflow-hidden">
                 {/* Premium Header */}
                 <div className="relative h-20 md:h-28 flex items-center justify-between px-6 md:px-12 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-white/[0.05] shrink-0 z-50">
                     <div className="flex items-center gap-6 md:gap-10">
@@ -462,7 +505,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     {format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}
                                 </span>
                             </div>
-                            <h2 className="font-bold text-xl md:text-3xl text-white flex items-center gap-3">
+                            <h2 className="font-bold text-xl md:text-3xl text-slate-900 dark:text-white flex items-center gap-3">
                                 {ticket.deviceBrand} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">{ticket.deviceModel}</span>
                             </h2>
                         </div>
@@ -490,7 +533,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 isPast ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
                                                     "bg-white/5 border-white/10 text-white/40"
                                         )}>
-                                            {isPast ? <Check className="h-4 w-4" /> : <config.icon className="h-4 w-4" />}
+                                            {isPast ? <Check className="h-4 w-4" /> : isCurrent ? <Check className="h-4 w-4" /> : <config.icon className="h-4 w-4" />}
                                         </div>
                                         <span className="text-[7px] font-black uppercase tracking-widest text-center max-w-[50px] leading-tight">
                                             {config.label}
@@ -511,13 +554,13 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                     <div className="flex items-center gap-3 md:gap-6">
                         {!isQuickDeliver && !["READY", "DELIVERED", "CANCELLED"].includes(ticket.status) && (
-                            <Button
+                            <button
                                 onClick={() => handleStatusUpdate("READY")}
-                                className="h-10 md:h-14 bg-white text-black hover:bg-zinc-200 text-xs font-bold px-6 md:px-10 rounded-2xl gap-3 shadow-xl transform transition-all active:scale-95"
+                                className="h-10 md:h-12 bg-emerald-500 hover:bg-emerald-400 text-white text-[10px] font-black px-6 md:px-8 rounded-xl flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] transform transition-all active:scale-95 group"
                             >
-                                <Sparkles className="h-4 w-4 text-blue-600 animate-pulse" />
-                                <span className="hidden md:inline uppercase tracking-widest">Tamamla</span>
-                            </Button>
+                                <Check className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                                <span className="hidden md:inline uppercase tracking-widest text-[11px]">Tamamla</span>
+                            </button>
                         )}
                         <Button
                             variant="ghost"
@@ -530,120 +573,99 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col md:grid md:grid-cols-[400px_1fr] overflow-hidden bg-[#0A0A0B]">
+                <div className="flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] overflow-hidden bg-[#0F172A]">
                     {/* Left Pane: Identity & Context */}
                     <div className="border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar bg-white/[0.01]">
-                        <div className="p-8 space-y-10">
+                        <div className="p-5 space-y-6">
                             {/* Device Context */}
-                            <section className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                        <Smartphone className="h-4 w-4 text-blue-500" />
-                                    </div>
-                                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Cihaz Kimliği</h3>
+                            <section className="space-y-1.5">
+                                <div className="flex items-center gap-2 px-1">
+                                    <Smartphone className="h-3 w-3 text-blue-500/60" />
+                                    <h3 className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">Cihaz Kimliği</h3>
                                 </div>
 
-                                <div className="bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] p-7 space-y-7 shadow-inner">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Donanım</p>
-                                        <p className="text-xl font-bold text-white leading-tight">
-                                            {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
-                                        </p>
-                                        <p className="text-xs font-mono text-white/40 tracking-widest mt-1">
-                                            {ticket.imei || "IMEI TANIMSIZ"}
-                                        </p>
+                                <div className="bg-white/[0.01] border border-white/[0.05] rounded-xl p-2.5 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-bold text-white leading-tight truncate">
+                                                {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
+                                            </p>
+                                            <p className="text-[9px] font-mono text-white/30 tracking-widest mt-0.5">
+                                                {ticket.imei || "IMEI TANIMSIZ"}
+                                            </p>
+                                        </div>
+                                        {ticket.devicePassword && !ticket.devicePassword.startsWith("DESEN:") && (
+                                            <div className="px-2 py-1 bg-amber-500/5 rounded-lg border border-amber-500/10">
+                                                <span className="text-[9px] font-mono font-bold text-amber-500/80">{ticket.devicePassword}</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {ticket.devicePassword && (
-                                        <div className="pt-7 border-t border-white/[0.05] space-y-5">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Lock className="h-3 w-3 text-amber-500" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Erişim Yetkisi</span>
-                                                </div>
-                                                <span className="text-[8px] px-2 py-0.5 rounded bg-white/5 text-white/40 font-mono">SECURE</span>
+                                    {ticket.devicePassword?.startsWith("DESEN:") && (
+                                        <div className="pt-2 border-t border-white/[0.03]">
+                                            <div className="p-2 bg-black/20 rounded-lg flex justify-center">
+                                                <PatternLock
+                                                    readOnly
+                                                    width={80}
+                                                    height={80}
+                                                    initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
+                                                    className="opacity-60"
+                                                />
                                             </div>
-
-                                            {ticket.devicePassword.startsWith("DESEN:") ? (
-                                                <div className="p-6 bg-black/40 rounded-[2rem] border border-white/5 flex flex-col items-center gap-5">
-                                                    <PatternLock
-                                                        readOnly
-                                                        width={140}
-                                                        height={140}
-                                                        initialPattern={ticket.devicePassword.replace("DESEN:", "").split(",").map(Number)}
-                                                        className="opacity-90"
-                                                    />
-                                                    <div className="px-5 py-2.5 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex items-center gap-3">
-                                                        <Grid3x3 className="h-4 w-4 text-blue-500" />
-                                                        <span className="text-xs font-bold tracking-[0.4em] text-blue-400">
-                                                            {ticket.devicePassword.replace("DESEN:", "").split(",").join("-")}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="p-5 bg-amber-500/5 rounded-[2rem] border border-amber-500/10 flex items-center gap-5">
-                                                    <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-xl shadow-amber-500/5">
-                                                        <Hash className="h-6 w-6 text-amber-500" />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[9px] text-amber-500/40 uppercase font-bold tracking-widest">KİLİT ŞİFRESİ</span>
-                                                        <span className="text-2xl font-bold text-amber-200 tracking-widest leading-none mt-1">{ticket.devicePassword}</span>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     )}
                                 </div>
                             </section>
 
-                            {/* Customer Context */}
-                            <section className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                        <User className="h-4 w-4 text-emerald-500" />
-                                    </div>
-                                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Müşteri Profili</h3>
+                            <section className="space-y-1.5">
+                                <div className="flex items-center gap-2 px-1">
+                                    <User className="h-3 w-3 text-emerald-500/60" />
+                                    <h3 className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">Müşteri Profili</h3>
                                 </div>
 
-                                <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-7 flex items-center justify-between group cursor-pointer hover:bg-emerald-500/10 transition-all shadow-lg active:scale-[0.98]">
-                                    <div className="space-y-2 min-w-0">
-                                        <p className="text-[10px] font-extrabold text-emerald-500/40 uppercase tracking-widest">Sahibi</p>
-                                        <p className="text-xl font-bold text-white truncate">{ticket.customer?.name}</p>
-                                        <p className="text-sm font-medium text-emerald-500/60 font-mono tracking-tighter">{formatPhone(ticket.customer?.phone)}</p>
+                                <div className="bg-white/[0.01] border border-white/[0.05] rounded-xl p-2.5 flex items-center justify-between group hover:bg-white/[0.03] transition-all">
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-bold text-white/90 truncate">{ticket.customer?.name}</p>
+                                        <p className="text-[9px] font-mono text-white/30 tracking-wider mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-14 w-14 rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all shadow-xl shadow-emerald-500/10"
+                                        className="h-8 w-8 rounded-lg bg-emerald-500/5 text-emerald-500/60 hover:bg-emerald-500 hover:text-black transition-all"
                                         onClick={() => setWhatsappModalOpen(true)}
                                     >
-                                        <MessageCircle className="h-6 w-6" />
+                                        <MessageCircle className="h-3.5 w-3.5" />
                                     </Button>
                                 </div>
                             </section>
 
                             {/* Staff Assignment */}
-                            <section className="space-y-5">
+                            <section className="space-y-2">
                                 <div className="flex items-center gap-3 px-1">
-                                    <h3 className="text-[10px] font-extrabold uppercase tracking-[0.3em] text-white/30">SORUMLU TEKNİSYEN</h3>
+                                    <div className="h-4 w-4 rounded bg-blue-500/10 flex items-center justify-center">
+                                        <Wrench className="h-2.5 w-2.5 text-blue-500" />
+                                    </div>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Sorumlu Teknisyen</h3>
                                 </div>
-                                <div className="p-1.5 bg-white/[0.03] border border-white/5 rounded-[2rem] shadow-inner">
+                                <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl overflow-hidden">
                                     <Select
-                                        value={ticket.technician?.id || ""}
+                                        value={ticket.technician?.id || staff.find(s => s.role === "SHOP_MANAGER")?.id || ""}
                                         onValueChange={handleAssignTech}
                                         disabled={!!ticket.technicianId && !isAdmin}
                                     >
-                                        <SelectTrigger className="h-14 bg-transparent border-none text-sm text-white/80 rounded-[1.5rem] px-6 focus:ring-2 focus:ring-blue-500/20">
+                                        <SelectTrigger className="h-10 bg-transparent border-none text-xs text-white/80 px-3 focus:ring-0">
                                             <SelectValue placeholder="Teknisyen Atanmamış" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-[#0A0A0B] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-xl">
+                                        <SelectContent className="bg-[#111827] border-white/10 text-white rounded-xl p-1 z-[9999]" position="popper" sideOffset={5}>
                                             {staff.map(s => (
-                                                <SelectItem key={s.id} value={s.id} className="py-4 px-4 rounded-xl focus:bg-white/5 cursor-pointer">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-[10px] font-bold text-blue-400">
+                                                <SelectItem key={s.id} value={s.id} className="py-2 px-3 rounded-lg focus:bg-white/5 cursor-pointer">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-6 w-6 rounded bg-blue-500/10 flex items-center justify-center text-[9px] font-bold text-blue-400">
                                                             {s.name[0]}{s.surname[0]}
                                                         </div>
-                                                        <span className="font-bold text-white/70">{s.name} {s.surname}</span>
+                                                        <span className="font-bold text-xs text-white/70">
+                                                            {s.name} {s.surname} {s.role === "SHOP_MANAGER" && "(Bayi Yöneticisi)"}
+                                                        </span>
                                                     </div>
                                                 </SelectItem>
                                             ))}
@@ -654,25 +676,26 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
                     </div>
 
+
                     {/* Right Pane: Workshop & Workflow (Merged from Center & Right) */}
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-10">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-5 md:p-8 space-y-6 md:space-y-8">
                             {/* Problem Highlight */}
-                            <div className="p-10 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.02] to-transparent border border-amber-500/20 rounded-[3rem] relative overflow-hidden group shadow-2xl">
-                                <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
-                                    <AlertCircle className="h-32 w-32 text-amber-500" />
+                            <div className="p-4 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.02] to-transparent border border-amber-500/20 rounded-2xl relative overflow-hidden group shadow-xl">
+                                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
+                                    <AlertCircle className="h-16 w-16 text-amber-500" />
                                 </div>
-                                <div className="flex items-center gap-3 mb-6">
-                                    <Activity className="h-4 w-4 text-amber-500 animate-pulse" />
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500/40">MÜŞTERİ ARIZA BEYANI</h3>
+                                <div className="flex items-center gap-3 mb-1.5">
+                                    <Activity className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+                                    <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-500/40">MÜŞTERİ ARIZA BEYANI</h3>
                                 </div>
-                                <p className="text-xl md:text-2xl font-bold text-amber-100/90 leading-relaxed italic tracking-tight">
+                                <p className="text-[12px] font-bold text-amber-900 dark:text-amber-100/90 leading-relaxed italic tracking-tight">
                                     "{ticket.problemDesc}"
                                 </p>
                             </div>
-                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-10">
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-8">
                                 {/* Center Pane: Workshop */}
-                                <div className="space-y-10">
+                                <div className="space-y-8">
                                     {/* Parts Search */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between px-1">
@@ -706,7 +729,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col items-end gap-1">
-                                                                        <span className="text-sm font-black text-blue-500">₺{Number(p.sellPrice).toLocaleString('tr-TR')}</span>
+                                                                        <span className="text-sm font-black text-blue-500">{formatCurrency(p.sellPrice, true)}</span>
                                                                         <ArrowRight className="h-4 w-4 text-white/10 group-hover/item:text-blue-500 group-hover/item:translate-x-1 transition-all" />
                                                                     </div>
                                                                 </button>
@@ -725,16 +748,17 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             setIsAddingManual(true);
                                                             setManualPart(prev => ({ ...prev, name: searchQuery }));
                                                         }}
-                                                        className="w-full p-6 flex items-center gap-4 bg-blue-600 hover:bg-blue-500 transition-all group/new text-left"
+                                                        className="w-full p-6 flex items-center gap-4 bg-blue-600 hover:bg-blue-500 transition-all group/new text-left shadow-2xl relative overflow-hidden"
                                                     >
-                                                        <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                                                        <div className="absolute inset-0 bg-blue-400/10 translate-y-full group-hover/new:translate-y-0 transition-transform duration-500" />
+                                                        <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center text-white relative z-10">
                                                             <Plus className="h-6 w-6" />
                                                         </div>
-                                                        <div className="flex flex-col">
+                                                        <div className="flex flex-col relative z-10">
                                                             <span className="text-xs font-black text-white uppercase tracking-[0.2em]">SİSTEM DIŞI EKLE</span>
-                                                            <span className="text-[10px] text-white/60 font-medium">Parçayı tedarikçiden borç olarak temin et</span>
+                                                            <span className="text-[10px] text-white/60 font-medium tracking-tight">Parçayı tedarikçiden borç olarak temin et</span>
                                                         </div>
-                                                        <ArrowRightCircle className="h-6 w-6 text-white ml-auto group-hover:translate-x-1 transition-transform" />
+                                                        <ArrowRightCircle className="h-6 w-6 text-white ml-auto group-hover/new:translate-x-1 transition-transform relative z-10" />
                                                     </button>
                                                 </div>
                                             )}
@@ -747,7 +771,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         <div className="flex items-center justify-between px-1">
                                             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">KULLANILAN MATERYALLER</h3>
                                             <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                                <span className="text-[10px] font-black text-emerald-500 tabular-nums">₺{formatCurrency(partsTotal)}</span>
+                                                <span className="text-[10px] font-black text-emerald-500 tabular-nums">{formatCurrency(partsTotal, true)}</span>
                                             </div>
                                         </div>
 
@@ -803,7 +827,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     {/* Status & Technical Note */}
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between px-1">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">İŞLEM MERKEZİ</h3>
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/30">İŞLEM MERKEZİ</h3>
                                             {selectedStatus && <span className="text-[10px] text-amber-500 animate-bounce font-black uppercase">Onay Bekliyor</span>}
                                         </div>
 
@@ -814,7 +838,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     <SelectTrigger className="h-14 bg-black/40 border-white/10 rounded-2xl text-xs font-bold text-white/80 focus:ring-blue-500/20">
                                                         <SelectValue placeholder="Durumu güncelle..." />
                                                     </SelectTrigger>
-                                                    <SelectContent className="bg-[#0A0A0B] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-3xl shadow-2xl">
+                                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-3xl shadow-2xl">
                                                         {Object.entries(statusConfig).map(([key, config]) => (
                                                             <SelectItem key={key} value={key} className="py-4 px-4 rounded-xl focus:bg-white/5 cursor-pointer">
                                                                 <div className="flex items-center gap-4">
@@ -872,11 +896,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     >
                                                         <div className={cn(
                                                             "h-14 w-14 rounded-2xl border flex items-center justify-center shrink-0 z-10 transition-all duration-500",
-                                                            i === 0 ? "bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)] scale-110" :
+                                                            i === 0 ? "bg-emerald-600 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110" :
                                                                 isStatusLog ? "bg-amber-600/10 border-amber-500/20 text-amber-500" :
                                                                     "bg-zinc-900 border-white/5 group-hover:border-white/20 group-hover:bg-zinc-800"
                                                         )}>
-                                                            {i === 0 ? <Zap className="h-5 w-5 text-white animate-pulse" /> :
+                                                            {i === 0 ? <Check className="h-5 w-5 text-white animate-pulse" /> :
                                                                 isStatusLog ? <Timer className="h-4 w-4" /> :
                                                                     <Target className="h-4 w-4 text-white/20" />}
                                                         </div>
@@ -911,19 +935,18 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         {/* Financial Footer Workstation */}
-                        <div className="h-32 md:h-40 bg-black/60 border-t border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
+                        <div className="h-32 md:h-40 bg-[#0F172A]/80 border-t border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
                             <div className="flex items-center gap-10">
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] ml-1">KODLAMA & İŞÇİLİK</p>
+                                    <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.3em] ml-1">KODLAMA & İŞÇİLİK</p>
                                     <div className="relative group">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">₺</div>
                                         <PriceInput
                                             value={laborCost}
                                             onChange={(v) => {
                                                 setLaborCost(v);
                                                 updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
                                             }}
-                                            className="h-14 w-44 bg-white/5 border-white/10 rounded-2xl pl-10 pr-6 text-lg font-black text-white focus:ring-blue-500/20"
+                                            className="h-14 w-44 bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-6 text-lg font-black text-slate-900 dark:text-white focus:ring-blue-500/20"
                                         />
                                     </div>
                                 </div>
@@ -933,30 +956,42 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 <div className="space-y-1.5 flex flex-col items-center md:items-start">
                                     <p className="text-[10px] font-black text-blue-500/40 uppercase tracking-[0.3em]">HAKEDİŞ ÖZETİ</p>
                                     <div className="flex items-baseline gap-3">
-                                        <span className="text-3xl md:text-5xl font-black text-white tracking-tighter tabular-nums">₺{formatCurrency(grandTotal)}</span>
+                                        <span className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{formatCurrency(grandTotal, true)}</span>
                                         {applyLoyaltyDiscount && (
-                                            <span className="text-sm font-bold text-rose-500/60 line-through">₺{formatCurrency(subtotal)}</span>
+                                            <span className="text-sm font-bold text-rose-500/60 line-through">{formatCurrency(subtotal, true)}</span>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-4 w-full md:w-auto">
-                                {loyaltyTier && loyaltyTier.name !== "STANDART" && (
+                                {ticket.customer?.loyaltyPoints > 0 && (
                                     <button
-                                        onClick={() => setApplyLoyaltyDiscount(!applyLoyaltyDiscount)}
+                                        onClick={() => {
+                                            if (!loyaltySettings.enabled) {
+                                                setShowEnableLoyaltyConfirm(true);
+                                                return;
+                                            }
+                                            setApplyLoyaltyDiscount(!applyLoyaltyDiscount);
+                                        }}
                                         className={cn(
                                             "h-16 px-8 rounded-3xl border transition-all flex flex-col items-center justify-center gap-1 group",
                                             applyLoyaltyDiscount
                                                 ? "bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.3)] text-white"
-                                                : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                                                : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/10"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <Sparkles className={cn("h-4 w-4", applyLoyaltyDiscount ? "text-white" : "text-white/40")} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">SADAKAT %{loyaltyTier.name === "PLATİN" ? 20 : 15}</span>
+                                            <Sparkles className={cn("h-4 w-4", applyLoyaltyDiscount ? "text-white" : "text-blue-500")} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                                Cüzdan: {ticket.customer.loyaltyPoints} Puan
+                                            </span>
                                         </div>
-                                        {applyLoyaltyDiscount && <span className="text-[9px] font-bold opacity-60">-₺{formatCurrency(loyaltyDiscountAmount)} İndirim</span>}
+                                        {applyLoyaltyDiscount ? (
+                                            <span className="text-[9px] font-bold opacity-60">-{formatCurrency(loyaltyDiscountAmount, true)} İndirim</span>
+                                        ) : (
+                                            <span className="text-[9px] font-bold opacity-40">+{loyaltyDiscountAmount || ticket.customer.loyaltyPoints * loyaltySettings.pointValue} TL Mevcut</span>
+                                        )}
                                     </button>
                                 )}
 
@@ -975,11 +1010,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         className={cn(
                                             "h-16 px-10 rounded-3xl transition-all font-black text-[11px] uppercase tracking-widest gap-4",
                                             ticket.status === "READY"
-                                                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xl shadow-emerald-500/20"
+                                                ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                                                 : "bg-white/5 border border-white/5 text-white/20 cursor-not-allowed"
                                         )}
                                     >
-                                        <CreditCard className="h-5 w-5" /> TAHSİL & TESLİM
+                                        <Check className="h-5 w-5" /> TAHSİL & TESLİM
                                     </Button>
                                     <Button
                                         onClick={() => handleStatusUpdate("DELIVERED", "DEBT", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
@@ -1025,16 +1060,16 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 )}
             />
 
-            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent className="bg-card border-border/50 text-foreground rounded-[2rem]">
+            < AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} >
+                <AlertDialogContent className="bg-[#0F172A] border-white/10 text-white rounded-[2rem]">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Kaydı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogDescription className="text-white/40">
                             Bu işlem geri alınamaz. Cihaza eklenen parçalar varsa stoğa iade edilecektir.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction
                             className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
                             onClick={async () => {
@@ -1060,7 +1095,152 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
+            </AlertDialog >
+
+            <AlertDialog open={showEnableLoyaltyConfirm} onOpenChange={setShowEnableLoyaltyConfirm}>
+                <AlertDialogContent className="bg-[#0F172A] border-white/10 text-white rounded-[2rem]">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Sadakat Sistemini Aktif Et</AlertDialogTitle>
+                        <AlertDialogDescription className="text-white/40">
+                            Müşteri sadakat sistemi şu anda kapalı. Sadakat indirimini uygulamak için sistemi aktif etmek ister misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10">Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+                            onClick={async () => {
+                                try {
+                                    const res = await updateSetting("loyalty_enabled", "true", true);
+                                    if (res.success) {
+                                        toast.success("Sadakat sistemi aktif edildi.");
+                                        queryClient.invalidateQueries({ queryKey: ["settings"] });
+                                        setApplyLoyaltyDiscount(true);
+                                    } else {
+                                        toast.error("İşlem başarısız.");
+                                    }
+                                } catch (error) {
+                                    toast.error("Bir hata oluştu.");
+                                } finally {
+                                    setShowEnableLoyaltyConfirm(false);
+                                }
+                            }}
+                        >
+                            Evet, Aktif Et
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={isAddingManual} onOpenChange={setIsAddingManual} key={isAddingManual ? "open" : "closed"}>
+                <DialogContent className="max-w-md bg-[#0F172A] border-white/10 rounded-[2rem] p-8 shadow-2xl z-[10001]">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                                <Plus className="h-6 w-6 text-blue-500" />
+                            </div>
+                            <div className="flex flex-col">
+                                <h3 className="text-xl font-bold text-white">Sistem Dışı Parça Ekle</h3>
+                                <p className="text-xs text-white/40">Tedarikçiden borç olarak parça temin et</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Parça Adı</label>
+                                <Input
+                                    value={manualPart.name}
+                                    onChange={e => setManualPart({ ...manualPart, name: e.target.value })}
+                                    className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Maliyet Birimi</label>
+                                    <Select value={manualPart.currency} onValueChange={(v: any) => setManualPart({ ...manualPart, currency: v })}>
+                                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                            <SelectItem value="TRY">TRY (₺)</SelectItem>
+                                            <SelectItem value="USD">USD ($)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Birim Maliyet</label>
+                                    <PriceInput
+                                        value={manualPart.currency === "USD" ? Number(manualPart.buyPriceUsd) : Number(manualPart.buyPrice)}
+                                        onChange={v => {
+                                            if (manualPart.currency === "USD") {
+                                                setManualPart({ ...manualPart, buyPriceUsd: String(v), buyPrice: String(v * (rates?.usd || 1)) });
+                                            } else {
+                                                setManualPart({ ...manualPart, buyPrice: String(v), buyPriceUsd: String(v / (rates?.usd || 1)) });
+                                            }
+                                        }}
+                                        className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Tedarikçi</label>
+                                <Select value={manualPart.supplierId} onValueChange={v => setManualPart({ ...manualPart, supplierId: v })}>
+                                    <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                        <SelectValue placeholder="Tedarikçi seçin..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                        {suppliers.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Garanti Süresi</label>
+                                <Select value={manualPart.warrantyType} onValueChange={(v: any) => setManualPart({ ...manualPart, warrantyType: v })}>
+                                    <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                        <SelectItem value="15_DAYS">15 Gün</SelectItem>
+                                        <SelectItem value="1_MONTH">1 Ay</SelectItem>
+                                        <SelectItem value="3_MONTHS">3 Ay</SelectItem>
+                                        <SelectItem value="6_MONTHS">6 Ay</SelectItem>
+                                        <SelectItem value="MANUAL">Özel (Gün)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {manualPart.warrantyType === "MANUAL" && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Kaç Gün?</label>
+                                    <Input
+                                        type="number"
+                                        value={manualPart.warrantyValue}
+                                        onChange={e => setManualPart({ ...manualPart, warrantyValue: e.target.value })}
+                                        className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex gap-4 pt-4">
+                            <Button variant="ghost" onClick={() => setIsAddingManual(false)} className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all">İptal</Button>
+                            <Button
+                                onClick={handleCreateAndAddPart}
+                                disabled={loading}
+                                className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest shadow-xl shadow-blue-500/20 gap-3"
+                            >
+                                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+                                EKLE
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Dialog >
     );
 }

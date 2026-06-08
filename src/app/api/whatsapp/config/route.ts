@@ -27,6 +27,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Initializing...' });
         }
 
+        if (action === 'wakeup') {
+            whatsappManager.wakeUp(shopId);
+            return NextResponse.json({ message: 'Waking up...' });
+        }
+
         if (action === 'logout') {
             await whatsappManager.logout(shopId);
             return NextResponse.json({ message: 'Logging out...' });

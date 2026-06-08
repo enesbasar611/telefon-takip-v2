@@ -83,7 +83,7 @@ export function POSInterface({ initialSaleId }: {
   });
 
   const customers = (posData?.customers || []) as { id: string; name: string; phone: string; loyaltyPoints?: number }[];
-  const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
+  const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; sku?: string | null; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
   const categories = (posData?.categories || []) as { id: string; name: string }[];
 
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
@@ -158,11 +158,23 @@ export function POSInterface({ initialSaleId }: {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (p.barcode && p.barcode.includes(debouncedSearchTerm)) ||
-        (p.category?.name && p.category.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+      const searchLower = debouncedSearchTerm.toLowerCase().trim();
+      const isSearching = searchLower.length > 0;
+
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchLower) ||
+        (p.barcode && p.barcode.toLowerCase().includes(searchLower)) ||
+        (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
+        (p.category?.name && p.category.name.toLowerCase().includes(searchLower));
+
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
-      return matchesSearch && matchesCategory;
+
+      // Arama yapılıyorsa kategori sınırlamasını kaldır (global arama), aksi halde kategoriye göre filtrele
+      if (isSearching) {
+        return matchesSearch;
+      }
+
+      return matchesCategory;
     });
   }, [products, debouncedSearchTerm, selectedCategory]);
 

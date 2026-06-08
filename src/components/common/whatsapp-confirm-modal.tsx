@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Smartphone, CheckCheck, Sparkles, Loader2 } from "lucide-react";
+import { Send, Smartphone, CheckCheck, Sparkles, Loader2, AlertTriangle, Settings, Moon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { sendWhatsAppAction, getWhatsAppStatusAction } from "@/lib/actions/data-management-actions";
 import { formatWhatsAppLink } from "@/lib/utils/notifications";
+import { useRouter } from "next/navigation";
 
 interface WhatsAppConfirmModalProps {
     isOpen: boolean;
@@ -22,7 +23,11 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
     const [message, setMessage] = useState(initialMessage);
     const [isSending, setIsSending] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [isSleeping, setIsSleeping] = useState(false);
+    const [errorCode, setErrorCode] = useState<string | undefined>();
+    const [statusError, setStatusError] = useState<string | undefined>();
     const [isRefining, setIsRefining] = useState(false);
+    const router = useRouter();
 
     const handleRefine = async (tone: "professional" | "friendly" | "urgent") => {
         setIsRefining(true);
@@ -53,6 +58,9 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
         try {
             const res = await getWhatsAppStatusAction();
             setIsConnected(res.status === 'CONNECTED');
+            setIsSleeping(res.status === 'SLEEPING');
+            setErrorCode((res as any).errorCode);
+            setStatusError(res.error);
         } catch {
             setIsConnected(false);
         }
@@ -64,22 +72,42 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
         if (!message.trim()) return;
         setIsSending(true);
 
-        if (isConnected) {
+        if (isConnected || isSleeping) {
+            // Bağlı veya uyku modunda - sistem üzerinden gönder (uyku modundaysa lazy wake tetiklenecek)
             let successCount = 0;
+            let lastError = '';
             for (const p of targetPhones) {
                 const res = await sendWhatsAppAction(p, message);
-                if (res.success) successCount++;
-                // Small delay to prevent rate limit
+                if (res.success) {
+                    successCount++;
+                } else {
+                    lastError = res.error || '';
+                }
                 await new Promise(r => setTimeout(r, 500));
             }
             setIsSending(false);
+
+            if (lastError === 'LOGGED_OUT_BY_PHONE') {
+                toast({
+                    title: "WhatsApp Bağlantısı Kesildi",
+                    description: "Telefonunuzdan bağlı cihazlardan çıkış yapılmış. Lütfen WhatsApp'a yeniden bağlanın.",
+                    variant: "destructive",
+                    action: (
+                        <Button variant="outline" size="sm" onClick={() => { onClose(); router.push('/ayarlar'); }}>
+                            Ayarlara Git
+                        </Button>
+                    )
+                });
+                return;
+            }
+
             if (successCount > 0) {
-                toast({ title: "Başarılı", description: `${successCount} mesaj başarıyla gönderildi.` });
+                toast({ title: "Başarılı", description: `${successCount} mesaj başarıyla gönderildi.${isSleeping ? ' (Uyku modundan uyandırıldı)' : ''}` });
                 onClose();
             } else {
                 toast({
                     title: "Hata",
-                    description: "Mesaj gönderilemedi. WhatsApp bağlantınızı veya numara formatını kontrol edin.",
+                    description: lastError || "Mesaj gönderilemedi. WhatsApp bağlantınızı veya numara formatını kontrol edin.",
                     variant: "destructive"
                 });
             }
@@ -88,7 +116,6 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
             for (const p of targetPhones) {
                 const link = formatWhatsAppLink(p, message);
                 window.open(link, '_blank');
-                // Small delay to let browser handle windows
                 await new Promise(r => setTimeout(r, 1000));
             }
             setIsSending(false);
@@ -98,7 +125,7 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !isSending && onClose()}>
-            <DialogContent className="sm:max-w-[425px] bg-[#EFEAE2] dark:bg-[#0B141A] p-0 border-none overflow-hidden outline-none">
+            <DialogContent className="sm:max-w-[425px] bg-[#EFEAE2] dark:bg-[#0F172A] p-0 border-none overflow-hidden outline-none">
 
                 {/* WhatsApp Header Mockup */}
                 <div className="bg-[#00A884] dark:bg-[#202C33] flex items-center gap-3 px-4 py-3 text-white">
@@ -163,12 +190,40 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
                     </div>
                 </div>
 
+                {/* Disconnect / Logout Warning Banner */}
+                {errorCode === 'LOGGED_OUT_BY_PHONE' && (
+                    <div className="mx-4 mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-xs font-bold text-red-600 dark:text-red-400">WhatsApp Bağlantısı Kesildi</p>
+                            <p className="text-[10px] text-red-500/80 dark:text-red-400/70 mt-0.5">Telefonunuzdan bağlı cihazlar kısmından çıkış yapılmış.</p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 h-7 text-[10px] border-red-500/30 text-red-600 hover:bg-red-500/10"
+                                onClick={() => { onClose(); router.push('/ayarlar'); }}
+                            >
+                                <Settings className="h-3 w-3 mr-1" />
+                                Ayarlara Git ve Yeniden Bağla
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Footer actions */}
                 <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-4 py-3 flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground flex-1">
                         {isConnected ? (
                             <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                                 <CheckCheck className="h-4 w-4" /> Sistem üzerinden gönderilecek
+                            </span>
+                        ) : isSleeping ? (
+                            <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                                <Moon className="h-4 w-4" /> Uyku modunda - gönderimde uyandırılacak
+                            </span>
+                        ) : errorCode === 'LOGGED_OUT_BY_PHONE' ? (
+                            <span className="text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                                <AlertTriangle className="h-4 w-4" /> Bağlantı kesildi - ayarlardan bağlayın
                             </span>
                         ) : (
                             <span className="font-medium text-amber-600 dark:text-amber-400">WhatsApp Web / App kullanılacak</span>

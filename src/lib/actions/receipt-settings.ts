@@ -34,6 +34,7 @@ export async function getReceiptSettings(type: string = "pos") {
                     address: shop?.address || null,
                     website: shop?.website || "v2.basarteknik.com",
                     footer: "Bizi Tercih Ettiğiniz İçin Teşekkürler",
+                    footer2: "Hayırlı işler dileriz",
                     terms: type === "service" ? serviceTerms : null,
                     paperSize: "72mm",
                 },
@@ -51,9 +52,20 @@ export async function getReceiptSettings(type: string = "pos") {
 export async function getAllReceiptSettings() {
     try {
         const shopId = await getShopId();
-        const settings = await prisma.receiptSettings.findMany({
+        let settings = await prisma.receiptSettings.findMany({
             where: { shopId },
         });
+
+        // Eğer hiç ayar yoksa varsayılanları oluşturun (en azından ana tipler için)
+        if (settings.length === 0) {
+            const types = ["pos", "service", "debt", "device-hub"];
+            await Promise.all(types.map(type => getReceiptSettings(type)));
+
+            settings = await prisma.receiptSettings.findMany({
+                where: { shopId },
+            });
+        }
+
         return serializePrisma(settings);
     } catch (error) {
         console.error("Error fetching all receipt settings:", error);

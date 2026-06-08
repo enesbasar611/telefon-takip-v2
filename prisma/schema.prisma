@@ -762,6 +762,7 @@ model ReceiptSettings {
   phone     String   @default("+90 (5xx) xxx xx xx")
   address   String?
   footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
+  footer2   String?  @default("Yine Bekleriz")
   website   String   @default("basarteknik.tech")
   updatedAt DateTime @updatedAt
   terms     String?

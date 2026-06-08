@@ -16,7 +16,7 @@ export function Barcode({ value, width = 2, height = 50, fontSize = 12, displayV
   if (!value) return null;
 
   return (
-    <div className="flex justify-center p-2 bg-white">
+    <div className="flex justify-center p-2 bg-white barcode-svg">
       <BarcodeComponent
         value={value}
         width={width}
@@ -28,6 +28,3 @@ export function Barcode({ value, width = 2, height = 50, fontSize = 12, displayV
     </div>
   );
 }
-
-
-

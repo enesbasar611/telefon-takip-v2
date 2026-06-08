@@ -145,14 +145,14 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-blue-500 text-black  hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
+        <Button disabled={isPending} className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-2">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "DURUMU GÜNCELLE"}
           {!isPending && <ChevronDown className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card border-border/50 text-white p-2 min-w-[220px] shadow-none">
-        <DropdownMenuLabel className="text-[10px]  text-gray-500 p-3">Yeni Durum Seçin</DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-white/5" />
+      <DropdownMenuContent align="end" className="bg-card border-border p-2 min-w-[220px] shadow-2xl">
+        <DropdownMenuLabel className="text-[10px] text-muted-foreground p-3">Yeni Durum Seçin</DropdownMenuLabel>
+        <DropdownMenuSeparator />
         {Object.entries(statusMap).map(([status, info]) => (
           <DropdownMenuItem
             key={status}
