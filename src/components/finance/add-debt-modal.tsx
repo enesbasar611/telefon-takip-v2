@@ -119,8 +119,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
 
     const formatProductPrice = (product: any, currency: "TRY" | "USD" = itemCurrency) => {
         const value = getProductPriceForCurrency(product, currency);
-        return `${currency === "USD" ? "$" : "₺"}${value.toLocaleString("tr-TR", {
-            minimumFractionDigits: currency === "USD" ? 2 : 0,
+        const locale = currency === "USD" ? "en-US" : "tr-TR";
+        return `${currency === "USD" ? "$" : "₺"}${value.toLocaleString(locale, {
+            minimumFractionDigits: 2,
             maximumFractionDigits: 2
         })}`;
     };

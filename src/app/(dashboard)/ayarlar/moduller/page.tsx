@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Copy, HelpCircle, QrCode, Smartphone } from "lucide-react";
+import { useSocket } from "@/components/providers/socket-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ export default function MobileScannerSettingsPage() {
     const [qrUrl, setQrUrl] = useState("");
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const { initializeScannerRoom, isMobileScannerLinked } = useScanner();
+    const { tabId } = useSocket();
     const { data: networkInfo, isLoading: isLoadingNetwork } = useQuery({
         queryKey: ["network-info"],
         queryFn: async () => {
@@ -32,16 +34,16 @@ export default function MobileScannerSettingsPage() {
 
     useEffect(() => {
         if (session?.user?.shopId || session?.user?.id) {
-            const room = session.user.shopId || session.user.id;
-            initializeScannerRoom(room);
+            const shopId = session.user.shopId || session.user.id;
+            initializeScannerRoom(shopId);
 
             setQrUrl(buildScannerUrl({
-                roomId: room,
+                roomId: `${shopId}:${tabId}`,
                 browserOrigin: window.location.origin,
                 networkInfo: networkInfo,
             }));
         }
-    }, [session, initializeScannerRoom, networkInfo]);
+    }, [session, initializeScannerRoom, networkInfo, tabId]);
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(qrUrl);

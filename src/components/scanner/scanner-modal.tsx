@@ -2,6 +2,7 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useScanner } from "@/hooks/use-scanner";
+import { useSocket } from "@/components/providers/socket-provider";
 import { Smartphone, QrCode, Loader2, HelpCircle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -20,6 +21,7 @@ interface ScannerModalProps {
 
 export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModalProps) {
     const { initializeScannerRoom, isConnected, isMobileScannerLinked, socket } = useScanner();
+    const { tabId } = useSocket();
     const [qrUrl, setQrUrl] = useState("");
     const [recentScans, setRecentScans] = useState<{ id: string; name: string; time: string; device: string }[]>([]);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -37,12 +39,15 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
     }, [open, qrUrl, router, onOpenChange]);
 
     useEffect(() => {
-        if (open && shopIdOrUserId) {
+        if (open && shopIdOrUserId && tabId) {
             initializeScannerRoom(shopIdOrUserId);
+
+            // Construct unique roomId including tabId
+            const uniqueRoomId = `${shopIdOrUserId}:${tabId}`;
 
             const setFallbackUrl = () => {
                 setQrUrl(buildScannerUrl({
-                    roomId: shopIdOrUserId,
+                    roomId: uniqueRoomId,
                     browserOrigin: window.location.origin,
                 }));
             };
@@ -52,14 +57,14 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                 .then(r => r.json())
                 .then(data => {
                     setQrUrl(buildScannerUrl({
-                        roomId: shopIdOrUserId,
+                        roomId: uniqueRoomId,
                         browserOrigin: window.location.origin,
                         networkInfo: data,
                     }));
                 })
                 .catch(setFallbackUrl);
         }
-    }, [open, shopIdOrUserId, initializeScannerRoom]);
+    }, [open, shopIdOrUserId, tabId, initializeScannerRoom]);
 
     useEffect(() => {
         if (!socket || !open) return;
@@ -88,33 +93,33 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
 
     return (
         <>
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md border-neutral-200 dark:border-neutral-800 backdrop-blur-md bg-white/90 dark:bg-neutral-900/90 shadow-2xl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-xl">
-                        <Smartphone className="w-6 h-6 text-blue-500" />
-                        Telefon Kamerası ile Tarama
-                    </DialogTitle>
-                    <DialogDescription>
-                        Aşağıdaki QR kodunu telefonunuzdan okutarak cihazı sepetinize bağlayın.
-                    </DialogDescription>
-                </DialogHeader>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-md border-neutral-200 dark:border-neutral-800 backdrop-blur-md bg-white/90 dark:bg-neutral-900/90 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Smartphone className="w-6 h-6 text-blue-500" />
+                            Telefon Kamerası ile Tarama
+                        </DialogTitle>
+                        <DialogDescription>
+                            Aşağıdaki QR kodunu telefonunuzdan okutarak cihazı sepetinize bağlayın.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <div className="flex flex-col items-center justify-center py-6 space-y-6">
-                    <>
-                        {!isConnected && (
-                            <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-amber-500">
-                                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                                <p className="text-xs font-medium">Sunucu bağlantısı bekleniyor, QR hazır.</p>
-                            </div>
-                        )}
-                        {isMobileScannerLinked && (
-                            <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                <p className="text-xs font-medium">Telefon bağlı. Barkod okutmaya hazır.</p>
-                            </div>
-                        )}
-                        <div className="flex flex-col items-center space-y-4">
+                    <div className="flex flex-col items-center justify-center py-6 space-y-6">
+                        <>
+                            {!isConnected && (
+                                <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-amber-500">
+                                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                                    <p className="text-xs font-medium">Sunucu bağlantısı bekleniyor, QR hazır.</p>
+                                </div>
+                            )}
+                            {isMobileScannerLinked && (
+                                <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    <p className="text-xs font-medium">Telefon bağlı. Barkod okutmaya hazır.</p>
+                                </div>
+                            )}
+                            <div className="flex flex-col items-center space-y-4">
                                 <div className="bg-white p-4 rounded-3xl shadow-sm border border-neutral-100 dark:border-neutral-800">
                                     {qrUrl ? (
                                         <QRCodeSVG value={qrUrl} size={180} />
@@ -175,11 +180,11 @@ export function ScannerModal({ open, onOpenChange, shopIdOrUserId }: ScannerModa
                                     </div>
                                 </div>
                             )}
-                    </>
-                </div>
-            </DialogContent>
-        </Dialog>
-        <ScannerHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
+                        </>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <ScannerHelpModal open={isHelpOpen} onOpenChange={setIsHelpOpen} />
         </>
     );
 }

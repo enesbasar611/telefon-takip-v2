@@ -114,6 +114,7 @@ export function formatPhone(phone: string | null | undefined): string {
   const part3 = cleaned.substring(6, 10);
   return `+90 (${part1}) ${part2} ${part3}`;
 }
+
 /**
  * Formats a number or string to Turkish currency format (1.234,56)
  * @param amount Number or string to format
@@ -144,6 +145,9 @@ export function parseCurrency(value: string | number): number {
   let str = value.trim();
   if (!str) return 0;
 
+  // Remove currency symbols
+  str = str.replace(/[₺$€\s]/g, "");
+
   // If it has both . and ,
   if (str.includes(".") && str.includes(",")) {
     const lastDot = str.lastIndexOf(".");
@@ -157,26 +161,52 @@ export function parseCurrency(value: string | number): number {
       str = str.replace(/,/g, "");
     }
   } else if (str.includes(",")) {
-    // Only comma: 1234,56 or 1,234
-    // In Turkish context, comma is almost always decimal
-    str = str.replace(",", ".");
+    // Only comma: 1234,56 or 1.234 (comma as thousand)
+    // In Turkish context, comma is almost always decimal.
+    // However, if there are multiple commas, they are thousand separators
+    const commaCount = (str.match(/,/g) || []).length;
+    if (commaCount > 1) {
+      str = str.replace(/,/g, "");
+    } else {
+      // Single comma: 1234,56 -> 1234.56
+      // But wait! If it's something like "1,000", is it 1 or 1000?
+      // Heuristic: if exactly 3 digits after comma, and no dots elsewhere, 
+      // check if it's > 999. Usually, we treat single comma as decimal in TR.
+      str = str.replace(",", ".");
+    }
   } else if (str.includes(".")) {
     // Only dot: 1.234 or 1234.56
-    // Heuristic: if there are exactly 2 digits after the dot, it's likely a decimal (e.g., 5.50)
-    // If there are 3 digits, it could be a thousand separator (e.g., 1.000)
-    const parts = str.split(".");
-    if (parts.length === 2) {
-      const decimals = parts[1];
-      if (decimals.length !== 3) {
-        // Treat as decimal (5.5, 5.50, 5.5000 etc but not 5.500)
-        // Note: 5.500 is ambiguous but we lean towards thousand separator if it's exactly 3
-      } else {
-        // Exactly 3 digits: 1.000 -> treat as thousand separator
-        str = str.replace(/\./g, "");
-      }
-    } else if (parts.length > 2) {
-      // 1.000.000
+    const dotCount = (str.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      // 1.000.000 -> thousand separators
       str = str.replace(/\./g, "");
+    } else {
+      // Single dot: 1.234 OR 1.23
+      const parts = str.split(".");
+      const decimals = parts[1];
+
+      // IMPROVED HEURISTIC: 
+      // In International format, a single dot is ALWAYS a decimal.
+      // In Turkish format, a single dot can be a thousand separator (1.000).
+      // If we see exactly 3 zeros or digits after a dot, it might be a thousand separator.
+      // BUT if the number is small (like 5.500), it's more likely 5.5 in a financial context.
+      // Or if the user typed it in a field that expects USD.
+
+      // Let's be safer: if it's 1.000, 2.000 etc., it's ambiguous.
+      // But if it's 1.234, it's 1234.
+      // If it's 1.23, it's 1.23.
+
+      if (decimals.length === 3) {
+        // Heuristic: If it's something like "1.000" and the first part is 1-3 digits,
+        // it's likely a thousand separator in Turkish context.
+        // HOWEVER, if it's "14.000" it's still ambiguous.
+        // Let's only treat it as thousand separator if the number is >= 1000 and has no other dots.
+        // Actually, the most reliable way in the absence of locale is to check the number of digits.
+        const firstPart = parts[0];
+        if (firstPart.length >= 1 && firstPart.length <= 3) {
+          str = str.replace(/\./g, "");
+        }
+      }
     }
   }
 

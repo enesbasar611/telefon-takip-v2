@@ -423,25 +423,16 @@ export async function backupToDriveAction() {
 }
 
 export async function getWhatsAppStatusAction() {
-    try {
-        const shopId = await getShopId();
-        const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        return await whatsappManager.getStatus(shopId);
-    } catch (error: any) {
-        return { status: "DISCONNECTED" as const, qr: undefined, error: undefined, errorCode: undefined };
-    }
+    return {
+        status: "DISCONNECTED" as const,
+        qr: undefined,
+        error: "Sistem güncellendi: WhatsApp artık doğrudan tarayıcı üzerinden çalışmaktadır.",
+        errorCode: undefined
+    };
 }
 
-/** Send WhatsApp Message using local whatsapp-web.js */
+/** Send WhatsApp Message - DEPRECATED (Use client-side) */
 export async function sendWhatsAppAction(phone: string, message: string) {
-    try {
-        const shopId = await getShopId();
-        const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        await whatsappManager.sendMessage(shopId, phone, message);
-        return { success: true };
-    } catch (error: any) {
-        console.error("[WHATSAPP ERROR]", error.message);
-        return { success: false, error: error.message };
-    }
+    return { success: false, error: "Sistem güncellendi: Mesajlar artık tarayıcıdan gönderiliyor." };
 }
 

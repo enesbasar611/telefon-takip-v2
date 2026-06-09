@@ -1,6 +1,20 @@
-# WhatsApp Session Data
+# WhatsApp Session Data (Legacy)
 .whatsapp-auth/
 .wwebjs_cache/
+
+# User Data & Temporary Files
+artifacts/
+tmp/
+.testsprite/
+testsprite_tests/
+test-results/
+graphify-out/
+*.sql
+admin_user.json
+swagger.json
+architecture_diagram.svg
+*.bak
+prisma/migrations.bak
 
 # dependencies
 /node_modules

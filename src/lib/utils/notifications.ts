@@ -11,6 +11,12 @@ export function formatWhatsAppLink(phone: string, message: string) {
   return `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
 }
 
+export function sendWhatsAppClientSide(phone: string, message: string) {
+  const link = formatWhatsAppLink(phone, message);
+  // Using a named window 'whatsapp_window' ensures subsequent messages open in the same tab
+  window.open(link, 'whatsapp_window');
+}
+
 export const WHATSAPP_TEMPLATES = {
   NEW_SERVICE: "✅ Sayın {customer},\n\n{device} cihazınız {ticket} numarası ile servisimize kabul edilmiştir. İşlemler başladığında size bilgi verilecektir.\n\nBizi tercih ettiğiniz için teşekkür ederiz. 🙏",
 

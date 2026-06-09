@@ -129,18 +129,16 @@ export function StockListTable({
       sendSuccessFeedback("Ürün Arandı");
       toast.success("Barkod okutuldu");
       setIsScannerModalOpen(false);
-    }
+    },
+    { allowGlobal: true }
   );
 
   useEffect(() => {
-    let rid = localStorage.getItem("scanner_room_id");
-    if (!rid) {
-      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("scanner_room_id", rid);
+    if (shop?.id) {
+      setScannerRoomId(shop.id);
+      initializeScannerRoom(shop.id);
     }
-    setScannerRoomId(rid);
-    initializeScannerRoom(rid);
-  }, [initializeScannerRoom]);
+  }, [initializeScannerRoom, shop?.id]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -829,7 +827,7 @@ export function StockListTable({
         isOpen={isPrintDialogOpen}
         onOpenChange={setIsPrintDialogOpen}
       />
-      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={shop?.id || "global"} />
 
       {/* Pagination Controls */}
       {totalCount > pageSize && (

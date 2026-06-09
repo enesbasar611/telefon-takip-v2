@@ -57,7 +57,7 @@ const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange }: an
             <div className="space-y-4 mb-6">
                 <div className="border-[1.5px] border-black p-2">
                     <span className="text-[9px] font-black text-black uppercase block mb-1">CİHAZ BİLGİSİ</span>
-                    <span className="text-[13px] font-black uppercase text-black block leading-tight">
+                    <span className="text-[11px] font-black uppercase text-black block leading-none truncate overflow-hidden">
                         {ticket.deviceBrand} {ticket.deviceModel}
                     </span>
                     {ticket.imei && (
@@ -94,9 +94,9 @@ const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange }: an
                 </div>
 
                 {!isEditing && (
-                    <div className="flex justify-between items-center bg-black p-2 mt-2">
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">TOPLAM</span>
-                        <span className="text-xl font-black text-white">{formatCurrency(ticket.estimatedCost, true)}</span>
+                    <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2">
+                        <span className="text-[10px] font-black text-black uppercase tracking-wider">TOPLAM</span>
+                        <span className="text-lg font-black text-black">{formatCurrency(ticket.estimatedCost, true)}</span>
                     </div>
                 )}
             </div>

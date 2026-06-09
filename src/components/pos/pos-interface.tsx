@@ -93,7 +93,7 @@ export function POSInterface({ initialSaleId }: {
     queryFn: () => getSettings(),
   });
 
-  const { rates: exchangeRates } = useDashboardData();
+  const { rates: exchangeRates, shopId } = useDashboardData();
 
   // Show receipt if arrived via sale confirmation URL
   useEffect(() => {
@@ -371,7 +371,8 @@ export function POSInterface({ initialSaleId }: {
       } else {
         sendErrorFeedback("Ürün bulunamadı");
       }
-    }
+    },
+    { allowGlobal: true }
   );
 
   // Sync cart to mobile whenever it changes
@@ -408,14 +409,11 @@ export function POSInterface({ initialSaleId }: {
   }, [removeFromCart, updateQuantity, addToCart, updatePrice]);
 
   useEffect(() => {
-    let rid = localStorage.getItem("scanner_room_id");
-    if (!rid) {
-      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("scanner_room_id", rid);
+    if (shopId) {
+      setScannerRoomId(shopId);
+      initializeScannerRoom(shopId);
     }
-    setScannerRoomId(rid);
-    initializeScannerRoom(rid);
-  }, [initializeScannerRoom]);
+  }, [initializeScannerRoom, shopId]);
 
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
@@ -744,7 +742,7 @@ export function POSInterface({ initialSaleId }: {
           animation: success-pulse 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
       `}</style>
-      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={shopId || "global"} />
     </div>
   );
 

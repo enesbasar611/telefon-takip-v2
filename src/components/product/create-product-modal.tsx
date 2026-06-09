@@ -84,7 +84,7 @@ export function CreateProductModal({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange
 }: CreateProductModalProps) {
-  const { rates: exchangeRates, defaultCurrency } = useDashboardData();
+  const { rates: exchangeRates, defaultCurrency, shopId } = useDashboardData();
   const [internalOpen, setInternalOpen] = useState(autoOpen);
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -111,18 +111,16 @@ export function CreateProductModal({
       sendSuccessFeedback("Barkod Kopyalandı");
       toast.success("Barkod okutuldu");
       setIsScannerModalOpen(false);
-    }
+    },
+    { allowGlobal: true }
   );
 
   useEffect(() => {
-    let rid = localStorage.getItem("scanner_room_id");
-    if (!rid) {
-      rid = "scanner-" + Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("scanner_room_id", rid);
+    if (shopId) {
+      setScannerRoomId(shopId);
+      initializeScannerRoom(shopId);
     }
-    setScannerRoomId(rid);
-    initializeScannerRoom(rid);
-  }, [initializeScannerRoom]);
+  }, [initializeScannerRoom, shopId]);
 
   const industryFields = getInventoryFormFields(shop);
 
@@ -641,7 +639,7 @@ export function CreateProductModal({
           </div>
         </form>
       </DialogContent>
-      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={scannerRoomId} />
+      <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={shopId || "global"} />
     </Dialog>
   );
 }

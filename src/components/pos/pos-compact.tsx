@@ -48,7 +48,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
     const lastAddRef = useRef<{ id: string; time: number } | null>(null);
 
-    const { rates: exchangeRates } = useDashboardData();
+    const { rates: exchangeRates, defaultCurrency } = useDashboardData();
     const { data: settingsData } = useQuery({
         queryKey: ["settings"],
         queryFn: () => getSettings(),
@@ -76,12 +76,10 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         return item?.sellPriceUsd ? "USD" : "TRY";
     }
 
-    const getCartCurrencySymbol = useCallback((item: any) => {
-        const itemCurrency = getCartItemCurrency(item);
-        if (itemCurrency === "USD") return "$";
-        if (itemCurrency === "EUR") return "€";
+    const getCartCurrencySymbol = useCallback(() => {
+        if (defaultCurrency === "USD") return "$";
         return "₺";
-    }, []);
+    }, [defaultCurrency]);
 
     const getEquivalentDisplay = useCallback((product: any) => {
         const itemCurrency = getCartItemCurrency(product);
@@ -111,7 +109,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         } else {
             sendErrorFeedback("Ürün bulunamadı!", deviceId);
         }
-    });
+    }, { allowGlobal: true });
 
     // Update local products when props change
     useEffect(() => {
@@ -124,8 +122,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     }, [cart, syncCartToMobile]);
 
     useEffect(() => {
-        if (session?.user?.id || session?.user?.shopId) {
-            initializeScannerRoom(session.user.shopId || session.user.id);
+        const shopId = session?.user?.shopId || session?.user?.id;
+        if (shopId) {
+            initializeScannerRoom(shopId);
         }
     }, [session, initializeScannerRoom]);
 
@@ -303,6 +302,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 })),
                 totalAmount: total,
                 paymentMethod,
+                currency: "TRY",
                 discountAmount: loyaltyDiscountAmount,
                 usedPoints
             });
@@ -569,7 +569,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
             <ScannerModal
                 open={isScannerModalOpen}
                 onOpenChange={setIsScannerModalOpen}
-                shopIdOrUserId={session?.user?.shopId || session?.user?.id || ""}
+                shopIdOrUserId={session?.user?.shopId || session?.user?.id || "global"}
             />
         </div>
     );

@@ -142,15 +142,15 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                         <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
                                             <div className="flex flex-col flex-1 pr-4">
                                                 <span className={cn(
-                                                    "text-[11px] font-black uppercase leading-tight break-words",
-                                                    isPayment ? "text-emerald-800" : "text-black"
+                                                    "text-[9px] font-black uppercase leading-none truncate max-w-[160px] block",
+                                                    isPayment ? "text-slate-700" : "text-black"
                                                 )}>
                                                     {isPayment && "[TAHSİLAT] "}
-                                                    {item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
+                                                    {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
                                                 </span>
                                             </div>
                                             <div className="text-right whitespace-nowrap">
-                                                <div className="text-[11px] font-black text-black">
+                                                <div className="text-[10px] font-black text-black">
                                                     {isPayment ? '-' : ''}{new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
                                                         style: 'currency',
                                                         currency: item.currency || 'TRY'
@@ -181,12 +181,12 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                         </div>
                     </div>
                 )}
-                <div className="flex justify-between items-center bg-black p-2 mt-2">
+                <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-white uppercase tracking-wider">GENEL TOPLAM</span>
-                        <span className="text-[7px] font-bold text-white/80">KUR: $1 = ₺{currentUsdRate}</span>
+                        <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
+                        <span className="text-[7px] font-bold text-black/60">KUR: $1 = ₺{currentUsdRate}</span>
                     </div>
-                    <span className="text-xl font-black text-white">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(portfolioTotal)}</span>
+                    <span className="text-lg font-black text-black">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(portfolioTotal)}</span>
                 </div>
 
                 {portfolioTotal <= 0 && (

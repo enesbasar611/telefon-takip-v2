@@ -1,35 +1,61 @@
+# Version Control
+.git
+.gitignore
+.dockerignore
+.github
+
+# Dependencies & Build
 node_modules
 .next
-.git
-.env
-.env.local
-.env.production
-.vercel
-README.md
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+out
+dist
+build
+/.vercel
+*.tsbuildinfo
+
+# Debug & Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+ts_errors.txt
+
+# Temporary & Cache
 .agents
 .agent
 _agents
 _agent
 .gemini
+.testsprite
+testsprite_tests
+test-results
+artifacts
 tmp
-out
-dist
-*.tsbuildinfo
-.DS_Store
+graphify-out
+
+# Legacy WhatsApp / Puppeteer
 .puppeteer_edevlet_session
 .whatsapp-auth
 .wwebjs_cache
-build_output.log
-ts_errors.txt
-dev-server.log
-dev-server.err.log
 
-# Geçici yedekleri alma ama normal migrations klasörüne dokunma!
-prisma/migrations.bak
+# Environment & Sensitive
+.env
+.env.local
+.env.production
+.env2
 *.bak
+prisma/migrations.bak
+
+# Docs & Non-Code
+docs
+README.md
+CONTRIBUTING.md
+PROJECT_CONTEXT.md
+PROJECT_MASTER_DATA.md
+baseline.sql
+migration_fix.sql
+admin_user.json
+swagger.json
+architecture_diagram.svg
+*.md
+!package.json

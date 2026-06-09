@@ -27,33 +27,40 @@ export const ReceiptTemplate = ({
     return (
         <div
             className={cn(
-                "bg-white text-black p-6 font-mono relative border-0",
+                "bg-white text-black p-6 font-sans relative border-0",
                 paperSizeVal === "58mm" ? "w-[58mm] text-[10px]" :
                     paperSizeVal === "80mm" ? "w-[80mm] text-[13px]" :
                         "w-[72mm] text-[11px]"
             )}
             style={{ boxSizing: "border-box" }}
         >
+            {/* Top Right Date */}
+            {showDate && (
+                <div className="absolute top-2 right-2 text-[7px] font-bold text-black border border-black/20 px-1 py-0.5 rounded">
+                    {format(date, "dd.MM.yyyy HH:mm")}
+                </div>
+            )}
+
             {/* Header */}
-            <div className="text-center border-b-[1.5px] border-black pb-4 mb-4">
+            <div className="text-center border-b-[1.5px] border-black pb-2 mb-3">
                 {settings?.logoUrl && (
-                    <div className="mb-3 flex justify-center">
-                        <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto grayscale contrast-[2]" />
+                    <div className="mb-2 flex justify-center">
+                        <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-[2]" />
                     </div>
                 )}
-                <h3 className="font-black text-lg uppercase text-black leading-tight tracking-tight">
+                <h3 className="font-black text-base uppercase text-black leading-none tracking-tight">
                     {settings?.title || "FİRMA ÜNVANI"}
                 </h3>
                 {subtitle && (
-                    <p className="text-[9px] font-black mt-1 uppercase text-black leading-tight border border-black inline-block px-2 py-0.5 mt-2">
+                    <p className="text-[8px] font-black uppercase text-black leading-none border border-black inline-block px-1.5 py-0.5 mt-1.5">
                         {subtitle}
                     </p>
                 )}
 
-                <div className="mt-3 space-y-0.5 text-[9px] font-black text-black">
+                <div className="mt-1.5 text-[8px] font-black text-black leading-tight">
                     <p>TEL: {settings?.phone || "05xx xxx xx xx"}</p>
                     {settings?.website && <p>{settings.website}</p>}
-                    {settings?.address && <p className="px-2 leading-tight">{settings.address}</p>}
+                    {settings?.address && <p className="px-1">{settings.address}</p>}
                 </div>
             </div>
 
@@ -63,26 +70,20 @@ export const ReceiptTemplate = ({
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-4 border-t-[1.5px] border-black border-dashed mt-6">
+            <div className="text-center pt-3 border-t-[1.5px] border-black border-dashed mt-4">
                 {settings?.terms && (
-                    <div className="text-[7px] border-b border-black border-dotted mb-3 pb-2 whitespace-pre-wrap leading-tight font-bold text-left italic">
+                    <div className="text-[7px] border-b border-black border-dotted mb-2 pb-1.5 whitespace-pre-wrap leading-tight font-bold text-left italic">
                         {settings.terms}
                     </div>
                 )}
 
-                <p className="font-black text-[10px] uppercase mb-1 text-black leading-tight">
+                <p className="font-black text-[9px] uppercase mb-1 text-black leading-tight">
                     {settings?.footer || "Bizi Tercih Ettiğiniz İçin Teşekkürler"}
                 </p>
 
                 {settings?.footer2 && (
-                    <p className="font-bold text-[8px] uppercase mb-1 text-black">
+                    <p className="font-bold text-[7px] uppercase text-black">
                         {settings.footer2}
-                    </p>
-                )}
-
-                {showDate && (
-                    <p className="text-[8px] font-bold mt-2 text-black border-t border-black pt-2">
-                        {format(date, "dd.MM.yyyy HH:mm")}
                     </p>
                 )}
             </div>

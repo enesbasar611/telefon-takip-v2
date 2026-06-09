@@ -1,29 +1,40 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSocket } from "@/components/providers/socket-provider";
 
-export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: string) => void) => {
-    const { socket, isConnected } = useSocket();
+export const useScanner = (onBarcodeScanned?: (barcode: string, deviceId?: string) => void, options?: { allowGlobal?: boolean }) => {
+    const { socket, isConnected, tabId } = useSocket();
     const [roomId, setRoomId] = useState<string | null>(null);
     const [isMobileScannerLinked, setIsMobileScannerLinked] = useState(false);
 
     // Initial Room Connect (For PC)
-    const initializeScannerRoom = useCallback((currentUserIdOrShopId: string) => {
-        if (!socket || !isConnected) return;
+    const initializeScannerRoom = useCallback((shopId: string) => {
+        if (!socket || !isConnected || !tabId) return;
+
+        const uniqueRoomId = `${shopId}:${tabId}`;
 
         setRoomId((currentRoomId) => {
-            if (currentRoomId !== currentUserIdOrShopId) {
+            if (currentRoomId !== uniqueRoomId) {
                 setIsMobileScannerLinked(false);
             }
-            return currentUserIdOrShopId;
+            return uniqueRoomId;
         });
-        socket.emit("join_room", currentUserIdOrShopId);
-    }, [socket, isConnected]);
+        socket.emit("join_room", uniqueRoomId);
+    }, [socket, isConnected, tabId]);
 
     // Listener for PC Side (when mobile scans or manages cart)
     useEffect(() => {
         if (!socket || !roomId) return;
 
         const handleProcessBarcode = ({ barcode, deviceId }: { barcode: string, deviceId?: string }) => {
+            // Context-aware check: Only process if an input is focused or global is allowed
+            const activeElement = document.activeElement;
+            const isInputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+
+            if (!options?.allowGlobal && !isInputFocused) {
+                console.log("[SCANNER] Input odaklı değil, tarama yoksayıldı.");
+                return;
+            }
+
             if (onBarcodeScanned) {
                 onBarcodeScanned(barcode, deviceId);
             }

@@ -177,7 +177,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
             remainingAmount: finalAmount,
             currency: data.currency || "TRY",
             shopId,
-            notes: `Satış: ${newSale.saleNumber}`,
+            notes: saleDescription,
             saleId: newSale.id, // Verified in schema.prisma
             isPaid: false
           } as any

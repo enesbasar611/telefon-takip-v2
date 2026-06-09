@@ -16,6 +16,7 @@ interface DashboardDataContextType {
     isLoading: boolean;
     refresh: () => void;
     defaultCurrency: "TRY" | "USD";
+    shopId?: string;
 }
 
 const DashboardDataContext = createContext<DashboardDataContextType | null>(null);
@@ -72,7 +73,8 @@ export function DashboardDataProvider({
                 settings,
                 defaultCurrency,
                 isLoading,
-                refresh
+                refresh,
+                shopId
             }}
         >
             {children}

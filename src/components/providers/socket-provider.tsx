@@ -9,11 +9,13 @@ import { usePathname } from "next/navigation";
 interface SocketContextType {
     socket: any | null;
     isConnected: boolean;
+    tabId: string;
 }
 
 const SocketContext = createContext<SocketContextType>({
     socket: null,
     isConnected: false,
+    tabId: "",
 });
 
 export const useSocket = () => {
@@ -25,6 +27,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
     const [socket, setSocket] = useState<any | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [tabId] = useState(() => Math.random().toString(36).substring(2, 10).toUpperCase());
 
     useEffect(() => {
         if (status === "loading" || status !== "authenticated" || !session?.user?.shopId) {
@@ -39,8 +42,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         const shopId = session.user.shopId;
         const socketUrl = window.location.origin;
+        // Room ID is now unique per tab to prevent cross-talk between windows
+        const roomId = `${shopId}:${tabId}`;
 
-        console.log(`[SOCKET] ${shopId} için bağlantı başlatılıyor:`, socketUrl);
+        console.log(`[SOCKET] ${roomId} için bağlantı başlatılıyor:`, socketUrl);
 
         const socketInstance = io(socketUrl, {
             path: "/socket.io",
@@ -48,20 +53,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             upgrade: true,
             rememberUpgrade: true,
             reconnection: true,
-            reconnectionAttempts: 5, // Optimized as per task
+            reconnectionAttempts: 5,
             reconnectionDelay: 2000,
             reconnectionDelayMax: 10000,
             timeout: 20000,
             autoConnect: true,
-            multiplex: true, // Optimized for performance
+            multiplex: true,
         });
 
         socketInstance.on("connect", () => {
             const transport = (socketInstance as any).io?.engine?.transport?.name || "Bilinmiyor";
-            console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Shop: ${shopId} | Transport: ${transport}`);
+            console.log(`[SOCKET] BAĞLANDI! ID: ${socketInstance.id} | Room: ${roomId} | Transport: ${transport}`);
 
             // Join room once connected
-            socketInstance.emit("join_room", shopId);
+            socketInstance.emit("join_room", roomId);
             setIsConnected(true);
 
             // Only show toast if not already connected (prevents toast spam)
@@ -82,7 +87,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             if (socketInstance.connected) {
                 socketInstance.emit("ping_status", {
                     time: new Date().toISOString(),
-                    shopId: shopId
+                    roomId: roomId
                 });
             }
         }, 15000);
@@ -93,7 +98,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             clearInterval(pingInterval);
             socketInstance.disconnect();
         };
-    }, [status, session?.user?.shopId]); // Removed pathname dependency
+    }, [status, session?.user?.shopId, tabId]);
 
     // Side effect to handle path-based restrictions if needed, without disconnecting
     useEffect(() => {
@@ -104,15 +109,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const isAllowed = allowedPaths.some(p => pathname?.startsWith(p));
 
         if (isCourierPage || !isAllowed) {
-            // We could pause or emit a 'leave_room' here if desired, 
-            // but the user wants the socket to stay global and active.
-            // For now, we just log it to keep the connection alive but silent.
             console.log(`[SOCKET] Kısıtlı sayfadasınız (${pathname}), ama global bağlantı korunuyor.`);
         }
     }, [pathname, socket]);
 
     return (
-        <SocketContext.Provider value={{ socket, isConnected }}>
+        <SocketContext.Provider value={{ socket, isConnected, tabId }}>
             {children}
         </SocketContext.Provider>
     );

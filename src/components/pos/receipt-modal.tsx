@@ -51,7 +51,7 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency }: 
         {sale.items?.map((item: any, idx: number) => (
           <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
             <div className="flex flex-col flex-1 pr-4">
-              <span className="text-[11px] font-black uppercase leading-tight break-words">
+              <span className="text-[9px] font-black uppercase leading-none truncate max-w-[160px] block text-black">
                 {item.product?.name}
               </span>
               <span className="text-[9px] font-bold text-black/60">
@@ -74,9 +74,9 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency }: 
           <span className="text-[11px] font-black text-black uppercase">{sale.paymentMethod}</span>
         </div>
 
-        <div className="flex justify-between items-center bg-black p-2 mt-2">
-          <span className="text-[10px] font-black text-white uppercase tracking-wider">GENEL TOPLAM</span>
-          <span className="text-xl font-black text-white">
+        <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2 font-sans">
+          <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
+          <span className="text-lg font-black text-black">
             {currencySymbol}{Number(sale.finalAmount / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}
           </span>
         </div>

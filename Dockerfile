@@ -2,14 +2,15 @@
 FROM node:20-slim AS deps
 WORKDIR /app
 
-# Gerekli temel sistem paketleri
-RUN apt-get update && apt-get install -y openssl python3 make g++
+# Required system packages (basic only)
+RUN apt-get update && apt-get install -y openssl python3 make g++ --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Sadece üretim bağımlılıkları yerine tam yükleme yapıyoruz çünkü build sırasında hepsi gerekiyor
-RUN npm install
+# Cache npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
 
 # Stage 2: Build the application
 FROM node:20-slim AS builder
@@ -20,15 +21,16 @@ COPY . .
 
 RUN apt-get update && apt-get install -y openssl --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
-# Prisma Client oluştur
+# Prisma Client generation
 RUN npx prisma generate
 
-# Standalone build için gerekli environmentlar
+# Environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Next.js Build
-RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
+# Next.js Build with cache mount for speed
+RUN --mount=type=cache,target=/app/.next/cache \
+    DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
     NEXTAUTH_SECRET="build-time-placeholder-secret" \
     AUTH_SECRET="build-time-placeholder-secret" \
     NEXTAUTH_URL="http://localhost:5000" \
@@ -37,46 +39,18 @@ RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
     ADMIN_EMAIL="admin@example.com" \
     npm run build
 
-# Stage 3: Production runner
+# Stage 3: Production runner (Ultra-lightweight)
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Puppeteer (WhatsApp Manager vb. için) ve Standalone çalışma zamanı paketleri
-RUN apt-get update && apt-get install -y \
-    chromium \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    libxss1 \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpangocairo-1.0-0 \
-    libpango-1.0-0 \
-    libcairo2 \
-    openssl \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+# Only required runtime library for Prisma
+RUN apt-get update && apt-get install -y openssl --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PORT=5000
 ENV HOSTNAME="0.0.0.0"
 
-# Sadece standalone çıktı klasörünü ve statik dosyaları kopyalıyoruz
-# Bu image boyutunu devasa oranda (~2GB -> ~250MB) düşürür
+# Copy only necessary artifacts from standalone build
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
@@ -84,5 +58,4 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 5000
 
-# Standalone mode .next/standalone/server.js dosyasını çalıştırır
 CMD ["node", "server.js"]

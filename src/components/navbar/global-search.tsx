@@ -7,13 +7,31 @@ import { Badge } from "@/components/ui/badge";
 import { globalSearchAction } from "@/lib/actions/search-actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useScanner } from "@/hooks/use-scanner";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { shopId } = useDashboardData();
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const { initializeScannerRoom } = useScanner(
+    (barcode: string) => {
+      setQuery(barcode);
+      setIsOpen(true);
+    },
+    { allowGlobal: false } // only when focused
+  );
+
+  useEffect(() => {
+    if (shopId) {
+      initializeScannerRoom(shopId);
+    }
+  }, [shopId, initializeScannerRoom]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,6 +66,7 @@ export function GlobalSearch() {
         {isPending ? <Loader2 className="h-4 w-4 text-blue-500 animate-spin" /> : <Search className="h-4 w-4 text-gray-500 group-focus-within:text-blue-500" />}
       </div>
       <Input
+        ref={inputRef}
         type="search"
         placeholder="Ürün, Müşteri veya Servis ara..."
         value={query}
