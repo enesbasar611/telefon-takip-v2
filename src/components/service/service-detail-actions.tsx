@@ -29,7 +29,7 @@ export function ServiceDetailActions({ ticket }: ServiceDetailActionsProps) {
 
     const totalAmount = (ticket.usedParts?.reduce((acc: number, p: any) => acc + (Number(p.unitPrice) * (p.quantity || 1)), 0) || 0) + (Number(ticket.laborCost || ticket.actualCost || ticket.estimatedCost) || 0);
 
-    const whatsappMessage = `🤝 Sayın *${ticket.customer?.name}*,\n\n*${ticket.deviceBrand} ${ticket.deviceModel}* cihazınızın servis işlemleri hakkındaki güncel bilgiler aşağıdadır:\n\n*📋 Yapılan İşlemler:*\n${formatLogs()}\n\n*🏷️ Kullanılan Parçalar:*\n${formatParts()}\n\n*💰 Toplam Tutar:* ₺${totalAmount.toLocaleString('tr-TR')}\n\n*Durum:* ${ticket.status === 'READY' ? '✅ Cihazınız Hazır' : '⏳ İşlemler Devam Ediyor'}\n\nBizi tercih ettiğiniz için teşekkür ederiz. 😊`;
+    const whatsappMessage = `🤝 Sayın *${ticket.customer?.name}*,\n\n*${ticket.deviceBrand} ${ticket.deviceModel}* cihazınızın servis işlemleri hakkındaki güncel bilgiler aşağıdadır:\n\n*📋 Yapılan İşlemler:*\n${formatLogs()}\n\n*🏷️ Kullanılan Parçalar:*\n${formatParts()}\n\n*💰 Toplam Tutar:* ₺${totalAmount.toLocaleString('tr-TR')}\n\n*Durum:* ${ticket.status === 'READY' ? '🟢 Cihazınız Hazır' : '⏳ İşlemler Devam Ediyor'}\n\nBizi tercih ettiğiniz için teşekkür ederiz. ✨`;
 
     return (
         <div className="space-y-4">

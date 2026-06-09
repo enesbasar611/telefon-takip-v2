@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback, useMemo, useTransition, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, MessageCircle, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate, ShieldAlert } from "lucide-react";
+import { Settings as SettingsIcon, Palette, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate, ShieldAlert } from "lucide-react";
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -14,7 +14,6 @@ import { Loader2 } from "lucide-react";
 
 // Tab Components
 import { AppearanceTab } from "./tabs/appearance-tab";
-import { WhatsAppTab } from "./tabs/whatsapp-tab";
 import { PrinterTab } from "./tabs/printer-tab";
 import { DataTab } from "./tabs/data-tab";
 import { AutomationTab } from "./tabs/automation-tab";
@@ -38,7 +37,6 @@ const defaultTabs = [
   { id: "shop", label: "Dükkan", icon: Store, desc: "Sektör ve bilgiler" },
   { id: "forms", label: "Dinamik Formlar", icon: LayoutTemplate, desc: "Sektörel form ayarları" },
   { id: "modules", label: "Modüller", icon: LayoutGrid, desc: "Aktif özellikler" },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, desc: "Mesaj şablonları" },
   { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
   { id: "customers", label: "Müşteriler", icon: Users, desc: "Sadakat modülü" },
   { id: "data", label: "Veri", icon: Database, desc: "Yedek ve export" },
@@ -86,7 +84,6 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTabStates] = useState(searchParams.get("tab") || "shop");
-  const [whatsappStatus, setWhatsappStatus] = useState<string>("CONNECTED");
 
 
   const setActiveTab = (tab: string) => {
@@ -234,9 +231,6 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
                 >
                   <div className="relative">
                     <Icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? "text-blue-400" : "text-slate-600")} />
-                    {tab.id === "whatsapp" && whatsappStatus === "DISCONNECTED" && (
-                      <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-                    )}
                   </div>
                   <div className="min-w-0">
                     <span className="text-sm font-semibold block leading-tight">{tab.label}</span>
@@ -282,9 +276,6 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
               )}
               {activeTab === "modules" && (
                 <ModulesTab shop={shop} />
-              )}
-              {activeTab === "whatsapp" && (
-                <WhatsAppTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
               )}
               {activeTab === "printing" && (
                 <PrinterTab receiptSettings={receiptSettings} shop={shop} />

@@ -19,7 +19,7 @@ const templates = [
         label: "Yeni Servis Kabul",
         desc: "Servis kaydı açıldığında müşteriye gönderilecek mesaj",
         color: "blue",
-        defaultValue: "Sayın {musteri_adi}, {cihaz} cihazınız {servis_no} numarası ile servisimize kabul edilmiştir.",
+        defaultValue: "🟢 Sayın {musteri_adi}, {cihaz} cihazınız {servis_no} numarası ile servisimize kabul edilmiştir. İşlemler başladığında size bilgi verilecektir. ✨",
         variables: ["{musteri_adi}", "{cihaz}", "{servis_no}"],
     },
     {
@@ -27,7 +27,7 @@ const templates = [
         label: "Servis Hazır",
         desc: "Cihaz tamiri tamamlandığında gönderilecek mesaj",
         color: "emerald",
-        defaultValue: "Sayın {musteri_adi}, {cihaz} cihazınızın tamiri tamamlanmıştır. Teslim alabilirsiniz.",
+        defaultValue: "🎊 Sayın {musteri_adi}, {cihaz} cihazınızın tamiri tamamlanmıştır! Teslim alabilirsiniz. 🏪",
         variables: ["{musteri_adi}", "{cihaz}"],
     },
     {
@@ -35,7 +35,7 @@ const templates = [
         label: "Yeni Randevu",
         desc: "Randevu oluşturulduğunda bilgilendirme mesajı",
         color: "purple",
-        defaultValue: "Sayın {musteri_adi}, {tarih} tarihinde randevunuz oluşturulmuştur. Sizi bekliyoruz!",
+        defaultValue: "📅 Sayın {musteri_adi}, {tarih} tarihinde randevunuz oluşturulmuştur. Sizi bekliyoruz! ⭐",
         variables: ["{musteri_adi}", "{tarih}", "{saat}"],
     },
     {
@@ -43,7 +43,7 @@ const templates = [
         label: "Ödeme Hatırlatıcı",
         desc: "Gecikmiş ödeme durumunda gönderilecek mesaj",
         color: "amber",
-        defaultValue: "Sayın {musteri_adi}, {tutar} tutarındaki ödemeniz hakkında hatırlatma. Ödeme için bize ulaşabilirsiniz.",
+        defaultValue: "🔔 Sayın {musteri_adi}, {tutar} tutarındaki ödemeniz hakkında hatırlatma. Ödeme için bize ulaşabilirsiniz. ⭐",
         variables: ["{musteri_adi}", "{tutar}", "{servis_no}"],
     },
 ];

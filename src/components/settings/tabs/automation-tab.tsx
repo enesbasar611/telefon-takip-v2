@@ -9,6 +9,7 @@ import { Bell, Printer, CalendarClock, BarChart3, ShieldCheck, Zap, Loader2, Bra
 import { toast } from "sonner";
 import { validateGeminiKeyAction } from "@/lib/actions/gemini-actions";
 import { useState } from "react";
+import { WhatsAppTemplatesSection } from "./whatsapp-templates-section";
 
 interface AutomationTabProps {
     formData: Record<string, string>;
@@ -191,6 +192,8 @@ export function AutomationTab({ formData, onChange, savingKeys }: AutomationTabP
                     </div>
                 </div>
             </div>
+
+            <WhatsAppTemplatesSection formData={formData} onChange={onChange} />
         </div>
     );
 }

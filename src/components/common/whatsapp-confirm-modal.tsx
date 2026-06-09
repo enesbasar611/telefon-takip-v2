@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Smartphone, CheckCheck, Sparkles, Loader2 } from "lucide-react";
+import { Send, Smartphone, CheckCheck, Sparkles, Loader2, Globe, Monitor } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { sendWhatsAppClientSide } from "@/lib/utils/notifications";
+import { cn } from "@/lib/utils";
 
 interface WhatsAppConfirmModalProps {
     isOpen: boolean;
@@ -21,6 +22,19 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
     const [message, setMessage] = useState(initialMessage);
     const [isSending, setIsSending] = useState(false);
     const [isRefining, setIsRefining] = useState(false);
+
+    // Get initial value from localStorage if available
+    const [sendType, setSendType] = useState<'web' | 'desktop'>(() => {
+        if (typeof window !== 'undefined') {
+            return (localStorage.getItem('whatsapp_send_type') as 'web' | 'desktop') || 'web';
+        }
+        return 'web';
+    });
+
+    const handleSendTypeChange = (type: 'web' | 'desktop') => {
+        setSendType(type);
+        localStorage.setItem('whatsapp_send_type', type);
+    };
 
     const handleRefine = async (tone: "professional" | "friendly" | "urgent") => {
         setIsRefining(true);
@@ -53,11 +67,8 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
         setIsSending(true);
 
         try {
-            // Client-side sending
-            // Using a named window ensures subsequent messages open in the same tab
             for (const p of targetPhones) {
                 sendWhatsAppClientSide(p, message);
-                // Smaller delay for client side as it just triggers a URL
                 await new Promise(r => setTimeout(r, mode === "bulk" ? 800 : 0));
             }
 
@@ -89,8 +100,8 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
                         {mode === "bulk" ? <CheckCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                     </div>
                     <div className="flex-1">
-                        <p className="font-semibold">{mode === "bulk" ? "Toplu Hatırlatma" : (customerName || "Müşteri")}</p>
-                        <p className="text-xs text-white/80">{mode === "bulk" ? `${targetPhones.length} Alıcı` : phone}</p>
+                        <p className="font-semibold text-sm leading-tight">{mode === "bulk" ? "Toplu Hatırlatma" : (customerName || "Müşteri")}</p>
+                        <p className="text-[10px] text-white/80 leading-tight">{mode === "bulk" ? `${targetPhones.length} Alıcı` : phone}</p>
                     </div>
                 </div>
 
@@ -147,9 +158,35 @@ export function WhatsAppConfirmModal({ isOpen, onClose, phone, phones = [], cust
                 </div>
 
                 {/* Footer actions */}
-                <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="text-xs text-muted-foreground flex-1">
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400">WhatsApp Uygulaması / Web kullanılacak</span>
+                <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="flex-1 flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider px-1">Gönderim Türü</span>
+                        <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 w-fit">
+                            <button
+                                onClick={() => handleSendTypeChange('web')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2",
+                                    sendType === 'web'
+                                        ? "bg-white dark:bg-[#323739] text-[#00A884] shadow-sm"
+                                        : "text-muted-foreground hover:text-slate-900 dark:hover:text-white"
+                                )}
+                            >
+                                <Globe className="w-3 h-3" />
+                                Web
+                            </button>
+                            <button
+                                onClick={() => handleSendTypeChange('desktop')}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2",
+                                    sendType === 'desktop'
+                                        ? "bg-white dark:bg-[#323739] text-[#00A884] shadow-sm"
+                                        : "text-muted-foreground hover:text-slate-900 dark:hover:text-white"
+                                )}
+                            >
+                                <Monitor className="w-3 h-3" />
+                                Uygulama
+                            </button>
+                        </div>
                     </div>
 
                     <Button

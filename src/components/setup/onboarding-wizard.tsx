@@ -95,7 +95,6 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
     const [sector, setSector] = useState("");
 
     // Step 2: Integrations
-    const [whatsappConnected, setWhatsappConnected] = useState(false);
     const [geminiKey, setGeminiKey] = useState("");
     const [useDefaultGemini, setUseDefaultGemini] = useState(true);
 
@@ -135,7 +134,6 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                 setStep("integrations");
             } else if (step === "integrations") {
                 const res = await saveOnboardingIntegrations({
-                    whatsappConnected,
                     geminiApiKey: useDefaultGemini ? undefined : geminiKey
                 });
                 if (!res.success) {
@@ -299,28 +297,6 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                     </div>
 
                                     <div className="space-y-4">
-                                        {/* WhatsApp Section */}
-                                        <div className="p-8 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between group">
-                                            <div className="flex gap-4 items-center">
-                                                <div className="h-16 w-16 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/40">
-                                                    <MessageSquare className="h-8 w-8 text-black" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-bold">WhatsApp Business</h3>
-                                                    <p className="text-emerald-300 text-sm opacity-80">Müsterilerinize otomatik mesaj gönderin.</p>
-                                                </div>
-                                            </div>
-                                            <Button
-                                                onClick={() => setWhatsappConnected(!whatsappConnected)}
-                                                className={`rounded-2xl h-12 px-8 font-bold transition-all ${whatsappConnected
-                                                    ? "bg-emerald-400 text-black hover:bg-emerald-300"
-                                                    : "bg-white text-black hover:bg-gray-200"
-                                                    }`}
-                                            >
-                                                {whatsappConnected ? "BAĞLANDI" : "BAĞLA"}
-                                            </Button>
-                                        </div>
-
                                         {/* Gemini AI Section */}
                                         <div className="p-8 rounded-[2rem] bg-indigo-500/10 border border-indigo-500/20 space-y-6">
                                             <div className="flex items-center justify-between">

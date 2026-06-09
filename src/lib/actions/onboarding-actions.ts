@@ -121,7 +121,6 @@ export async function resetShopData() {
                 where: { id: shopId },
                 data: {
                     isFirstLogin: true,
-                    whatsappSessionId: null,
                     enabledModules: ["SERVICE", "STOCK", "SALE", "FINANCE"],
                     themeConfig: null
                 } as any
@@ -245,7 +244,7 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
     }
 }
 
-export async function saveOnboardingIntegrations(data: { whatsappConnected: boolean; geminiApiKey?: string }) {
+export async function saveOnboardingIntegrations(data: { geminiApiKey?: string }) {
     try {
         const shopId = await getShopId();
 
@@ -254,15 +253,6 @@ export async function saveOnboardingIntegrations(data: { whatsappConnected: bool
                 where: { shopId_key: { shopId, key: "gemini_api_key" } },
                 update: { value: data.geminiApiKey },
                 create: { shopId, key: "gemini_api_key", value: data.geminiApiKey }
-            });
-        }
-
-        if (data.whatsappConnected) {
-            // Logic to mark as connected or store session id
-            // For now we just mock high-level state
-            await prisma.shop.update({
-                where: { id: shopId },
-                data: { whatsappSessionId: `session_${shopId}` } as any
             });
         }
 
@@ -365,26 +355,3 @@ export async function finishOnboarding() {
     }
 }
 
-export async function getWhatsAppStatusOnboarding(shopId?: string) {
-    try {
-        const id = shopId || await getShopId().catch(() => null);
-        if (!id) return { success: false, error: "Shop ID bulunamadı." };
-        const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        return { success: true, ...await whatsappManager.getStatus(id) };
-    } catch (error) {
-        return { success: false, error: "WhatsApp servis bağlantısı kurulamadı." };
-    }
-}
-
-export async function reinitWhatsAppOnboarding(shopId?: string) {
-    try {
-        const id = shopId || await getShopId().catch(() => null);
-        if (!id) return { success: false, error: "Shop ID bulunamadı." };
-        const { whatsappManager } = await import("@/lib/whatsapp/whatsapp-manager");
-        await whatsappManager.logout(id);
-        await whatsappManager.initialize(id);
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: "WhatsApp yeniden başlatılamadı." };
-    }
-}
