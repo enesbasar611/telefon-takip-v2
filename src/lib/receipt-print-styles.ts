@@ -188,7 +188,7 @@ export function getReceiptPrintCSS(paperSize: string): string {
         .text-\\[13px\\] { font-size: 10pt !important; }
         .text-\\[14px\\] { font-size: 11pt !important; }
         
-        .leading-tight { line-height: 1.1; }
+        .leading-tight { line-height: 1.35; }
         .leading-none { line-height: 1; }
         .leading-relaxed { line-height: 1.4; }
         .tracking-widest { letter-spacing: 0.1em; }
@@ -272,24 +272,33 @@ export async function generateReceiptImage(
             backgroundColor: "#ffffff",
             logging: false,
             useCORS: true,
-            width: receiptRef.current.scrollWidth,
-            height: receiptRef.current.scrollHeight,
-            windowWidth: receiptRef.current.scrollWidth,
-            windowHeight: receiptRef.current.scrollHeight,
-            scrollX: 0,
-            scrollY: 0,
+            windowHeight: 8000, // Force large virtual viewport to prevent clipping long lists
             onclone: (clonedDoc) => {
                 const capturedEl = clonedDoc.querySelector('.receipt-capture-target') as HTMLElement;
                 if (capturedEl) {
+                    // Force the background to be white and remove any shadow/border that might interfere
+                    capturedEl.style.boxShadow = 'none';
+                    capturedEl.style.border = 'none';
+                    capturedEl.style.padding = '0';
+                    capturedEl.style.margin = '0';
+                    capturedEl.style.width = '384px'; // Max thermal width (approx 80mm)
+                    capturedEl.style.height = 'fit-content';
+                    capturedEl.style.display = 'block';
+
                     const el = capturedEl.querySelector('.font-mono') as HTMLElement;
                     if (el) el.style.fontFamily = "'Courier New', monospace";
 
-                    // Ensure the cloned element and its parents don't have height restrictions
+                    // CRITICAL: Ensure the cloned hierarchy allows full vertical growth
                     let current: HTMLElement | null = capturedEl;
-                    while (current && current.tagName !== 'BODY') {
+                    while (current && current.tagName !== 'HTML') {
                         current.style.maxHeight = 'none';
                         current.style.height = 'auto';
+                        current.style.minHeight = '0';
                         current.style.overflow = 'visible';
+                        // Add extra padding to the very bottom to prevent character clipping
+                        if (current === capturedEl) {
+                            current.style.paddingBottom = '30px';
+                        }
                         current = current.parentElement as HTMLElement | null;
                     }
                 }
@@ -323,6 +332,128 @@ export async function downloadReceiptImage(
     a.download = filename;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+/**
+ * Generates a professional table-based PDF for debt records.
+ */
+export async function generateDebtPDF(data: {
+    customerName: string;
+    customerPhone?: string;
+    shopName: string;
+    shopPhone?: string;
+    items: any[];
+    totals: {
+        try: number;
+        usd: number;
+        portfolioTRY: number;
+    };
+    filename: string;
+}) {
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+
+    const doc = new jsPDF();
+
+    // Set Header
+    doc.setFontSize(18);
+    doc.text(data.shopName, 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(data.shopPhone || "", 105, 20, { align: 'center' });
+
+    doc.line(20, 25, 190, 25);
+
+    // Customer Info
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("MÜŞTERİ:", 20, 35);
+    doc.setFont("helvetica", "normal");
+    doc.text(data.customerName, 50, 35);
+    if (data.customerPhone) {
+        doc.text(data.customerPhone, 50, 40);
+    }
+
+    doc.setFontSize(10);
+    doc.text(`Tarih: ${new Date().toLocaleDateString('tr-TR')}`, 190, 35, { align: 'right' });
+
+    // Table Data
+    const tableData = data.items.map(item => [
+        new Date(item.createdAt).toLocaleDateString('tr-TR'),
+        item.type === 'PAYMENT' ? '[TAHSİLAT] ' + (item.notes || '') : (item.notes || item.description || 'BORÇ'),
+        new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
+            style: 'currency',
+            currency: item.currency || 'TRY'
+        }).format(item.amount)
+    ]);
+
+    autoTable(doc, {
+        startY: 50,
+        head: [['Tarih', 'Açıklama', 'Tutar']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255 },
+        styles: { font: 'helvetica', fontSize: 9 },
+        columnStyles: {
+            2: { halign: 'right' }
+        }
+    });
+
+    // Totals
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOPLAM TL BORCU:", 140, finalY, { align: 'right' });
+    doc.text(new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(data.totals.try), 190, finalY, { align: 'right' });
+
+    if (data.totals.usd > 0) {
+        doc.text("TOPLAM USD BORCU:", 140, finalY + 7, { align: 'right' });
+        doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.totals.usd), 190, finalY + 7, { align: 'right' });
+    }
+
+    doc.setFontSize(14);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(130, finalY + 12, 65, 12, 'F');
+    doc.text("GENEL TOPLAM:", 140, finalY + 20, { align: 'right' });
+    doc.text(new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(data.totals.portfolioTRY), 190, finalY + 20, { align: 'right' });
+
+    doc.save(data.filename);
+}
+
+/**
+ * Generates a professional PDF from a DOM element.
+ * This is the preferred way to support Turkish characters and complex styling,
+ * as it leverages the browser's rendering engine via html2canvas.
+ */
+export async function generateProfessionalPDF(
+    element: HTMLElement,
+    filename: string
+): Promise<void> {
+    try {
+        const { jsPDF } = await import("jspdf");
+        const html2canvasModule = await import("html2canvas");
+        const html2canvas = html2canvasModule.default;
+
+        const canvas = await html2canvas(element, {
+            scale: 2, // 2x scale is enough for PDF quality and keeps file size reasonable
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff"
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+
+        const pdfWidth = 210; // A4 width in mm
+        const imgWidthPx = canvas.width;
+        const imgHeightPx = canvas.height;
+        const imgRatio = imgHeightPx / imgWidthPx;
+        const pdfHeight = Math.max(297, pdfWidth * imgRatio);
+
+        const pdf = new jsPDF("p", "mm", [pdfWidth, pdfHeight]);
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save(filename);
+    } catch (err) {
+        console.error("PDF generation failed", err);
+    }
 }
 
 /**

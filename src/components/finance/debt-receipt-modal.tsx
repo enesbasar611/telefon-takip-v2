@@ -13,6 +13,8 @@ import { getReceiptSettings } from "@/lib/actions/receipt-settings";
 import { ReceiptTemplate } from "@/components/common/receipt-template";
 import { ReceiptModalWrapper } from "@/components/common/receipt-modal-wrapper";
 import { cn } from "@/lib/utils";
+import { generateProfessionalPDF } from "@/lib/receipt-print-styles";
+import { Dialog } from "@/components/ui/dialog";
 
 interface DebtReceiptModalProps {
     open: boolean;
@@ -139,10 +141,10 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
                                 {groups[date].map((item: any, idx: number) => {
                                     const isPayment = item.type === 'PAYMENT';
                                     return (
-                                        <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
+                                        <div key={idx} className="flex justify-between items-start py-1.5 border-b border-black/5 last:border-0">
                                             <div className="flex flex-col flex-1 pr-4">
                                                 <span className={cn(
-                                                    "text-[9px] font-black uppercase leading-none truncate max-w-[160px] block",
+                                                    "text-[9px] font-black uppercase leading-tight block w-full break-words",
                                                     isPayment ? "text-slate-700" : "text-black"
                                                 )}>
                                                     {isPayment && "[TAHSİLAT] "}
@@ -202,6 +204,17 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
 export function DebtReceiptModal({ open, onClose, customer, debts, shopName, shopPhone, rates, initialShowPaid = false, logoUrl }: DebtReceiptModalProps) {
     const [showPaid, setShowPaid] = useState(initialShowPaid);
     const [settings, setSettings] = useState<any>(null);
+    const pdfRef = useRef<HTMLDivElement>(null);
+
+    const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
+    const totalTRY = unpaidDebts
+        .filter((d: any) => d.currency !== 'USD')
+        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
+    const totalUSD = unpaidDebts
+        .filter((d: any) => d.currency === 'USD')
+        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
+    const currentUsdRate = Number(rates?.usd) || 34.5;
+    const portfolioTotal = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
 
     useEffect(() => {
         if (open) {
@@ -209,50 +222,181 @@ export function DebtReceiptModal({ open, onClose, customer, debts, shopName, sho
         }
     }, [open]);
 
+    const handlePDF = async () => {
+        if (!pdfRef.current) return;
+        await generateProfessionalPDF(
+            pdfRef.current,
+            `ekstre-${customer.name.replace(/\s+/g, "-")}.pdf`
+        );
+    };
+
     const currentPaperSize = settings?.paperSize || "72mm";
 
+    const displayDebts = debts.filter(d => showPaid || !d.isPaid)
+        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
     return (
-        <ReceiptModalWrapper
-            open={open}
-            onClose={onClose}
-            title={customer.name}
-            subtitle="Hesap Ekstresi"
-            printTitle={`Borç Ekstresi - ${customer.name}`}
-            paperSize={currentPaperSize}
-            downloadFilename={`ekstre-${customer.name.replace(/\s+/g, "-")}.png`}
-            whatsappPhone={customer.phone}
-            icon={<Receipt className="h-4 w-4 text-foreground" />}
-            headerActions={
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPaid(!showPaid)}
-                    className={cn(
-                        "rounded-xl gap-2 text-[9px] font-black uppercase tracking-widest h-9 px-3 border",
-                        showPaid
-                            ? "bg-muted text-foreground hover:bg-muted/80 border-border/50"
-                            : "bg-muted/50 text-muted-foreground hover:bg-muted border-border/30"
-                    )}
-                >
-                    {showPaid ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    {showPaid ? "Gizle" : "Tümü"}
-                </Button>
-            }
-        >
-            {(receiptRef) => (
-                <div ref={receiptRef}>
-                    <ReceiptContent
-                        customer={customer}
-                        debts={debts}
-                        shopName={settings?.title || shopName}
-                        shopPhone={settings?.phone || shopPhone}
-                        rates={rates}
-                        showPaid={showPaid}
-                        logoUrl={settings?.logoUrl || logoUrl}
-                        settings={settings}
-                    />
+        <Dialog open={open} onOpenChange={onClose}>
+            {/* Hidden PDF Template for Capture */}
+            <div className="fixed -left-[4000px] top-0 pointer-events-none pr-4">
+                <div ref={pdfRef} className="w-[800px] p-12 bg-white text-black font-sans box-border" style={{ fontFamily: 'system-ui, sans-serif' }}>
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl font-black uppercase tracking-widest mb-2">{settings?.title || shopName || "DÜKKAN"}</h1>
+                        <p className="text-base font-bold text-slate-600">{settings?.phone || shopPhone}</p>
+                    </div>
+
+                    <div className="h-[2px] bg-black mb-10" />
+
+                    {/* Customer & Info */}
+                    <div className="flex justify-between items-start mb-10">
+                        <div>
+                            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">MÜŞTERİ BİLGİLERİ</h2>
+                            <p className="text-2xl font-black text-black leading-tight">{customer.name}</p>
+                            {customer.phone && <p className="text-lg font-bold text-slate-700 mt-1">{customer.phone}</p>}
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Döküm Tarihi</p>
+                            <p className="text-lg font-black">{format(new Date(), "dd.MM.yyyy")}</p>
+                        </div>
+                    </div>
+
+                    {/* Table / List */}
+                    <div className="space-y-8 mb-10">
+                        {Object.entries(
+                            displayDebts.reduce((acc: any, debt: any) => {
+                                const date = format(new Date(debt.createdAt), "dd.MM.yyyy");
+                                if (!acc[date]) acc[date] = [];
+                                acc[date].push(debt);
+                                return acc;
+                            }, {})
+                        ).map(([date, items]: [string, any], groupIdx) => (
+                            <div key={groupIdx} className="rounded-2xl border border-slate-200 overflow-hidden">
+                                <div className="bg-slate-900 px-6 py-3 flex justify-between items-center">
+                                    <span className="text-white text-[11px] font-black uppercase tracking-widest">{date}</span>
+                                    <span className="text-slate-400 text-[10px] font-bold">GÜNLÜK İŞLEMLER</span>
+                                </div>
+                                <table className="w-full border-collapse">
+                                    <tbody>
+                                        {items.map((item: any, idx: number) => {
+                                            const isPayment = item.type === 'PAYMENT';
+                                            return (
+                                                <tr key={idx} className={cn(
+                                                    "border-b border-slate-100 last:border-0",
+                                                    isPayment ? "bg-emerald-50/30" : "bg-white"
+                                                )}>
+                                                    <td className="py-5 px-6">
+                                                        <span className={cn(
+                                                            "text-sm font-black uppercase tracking-tight",
+                                                            isPayment ? "text-emerald-700" : "text-black"
+                                                        )}>
+                                                            {isPayment && "[TAHSİLAT] "}
+                                                            {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-5 px-6 text-right w-[180px]">
+                                                        <span className={cn(
+                                                            "text-base font-black tabular-nums",
+                                                            isPayment ? "text-emerald-700" : "text-black"
+                                                        )}>
+                                                            {isPayment ? '-' : ''}{new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                                style: 'currency',
+                                                                currency: item.currency || 'TRY'
+                                                            }).format(item.amount)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Totals Section */}
+                    <div className="flex justify-end pr-2">
+                        <div className="w-[320px] space-y-4">
+                            <div className="flex justify-between items-center px-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOPLAM TL BORCU:</span>
+                                <span className="text-lg font-black text-black">
+                                    {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalTRY)}
+                                </span>
+                            </div>
+
+                            {totalUSD > 0 && (
+                                <div className="flex justify-between items-center px-4">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOPLAM USD BORCU:</span>
+                                    <span className="text-lg font-black text-black">
+                                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUSD)}
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="h-[2px] bg-black my-4" />
+
+                            <div className="flex justify-between items-center p-6 bg-slate-900 rounded-2xl shadow-xl">
+                                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">GENEL TOPLAM:</span>
+                                <span className="text-3xl font-black text-white">
+                                    {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(portfolioTotal)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-24 text-center border-t border-slate-100 pt-8">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.4em] italic leading-relaxed">
+                            Bu belge sistem tarafından otomatik oluşturulmuştur.<br />
+                            {settings?.shopName || shopName} - {new Date().getFullYear()}
+                        </p>
+                    </div>
                 </div>
-            )}
-        </ReceiptModalWrapper>
+            </div>
+
+            <ReceiptModalWrapper
+                open={open}
+                onClose={onClose}
+                title={customer.name}
+                subtitle="Hesap Ekstresi"
+                printTitle={`Borç Ekstresi - ${customer.name}`}
+                paperSize={currentPaperSize}
+                downloadFilename={`ekstre-${customer.name.replace(/\s+/g, "-")}.png`}
+                whatsappPhone={customer.phone}
+                onPDF={handlePDF}
+                icon={<Receipt className="h-4 w-4 text-foreground" />}
+                headerActions={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPaid(!showPaid)}
+                        className={cn(
+                            "rounded-xl gap-2 text-[9px] font-black uppercase tracking-widest h-9 px-3 border",
+                            showPaid
+                                ? "bg-muted text-foreground hover:bg-muted/80 border-border/50"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted border-border/30"
+                        )}
+                    >
+                        {showPaid ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        {showPaid ? "Gizle" : "Tümü"}
+                    </Button>
+                }
+            >
+                {(receiptRef) => (
+                    <div ref={receiptRef}>
+                        <ReceiptContent
+                            customer={customer}
+                            debts={debts}
+                            shopName={settings?.title || shopName}
+                            shopPhone={settings?.phone || shopPhone}
+                            rates={rates}
+                            showPaid={showPaid}
+                            logoUrl={settings?.logoUrl || logoUrl}
+                            settings={settings}
+                        />
+                    </div>
+                )}
+            </ReceiptModalWrapper>
+        </Dialog>
     );
 }

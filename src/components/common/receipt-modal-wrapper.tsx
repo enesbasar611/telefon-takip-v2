@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, ReactNode, RefObject } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Printer, MessageCircle } from "lucide-react";
+import { Download, Printer, MessageCircle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { printReceipt, downloadReceiptImage, generateReceiptImage, getReceiptWidthClass } from "@/lib/receipt-print-styles";
 
@@ -25,6 +25,8 @@ interface ReceiptModalWrapperProps {
     children: (receiptRef: RefObject<HTMLDivElement>, widthClass: string) => ReactNode;
     /** Icon to show in the header */
     icon?: ReactNode;
+    /** Action for PDF download */
+    onPDF?: () => void;
 }
 
 export function ReceiptModalWrapper({
@@ -40,6 +42,7 @@ export function ReceiptModalWrapper({
     headerActions,
     children,
     icon,
+    onPDF
 }: ReceiptModalWrapperProps) {
     const receiptRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -139,10 +142,20 @@ export function ReceiptModalWrapper({
                         variant="outline"
                         onClick={handleWhatsApp}
                         disabled={isGenerating}
-                        className="flex-1 h-12 rounded-xl gap-2 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all border-border/50 text-foreground hover:bg-muted"
+                        className="flex-1 h-12 rounded-xl gap-2 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all border-border/50 text-[#25D366] hover:bg-[#25D366]/10"
                     >
                         <MessageCircle className="h-4 w-4" /> WhatsApp
                     </Button>
+                    {onPDF && (
+                        <Button
+                            variant="outline"
+                            onClick={onPDF}
+                            disabled={isGenerating}
+                            className="flex-1 h-12 rounded-xl gap-2 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all border-border/50 text-[#E11D48] hover:bg-rose-500/10"
+                        >
+                            <FileText className="h-4 w-4" /> Tablo (PDF)
+                        </Button>
+                    )}
                     <Button
                         onClick={handlePrint}
                         disabled={isGenerating}

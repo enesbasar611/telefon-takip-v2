@@ -48,13 +48,15 @@ export const ReceiptTemplate = ({
                         <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-[2]" />
                     </div>
                 )}
-                <h3 className="font-black text-base uppercase text-black leading-none tracking-tight">
+                <h3 className="font-black text-base uppercase text-black leading-tight tracking-tight">
                     {settings?.title || "TEKNİK SERVİS"}
                 </h3>
                 {subtitle && (
-                    <p className="text-[8px] font-black uppercase text-black leading-none border border-black inline-block px-1.5 py-0.5 mt-1.5">
-                        {subtitle}
-                    </p>
+                    <div className="flex justify-center mt-2 mb-1">
+                        <p className="text-[8px] font-black uppercase text-black leading-tight border border-black inline-block px-2 py-0.5">
+                            {subtitle}
+                        </p>
+                    </div>
                 )}
 
                 <div className="mt-1 text-[8px] font-black text-black leading-tight">
