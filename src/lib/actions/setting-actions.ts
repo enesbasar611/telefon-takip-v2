@@ -142,6 +142,17 @@ export async function updateShop(data: any) {
       },
     });
 
+    // Fiş Ayarları (ReceiptSettings) ile senkronize et
+    // Dükkan ismi, telefon veya adres değiştiyse tüm fiş tiplerine yansıt
+    await prisma.receiptSettings.updateMany({
+      where: { shopId },
+      data: {
+        ...(data.name !== undefined && { title: data.name }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.address !== undefined && { address: data.address }),
+      }
+    });
+
     revalidatePath("/");
     revalidatePath("/ayarlar");
     revalidatePath("/admin/edm");
@@ -149,6 +160,7 @@ export async function updateShop(data: any) {
     revalidatePath("/ayarlar");
     revalidateTag("shop");
     revalidateTag(`shop-${shopId}`);
+    revalidateTag("receipt-settings");
     return { success: true };
   } catch (error) {
     console.error("updateShop error:", error);

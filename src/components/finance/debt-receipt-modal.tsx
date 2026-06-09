@@ -98,7 +98,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             subtitle={settings?.subtitle || "HESAP EKSTRESİ"}
         >
             {/* Customer Info */}
-            <div className="mb-4 border-b-[1.5px] border-black pb-3">
+            <div className="mb-2 border-b-[1.5px] border-black pb-2">
                 <div className="flex flex-col gap-1">
                     <span className="text-[9px] font-black text-black">MÜŞTERİ</span>
                     <span className="text-[13px] font-black uppercase text-black">{customer?.name}</span>
@@ -109,7 +109,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             </div>
 
             {/* List */}
-            <div className="space-y-4 mb-6 min-h-[50px]">
+            <div className="space-y-2 mb-4 min-h-[50px]">
                 {sortedDates.map((date) => {
                     const dailyTRY = groups[date]
                         .filter((item: any) => item.type !== 'PAYMENT' && item.currency !== 'USD')
@@ -167,7 +167,7 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
             </div>
 
             {/* Final Totals */}
-            <div className="border-t-[1.5px] border-black pt-4 space-y-2">
+            <div className="border-t-[1.5px] border-black pt-2 space-y-1">
                 <div className="flex justify-between items-center py-1">
                     <span className="text-[10px] font-black text-black uppercase">TL BORCU:</span>
                     <span className="text-[12px] font-black text-black">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalTRY)}</span>

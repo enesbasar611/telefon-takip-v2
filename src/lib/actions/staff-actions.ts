@@ -467,7 +467,12 @@ export async function getStaffLogs(page = 1, limit = 10, search?: string, date?:
 
         // Apply search filter on combined logs
         const filtered = search
-            ? combined.filter(log => log.user?.name?.toLowerCase().includes(search.toLowerCase()))
+            ? combined.filter(log => {
+                const searchLower = search.toLowerCase();
+                const userName = log.user?.name?.toLowerCase() || "";
+                const message = log.message?.toLowerCase() || "";
+                return userName.includes(searchLower) || message.includes(searchLower);
+            })
             : combined;
 
         const total = filtered.length;

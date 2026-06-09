@@ -42,14 +42,14 @@ export const ReceiptTemplate = ({
             )}
 
             {/* Header */}
-            <div className="text-center border-b-[1.5px] border-black pb-2 mb-3">
+            <div className="text-center border-b-[1.5px] border-black pb-1 mb-2">
                 {settings?.logoUrl && (
                     <div className="mb-2 flex justify-center">
                         <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-[2]" />
                     </div>
                 )}
                 <h3 className="font-black text-base uppercase text-black leading-none tracking-tight">
-                    {settings?.title || "FİRMA ÜNVANI"}
+                    {settings?.title || "TEKNİK SERVİS"}
                 </h3>
                 {subtitle && (
                     <p className="text-[8px] font-black uppercase text-black leading-none border border-black inline-block px-1.5 py-0.5 mt-1.5">
@@ -57,7 +57,7 @@ export const ReceiptTemplate = ({
                     </p>
                 )}
 
-                <div className="mt-1.5 text-[8px] font-black text-black leading-tight">
+                <div className="mt-1 text-[8px] font-black text-black leading-tight">
                     <p>TEL: {settings?.phone || "05xx xxx xx xx"}</p>
                     {settings?.website && <p>{settings.website}</p>}
                     {settings?.address && <p className="px-1">{settings.address}</p>}

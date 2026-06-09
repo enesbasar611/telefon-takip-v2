@@ -299,10 +299,10 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                                         localSettings.paperSize === "80mm" ? "w-[80mm]" : "w-[72mm]"
                                 )}
                             >
-                                <div className="p-6 text-center border-b-[1.5px] border-black pb-4 mb-4">
-                                    <h3 className="font-black text-lg uppercase leading-tight tracking-tight">{localSettings.title || "FİRMA ÜNVANI"}</h3>
+                                <div className="p-6 text-center border-b-[1.5px] border-black pb-1 mb-2">
+                                    <h3 className="font-black text-lg uppercase leading-tight tracking-tight">{localSettings.title || "TEKNİK SERVİS"}</h3>
                                     <p className="text-[9px] font-black uppercase inline-block border border-black px-2 py-0.5 mt-2 leading-tight">{localSettings.subtitle || "FİŞ ALT BAŞLIĞI"}</p>
-                                    <div className="mt-3 text-[9px] font-bold space-y-0.5">
+                                    <div className="mt-1 text-[9px] font-bold space-y-0.5">
                                         <p>TEL: {localSettings.phone || "05xx xxx xx xx"}</p>
                                         <p>{localSettings.website || "www.site.com"}</p>
                                         {localSettings.address && <p className="px-4">{localSettings.address}</p>}

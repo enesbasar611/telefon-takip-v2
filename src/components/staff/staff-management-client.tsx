@@ -1091,7 +1091,7 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                         </div>
                     )}
                     <div className="divide-y divide-border/5">
-                        {logs.map((log: any, i: number) => {
+                        {logs.length > 0 ? logs.map((log: any, i: number) => {
                             const isAudit = log.type === 'audit';
                             const actionColor =
                                 isAudit && log.action === 'DELETE' ? "bg-red-500/10 text-red-500" :
@@ -1149,16 +1149,20 @@ export function StaffManagementClient({ staff: initialStaff, logs: initialLogs, 
                                     </div>
                                 </div>
                             );
-                        })}
-                    </div>
-                    {!isLogsLoading && logs.length === 0 && (
-                        <div className="p-32 text-center space-y-5">
-                            <div className="h-20 w-20 bg-slate-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto">
-                                <Activity className="w-10 h-10 text-muted-foreground/30" />
+                        }) : (
+                            <div className="py-24 text-center space-y-4">
+                                <div className="h-20 w-20 bg-slate-100 dark:bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto opacity-40">
+                                    <Clock className="w-10 h-10 text-muted-foreground" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-black text-foreground uppercase tracking-wider">KAYIT BULUNAMADI</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed">
+                                        {logSearch ? `"${logSearch}" araması için sonuç bulunamadı` : "Seçili tarih için herhangi bir işlem kaydı bulunmuyor"}
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em]">Herhangi bir işlem kaydı bulunamadı</p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {logTotalPages > 1 && (

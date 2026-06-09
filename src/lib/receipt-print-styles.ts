@@ -260,6 +260,10 @@ export async function generateReceiptImage(
     receiptRef: React.RefObject<HTMLDivElement | null>
 ): Promise<Blob | null> {
     if (!receiptRef.current) return null;
+
+    // Add temporary class for targeting in onclone
+    receiptRef.current.classList.add('receipt-capture-target');
+
     try {
         const html2canvasModule = await import("html2canvas");
         const html2canvas = html2canvasModule.default;
@@ -268,15 +272,37 @@ export async function generateReceiptImage(
             backgroundColor: "#ffffff",
             logging: false,
             useCORS: true,
+            width: receiptRef.current.scrollWidth,
+            height: receiptRef.current.scrollHeight,
+            windowWidth: receiptRef.current.scrollWidth,
+            windowHeight: receiptRef.current.scrollHeight,
+            scrollX: 0,
+            scrollY: 0,
             onclone: (clonedDoc) => {
-                const el = clonedDoc.querySelector('.font-mono') as HTMLElement;
-                if (el) el.style.fontFamily = "'Courier New', monospace";
+                const capturedEl = clonedDoc.querySelector('.receipt-capture-target') as HTMLElement;
+                if (capturedEl) {
+                    const el = capturedEl.querySelector('.font-mono') as HTMLElement;
+                    if (el) el.style.fontFamily = "'Courier New', monospace";
+
+                    // Ensure the cloned element and its parents don't have height restrictions
+                    let current: HTMLElement | null = capturedEl;
+                    while (current && current.tagName !== 'BODY') {
+                        current.style.maxHeight = 'none';
+                        current.style.height = 'auto';
+                        current.style.overflow = 'visible';
+                        current = current.parentElement as HTMLElement | null;
+                    }
+                }
             }
         });
+        receiptRef.current.classList.remove('receipt-capture-target');
         return new Promise<Blob | null>((resolve) => {
             canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
         });
     } catch (err) {
+        if (receiptRef.current) {
+            receiptRef.current.classList.remove('receipt-capture-target');
+        }
         console.error("Receipt image generation failed", err);
         return null;
     }

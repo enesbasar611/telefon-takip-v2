@@ -2,7 +2,7 @@
 FROM node:20-slim AS deps
 WORKDIR /app
 
-# Required system packages (basic only)
+# Required system packages for building
 RUN apt-get update && apt-get install -y openssl python3 make g++ --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
@@ -16,13 +16,18 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM node:20-slim AS builder
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
+# Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
-# Prisma Client generation
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
+COPY prisma ./prisma/
+
+# Prisma Client generation (cached if prisma/schema.prisma doesn't change)
 RUN npx prisma generate
+
+# Now copy the rest of the source code
+COPY . .
 
 # Environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -39,7 +44,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
     ADMIN_EMAIL="admin@example.com" \
     npm run build
 
-# Stage 3: Production runner (Ultra-lightweight)
+# Stage 3: Production runner
 FROM node:20-slim AS runner
 WORKDIR /app
 
