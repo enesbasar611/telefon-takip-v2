@@ -25,7 +25,7 @@ interface ServiceReceiptModalProps {
     ticket: any;
 }
 
-const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange }: any) => {
+const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange, shopName, shopPhone, shopAddress }: any) => {
     if (!ticket) return null;
 
     return (
@@ -33,6 +33,9 @@ const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange }: an
             settings={settings}
             subtitle={settings?.subtitle || "TEKNİK SERVİS FİŞİ"}
             date={ticket.createdAt ? new Date(ticket.createdAt) : undefined}
+            shopName={shopName}
+            shopPhone={shopPhone}
+            shopAddress={shopAddress}
         >
             {/* Customer Info */}
             <div className="mb-4 border-b-[1.5px] border-black pb-3">
@@ -111,6 +114,7 @@ const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange }: an
 
 export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptModalProps) {
     const [settings, setSettings] = useState<any>(null);
+    const [shop, setShop] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editableTicket, setEditableTicket] = useState(ticket);
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
@@ -118,6 +122,7 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
     useEffect(() => {
         if (isOpen) {
             getReceiptSettings("service").then(setSettings);
+            getShop().then(setShop);
             setEditableTicket(ticket);
             setIsEditing(false);
         }
@@ -166,6 +171,9 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                             settings={settings}
                             isEditing={isEditing}
                             onCostChange={handleCostChange}
+                            shopName={shop?.name}
+                            shopPhone={shop?.phone}
+                            shopAddress={shop?.address}
                         />
                     </div>
                 )}

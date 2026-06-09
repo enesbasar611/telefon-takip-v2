@@ -12,6 +12,9 @@ interface ReceiptTemplateProps {
     showBarcode?: boolean;
     barcodeValue?: string;
     paperSize?: string;
+    shopName?: string;
+    shopPhone?: string;
+    shopAddress?: string;
 }
 
 export const ReceiptTemplate = ({
@@ -21,6 +24,9 @@ export const ReceiptTemplate = ({
     showDate = true,
     date = new Date(),
     paperSize,
+    shopName,
+    shopPhone,
+    shopAddress,
 }: ReceiptTemplateProps) => {
     const paperSizeVal = paperSize || settings?.paperSize || "72mm";
 
@@ -49,7 +55,7 @@ export const ReceiptTemplate = ({
                     </div>
                 )}
                 <h3 className="font-black text-base uppercase text-black leading-tight tracking-tight">
-                    {settings?.title || "TEKNİK SERVİS"}
+                    {settings?.title || shopName || "TEKNİK SERVİS"}
                 </h3>
                 {subtitle && (
                     <div className="flex justify-center mt-2 mb-1">
@@ -60,9 +66,9 @@ export const ReceiptTemplate = ({
                 )}
 
                 <div className="mt-1 text-[8px] font-black text-black leading-tight">
-                    <p>TEL: {settings?.phone || "05xx xxx xx xx"}</p>
+                    <p>TEL: {settings?.phone || shopPhone || "05xx xxx xx xx"}</p>
                     {settings?.website && <p>{settings.website}</p>}
-                    {settings?.address && <p className="px-1">{settings.address}</p>}
+                    {(settings?.address || shopAddress) && <p className="px-1">{settings?.address || shopAddress}</p>}
                 </div>
             </div>
 

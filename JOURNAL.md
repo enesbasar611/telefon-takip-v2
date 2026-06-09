@@ -2,7 +2,7 @@
 
 ## Genel Proje Durumu
 
-- Tarih: 2026-05-23
+- Tarih: 2026-06-09
 - Mimari durum: Proje V2 mimarisinde ilerliyor. EDM BiliÅŸim e-Fatura REST API tam entegrasyonu (Faz 1-6) tamamlandi ve commitlendi.
 - Graphify durumu: `graphify-out/GRAPH_REPORT.md` guncel kabul ediliyor. Rapor `84c324a2` commitinden uretilmis; mevcut HEAD `83ff6703`.
 - Graphify ozeti: 453 dosya, 2056 node, 7225 edge, 156 community. En kritik ortak baglanti noktalarindan bazilari `getShopId()`, `cn()`, `Button`. EDM ile ilgili onemli topluluklar: Community 11 (fatura XML builder, EDM tipleri), Community 13 (ayarlar/settings), Community 46 (cron, server), Community 55 (fatura HTML/PDF uretimi), Community 69 (middleware/auth), Community 75 (Prisma), Community 93 (UI context), Community 94 (JWT/Session/User).
@@ -301,3 +301,6 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - Ölü stok ürünlerinin aktif eksik adetlerinden (Tümü, Kritik, Bitenler) izole edilmesi sağlandı.
 - **Dosyalar**: `src/components/finance/veresiye-client.tsx`, `src/components/courier/courier-dashboard-client.tsx`, `src/lib/actions/shortage-actions.ts`.
 
+- [x] 2026-06-09: Veresiye fiş (PNG) kesilme sorunları giderildi. Dosyalar: `src/lib/receipt-print-styles.ts`, `src/components/finance/debt-receipt-modal.tsx`. Neden: Uzun ürün isimleri ve uzun listeler görselde yarım çıkıyordu; ürün isimlerindeki `truncate` kaldırıldı, yakalama (capture) sırasında tüm yükseklik kısıtlamaları devre dışı bırakıldı ve `windowHeight` artırıldı.
+- [x] 2026-06-09: Profesyonel PDF dökümü (Tablo) ekstre özelliği iyileştirildi. Dosyalar: `src/lib/receipt-print-styles.ts`, `src/components/finance/debt-receipt-modal.tsx`. Neden: Müşterilerin geçmiş alımlarını daha net görmesi için tablo dökümü tarihlere göre gruplandırıldı, uzun listeler için "Tek Sayfa PDF" (Long PDF) desteği getirildi ve "Ödenenleri Gizle" seçeneğine tam uyum sağlandı.
+- [x] 2026-06-09: Fiş modalı butonu ve WhatsApp ikon tasarımı güncellendi. Dosya: `src/components/common/receipt-modal-wrapper.tsx`. Neden: WhatsApp butonu markayla uyumlu yeşil (`#25D366`) renge çekildi, "Tablo (PDF)" butonu eklendi ve tüm modal butonları daha belirgin ve modern bir yapıya kavuşturuldu.

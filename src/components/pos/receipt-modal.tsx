@@ -16,7 +16,7 @@ interface ReceiptModalProps {
   sale: any;
 }
 
-const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency }: any) => {
+const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, shopName, shopPhone, shopAddress }: any) => {
   if (!sale) return null;
 
   return (
@@ -24,6 +24,9 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency }: 
       settings={settings}
       subtitle={settings?.subtitle || "SATIŞ FİŞİ"}
       date={sale.createdAt ? new Date(sale.createdAt) : undefined}
+      shopName={shopName}
+      shopPhone={shopPhone}
+      shopAddress={shopAddress}
     >
       {/* Customer Info */}
       <div className="mb-4 border-b-[1.5px] border-black pb-3">
@@ -87,6 +90,7 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency }: 
 
 export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
   const [settings, setSettings] = useState<any>(null);
+  const [shop, setShop] = useState<any>(null);
   const [defaultCurrency, setDefaultCurrency] = useState<string>("TRY");
 
   useEffect(() => {
@@ -97,6 +101,7 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
           const curr = s.find((a: any) => a.key === "defaultCurrency")?.value || "TRY";
           setDefaultCurrency(curr);
         });
+        m.getShop().then(setShop);
       });
     }
   }, [isOpen]);
@@ -131,6 +136,9 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             settings={settings}
             currencySymbol={currencySymbol}
             defaultCurrency={defaultCurrency}
+            shopName={shop?.name}
+            shopPhone={shop?.phone}
+            shopAddress={shop?.address}
           />
         </div>
       )}

@@ -98,6 +98,8 @@ const ReceiptContent = ({ customer, debts, shopName, shopPhone, rates, showPaid,
         <ReceiptTemplate
             settings={settings}
             subtitle={settings?.subtitle || "HESAP EKSTRESİ"}
+            shopName={shopName}
+            shopPhone={shopPhone}
         >
             {/* Customer Info */}
             <div className="mb-2 border-b-[1.5px] border-black pb-2">
