@@ -13,9 +13,12 @@ interface RevealFinancialProps {
 export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFinancialProps) {
   const { isFinancialVisible } = useUI();
 
+  const hasSymbol = typeof amount === "string" && (amount.startsWith('₺') || amount.startsWith('$'));
+  const finalPrefix = hasSymbol ? (amount as string)[0] : prefix;
+
   const formattedAmount = typeof amount === "number"
     ? formatCurrency(amount)
-    : amount.replace('₺', '').trim();
+    : amount.replace(/[₺$]/g, '').trim();
 
   return (
     <div
@@ -25,7 +28,7 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
         "transition-all duration-300 ",
         !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
-        {prefix}{formattedAmount}
+        {finalPrefix}{formattedAmount}
       </span>
       {!isFinancialVisible && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

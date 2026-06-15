@@ -62,7 +62,7 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <span className="text-foreground font-semibold uppercase">Dolar</span>
             </div>
             <span className="text-foreground font-extrabold tracking-tight">
-              {mounted ? `₺${rates.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+              {mounted ? `₺${rates.usd?.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) || '0.00'}` : '₺--'}
             </span>
           </button>
         }
@@ -78,7 +78,7 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <span className="text-foreground font-semibold uppercase">Euro</span>
             </div>
             <span className="text-foreground font-extrabold tracking-tight">
-              {mounted ? `₺${rates.eur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+              {mounted ? `₺${rates.eur?.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) || '0.00'}` : '₺--'}
             </span>
           </button>
         }
@@ -94,7 +94,7 @@ export function CurrencyDisplay({ mobile = false }: { mobile?: boolean }) {
               <span className="text-foreground font-semibold uppercase">Altın</span>
             </div>
             <span className="text-foreground font-extrabold tracking-tight">
-              {mounted ? `₺${rates.ga.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '₺--'}
+              {mounted ? `₺${rates.ga?.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) || '0.00'}` : '₺--'}
             </span>
           </button>
         }

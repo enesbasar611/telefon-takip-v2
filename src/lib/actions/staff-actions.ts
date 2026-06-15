@@ -9,23 +9,70 @@ import bcrypt from "bcryptjs";
 import { getDefaultStaffPermissions } from "@/lib/staff-permissions";
 import { recordAuditLog } from "./audit-actions";
 
+/**
+ * Checks if a user has an active leave today.
+ * @param userId Unique identifier of the staff
+ * @returns Object containing active status and current leave details
+ */
+export async function checkActiveLeave(userId: string) {
+    try {
+        const shopId = await getShopId();
+        const now = new Date();
+
+        // Find if there is any overlapping leave for today
+        const activeLeave = await prisma.leaveRequest.findFirst({
+            where: {
+                userId,
+                shopId,
+                startDate: { lte: now },
+                endDate: { gte: now }
+            }
+        });
+
+        return {
+            isLeave: !!activeLeave,
+            leave: activeLeave ? serializePrisma(activeLeave) : null
+        };
+    } catch (error) {
+        console.error("Error checking active leave:", error);
+        return { isLeave: false, leave: null };
+    }
+}
+
 
 export const getStaff = async (shopId?: string) => {
     const finalShopId = shopId || await getShopId();
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
     try {
         const staff = await prisma.user.findMany({
             where: { shopId: finalShopId },
             include: {
                 assignedTickets: {
-                    where: { status: "DELIVERED", shopId: finalShopId }
+                    where: {
+                        status: "DELIVERED",
+                        shopId: finalShopId,
+                        updatedAt: { gte: firstDayOfMonth }
+                    }
                 },
                 sales: {
-                    where: { shopId: finalShopId }
+                    where: {
+                        shopId: finalShopId,
+                        createdAt: { gte: firstDayOfMonth }
+                    }
+                },
+                staffCommissions: {
+                    where: {
+                        shopId: finalShopId,
+                        status: "APPROVED",
+                        createdAt: { gte: firstDayOfMonth }
+                    }
                 },
                 shortageTasks: {
                     where: { shopId: finalShopId }
                 },
-                leaves: {
+                leaveRequests: {
                     where: { shopId: finalShopId }
                 }
             },
@@ -82,7 +129,10 @@ export async function getProfile() {
                         companyName: true,
                         companyCity: true,
                         companyDistrict: true,
-                    }
+                        website: true,
+                        logoUrl: true,
+                        enabledModules: true,
+                    } as any
                 },
                 ...(shopId ? {
                     assignedTickets: {
@@ -98,12 +148,6 @@ export async function getProfile() {
                 } : {})
             }
         });
-
-        console.log(`DEBUG: [getProfile] User ID: ${userId}, hasLayout: ${!!user?.dashboardLayout}`);
-        if (user?.dashboardLayout) {
-            const layout = user.dashboardLayout as any;
-            console.log(`DEBUG: [getProfile] Layout length: ${Array.isArray(layout) ? layout.length : 'unknown'}`);
-        }
 
         if (!user) return null;
         return serializePrisma({
@@ -131,6 +175,9 @@ export async function createStaff(data: {
     canFinance: boolean;
     canDelete: boolean;
     canEdit: boolean;
+    baseSalary?: number;
+    salaryCurrency?: string;
+    serviceCommissionAmount?: number;
 }) {
     try {
         const shopId = await getShopId();
@@ -157,7 +204,7 @@ export async function createStaff(data: {
 
         const defaults = template || getDefaultStaffPermissions(data.role);
 
-        const user = await prisma.user.create({
+        const user = await (prisma.user as any).create({
             data: {
                 name: formatName(data.name),
                 surname: data.surname ? formatName(data.surname) : undefined,
@@ -166,13 +213,16 @@ export async function createStaff(data: {
                 image: data.image,
                 role: data.role,
                 password: hashedPassword,
-                commissionRate: data.commissionRate,
+                commissionRate: 0,
                 canSell: data.canSell ?? defaults.canSell,
                 canService: data.canService ?? defaults.canService,
                 canStock: data.canStock ?? defaults.canStock,
                 canFinance: data.canFinance ?? defaults.canFinance,
                 canDelete: data.canDelete ?? defaults.canDelete,
                 canEdit: data.canEdit ?? defaults.canEdit,
+                baseSalary: data.baseSalary || 0,
+                salaryCurrency: data.salaryCurrency || "TRY",
+                serviceCommissionAmount: data.serviceCommissionAmount || 0,
                 isApproved: true, // Staff created by managers/admins are auto-approved
                 shopId
             }
@@ -214,7 +264,12 @@ export async function updateStaff(userId: string, data: any) {
             return { success: false, error: "Süper Admin yetkisi veremezsiniz." };
         }
 
-        const updateData: any = { ...data };
+        const updateData: any = {
+            ...data,
+            baseSalary: data.baseSalary ? Number(data.baseSalary) : undefined,
+            serviceCommissionAmount: data.serviceCommissionAmount !== undefined ? Number(data.serviceCommissionAmount) : undefined,
+            // commissionRate removed
+        };
         if (data.name) updateData.name = formatName(data.name);
         if (data.surname) updateData.surname = formatName(data.surname);
         if (data.phone) updateData.phone = data.phone.replace(/\D/g, '');
@@ -226,7 +281,7 @@ export async function updateStaff(userId: string, data: any) {
             delete updateData.password;
         }
 
-        await prisma.user.update({
+        await (prisma.user as any).update({
             where: { id: userId, shopId },
             data: updateData
         });
@@ -299,6 +354,11 @@ export async function checkStaffDeletion(userId: string) {
 export async function deleteStaff(userId: string, options?: {
     action: 'TRANSFER' | 'DELETE_ALL' | 'DETACH';
     transferToId?: string;
+    salaryPayment?: {
+        accountId: string;
+        amount: number;
+        description: string;
+    }
 }) {
     try {
         const shopId = await getShopId();
@@ -344,6 +404,65 @@ export async function deleteStaff(userId: string, options?: {
                     });
                 }
             }
+
+            // Optional Salary Payment
+            if (options?.salaryPayment && options.salaryPayment.amount > 0) {
+                const account = await tx.financeAccount.findUnique({
+                    where: { id: options.salaryPayment.accountId }
+                });
+
+                if (account) {
+                    const amount = options.salaryPayment.amount;
+                    const newBalance = Number(account.balance) - amount;
+
+                    await tx.transaction.create({
+                        data: {
+                            type: "EXPENSE",
+                            amount,
+                            description: options.salaryPayment.description || `${targetUser.name} - Final Maaş Ödemesi`,
+                            category: "MAAŞ",
+                            paymentMethod: account.type === "CASH" ? "CASH" : "TRANSFER",
+                            financeAccountId: account.id,
+                            userId: session!.user.id,
+                            shopId,
+                            runningBalance: newBalance
+                        }
+                    });
+
+                    await tx.financeAccount.update({
+                        where: { id: account.id },
+                        data: {
+                            balance: newBalance,
+                            availableBalance: account.type === "CREDIT_CARD" ? (Number(account.limit || 0) - newBalance) : newBalance
+                        }
+                    });
+                }
+            }
+
+            // Clean up strictly related user records before deleting the user
+            await tx.staffCommission.deleteMany({ where: { userId, shopId } });
+            await tx.staffExpense.deleteMany({ where: { userId, shopId } });
+            await tx.monthlyStaffArchive.deleteMany({ where: { userId, shopId } });
+
+            // Ensure leaves are safely removed (though they might have cascade)
+            await tx.leaveRequest.deleteMany({ where: { userId, shopId } });
+
+            // Any commissions this user approved shouldn't prevent deletion - setting to null if it crashes later we might need to cascade there too but typically it's optional relation
+            // @ts-ignore - Prisma types might be lagging due to EPERM lock on windows generate
+            await tx.staffCommission.updateMany({
+                // @ts-ignore
+                where: { approvedById: userId, shopId },
+                // @ts-ignore
+                data: { approvedById: null }
+            });
+
+            // @ts-ignore
+            await tx.leaveRequest.updateMany({
+                // @ts-ignore
+                where: { approvedById: userId, shopId },
+                // @ts-ignore
+                data: { approvedById: null }
+            });
 
             await tx.user.delete({ where: { id: userId, shopId } });
         });
@@ -639,16 +758,16 @@ export async function updateDashboardLayout(layout: any) {
     }
 }
 
-export async function assignStaffLeave(data: {
+export async function assignLeave(data: {
     userId: string,
     startDate: Date,
     endDate: Date,
-    type: string,
+    type: "ANNUAL" | "DAILY" | "PAID" | "UNPAID",
     note?: string
 }) {
     try {
         const shopId = await getShopId();
-        await prisma.userLeave.create({
+        await prisma.leaveRequest.create({
             data: {
                 userId: data.userId,
                 shopId,
@@ -667,16 +786,85 @@ export async function assignStaffLeave(data: {
     }
 }
 
-export async function deleteStaffLeave(leaveId: string) {
+export async function deleteLeave(leaveId: string) {
     try {
         const shopId = await getShopId();
-        await prisma.userLeave.delete({
+        await prisma.leaveRequest.delete({
             where: { id: leaveId, shopId }
         });
-        revalidatePath("/personel");
+        revalidatePath("/");
         revalidateTag(`staff-${shopId}`);
         return { success: true };
     } catch (error) {
         return { success: false, error: "İzin silinemedi." };
+    }
+}
+
+export async function getMonthlyStaffReport(month?: number, year?: number) {
+    try {
+        const shopId = await getShopId();
+        const targetDate = month && year ? new Date(year, month - 1, 1) : new Date();
+        const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+        const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        const staff = await prisma.user.findMany({
+            where: { shopId },
+            include: {
+                leaveRequests: {
+                    where: {
+                        shopId,
+                        OR: [
+                            { startDate: { lte: endOfMonth }, endDate: { gte: startOfMonth } }
+                        ]
+                    }
+                },
+                sales: {
+                    where: {
+                        shopId,
+                        createdAt: { gte: startOfMonth, lte: endOfMonth }
+                    }
+                },
+                assignedTickets: {
+                    where: {
+                        shopId,
+                        status: "DELIVERED",
+                        createdAt: { gte: startOfMonth, lte: endOfMonth }
+                    }
+                }
+            }
+        });
+
+        const report = staff.map(user => {
+            // Calculate leave days in this month
+            let leaveDays = 0;
+            user.leaveRequests.forEach(leave => {
+                const start = leave.startDate < startOfMonth ? startOfMonth : leave.startDate;
+                const end = leave.endDate > endOfMonth ? endOfMonth : leave.endDate;
+                const diffTime = Math.max(0, end.getTime() - start.getTime());
+                leaveDays += Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            });
+
+            // Work activity counts
+            const salesCount = user.sales.length;
+            const serviceCount = user.assignedTickets.length;
+            const totalRevenue = user.sales.reduce((sum, s) => sum + Number(s.finalAmount || 0), 0) +
+                user.assignedTickets.reduce((sum, t) => sum + Number(t.actualCost || 0), 0);
+
+            return {
+                userId: user.id,
+                name: `${user.name} ${user.surname || ""}`.trim(),
+                role: user.role,
+                leaveDays,
+                salesCount,
+                serviceCount,
+                totalRevenue,
+                commission: totalRevenue * (Number(user.commissionRate || 0) / 100)
+            };
+        });
+
+        return { success: true, report: serializePrisma(report) };
+    } catch (error) {
+        console.error("Error generating staff report:", error);
+        return { success: false, error: "Rapor oluşturulamadı." };
     }
 }

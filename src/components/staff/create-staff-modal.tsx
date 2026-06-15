@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -20,12 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus, Image as ImageIcon } from "lucide-react";
-import { createStaff, getRoleTemplates } from "@/lib/actions/staff-actions";
-import { toast } from "sonner";
+import { Plus, Loader2, Camera, X, Shield, MapPin, UserPlus, Image as ImageIcon, Settings2, Edit2 } from "lucide-react";
+import { createStaff, updateStaff, getRoleTemplates } from "@/lib/actions/staff-actions";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { getDefaultStaffPermissions, STAFF_PERMISSION_FIELDS } from "@/lib/staff-permissions";
@@ -34,12 +41,16 @@ const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
   surname: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
   email: z.string().email("Geçerli bir e-posta giriniz"),
-  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  password: z.string().min(0),
   role: z.enum(["ADMIN", "MANAGER", "CASHIER", "TECHNICIAN", "STAFF", "COURIER"]),
   branch: z.string().min(1, "Şube seçiniz"),
   gender: z.enum(["MALE", "FEMALE"]),
-  phone: z.string().optional(),
-  customImage: z.string().optional(),
+  phone: z.string(),
+  customImage: z.string(),
+  // commissionRate removed
+  baseSalary: z.number().min(0),
+  salaryCurrency: z.string().min(1),
+  serviceCommissionAmount: z.number().min(0),
   canSell: z.boolean(),
   canService: z.boolean(),
   canStock: z.boolean(),
@@ -50,12 +61,16 @@ const staffSchema = z.object({
 
 type StaffFormValues = z.infer<typeof staffSchema>;
 
-export function CreateStaffModal() {
-  const [open, setOpen] = useState(false);
+interface CreateStaffModalProps {
+  onSuccess?: () => void;
+  staff?: any;
+}
+
+export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [roleTemplates, setRoleTemplates] = useState<any[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const {
     register,
@@ -66,7 +81,16 @@ export function CreateStaffModal() {
     reset,
   } = useForm<StaffFormValues>({
     resolver: zodResolver(staffSchema),
-    defaultValues: {
+    defaultValues: staff ? {
+      ...staff,
+      password: "", // Don't show password for edit
+      // commissionRate removed
+      baseSalary: Number(staff.baseSalary || 0),
+      serviceCommissionAmount: Number(staff.serviceCommissionAmount || 0),
+      salaryCurrency: staff.salaryCurrency || "TRY",
+      phone: staff.phone || "",
+      customImage: staff.customImage || "",
+    } : {
       name: "",
       surname: "",
       email: "",
@@ -76,337 +100,247 @@ export function CreateStaffModal() {
       gender: "MALE",
       phone: "",
       customImage: "",
+      // commissionRate removed
+      baseSalary: 0,
+      serviceCommissionAmount: 0,
+      salaryCurrency: "TRY",
       ...getDefaultStaffPermissions("STAFF"),
     }
   });
 
-  const name = watch("name") || "";
-  const surname = watch("surname") || "";
-  const selectedRole = watch("role");
-  const initials = (name.charAt(0) + surname.charAt(0)).toUpperCase() || "?";
-
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     getRoleTemplates().then(setRoleTemplates);
-  }, [open]);
-
-  const resolveRolePermissions = (role: StaffFormValues["role"]) => {
-    return roleTemplates.find((template) => template.role === role) || getDefaultStaffPermissions(role);
-  };
+    if (staff) {
+      reset({
+        ...staff,
+        password: "",
+        // commissionRate removed
+        baseSalary: Number(staff.baseSalary || 0),
+        serviceCommissionAmount: Number(staff.serviceCommissionAmount || 0),
+        salaryCurrency: staff.salaryCurrency || "TRY",
+        phone: staff.phone || "",
+        customImage: staff.customImage || "",
+      });
+    }
+  }, [isOpen, staff, reset]);
 
   const applyRolePermissions = (role: StaffFormValues["role"]) => {
-    const permissions = resolveRolePermissions(role);
+    const template = roleTemplates.find((t) => t.role === role) || getDefaultStaffPermissions(role);
     setValue("role", role);
-    STAFF_PERMISSION_FIELDS.forEach(({ key }) => {
-      setValue(key, permissions[key]);
+    STAFF_PERMISSION_FIELDS.forEach((field) => {
+      // Check if permission is prohibited for this role
+      const isProhibited = field.prohibitedRoles?.includes(role);
+      setValue(field.key as any, isProhibited ? false : template[field.key]);
     });
   };
 
   const onSubmit = async (data: StaffFormValues) => {
     startTransition(async () => {
-      const result = await createStaff({
-        ...data,
-        image: data.customImage || "",
-        role: data.role as Role,
-        commissionRate: 0,
-      });
+      const result = staff
+        ? await updateStaff(staff.id, data)
+        : await createStaff(data as any);
 
       if (result.success) {
-        toast.success("Personel başarıyla tanımlandı.");
-        setOpen(false);
+        toast({
+          title: staff ? "Personel güncellendi" : "Personel eklendi",
+          description: "İşlem başarıyla tamamlandı.",
+        });
+        setIsOpen(false);
         reset();
-        setPreviewImage(null);
+        onSuccess?.();
       } else {
-        toast.error(result.error || "Bir hata oluştu");
+        toast({
+          title: "Hata",
+          description: result.error,
+          variant: "destructive",
+        });
       }
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="h-11 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white  text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center">
-          <UserPlus className="h-4 w-4" />
-          Yeni Personel Ekle
-        </Button>
+        {staff ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
+            <Edit2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2 flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
+            <UserPlus className="h-4 w-4" />
+            <span>Personel Ekle</span>
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl bg-white dark:bg-card border-none rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
-        <DialogHeader className="p-8 pb-4 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-              <UserPlus className="w-6 h-6" />
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-none shadow-2xl rounded-3xl h-[85vh] sm:h-auto flex flex-col">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
+
+        <div className="px-6 pt-6 pb-4 flex justify-between items-center bg-slate-50/50 dark:bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/10 rounded-2xl">
+              {staff ? <Settings2 className="h-5 w-5 text-emerald-600" /> : <UserPlus className="h-5 w-5 text-emerald-600" />}
             </div>
             <div>
-              <DialogTitle className="font-medium text-xl  text-slate-900 dark:text-white">Yeni Personel Ekle</DialogTitle>
-              <DialogDescription className="text-muted-foreground/80 text-xs font-medium">Sisteme yeni bir kullanıcı tanımlayın</DialogDescription>
+              <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                {staff ? "Personel Düzenle" : "Yeni Personel Tanımla"}
+              </DialogTitle>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mt-0.5">
+                PERSONEL VE YETKİLENDİRME SİSTEMİ
+              </p>
             </div>
           </div>
-        </DialogHeader>
+          {/* REMOVED EXTRA CLOSE BUTTON */}
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-8 pt-4 space-y-8">
-          <div className="flex gap-8 items-start">
-            <div className="flex flex-col items-center gap-3">
-              <input type="hidden" {...register("customImage")} />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      const base64 = reader.result as string;
-                      setPreviewImage(base64);
-                      setValue("customImage", base64);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-              />
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="group relative cursor-pointer"
-              >
-                <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
-                <div className="relative w-24 h-24 bg-white dark:bg-muted rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white dark:border-border ring-4 ring-blue-500/10">
-                  {previewImage ? (
-                    <img src={previewImage} className="w-full h-full object-cover" alt="Preview" />
-                  ) : initials !== "?" ? (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-3xl  text-muted-foreground dark:text-white/20">
-                      {initials}
-                    </div>
-                  ) : (
-                    <ImageIcon className="w-8 h-8 text-foreground" />
-                  )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
-                    <ImageIcon className="w-6 h-6 text-white" />
-                  </div>
-                </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="overflow-y-auto custom-scrollbar flex-1">
+          <div className="p-6 space-y-8">
+            {/* Temel Bilgiler */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl bg-slate-50/50 dark:bg-muted/10 border border-slate-100 dark:border-white/5">
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">AD</Label>
+                <Input {...register("name")} className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs" />
+                {errors.name && <p className="text-[10px] text-red-500 ml-1">{errors.name.message}</p>}
               </div>
-              <div className="flex flex-col gap-2 w-full max-w-[120px]">
-                <div className="flex bg-slate-50 dark:bg-white/5 p-1 rounded-xl gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setValue("gender", "MALE");
-                      const url = `https://ui-avatars.com/api/?name=${encodeURIComponent(watch("name") || "E")}&background=4F46E5&color=fff&bold=true`;
-                      setValue("customImage", url);
-                      setPreviewImage(url);
-                    }}
-                    className={cn(
-                      "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
-                      watch("gender") === "MALE" ? "bg-blue-600 text-white shadow-lg" : "text-muted-foreground hover:text-slate-600"
-                    )}
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">SOYAD</Label>
+                <Input {...register("surname")} className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs" />
+                {errors.surname && <p className="text-[10px] text-red-500 ml-1">{errors.surname.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">ROL</Label>
+                <Select onValueChange={(val: any) => applyRolePermissions(val)} defaultValue={watch("role")}>
+                  <SelectTrigger className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs">
+                    <SelectValue placeholder="Rol Seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-none shadow-2xl">
+                    <SelectItem value="ADMIN">Yönetici</SelectItem>
+                    <SelectItem value="MANAGER">Müdür</SelectItem>
+                    <SelectItem value="TECHNICIAN">Teknisyen</SelectItem>
+                    <SelectItem value="CASHIER">Kasiyer</SelectItem>
+                    <SelectItem value="COURIER">Kurye</SelectItem>
+                    <SelectItem value="STAFF">Personel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">E-POSTA</Label>
+                <Input {...register("email")} type="email" className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs" />
+                {errors.email && <p className="text-[10px] text-red-500 ml-1">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">TELEFON</Label>
+                <PhoneInput value={watch("phone") || ""} onChange={(v) => setValue("phone", v)} className="h-11 border-none bg-white dark:bg-muted/50" />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">ŞİFRE</Label>
+                <Input {...register("password")} type="password" placeholder={staff ? "Değiştirmek istemiyorsanız boş bırakın" : "*******"} className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs" />
+              </div>
+
+              {/* Removed Commission Rate Input */}
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">SABİT MAAŞ</Label>
+                <div className="flex gap-2">
+                  <Input
+                    {...register("baseSalary", { valueAsNumber: true })}
+                    type="number"
+                    step="0.01"
+                    className="flex-1 h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs"
+                  />
+                  <Select
+                    value={watch("salaryCurrency")}
+                    onValueChange={(v) => setValue("salaryCurrency", v)}
                   >
-                    ERKEK
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setValue("gender", "FEMALE");
-                      const url = `https://ui-avatars.com/api/?name=${encodeURIComponent(watch("name") || "K")}&background=E11D48&color=fff&bold=true`;
-                      setValue("customImage", url);
-                      setPreviewImage(url);
-                    }}
-                    className={cn(
-                      "flex-1 py-2 rounded-lg text-[10px]  transition-all uppercase tracking-tighter flex items-center justify-center gap-1",
-                      watch("gender") === "FEMALE" ? "bg-rose-600 text-white shadow-lg" : "text-muted-foreground hover:text-slate-600"
-                    )}
-                  >
-                    KADIN
-                  </button>
+                    <SelectTrigger className="w-20 h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-none shadow-2xl">
+                      <SelectItem value="TRY">₺ TL</SelectItem>
+                      <SelectItem value="USD">$ USD</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-[9px]  text-center text-muted-foreground uppercase tracking-widest">HIZLI AVATAR</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">SERVİS BAŞI PRİM</Label>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase italic">SABİT TUTAR</span>
+                </div>
+                <Input
+                  {...register("serviceCommissionAmount", { valueAsNumber: true })}
+                  type="number"
+                  step="0.01"
+                  className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs"
+                />
               </div>
             </div>
 
-            {/* Form Fields */}
-            <div className="flex-1 grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ADI</Label>
-                <Input
-                  {...register("name")}
-                  placeholder="Örn: Ahmet"
-                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">SOYADI</Label>
-                <Input
-                  {...register("surname")}
-                  placeholder="Örn: Yılmaz"
-                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">E-POSTA</Label>
-                <Input
-                  {...register("email")}
-                  placeholder="ahmet@example.com"
-                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-medium text-[10px]  text-rose-500 uppercase tracking-widest ml-1">GİRİŞ ŞİFRESİ</Label>
-                <Input
-                  {...register("password")}
-                  type="password"
-                  placeholder="******"
-                  className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs focus:ring-2 focus:ring-rose-500/20"
-                />
-              </div>
-              <PhoneInput
-                label="TELEFON"
-                value={watch("phone") || ""}
-                onChange={(val: string) => setValue("phone", val)}
-                error={errors.phone?.message}
-                className="h-11 border-none bg-slate-50 dark:bg-muted/50"
-              />
+            {/* Yetkiler */}
+            <div className="space-y-4">
+              <Label className="font-black text-xs text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
+                <Shield className="h-4 w-4" /> YETKİLENDİRME MODÜLLERİ
+              </Label>
+              <TooltipProvider>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {STAFF_PERMISSION_FIELDS.map((field) => {
+                    const isAllowed = !field.prohibitedRoles?.includes(watch("role"));
+                    const isChecked = watch(field.key as any);
+
+                    return (
+                      <Tooltip key={field.key} delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={!isAllowed}
+                            onClick={() => isAllowed && setValue(field.key as any, !isChecked)}
+                            className={cn(
+                              "flex items-center gap-3 p-4 rounded-2xl text-left transition-all border-2",
+                              isChecked && isAllowed
+                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 shadow-sm hover:bg-emerald-500/20"
+                                : "bg-slate-50 dark:bg-muted/10 border-transparent text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5",
+                              !isAllowed && "opacity-50 cursor-not-allowed grayscale"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all",
+                              isChecked && isAllowed ? "bg-emerald-500 border-emerald-500" : "border-slate-300 dark:border-slate-700"
+                            )}>
+                              {isChecked && isAllowed && <X className="h-3 w-3 text-white rotate-45" />}
+                              {!isAllowed && <Shield className="h-2.5 w-2.5 text-slate-400" />}
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{field.label}</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-slate-900 text-white border-none rounded-xl p-3 shadow-2xl max-w-[200px]">
+                          <p className="text-[10px] leading-relaxed">
+                            {!isAllowed
+                              ? <span className="text-red-400 block mb-1 font-bold">⚠️ BU ROL İÇİN YETKİ VERİLEMEZ</span>
+                              : null
+                            }
+                            {field.description}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
             </div>
           </div>
 
-          {/* Role and Branch Selection */}
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <div className="space-y-2">
-              <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ROL SEÇİMİ</Label>
-              <Select onValueChange={(v) => applyRolePermissions(v as StaffFormValues["role"])} value={selectedRole}>
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs">
-                  <SelectValue placeholder="Bir rol seçin..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-card border-slate-200 dark:border-border/50 rounded-xl">
-                  <SelectItem value="ADMIN" className="">Yönetici (Full)</SelectItem>
-                  <SelectItem value="MANAGER" className="">Mağaza Müdürü</SelectItem>
-                  <SelectItem value="CASHIER" className="">Kasiyer</SelectItem>
-                  <SelectItem value="TECHNICIAN" className="">Teknisyen</SelectItem>
-                  <SelectItem value="STAFF" className="">Satış Danışmanı / Personel</SelectItem>
-                  <SelectItem value="COURIER" className="">Kurye</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1">ŞUBE SEÇİMİ</Label>
-              <Select onValueChange={(v) => setValue("branch", v)} defaultValue="Ana Şube" disabled>
-                <SelectTrigger className="h-11 bg-slate-50 dark:bg-muted/50 border-none rounded-xl  text-xs opacity-70">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3 h-3 text-muted-foreground" />
-                    <SelectValue placeholder="Bir şube seçin..." />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border/50 text-white rounded-xl">
-                  <SelectItem value="Ana Şube">Ana Şube</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Quick Permissions */}
-          <div className="pt-4 border-t border-border/50 mt-4">
-            <Label className="font-medium text-[10px]  text-muted-foreground uppercase tracking-widest ml-1 mb-3 block">HIZLI YETKİLER</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setValue("canSell", !watch("canSell"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canSell") ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canSell") ? "border-emerald-500 bg-emerald-500" : "border-border/80")}>
-                  {watch("canSell") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">SATIŞ</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue("canService", !watch("canService"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canService") ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canService") ? "border-blue-500 bg-blue-500" : "border-border/80")}>
-                  {watch("canService") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">SERVİS</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue("canStock", !watch("canStock"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canStock") ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canStock") ? "border-orange-500 bg-orange-500" : "border-border/80")}>
-                  {watch("canStock") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">STOK</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue("canFinance", !watch("canFinance"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canFinance") ? "bg-purple-500/10 border-purple-500/20 text-purple-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canFinance") ? "border-purple-500 bg-purple-500" : "border-border/80")}>
-                  {watch("canFinance") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">FİNANS</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue("canEdit", !watch("canEdit"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canEdit") ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canEdit") ? "border-indigo-500 bg-indigo-500" : "border-border/80")}>
-                  {watch("canEdit") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">DÜZENLEME</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue("canDelete", !watch("canDelete"))}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-xl border transition-all text-left",
-                  watch("canDelete") ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-white/5 border-border/50 text-muted-foreground/80"
-                )}
-              >
-                <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", watch("canDelete") ? "border-red-500 bg-red-500" : "border-border/80")}>
-                  {watch("canDelete") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                </div>
-                <span className="text-[10px]  uppercase tracking-wider">SİLME</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              className=" text-xs uppercase tracking-widest text-muted-foreground hover:text-slate-900 dark:hover:text-white"
-            >
-              İptal
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white  text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 flex gap-2 items-center"
-            >
-              {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-              Personeli Kaydet
+          <div className="p-6 bg-slate-50/50 dark:bg-muted/20 border-t border-slate-100 dark:border-white/5 flex gap-3">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" className="flex-1 h-12 rounded-2xl font-bold uppercase tracking-widest text-[10px]">İptal</Button>
+            </DialogClose>
+            <Button disabled={isPending} type="submit" className="flex-[2] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20">
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (staff ? "Güncelle" : "Personel Oluştur")}
             </Button>
           </div>
         </form>
@@ -414,8 +348,3 @@ export function CreateStaffModal() {
     </Dialog>
   );
 }
-
-
-
-
-

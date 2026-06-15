@@ -9,10 +9,11 @@ import { DashboardDataProvider } from "@/lib/context/dashboard-data-context";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ProgressBarProvider } from "@/components/providers/progress-bar-provider";
-import { getStaffShell } from "@/lib/actions/staff-actions";
+import { getStaffShell, checkActiveLeave } from "@/lib/actions/staff-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
+import { LeaveLockModal } from "@/components/staff/leave-lock-modal";
 import { redirect } from "next/navigation";
 import { getShopId, getSession } from "@/lib/auth";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
@@ -66,19 +67,23 @@ export default async function DashboardLayout({
     let shop: any = null;
     let settings: any[] = [];
 
+    let leaveData = { isLeave: false, leave: null };
+
     try {
         // Keep the dashboard shell light; page-specific stats load through React Query.
         if (shopId) {
-            const [staffRes, ratesRes, shopRes, settingsRes] = await Promise.all([
+            const [staffRes, ratesRes, shopRes, settingsRes, activeLeaveRes] = await Promise.all([
                 getStaffShell(shopId).catch(() => []),
                 getExchangeRates(shopId).catch(() => null),
                 getShop().catch(() => null),
                 getSettings().catch(() => []),
+                checkActiveLeave(session.user.id).catch(() => ({ isLeave: false, leave: null })),
             ]);
             staff = staffRes;
             initialRates = ratesRes;
             shop = shopRes;
             settings = settingsRes;
+            leaveData = activeLeaveRes;
         } else if (isSuperAdmin) {
             // Default empty state for shop-less super admin (e.g. at /admin/shops)
             staff = [];
@@ -121,6 +126,10 @@ export default async function DashboardLayout({
                                 />
 
                                 <AnnouncementsModal />
+
+                                {leaveData.isLeave && !isSuperAdmin && role !== "ADMIN" && (
+                                    <LeaveLockModal leave={leaveData.leave} userName={session.user.name || ""} />
+                                )}
 
                                 {!isCourier && <GlobalSearch />}
 

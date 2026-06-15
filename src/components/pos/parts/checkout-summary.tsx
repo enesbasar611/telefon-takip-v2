@@ -28,6 +28,7 @@ interface CheckoutSummaryProps {
     isCompact?: boolean;
     getEquivalentDisplay?: (val: any) => string;
     defaultCurrency?: string;
+    rates?: any;
 }
 
 export const CheckoutSummary = ({
@@ -47,8 +48,10 @@ export const CheckoutSummary = ({
     isDebtBlocked = false,
     isCompact = false,
     getEquivalentDisplay,
-    defaultCurrency = "TRY"
+    defaultCurrency = "TRY",
+    rates
 }: CheckoutSummaryProps) => {
+    const currentUsdRate = Number(rates?.usd || rates?.USD) || 34.5;
     const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
     const paymentMethods = [
         { id: "CASH", label: "NAKİT", icon: Banknote, color: "text-emerald-500", bg: "bg-emerald-500/10" },
@@ -73,7 +76,7 @@ export const CheckoutSummary = ({
                         <span className="text-xs font-black text-foreground tracking-[0.1em] uppercase leading-none">ÖDENECEK TUTAR</span>
                         <div className="flex flex-col items-end">
                             {loyaltyDiscountAmount > 0 && (
-                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / 34.5)}</Badge>
+                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / currentUsdRate)}</Badge>
                             )}
                             <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">{currencySymbol}{total.toLocaleString('tr-TR')}</span>
                         </div>
@@ -199,7 +202,7 @@ export const CheckoutSummary = ({
                             )}
                             {getEquivalentDisplay && (
                                 <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
-                                    ({getEquivalentDisplay({ sellPrice: total * (defaultCurrency === 'USD' ? 34.5 : 1) })})
+                                    ({getEquivalentDisplay({ sellPrice: total * (defaultCurrency === 'USD' ? currentUsdRate : 1) })})
                                 </span>
                             )}
                         </div>

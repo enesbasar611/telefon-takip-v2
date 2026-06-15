@@ -19,6 +19,10 @@
   - Amac: EDM Biliºim e-Fatura/e-Arºiv servisini kendi sistem üzerinden tam entegre etmek; yeni fatura oluºturma, gönderme, gelen fatura alma, HTML/PDF indirme, iptal ve ayar yönetimi. EDM sitesine yönlendirme yok.
   - Durum: Faz 1-6 tamamlandi (Prisma schema, EDM client, API routes, UI sayfalari, cron senkronizasyonu, sidebar/menu, modul aktivasyonu, otomasyon ayarlari). Test credentials ile login basarili. Payload key'leri EDM REST API beklenen buyuk harf formatina cevrildi (HEADER, CONTENT, SENDER, RECEIVER, ISSUE_DATE, PAYABLE_AMOUNT, PROFILEID, EARCHIVE, INVOICE_TYPE, RECEIVER_ALIAS, INVOICE_SEND_TYPE, UUID, ID). CONTENT.Value base64 string olarak guncellendi (EDM REST API byte array bekliyordu, base64 string kabul ediyor). XSLT sablonlari public/xslt/ altina eklendi. TenantSettings ve Invoices Prisma modelleri eklendi. Encryption servisi (AES-256) yazildi. Registration servisi (initializeParameter, createCustomerPortal, getTenantBalanceAndStatus, loadCredit) yazildi. Debug/test endpoint'leri temizlendi. Build ve tip kontrolu basarili.
 
+- [x] Ozellik 5: Merkezi Firma Bilgileri ve Logo Yönetimi (Tamamlandı)
+  - Amac: Firma bilgilerini (İsim, Tel, Adres, Logo, Vergi Bilgileri) tek merkezden (Profil Sayfası) yönetmek; fiş ve faturalarda mükerrer girişi önlemek.
+  - Detay: `Shop` modeline `logoUrl` eklendi. Profil sayfasına dosya seçerek logo yükleme ve Gmail logosunu tek tıkla aktarma özelliği eklendi. Fiş şablonlarındaki (Termal, PDF) logo filtreleri (grayscale/contrast) temizlenerek PNG uyumu sağlandı. UI'daki kilitlenme (relative CSS hatası) giderildi.
+
 - [ ] Ozellik 1: Akilli Stok Yenileme ve Tedarik Planlama
   - Graphify baglamlari: Community 9 (`addShortageItem`, shortage flow), Community 32 (`SupplierOrderContext`, supplier order lists), Community 33 (`AI alerts`, purchase orders), Community 67 (`getCriticalProducts`, stock movements).
   - Amac: Kritik stok, son satis hizi, bekleyen servis parca ihtiyaci ve tedarikci bilgilerini birlestirerek otomatik satin alma onerisi uretmek.
@@ -304,3 +308,16 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
 - [x] 2026-06-09: Veresiye fiş (PNG) kesilme sorunları giderildi. Dosyalar: `src/lib/receipt-print-styles.ts`, `src/components/finance/debt-receipt-modal.tsx`. Neden: Uzun ürün isimleri ve uzun listeler görselde yarım çıkıyordu; ürün isimlerindeki `truncate` kaldırıldı, yakalama (capture) sırasında tüm yükseklik kısıtlamaları devre dışı bırakıldı ve `windowHeight` artırıldı.
 - [x] 2026-06-09: Profesyonel PDF dökümü (Tablo) ekstre özelliği iyileştirildi. Dosyalar: `src/lib/receipt-print-styles.ts`, `src/components/finance/debt-receipt-modal.tsx`. Neden: Müşterilerin geçmiş alımlarını daha net görmesi için tablo dökümü tarihlere göre gruplandırıldı, uzun listeler için "Tek Sayfa PDF" (Long PDF) desteği getirildi ve "Ödenenleri Gizle" seçeneğine tam uyum sağlandı.
 - [x] 2026-06-09: Fiş modalı butonu ve WhatsApp ikon tasarımı güncellendi. Dosya: `src/components/common/receipt-modal-wrapper.tsx`. Neden: WhatsApp butonu markayla uyumlu yeşil (`#25D366`) renge çekildi, "Tablo (PDF)" butonu eklendi ve tüm modal butonları daha belirgin ve modern bir yapıya kavuşturuldu.
+
+- [x] 2026-06-11: Personel İzin Yönetim Sistemi ve Fiş Kalite İyileştirmeler:
+    - **İzin Yönetimi**: `UserLeave` modeli tamamen kaldırılarak yerine modern `LeaveRequest` modeli ve `LeaveType`, `LeaveStatus` enumları eklendi.
+    - **Hata Giderme**: `staff-finance-actions.ts` içindeki `Cannot read properties of undefined (reading 'findMany')` hatası, model isminin ve Prisma Client'ın senkronize edilmesiyle çözüldü.
+    - **Teknik Çözüm**: Windows ortamındaki `EPERM` (dosya kilitli) hatasını aşmak için çalışan tüm Node süreçleri (`taskkill /F /IM node.exe`) durdurularak temiz bir `prisma generate` yapıldı. Veritabanı `npx prisma db push` ile güncellendi.
+    - **Fiş Kalitesi**: html2canvas scale değerleri optimize edildi (PNG: 6, PDF: 4).
+    - **Dosyalar**: `prisma/schema.prisma`, `src/lib/actions/staff-actions.ts`, `src/lib/actions/staff-finance-actions.ts`, `src/lib/receipt-print-styles.ts`.
+
+- [x] 2026-06-11: Finansal Para Birimi ve Kur Senkronizasyonu (Dinamik TL/USD):
+    - **Arayüz Standartlaştırma**: Veresiye (DebtReceiptModal) ve POS (ReceiptModal) fişleri tamamen dinamik hale getirildi. Artık ayarlardaki varsayılan para birimi (TL/USD) tercihinize göre fiyatlar ve kurlar otomatik güncelleniyor.
+    - **Kur Kontrolü**: Tüm finansal hesaplamalarda (CheckoutSummary, POS Sepet, Borç Ekstresi) sabit `34.5` kuru yerine sistemdeki güncel canlı kurlar kullanılacak şekilde refactor edildi.
+    - **Müşteri Paneli**: Müşteri detay sayfasındaki ödeme ve ekstre bölümleri merkezi kur sistemine bağlandı; manuel ödemeler ve otomatik fişler artık aynı toplamları gösteriyor.
+    - **Dosyalar**: `src/components/finance/debt-receipt-modal.tsx`, `src/components/pos/receipt-modal.tsx`, `src/components/pos/parts/checkout-summary.tsx`, `src/components/customer/customer-debt-panel.tsx`, `src/app/(dashboard)/musteriler/[id]/page.tsx`.

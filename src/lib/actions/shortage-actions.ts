@@ -300,17 +300,24 @@ export async function getCouriers() {
     const shopId = await getShopId();
     if (!shopId) return [];
 
-    // SADECE 'COURIER' rolündeki personelleri getir
-    // User talebi: "sadece corruier olarak atanan personel görüncek"
+    const now = new Date();
+
+    // SADECE 'COURIER' rolündeki ve BUGÜN İZİNLİ OLMAYAN personelleri getir
     const couriers = await prisma.user.findMany({
       where: {
         shopId: shopId,
-        role: Role.COURIER
+        role: Role.COURIER,
+        leaveRequests: {
+          none: {
+            startDate: { lte: now },
+            endDate: { gte: now }
+          }
+        }
       },
       select: { id: true, name: true, surname: true, role: true }
     });
 
-    console.log(`Found ${couriers.length} couriers for shop ${shopId}`);
+    console.log(`Found ${couriers.length} active couriers (not on leave) for shop ${shopId}`);
     return serializePrisma(couriers);
   } catch (error) {
     console.error("getCouriers error:", error);

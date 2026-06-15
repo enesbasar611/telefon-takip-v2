@@ -52,22 +52,15 @@ export async function createShopOnboarding(data: { name: string; industry: strin
             });
         }
 
-        // SYNC TO RECEIPTS
+        // INITIALIZE RECEIPTS WITH DEFAULTS
         const receiptTypes = ['pos', 'service', 'stock'];
         for (const rType of receiptTypes) {
             await prisma.receiptSettings.upsert({
                 where: { id: `${shop.id}_${rType}` },
-                update: {
-                    title: data.name.toUpperCase(),
-                    phone: data.phone || "",
-                    address: data.address || "",
-                },
+                update: {}, // Don't overwrite company info, it's now in Shop
                 create: {
                     id: `${shop.id}_${rType}`,
                     shopId: shop.id,
-                    title: data.name.toUpperCase(),
-                    phone: data.phone || "",
-                    address: data.address || "",
                     website: "basarteknik.tech",
                     subtitle: rType === "service" ? "Mobil servis & teknik destek" : "PROFESYONEL TEKNİK SERVİS",
                 }

@@ -105,9 +105,11 @@ export async function updateShop(data: any) {
         taxNumber: data.taxNumber,
         taxOffice: data.taxOffice,
         companyName: data.companyName,
-        companyAddress: data.address, // Adresi buraya da eşitleyelim
+        companyAddress: data.address,
         companyCity: data.companyCity,
         companyDistrict: data.companyDistrict,
+        website: data.website,
+        logoUrl: data.logoUrl,
         enabledModules: data.enabledModules,
         themeConfig: data.themeConfig,
         // Sync flags

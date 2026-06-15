@@ -17,10 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle,
+  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle, Wallet, Banknote,
 } from "lucide-react";
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
-import { getAccounts } from "@/lib/actions/finance-actions";
+import { getAccounts, createAccount } from "@/lib/actions/finance-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
@@ -120,6 +120,11 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [sellerIdFront, setSellerIdFront] = useState<File | null>(null);
   const [sellerIdBack, setSellerIdBack] = useState<File | null>(null);
   const [warrantyMode, setWarrantyMode] = useState<"date" | "months" | "intl">("months");
+  const [showQuickAccount, setShowQuickAccount] = useState(false);
+  const [quickAccountName, setQuickAccountName] = useState("Merkez Kasa");
+  const [quickAccountType, setQuickAccountType] = useState<"CASH" | "BANK">("CASH");
+  const [quickAccountBalance, setQuickAccountBalance] = useState("");
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const queryClient = useQueryClient();
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -152,33 +157,54 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     },
   });
 
-  const { data: accounts = [] } = useQuery({
+  const [pendingAccountId, setPendingAccountId] = useState<string | null>(null);
+
+  const { data: accounts = [], refetch: refetchAccounts, isFetching: isFetchingAccounts } = useQuery({
     queryKey: ["finance-accounts"],
-    queryFn: getAccounts,
+    queryFn: async () => {
+      try {
+        const result = await getAccounts();
+        return result || [];
+      } catch (e) {
+        console.error("Failed to fetch accounts:", e);
+        return [];
+      }
+    },
     enabled: open,
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always refetch when modal opens
   });
 
-  const createDeviceMutation = useMutation({
-    mutationFn: createDeviceEntry,
-    onSuccess: async (result) => {
-      if (!result.success) return;
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["devices"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
-        queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
-      ]);
-    },
-  });
-  const isPending = isUploading || createDeviceMutation.isPending;
+  // createDeviceMutation removed as it was replaced by direct call to avoid serialization issues
+  const isPending = isUploading;
 
   // Cache finance accounts while the modal is open.
+  // Auto-select a default account when accounts load if none is selected
   useEffect(() => {
-    const primary = accounts.find((a: any) => a.isDefault) || accounts[0];
-    if (open && primary) setValue("financeAccountId", primary.id);
-  }, [accounts, open, setValue]);
+    if (open && accounts.length > 0) {
+      const currentVal = watch("financeAccountId");
+      const exists = accounts.some((a: any) => a.id === currentVal);
+      if (!exists && !pendingAccountId) {
+        const primary = accounts.find((a: any) => a.isDefault) || accounts[0];
+        if (primary) setValue("financeAccountId", primary.id);
+      }
+    }
+    // Auto-open quick account form ONLY if we are sure there are absolutely no accounts
+    if (open && accounts.length === 0 && !isFetchingAccounts) {
+      setShowQuickAccount(true);
+    }
+  }, [accounts, open, setValue, watch, isFetchingAccounts, pendingAccountId]);
+
+  // Handle the automatic selection of a newly created account
+  useEffect(() => {
+    if (pendingAccountId && accounts.length > 0) {
+      const accountExists = accounts.find((a: any) => a.id === pendingAccountId);
+      if (accountExists) {
+        setValue("financeAccountId", pendingAccountId, { shouldValidate: true });
+        setPendingAccountId(null);
+        setShowQuickAccount(false);
+      }
+    }
+  }, [accounts, pendingAccountId, setValue]);
 
   const condition = watch("condition");
   const buyPrice = watch("buyPrice");
@@ -252,35 +278,47 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         replacedParts: "sentence"
       });
 
-      const result = await createDeviceMutation.mutateAsync({
+      // Sanitize payload: Zod/react-hook-form may produce non-plain objects
+      // that React Server Actions cannot serialize. JSON round-trip ensures purity.
+      const payload = JSON.parse(JSON.stringify({
         brand: cleaned.brand,
         model: cleaned.model,
         imei: cleaned.imei,
-        color: cleaned.color || undefined,
-        ram: cleaned.ram || undefined,
-        storage: cleaned.storage || undefined,
+        color: cleaned.color || null,
+        ram: cleaned.ram || null,
+        storage: cleaned.storage || null,
         condition: cleaned.condition,
-        warrantyEndDate: warrantyMode === "date" && !isNew ? cleaned.warrantyEndDate || undefined : undefined,
-        warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? cleaned.warrantyMonths || undefined : undefined),
-        sim1ExpirationDate: cleaned.sim1ExpirationDate || undefined,
-        sim1NotUsed: cleaned.sim1NotUsed,
-        sim2ExpirationDate: cleaned.sim2ExpirationDate || undefined,
-        sim2NotUsed: cleaned.sim2NotUsed,
-        batteryHealth: cleaned.batteryHealth ? parseInt(cleaned.batteryHealth) : undefined,
+        warrantyEndDate: warrantyMode === "date" && !isNew ? cleaned.warrantyEndDate || null : null,
+        warrantyMonths: isNew ? "24" : (warrantyMode === "months" ? cleaned.warrantyMonths || null : null),
+        sim1ExpirationDate: cleaned.sim1ExpirationDate || null,
+        sim1NotUsed: !!cleaned.sim1NotUsed,
+        sim2ExpirationDate: cleaned.sim2ExpirationDate || null,
+        sim2NotUsed: !!cleaned.sim2NotUsed,
+        batteryHealth: cleaned.batteryHealth ? parseInt(cleaned.batteryHealth) : null,
         cosmeticScore: parseInt(cleaned.cosmeticScore || "10"),
         expertChecklist: cleaned.replacedParts ? { notes: cleaned.replacedParts } : {},
         buyPrice: parseFloat(cleaned.buyPrice),
         sellPrice: parseFloat(cleaned.sellPrice),
         financeAccountId: cleaned.financeAccountId,
-        sellerName: cleaned.sellerName || undefined,
-        sellerTC: cleaned.sellerTC || undefined,
-        sellerPhone: cleaned.sellerPhone || undefined,
-        sellerIdPhotoUrl: sellerIdFrontUrl || undefined,
+        sellerName: cleaned.sellerName || null,
+        sellerTC: cleaned.sellerTC || null,
+        sellerPhone: cleaned.sellerPhone || null,
+        sellerIdPhotoUrl: sellerIdFrontUrl || null,
         photoUrls: uploadedPhotoUrls,
         invoiceUrl: null,
-      });
+      }));
+
+      // Call server action directly instead of mutateAsync to rule out proxy serialization issues
+      const result = await createDeviceEntry(payload);
 
       if (result.success) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["devices"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
+          queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
+        ]);
+
         toast.success("Cihaz başarıyla envantere eklendi.");
         setOpen(false);
         reset();
@@ -292,8 +330,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       } else {
         toast.error(result.error ?? "İşlem başarısız.");
       }
-    } catch (err) {
-      toast.error("Bir hata oluştu.");
+    } catch (err: any) {
+      console.error("Device creation error:", err);
+      const msg = err?.message || "Bilinmeyen bir hata oluştu.";
+      toast.error(`Hata: ${msg}`);
     } finally {
       setIsUploading(false);
     }
@@ -654,24 +694,163 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
 
             {/* Fiyat & Ödeme Hesabı */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
-              <div className="col-span-2 space-y-1.5 pb-2">
-                <Label className="font-medium text-[9px]  text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
-                <Select
-                  value={watch("financeAccountId")}
-                  onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
-                >
-                  <SelectTrigger className="bg-background border-border h-11 text-[13px] ">
-                    <SelectValue placeholder="Ödeme Hesabı Seçin" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {accounts.map((acc: any) => (
-                      <SelectItem key={acc.id} value={acc.id} className="">
-                        {acc.name} - <span className="text-blue-400">{acc.balance.toLocaleString("tr-TR")} ₺</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.financeAccountId && <p className="text-[10px] text-rose-500  mt-1">{errors.financeAccountId.message}</p>}
+              <div className="col-span-2 space-y-2 pb-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-medium text-[9px] text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAccount(!showQuickAccount)}
+                    className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {showQuickAccount ? "Vazgeç" : "Yeni Hesap"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <button
+                    type="button"
+                    onClick={() => refetchAccounts()}
+                    className="text-[8px] text-muted-foreground hover:text-blue-400 transition-colors uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <RotateCcw className={`h-2.5 w-2.5 ${isFetchingAccounts ? "animate-spin" : ""}`} />
+                    Hesapları Yenile
+                  </button>
+                </div>
+
+                {/* Inline Quick Account Creator */}
+                {showQuickAccount && (
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                        <Wallet className="h-3 w-3 text-emerald-400" />
+                      </div>
+                      <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Hızlı Hesap Oluştur</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[8px] text-muted-foreground/80 uppercase tracking-widest">Hesap Adı</Label>
+                        <Input
+                          value={quickAccountName}
+                          onChange={(e) => setQuickAccountName(e.target.value)}
+                          placeholder="Örn: Merkez Kasa"
+                          className="bg-background border-border rounded-xl h-9 text-[12px]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[8px] text-muted-foreground/80 uppercase tracking-widest">Hesap Türü</Label>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setQuickAccountType("CASH")}
+                            className={`flex-1 h-9 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all border ${quickAccountType === "CASH"
+                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                              : "bg-background border-border text-muted-foreground hover:text-foreground"
+                              }`}
+                          >
+                            <Banknote className="h-3 w-3" /> Nakit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickAccountType("BANK")}
+                            className={`flex-1 h-9 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all border ${quickAccountType === "BANK"
+                              ? "bg-blue-500/20 border-blue-500/40 text-blue-400"
+                              : "bg-background border-border text-muted-foreground hover:text-foreground"
+                              }`}
+                          >
+                            <Wallet className="h-3 w-3" /> Banka
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[8px] text-muted-foreground/80 uppercase tracking-widest">Açılış Bakiyesi (Opsiyonel)</Label>
+                        <Input
+                          value={quickAccountBalance}
+                          onChange={(e) => setQuickAccountBalance(formatCurrencyInput(e.target.value))}
+                          placeholder="0"
+                          className="bg-background border-border rounded-xl h-9 text-[12px]"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={isCreatingAccount || !quickAccountName.trim()}
+                      onClick={async () => {
+                        setIsCreatingAccount(true);
+                        try {
+                          const balanceNum = parseInt(parseCurrencyInput(quickAccountBalance)) || 0;
+                          const result = await createAccount({
+                            name: quickAccountName.trim(),
+                            type: quickAccountType,
+                            initialBalance: balanceNum,
+                          });
+                          if (result.success && result.account) {
+                            const newId = result.account.id;
+                            toast.success(`"${quickAccountName}" hesabı oluşturuldu!`);
+
+                            // Set this as pending, the useEffect will pick it up after refetch
+                            setPendingAccountId(newId);
+
+                            await refetchAccounts();
+
+                            setQuickAccountName("Merkez Kasa");
+                            setQuickAccountBalance("");
+                          } else {
+                            toast.error(result.error || "Hesap oluşturulamadı.");
+                          }
+                        } catch {
+                          toast.error("Hesap oluşturulurken bir hata oluştu.");
+                        } finally {
+                          setIsCreatingAccount(false);
+                        }
+                      }}
+                      className="w-full h-9 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-xl gap-2 transition-all"
+                    >
+                      {isCreatingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Hesap Oluştur & Seç
+                    </Button>
+                  </div>
+                )}
+
+                {/* Account Selector or Empty State */}
+                {isFetchingAccounts && accounts.length === 0 ? (
+                  <div className="h-11 border border-border rounded-xl bg-background/50 flex items-center px-3 gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
+                    <span className="text-[12px] text-muted-foreground font-medium italic">Hesaplar yükleniyor...</span>
+                  </div>
+                ) : accounts.length > 0 ? (
+                  <Select
+                    value={watch("financeAccountId")}
+                    onValueChange={(v) => setValue("financeAccountId", v, { shouldValidate: true })}
+                  >
+                    <SelectTrigger className="bg-background border-border h-11 text-[13px]">
+                      <SelectValue placeholder={isFetchingAccounts ? "Güncelleniyor..." : "Ödeme Hesabı Seçin"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {accounts.map((acc: any) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.name} - <span className="text-blue-400">{Number(acc.balance).toLocaleString("tr-TR")} ₺</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-4 px-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                    <AlertCircle className="h-5 w-5 text-amber-400" />
+                    <p className="text-[11px] text-amber-400 font-medium text-center">
+                      Henüz ödeme hesabı tanımlanmamış. Yukarıdaki <strong>"Yeni Hesap"</strong> butonuna tıklayarak hızlıca bir hesap oluşturun.
+                    </p>
+                    {!showQuickAccount && (
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickAccount(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-xl transition-all"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Hızlı Hesap Oluştur
+                      </button>
+                    )}
+                  </div>
+                )}
+                {errors.financeAccountId && <p className="text-[10px] text-rose-500 mt-1">{errors.financeAccountId.message}</p>}
               </div>
 
               <div className="space-y-1.5">

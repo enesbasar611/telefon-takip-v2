@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, User, AlertCircle, Sparkles, Wrench, Lock } from "lucide-react";
+import { PlusCircle, Loader2, User, AlertCircle, Sparkles, Wrench, Lock, Smartphone, MonitorSmartphone, Tag, Cpu } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -90,8 +90,8 @@ export function CreateServiceModal({
   const missingRequiredFields = [
     { key: "customerName", label: "Ad soyad", missing: !String(customerName ?? "").trim() },
     { key: "customerPhone", label: "Telefon numarası", missing: phoneDigits.length < 10 },
-    { key: "deviceBrand", label: getIndustryLabel(shop, "brandLabel"), missing: !isSimpleMode && !String(deviceBrand ?? "").trim() },
-    { key: "deviceModel", label: getIndustryLabel(shop, "modelLabel"), missing: !isSimpleMode && !String(deviceModel ?? "").trim() },
+    { key: "deviceBrand", label: getIndustryLabel(shop, "brandLabel"), missing: !String(deviceBrand ?? "").trim() },
+    { key: "deviceModel", label: getIndustryLabel(shop, "modelLabel"), missing: !String(deviceModel ?? "").trim() },
     { key: "problemDesc", label: getIndustryLabel(shop, "problemDesc"), missing: !isSimpleMode && !String(problemDesc ?? "").trim() },
     { key: "estimatedCost", label: "Tutar", missing: !Number.isFinite(estimatedCostValue) || estimatedCostValue <= 0 },
   ].filter((field) => field.missing);
@@ -128,15 +128,15 @@ export function CreateServiceModal({
 
     startTransition(async () => {
       try {
-        // Split form data into core DB fields and dynamic attributes
+        // Form verilerini çekirdek DB alanlarına ve dinamik özelliklere ayır
         const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, data);
 
         const result = await createServiceTicket({
           customerName: data.customerName,
           customerPhone: data.customerPhone,
           customerEmail: data.customerEmail,
-          deviceBrand: isSimpleMode && !deviceBrand ? "GENEL" : deviceBrand,
-          deviceModel: isSimpleMode && !deviceModel ? "HIZLI İŞLEM" : deviceModel,
+          deviceBrand: deviceBrand || "GENEL",
+          deviceModel: deviceModel || "HIZLI İŞLEM",
           imei,
           problemDesc: isSimpleMode && !data.problemDesc ? "Hızlı Servis İşlemi" : data.problemDesc,
           estimatedCost: Number(data.estimatedCost),
@@ -171,7 +171,7 @@ export function CreateServiceModal({
     });
   };
 
-  // Auto-lookup customer when phone is entered
+  // Telefon girildiğinde müşteriyi otomatik ara
   useEffect(() => {
     const checkPhone = async () => {
       const sanitized = phoneValue.replace(/\D/g, "");
@@ -266,7 +266,7 @@ export function CreateServiceModal({
             </div>
 
             <div className="p-5 md:p-8 space-y-6 overflow-y-auto flex-1 scrollbar-hide">
-              {/* Customer Info - Always side by side */}
+              {/* Müşteri Bilgileri - Daima yan yana */}
               <div className="grid grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2 relative">
                   <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
@@ -337,7 +337,7 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Dynamic Industry Fields — hidden in simple mode */}
+              {/* Dinamik Sektörel Alanlar — basit modda gizli */}
               {!isSimpleMode && (
                 <FormFactory
                   fields={industryFields}
@@ -349,7 +349,7 @@ export function CreateServiceModal({
                 />
               )}
 
-              {/* Problem Description — simplified in simple mode */}
+              {/* Arıza Açıklaması — basit modda sadeleştirilmiş */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center mb-1">
                   <Label htmlFor="problemDesc" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
@@ -373,7 +373,7 @@ export function CreateServiceModal({
                 {errors.problemDesc && <p className="text-[10px] text-red-500 ml-1">{errors.problemDesc.message as string}</p>}
               </div>
 
-              {/* Accessories / Parts Received — hidden in simple mode */}
+              {/* Alınan Aksesuarlar / Parçalar — basit modda gizli */}
               {!isSimpleMode && (
                 <div className="space-y-3">
                   <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Aksesuar / Emanet Parçalar</Label>
@@ -395,7 +395,7 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* AI Diagnostic Result */}
+              {/* AI Teşhis Sonucu */}
               {diagnosticResult && (
                 <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-3xl space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div className="flex items-center gap-2 text-blue-700">
@@ -438,7 +438,41 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Simple Mode: Device Password */}
+              {/* Basit Mod: Marka ve Model */}
+              {isSimpleMode && (
+                <div className="grid grid-cols-2 gap-3 md:gap-6 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="deviceBrandSimple" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                      {getIndustryLabel(shop, "brandLabel").toUpperCase()}
+                    </Label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="deviceBrandSimple"
+                        {...register("deviceBrand")}
+                        placeholder={getIndustryLabel(shop, "brandLabel") + "..."}
+                        className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deviceModelSimple" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                      {getIndustryLabel(shop, "modelLabel").toUpperCase()}
+                    </Label>
+                    <div className="relative">
+                      <MonitorSmartphone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="deviceModelSimple"
+                        {...register("deviceModel")}
+                        placeholder={getIndustryLabel(shop, "modelLabel") + "..."}
+                        className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-12 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Basit Mod: Cihaz Şifresi */}
               {isSimpleMode && (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center mb-1">
@@ -466,7 +500,7 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Estimated Cost */}
+              {/* Tahmini Maliyet */}
               <div className="space-y-2">
                 <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Tahmini Ücret</Label>
                 <PriceInput

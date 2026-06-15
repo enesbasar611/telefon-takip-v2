@@ -107,107 +107,26 @@ export function ShopTab({ shop }: ShopTabProps) {
                             <p className="text-[10px] text-muted-foreground">Sektör değişimi buton ve terimleri otomatik günceller.</p>
                         </div>
                     </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="taxNumber">VKN / TCKN</Label>
-                            <Input
-                                id="taxNumber"
-                                value={formData.taxNumber}
-                                onChange={(e) => setFormData(prev => ({ ...prev, taxNumber: e.target.value }))}
-                                placeholder="10 veya 11 haneli numara"
-                                className="bg-card/50"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="taxOffice">Vergi Dairesi</Label>
-                            <Input
-                                id="taxOffice"
-                                value={formData.taxOffice}
-                                onChange={(e) => setFormData(prev => ({ ...prev, taxOffice: e.target.value }))}
-                                placeholder="Örn: Beyoğlu V.D."
-                                className="bg-card/50"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="companyName">Resmi Unvan</Label>
-                        <Input
-                            id="companyName"
-                            value={formData.companyName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                            placeholder="Örn: Başar Teknik İletişim Ltd. Şti."
-                            className="bg-card/50"
-                        />
-                    </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-border/50">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-blue-500" />
-                        İletişim ve Adres
-                    </h3>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <PhoneInput
-                                id="phone"
-                                label="Telefon"
-                                value={formData.phone}
-                                onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
-                                className="bg-card/50"
-                            />
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <Zap className="w-5 h-5" />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="email">E-posta</Label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                <Input
-                                    id="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                                    placeholder="iletisim@dukkan.com"
-                                    className="pl-9 bg-card/50"
-                                />
-                            </div>
+                        <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">Firma Bilgileri Artık Profilde!</p>
+                            <p className="text-[11px] text-muted-foreground">Vergi bilgileri, adres ve iletişim detaylarını Profil sayfasından yönetebilirsiniz.</p>
                         </div>
                     </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="companyCity">İl</Label>
-                            <Input
-                                id="companyCity"
-                                value={formData.companyCity}
-                                onChange={(e) => setFormData(prev => ({ ...prev, companyCity: e.target.value }))}
-                                placeholder="Örn: İstanbul"
-                                className="bg-card/50"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="companyDistrict">İlçe</Label>
-                            <Input
-                                id="companyDistrict"
-                                value={formData.companyDistrict}
-                                onChange={(e) => setFormData(prev => ({ ...prev, companyDistrict: e.target.value }))}
-                                placeholder="Örn: Kadıköy"
-                                className="bg-card/50"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="address">Tam Adres</Label>
-                        <Input
-                            id="address"
-                            value={formData.address}
-                            onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                            placeholder="Dükkan açık adresi..."
-                            className="bg-card/50"
-                        />
-                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.href = "/profil"}
+                        className="rounded-xl border-blue-500/20 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    >
+                        Profile Git
+                    </Button>
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-border/50">

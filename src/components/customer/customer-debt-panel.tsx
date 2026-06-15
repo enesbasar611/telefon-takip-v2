@@ -68,9 +68,11 @@ interface CustomerDebtPanelProps {
     customer: any;
     accounts: any[];
     shop?: any;
+    rates?: any;
+    defaultCurrency?: string;
 }
 
-export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPanelProps) {
+export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurrency }: CustomerDebtPanelProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
@@ -85,11 +87,11 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
 
     // Payment Form State
     const [paymentAmount, setPaymentAmount] = useState<string>("0");
-    const [paymentCurrency, setPaymentCurrency] = useState<string>("TRY");
+    const [paymentCurrency, setPaymentCurrency] = useState<string>(defaultCurrency || "TRY");
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [accountId, setAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
-    const [usdRate, setUsdRate] = useState<number>(34.5);
+    const [usdRate, setUsdRate] = useState<number>(Number(rates?.usd || rates?.USD || 34.5));
 
     // Edit Payment State
     const [editingTransaction, setEditingTransaction] = useState<any>(null);
@@ -633,6 +635,9 @@ export function CustomerDebtPanel({ customer, accounts, shop }: CustomerDebtPane
                 debts={receiptDebts}
                 shopName={shop?.name}
                 shopPhone={shop?.phone}
+                rates={rates}
+                defaultCurrency={defaultCurrency}
+                shopLogo={shop?.logoUrl}
             />
 
             {/* Edit Transaction Modal */}

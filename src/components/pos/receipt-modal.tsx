@@ -14,10 +14,24 @@ interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   sale: any;
+  rates?: { usd: number; eur: number };
+  initialDefaultCurrency?: string;
 }
 
-const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, shopName, shopPhone, shopAddress }: any) => {
+const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, shopName, shopPhone, shopAddress, shopLogo, shopWebsite, rates }: any) => {
   if (!sale) return null;
+
+  const getPrice = (price: number) => {
+    if (defaultCurrency === 'USD') {
+      const rate = Number(rates?.usd || rates?.USD || 34.5);
+      return Number(price / rate).toFixed(2);
+    }
+    if (defaultCurrency === 'EUR') {
+      const rate = Number(rates?.eur || rates?.EUR || 37.0);
+      return Number(price / rate).toFixed(2);
+    }
+    return Number(price).toFixed(2);
+  };
 
   return (
     <ReceiptTemplate
@@ -27,6 +41,8 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
       shopName={shopName}
       shopPhone={shopPhone}
       shopAddress={shopAddress}
+      shopLogo={shopLogo}
+      shopWebsite={shopWebsite}
     >
       {/* Customer Info */}
       <div className="mb-4 border-b-[1.5px] border-black pb-3">
@@ -58,12 +74,12 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
                 {item.product?.name}
               </span>
               <span className="text-[9px] font-bold text-black/60">
-                {item.quantity} ADET x {currencySymbol}{Number(item.unitPrice / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}
+                {item.quantity} ADET x {currencySymbol}{getPrice(item.unitPrice)}
               </span>
             </div>
             <div className="text-right whitespace-nowrap">
               <div className="text-[11px] font-black text-black">
-                {currencySymbol}{Number(item.totalPrice / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}
+                {currencySymbol}{getPrice(item.totalPrice)}
               </div>
             </div>
           </div>
@@ -80,7 +96,7 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
         <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2 font-sans">
           <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
           <span className="text-lg font-black text-black">
-            {currencySymbol}{Number(sale.finalAmount / (defaultCurrency === 'USD' ? 34.5 : 1)).toFixed(2)}
+            {currencySymbol}{getPrice(sale.finalAmount)}
           </span>
         </div>
       </div>
@@ -88,23 +104,27 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
   );
 };
 
-export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
+export function ReceiptModal({ isOpen, onClose, sale, rates, initialDefaultCurrency }: ReceiptModalProps) {
   const [settings, setSettings] = useState<any>(null);
   const [shop, setShop] = useState<any>(null);
-  const [defaultCurrency, setDefaultCurrency] = useState<string>("TRY");
+  const [defaultCurrency, setDefaultCurrency] = useState<string>(initialDefaultCurrency || "TRY");
 
   useEffect(() => {
     if (isOpen) {
       getReceiptSettings("pos").then(setSettings);
-      import("@/lib/actions/setting-actions").then(m => {
-        m.getSettings().then(s => {
-          const curr = s.find((a: any) => a.key === "defaultCurrency")?.value || "TRY";
-          setDefaultCurrency(curr);
+      if (!initialDefaultCurrency) {
+        import("@/lib/actions/setting-actions").then(m => {
+          m.getSettings().then(s => {
+            const curr = s.find((a: any) => a.key === "defaultCurrency")?.value || "TRY";
+            setDefaultCurrency(curr);
+          });
         });
+      }
+      import("@/lib/actions/setting-actions").then(m => {
         m.getShop().then(setShop);
       });
     }
-  }, [isOpen]);
+  }, [isOpen, initialDefaultCurrency]);
 
   const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
   const currentPaperSize = settings?.paperSize || "72mm";
@@ -139,6 +159,9 @@ export function ReceiptModal({ isOpen, onClose, sale }: ReceiptModalProps) {
             shopName={shop?.name}
             shopPhone={shop?.phone}
             shopAddress={shop?.address}
+            shopLogo={shop?.logoUrl}
+            shopWebsite={shop?.website}
+            rates={rates}
           />
         </div>
       )}

@@ -4,49 +4,56 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Shop {
-  id                   String                @id @default(cuid())
+  id                   String                 @id @default(cuid())
   name                 String
   address              String?
   phone                String?
   email                String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  auditLogs            AuditLog[]
-  enabledModules       String[]              @default(["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"])
-  industry             String                @default("GENERAL")
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  enabledModules       String[]               @default(["SERVICE", "STOCK", "SALE", "FINANCE", "EFATURA"])
+  industry             String                 @default("GENERAL")
   themeConfig          Json?
-  isFirstLogin         Boolean               @default(true)
+  isFirstLogin         Boolean                @default(true)
   whatsappSessionId    String?
-  isActive             Boolean               @default(true)
-  taxNumber     String?
-  taxOffice     String?
-  isFinanceEnabled     Boolean               @default(true)
-  isServiceEnabled     Boolean               @default(true)
-  isStockEnabled       Boolean               @default(true)
-  isCourierEnabled     Boolean               @default(true)
-  isEInvoiceEnabled    Boolean               @default(true)
-  companyName   String?
-  companyAddress String?
-  companyCity   String?   @default("İSTANBUL")
-  companyDistrict String?
-  website              String?               @default("basarteknik.tech")
+  isActive             Boolean                @default(true)
+  taxNumber            String?
+  taxOffice            String?
+  companyName          String?
+  companyAddress       String?
+  companyCity          String?                @default("İSTANBUL")
+  companyDistrict      String?
+  website              String?                @default("basarteknik.tech")
+  isCourierEnabled     Boolean                @default(true)
+  isEInvoiceEnabled    Boolean                @default(true)
+  isFinanceEnabled     Boolean                @default(true)
+  isServiceEnabled     Boolean                @default(true)
+  isStockEnabled       Boolean                @default(true)
+  logoUrl              String?
+  agendaEvents         AgendaEvent[]
   attachments          Attachment[]
+  auditLogs            AuditLog[]
   categories           Category[]
   customers            Customer[]
   dailySessions        DailySession[]
   debts                Debt[]
   deviceHubInfos       DeviceHubInfo[]
+  edmIncomingInvoices  EDMIncomingInvoice[]
+  edmInvoices          EDMInvoice[]
+  edmInvoiceLines      EDMInvoiceLine[]
+  edmSettings          EDMSettings?
   financeAccounts      FinanceAccount[]
   hiddenAgendaItems    HiddenAgendaItem[]
-  agendaEvents         AgendaEvent[]
   inventoryLogs        InventoryLog[]
   inventoryMovements   InventoryMovement[]
+  monthlyArchives      MonthlyStaffArchive[]
   notifications        Notification[]
+  milestones           PerformanceMilestone[]
   products             Product[]
   purchaseOrders       PurchaseOrder[]
   purchaseOrderItems   PurchaseOrderItem[]
@@ -59,17 +66,15 @@ model Shop {
   serviceTickets       ServiceTicket[]
   serviceUsedParts     ServiceUsedPart[]
   settings             Setting[]
-  edmSettings          EDMSettings?
-  edmInvoices          EDMInvoice[]
-  edmInvoiceLines      EDMInvoiceLine[]
-  edmIncomingInvoices  EDMIncomingInvoice[]
   shortageItems        ShortageItem[]
+  staffCommissions     StaffCommission[]
+  staffExpenses        StaffExpense[]
   stockAIAlerts        StockAIAlert[]
   suppliers            Supplier[]
   supplierTransactions SupplierTransaction[]
   transactions         Transaction[]
   users                User[]
-  leaves               UserLeave[]
+  leaveRequests        LeaveRequest[]
 }
 
 model RolePermission {
@@ -85,47 +90,54 @@ model RolePermission {
 }
 
 model User {
-  id                   String          @id @default(cuid())
+  id                   String                @id @default(cuid())
   name                 String?
-  email                String          @unique
+  email                String                @unique
   password             String?
-  role                 Role            @default(STAFF)
+  role                 Role                  @default(STAFF)
   emailVerified        DateTime?
   image                String?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  commissionRate       Decimal         @default(0) @db.Decimal(5, 2)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  commissionRate       Decimal               @default(0) @db.Decimal(12, 2)
   surname              String?
   phone                String?
-  canSell              Boolean         @default(true)
-  canService           Boolean         @default(true)
-  canStock             Boolean         @default(true)
-  canFinance           Boolean         @default(false)
-  canDelete            Boolean         @default(false)
-  canEdit              Boolean         @default(true)
+  canSell              Boolean               @default(true)
+  canService           Boolean               @default(true)
+  canStock             Boolean               @default(true)
+  canFinance           Boolean               @default(false)
+  canDelete            Boolean               @default(false)
+  canEdit              Boolean               @default(true)
   shopId               String?
-  isApproved           Boolean         @default(false)
+  isApproved           Boolean               @default(false)
   verificationCode     String?
   lastVerificationSent DateTime?
-  verificationAttempts Int             @default(0)
+  verificationAttempts Int                   @default(0)
   dashboardLayout      Json?
-  points               Int             @default(0)
+  points               Int                   @default(0)
+  baseSalary           Decimal?              @default(0) @db.Decimal(12, 2)
+  salaryCurrency       String                @default("TRY")
   accounts             Account[]
-  closedSessions       DailySession[]  @relation("ClosedBy")
-  openedSessions       DailySession[]  @relation("OpenedBy")
+  auditLogs            AuditLog[]
+  closedSessions       DailySession[]        @relation("ClosedBy")
+  openedSessions       DailySession[]        @relation("OpenedBy")
   inventoryLogs        InventoryLog[]
+  monthlyArchives      MonthlyStaffArchive[]
   purchaseOrders       PurchaseOrder[]
   reminders            Reminder[]
   returns              ReturnTicket[]
   sales                Sale[]
-  createdTickets       ServiceTicket[] @relation("CreatedBy")
-  assignedTickets      ServiceTicket[] @relation("AssignedTechnician")
+  createdTickets       ServiceTicket[]       @relation("CreatedBy")
+  assignedTickets      ServiceTicket[]       @relation("AssignedTechnician")
   sessions             Session[]
-  shortageTasks        ShortageItem[]  @relation("ShortageAssignment")
+  shortageTasks        ShortageItem[]        @relation("ShortageAssignment")
+  staffCommissions     StaffCommission[]
+  staffExpenses        StaffExpense[]
   transactions         Transaction[]
-  leaves               UserLeave[]
-  auditLogs            AuditLog[]
-  shop                 Shop?           @relation(fields: [shopId], references: [id])
+  shop                 Shop?                 @relation(fields: [shopId], references: [id])
+  leaveRequests        LeaveRequest[]
+  approvedCommissions  StaffCommission[]     @relation("CommissionApprover")
+  approvedLeaves       LeaveRequest[]        @relation("LeaveApprover")
 }
 
 model Customer {
@@ -143,20 +155,19 @@ model Customer {
   secondaryPhone String?
   type           String          @default("BIREYSEL")
   shopId         String
+  balance        Decimal         @default(0) @db.Decimal(12, 2)
+  balanceUsd     Decimal         @default(0) @db.Decimal(12, 2)
+  taxNumber      String?
+  taxOffice      String?
+  isEInvoiceUser Boolean?        @default(false)
   shop           Shop            @relation(fields: [shopId], references: [id])
   debts          Debt[]
+  edmInvoices    EDMInvoice[]
   returns        ReturnTicket[]
   sales          Sale[]
   tickets        ServiceTicket[]
   shortageItems  ShortageItem[]
   transactions   Transaction[]
-  edmInvoices    EDMInvoice[]
-  balance        Decimal         @default(0) @db.Decimal(12, 2)
-  balanceUsd     Decimal         @default(0) @db.Decimal(12, 2)
-
-  taxNumber     String?
-  taxOffice     String?
-  isEInvoiceUser Boolean?  @default(false) // EDM CheckUser sonucu: true=e-Fatura, false=e-Arsiv
 
   @@unique([shopId, phone])
   @@index([shopId, taxNumber])
@@ -190,6 +201,7 @@ model ServiceTicket {
   serviceType           String?
   shopId                String
   attributes            Json?
+  edmInvoice            EDMInvoice?
   inventoryMovements    InventoryMovement[]
   returns               ReturnTicket[]
   logs                  ServiceLog[]
@@ -198,7 +210,6 @@ model ServiceTicket {
   shop                  Shop                @relation(fields: [shopId], references: [id])
   technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id])
   usedParts             ServiceUsedPart[]
-  edmInvoice            EDMInvoice?
 
   @@unique([shopId, ticketNumber])
   @@index([shopId, status])
@@ -250,40 +261,40 @@ model Category {
 }
 
 model Product {
-  id             String              @id @default(cuid())
-  sku            String?
-  barcode        String?
-  name           String
-  description    String?
-  categoryId     String
-  buyPrice       Decimal             @db.Decimal(10, 2)
-  buyPriceUsd    Decimal?            @db.Decimal(10, 2)
-  sellPrice      Decimal             @db.Decimal(10, 2)
-  sellPriceUsd   Decimal?            @db.Decimal(10, 2)
-  stock          Int                 @default(0)
-  criticalStock  Int                 @default(1)
-  isSecondHand   Boolean             @default(false)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  isChronic      Boolean             @default(false)
-  supplierId     String?
-  location       String?
-  warrantyMonths Int                 @default(0)
-  shopId         String
-  attributes     Json?
-  deviceInfo     DeviceHubInfo?
-  inventoryLogs  InventoryLog[]
-  movements      InventoryMovement[]
-  category       Category            @relation(fields: [categoryId], references: [id])
-  shop           Shop                @relation(fields: [shopId], references: [id])
-  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
-  purchaseItems  PurchaseOrderItem[]
-  returns        ReturnTicket[]
-  saleItems      SaleItem[]
-  usedInServices ServiceUsedPart[]
-  shortageItems  ShortageItem[]
-  aiAlerts       StockAIAlert[]
+  id               String              @id @default(cuid())
+  sku              String?
+  barcode          String?
+  name             String
+  description      String?
+  categoryId       String
+  buyPrice         Decimal             @db.Decimal(10, 2)
+  buyPriceUsd      Decimal?            @db.Decimal(10, 2)
+  sellPrice        Decimal             @db.Decimal(10, 2)
+  sellPriceUsd     Decimal?            @db.Decimal(10, 2)
+  stock            Int                 @default(0)
+  criticalStock    Int                 @default(1)
+  isSecondHand     Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  isChronic        Boolean             @default(false)
+  supplierId       String?
+  location         String?
+  warrantyMonths   Int                 @default(0)
+  shopId           String
+  attributes       Json?
   hideFromShortage Boolean             @default(false)
+  deviceInfo       DeviceHubInfo?
+  inventoryLogs    InventoryLog[]
+  movements        InventoryMovement[]
+  category         Category            @relation(fields: [categoryId], references: [id])
+  shop             Shop                @relation(fields: [shopId], references: [id])
+  supplier         Supplier?           @relation(fields: [supplierId], references: [id])
+  purchaseItems    PurchaseOrderItem[]
+  returns          ReturnTicket[]
+  saleItems        SaleItem[]
+  usedInServices   ServiceUsedPart[]
+  shortageItems    ShortageItem[]
+  aiAlerts         StockAIAlert[]
 
   @@unique([shopId, sku])
   @@unique([shopId, barcode])
@@ -339,35 +350,35 @@ model Reminder {
 }
 
 model ReturnTicket {
-  id              String         @id @default(cuid())
-  ticketNumber    String
-  serviceTicketId String?
-  productId       String?
-  supplierId      String?
-  userId          String
-  returnReason    ReturnReason?
-  lossAmount      Decimal        @default(0) @db.Decimal(10, 2)
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  shopId          String
-  customerId      String?
-  debtId          String?
-  quantity        Int            @default(1)
-  refundAmount    Decimal?       @db.Decimal(10, 2)
-  refundCurrency  String?        @default("TRY")
-  restockProduct  Boolean        @default(true)
-  returnStatus    ReturnStatus   @default(PENDING)
-  saleId          String?
-  sourceType      String         @default("SERVICE")
-  customer        Customer?      @relation(fields: [customerId], references: [id])
-  product         Product?       @relation(fields: [productId], references: [id])
-  serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
-  shop            Shop           @relation(fields: [shopId], references: [id])
-  supplier        Supplier?      @relation(fields: [supplierId], references: [id])
-  user            User           @relation(fields: [userId], references: [id])
-  shortageItems   ShortageItem[]
+  id                 String              @id @default(cuid())
+  ticketNumber       String
+  serviceTicketId    String?
+  productId          String?
+  supplierId         String?
+  userId             String
+  returnReason       ReturnReason?
+  lossAmount         Decimal             @default(0) @db.Decimal(10, 2)
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  shopId             String
+  customerId         String?
+  debtId             String?
+  quantity           Int                 @default(1)
+  refundAmount       Decimal?            @db.Decimal(10, 2)
+  refundCurrency     String?             @default("TRY")
+  restockProduct     Boolean             @default(true)
+  returnStatus       ReturnStatus        @default(PENDING)
+  saleId             String?
+  sourceType         String              @default("SERVICE")
   inventoryMovements InventoryMovement[]
+  customer           Customer?           @relation(fields: [customerId], references: [id])
+  product            Product?            @relation(fields: [productId], references: [id])
+  serviceTicket      ServiceTicket?      @relation(fields: [serviceTicketId], references: [id])
+  shop               Shop                @relation(fields: [shopId], references: [id])
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
+  user               User                @relation(fields: [userId], references: [id])
+  shortageItems      ShortageItem[]
 
   @@unique([shopId, ticketNumber])
 }
@@ -426,29 +437,29 @@ model DeviceHubInfo {
 }
 
 model ShortageItem {
-  id             String    @id @default(cuid())
+  id             String        @id @default(cuid())
   productId      String?
   name           String
-  quantity       Int       @default(1)
+  quantity       Int           @default(1)
   notes          String?
-  isResolved     Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  isResolved     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   shopId         String
   assignedToId   String?
   customerId     String?
-  isTaken        Boolean   @default(false)
+  isTaken        Boolean       @default(false)
   requesterName  String?
   requesterPhone String?
   takenAt        DateTime?
   supplierId     String?
   returnTicketId String?
-  assignedTo     User?          @relation("ShortageAssignment", fields: [assignedToId], references: [id])
-  customer       Customer?      @relation(fields: [customerId], references: [id])
-  product        Product?       @relation(fields: [productId], references: [id])
-  shop           Shop           @relation(fields: [shopId], references: [id])
-  supplier       Supplier?      @relation(fields: [supplierId], references: [id])
-  returnTicket   ReturnTicket?  @relation(fields: [returnTicketId], references: [id])
+  assignedTo     User?         @relation("ShortageAssignment", fields: [assignedToId], references: [id])
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  product        Product?      @relation(fields: [productId], references: [id])
+  returnTicket   ReturnTicket? @relation(fields: [returnTicketId], references: [id])
+  shop           Shop          @relation(fields: [shopId], references: [id])
+  supplier       Supplier?     @relation(fields: [supplierId], references: [id])
 }
 
 model InventoryMovement {
@@ -460,15 +471,15 @@ model InventoryMovement {
   createdAt       DateTime       @default(now())
   saleId          String?
   serviceTicketId String?
-  debtId          String?
-  returnTicketId  String?
   shopId          String
   supplierId      String?
+  debtId          String?
+  returnTicketId  String?
+  debt            Debt?          @relation(fields: [debtId], references: [id])
   product         Product        @relation(fields: [productId], references: [id])
+  returnTicket    ReturnTicket?  @relation(fields: [returnTicketId], references: [id])
   sale            Sale?          @relation(fields: [saleId], references: [id])
   serviceTicket   ServiceTicket? @relation(fields: [serviceTicketId], references: [id])
-  debt            Debt?          @relation(fields: [debtId], references: [id])
-  returnTicket    ReturnTicket?  @relation(fields: [returnTicketId], references: [id])
   shop            Shop           @relation(fields: [shopId], references: [id])
   supplier        Supplier?      @relation(fields: [supplierId], references: [id])
 }
@@ -485,13 +496,13 @@ model Sale {
   createdAt          DateTime            @default(now())
   shopId             String
   debt               Debt?
+  edmInvoice         EDMInvoice?
   inventoryMovements InventoryMovement[]
   customer           Customer?           @relation(fields: [customerId], references: [id])
   shop               Shop                @relation(fields: [shopId], references: [id])
   user               User                @relation(fields: [userId], references: [id])
   items              SaleItem[]
   transaction        Transaction?
-  edmInvoice         EDMInvoice?
 
   @@unique([shopId, saleNumber])
 }
@@ -508,7 +519,6 @@ model SaleItem {
   sale       Sale    @relation(fields: [saleId], references: [id])
   shop       Shop    @relation(fields: [shopId], references: [id])
 }
-
 
 model Transaction {
   id               String          @id @default(cuid())
@@ -527,15 +537,15 @@ model Transaction {
   shopId           String
   customerId       String?
   runningBalance   Decimal?        @db.Decimal(12, 2)
-  attachments      Attachment[]
   supplierId       String?
+  attachments      Attachment[]
   customer         Customer?       @relation(fields: [customerId], references: [id])
-  debt             Debt?           @relation(fields: [debtId], references: [id])
   dailySession     DailySession?   @relation(fields: [dailySessionId], references: [id])
+  debt             Debt?           @relation(fields: [debtId], references: [id])
   financeAccount   FinanceAccount? @relation(fields: [financeAccountId], references: [id])
   sale             Sale?           @relation(fields: [saleId], references: [id])
-  supplier         Supplier?       @relation("SupplierToTransaction", fields: [supplierId], references: [id])
   shop             Shop            @relation(fields: [shopId], references: [id])
+  supplier         Supplier?       @relation("SupplierToTransaction", fields: [supplierId], references: [id])
   user             User            @relation(fields: [userId], references: [id])
 
   @@index([shopId])
@@ -631,57 +641,57 @@ model DailySession {
 }
 
 model Debt {
-  id              String    @id @default(cuid())
-  customerId      String
-  amount          Decimal   @db.Decimal(10, 2)
-  remainingAmount Decimal   @db.Decimal(10, 2)
-  dueDate         DateTime?
-  isPaid          Boolean   @default(false)
-  isTracking      Boolean       @default(false)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  shopId          String
-  currency        String        @default("TRY")
-  exchangeRate    Decimal?      @db.Decimal(10, 4)
-  saleId          String?       @unique
-  transactions    Transaction[]
+  id                 String              @id @default(cuid())
+  customerId         String
+  amount             Decimal             @db.Decimal(10, 2)
+  remainingAmount    Decimal             @db.Decimal(10, 2)
+  dueDate            DateTime?
+  isPaid             Boolean             @default(false)
+  isTracking         Boolean             @default(false)
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  shopId             String
+  currency           String              @default("TRY")
+  exchangeRate       Decimal?            @db.Decimal(10, 4)
+  saleId             String?             @unique
+  customer           Customer            @relation(fields: [customerId], references: [id])
+  sale               Sale?               @relation(fields: [saleId], references: [id])
+  shop               Shop                @relation(fields: [shopId], references: [id])
   inventoryMovements InventoryMovement[]
-  customer        Customer      @relation(fields: [customerId], references: [id])
-  sale            Sale?         @relation(fields: [saleId], references: [id])
-  shop            Shop          @relation(fields: [shopId], references: [id])
+  transactions       Transaction[]
 }
 
 model Supplier {
-  id            String                @id @default(cuid())
-  name          String
-  contact       String?
-  phone         String?
-  email         String?
-  address       String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  balance       Decimal               @default(0) @db.Decimal(12, 2)
-  balanceUsd    Decimal               @default(0) @db.Decimal(12, 2)
-  category      String?               @default("Genel")
-  isApproved    Boolean               @default(false)
-  logo          String?
-  taxNumber     String?
-  taxOffice     String?
-  totalShopping Decimal               @default(0) @db.Decimal(12, 2)
-  trustScore    Int                   @default(100)
-  bankName      String?
-  iban          String?
-  notes         String?
-  shopId        String
-  products           Product[]
-  purchases          PurchaseOrder[]
-  returns            ReturnTicket[]
-  shop               Shop                  @relation(fields: [shopId], references: [id])
-  transactions       Transaction[] @relation("SupplierToTransaction")
-  shortageItems      ShortageItem[]
-  inventoryMovements InventoryMovement[]
+  id                  String                @id @default(cuid())
+  name                String
+  contact             String?
+  phone               String?
+  email               String?
+  address             String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  balance             Decimal               @default(0) @db.Decimal(12, 2)
+  balanceUsd          Decimal               @default(0) @db.Decimal(12, 2)
+  category            String?               @default("Genel")
+  isApproved          Boolean               @default(false)
+  logo                String?
+  taxNumber           String?
+  taxOffice           String?
+  totalShopping       Decimal               @default(0) @db.Decimal(12, 2)
+  trustScore          Int                   @default(100)
+  bankName            String?
+  iban                String?
+  notes               String?
+  shopId              String
+  inventoryMovements  InventoryMovement[]
+  products            Product[]
+  purchases           PurchaseOrder[]
+  returns             ReturnTicket[]
+  shortageItems       ShortageItem[]
+  shop                Shop                  @relation(fields: [shopId], references: [id])
   SupplierTransaction SupplierTransaction[]
+  transactions        Transaction[]         @relation("SupplierToTransaction")
 }
 
 model PurchaseOrder {
@@ -762,13 +772,13 @@ model ReceiptSettings {
   phone     String   @default("+90 (5xx) xxx xx xx")
   address   String?
   footer    String   @default("Bizi Tercih Ettiğiniz İçin Teşekkürler")
-  footer2   String?  @default("Yine Bekleriz")
   website   String   @default("basarteknik.tech")
   updatedAt DateTime @updatedAt
   terms     String?
   shopId    String
   logoUrl   String?
   paperSize String   @default("72mm")
+  footer2   String?  @default("Yine Bekleriz")
   shop      Shop     @relation(fields: [shopId], references: [id])
 }
 
@@ -811,6 +821,257 @@ model IndustryTemplate {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   primaryColor      String   @default("#6366f1")
+}
+
+model EDMInvoice {
+  id              String           @id @default(cuid())
+  shopId          String
+  uuid            String
+  invoiceId       String
+  type            EDMInvoiceType   @default(EARCHIVE)
+  status          EDMInvoiceStatus @default(DRAFT)
+  customerId      String?
+  saleId          String?          @unique
+  serviceTicketId String?          @unique
+  totalAmount     Decimal          @db.Decimal(12, 2)
+  subtotal        Decimal          @db.Decimal(12, 2)
+  taxTotal        Decimal          @db.Decimal(12, 2)
+  currency        String           @default("TRY")
+  issueDate       DateTime
+  note            String?
+  rawXml          String?
+  rawResponse     String?
+  xmlContent      String?
+  xsltContent     String?
+  edmError        String?
+  cancelledAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  customer        Customer?        @relation(fields: [customerId], references: [id])
+  sale            Sale?            @relation(fields: [saleId], references: [id])
+  serviceTicket   ServiceTicket?   @relation(fields: [serviceTicketId], references: [id])
+  shop            Shop             @relation(fields: [shopId], references: [id])
+  lines           EDMInvoiceLine[]
+
+  @@unique([shopId, uuid])
+  @@index([shopId, status])
+  @@index([shopId, issueDate])
+}
+
+model EDMInvoiceLine {
+  id         String     @id @default(cuid())
+  invoiceId  String
+  shopId     String
+  name       String
+  quantity   Int
+  unitPrice  Decimal    @db.Decimal(12, 2)
+  totalPrice Decimal    @db.Decimal(12, 2)
+  vatRate    Int        @default(18)
+  vatAmount  Decimal    @db.Decimal(12, 2)
+  unitCode   String     @default("C62")
+  invoice    EDMInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  shop       Shop       @relation(fields: [shopId], references: [id])
+}
+
+model EDMIncomingInvoice {
+  id          String   @id @default(cuid())
+  shopId      String
+  uuid        String
+  invoiceId   String
+  senderVkn   String
+  senderName  String
+  receiverVkn String
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("TRY")
+  status      String
+  issueDate   DateTime
+  envelopeId  String?
+  htmlContent String?
+  pdfBlob     Bytes?
+  rawXml      String?
+  isRead      Boolean  @default(false)
+  syncedAt    DateTime @default(now())
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, uuid])
+  @@index([shopId, issueDate])
+}
+
+model EDMSettings {
+  id                String   @id @default(cuid())
+  shopId            String   @unique
+  environment       String   @default("TEST")
+  senderVkn         String?
+  senderName        String?
+  senderAddress     String?
+  senderCity        String?  @default("İstanbul")
+  senderDistrict    String?
+  senderTaxOffice   String?
+  username          String?
+  passwordEncrypted String?
+  apiUrl            String?
+  registrationUrl   String?
+  edmActive         Boolean  @default(false)
+  earsivXslt        String?
+  efaturaXslt       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model TenantSettings {
+  id                     String   @id @default(cuid())
+  tenant_id              String   @unique
+  company_vkn            String
+  edm_username           String
+  edm_password_encrypted String
+  integration_code       String?
+  integration_company_id Int?
+  xslt_path_satim        String?
+  xslt_path_alim         String?
+  is_active              Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Invoices {
+  id             String    @id @default(cuid())
+  tenant_id      String
+  direction      String
+  invoice_number String?
+  ettn           String
+  receiver_title String?
+  receiver_vkn   String?
+  invoice_date   DateTime?
+  payable_amount Decimal   @db.Decimal(12, 2)
+  status         String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenant_id, direction])
+  @@index([tenant_id, ettn])
+  @@index([tenant_id, invoice_date])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  shopId     String
+  action     String
+  entityType String
+  entityId   String?
+  entityName String?
+  message    String
+  details    Json?
+  createdAt  DateTime @default(now())
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([shopId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model StaffCommission {
+  id          String           @id @default(cuid())
+  userId      String
+  amount      Decimal          @db.Decimal(12, 2)
+  description String
+  status      CommissionStatus @default(PENDING)
+  type        String           @default("SERVICE")
+  referenceId String?
+  approvedAt   DateTime?
+  approvedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  shopId       String
+  shop         Shop             @relation(fields: [shopId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+  approvedBy   User?            @relation("CommissionApprover", fields: [approvedById], references: [id])
+
+  @@index([userId, status])
+  @@index([shopId, createdAt])
+}
+
+model StaffExpense {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Decimal  @db.Decimal(12, 2)
+  description String
+  type        String   @default("ADVANCE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model PerformanceMilestone {
+  id          String   @id @default(cuid())
+  role        Role
+  targetType  String
+  targetValue Decimal  @db.Decimal(12, 2)
+  bonusAmount Decimal  @db.Decimal(12, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId, role])
+}
+
+model MonthlyStaffArchive {
+  id               String   @id @default(cuid())
+  userId           String
+  period           String
+  baseSalary       Decimal  @db.Decimal(12, 2)
+  totalCommissions Decimal  @db.Decimal(12, 2)
+  totalExpenses    Decimal  @db.Decimal(12, 2)
+  netPayout        Decimal  @db.Decimal(12, 2)
+  closedAt         DateTime @default(now())
+  shopId           String
+  metadata         Json?
+  shop             Shop     @relation(fields: [shopId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, period])
+  @@index([shopId, period])
+}
+
+model LeaveRequest {
+  id        String      @id @default(cuid())
+  userId    String
+  shopId    String
+  type      LeaveType
+  status    LeaveStatus @default(PENDING)
+  startDate DateTime
+  endDate      DateTime
+  note         String?
+  approvedById String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy   User?        @relation("LeaveApprover", fields: [approvedById], references: [id])
+
+  @@index([shopId])
+  @@index([userId])
+}
+
+enum LeaveType {
+  ANNUAL
+  DAILY
+  PAID
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum OrderStatus {
@@ -908,23 +1169,6 @@ enum IndustryType {
   GENERAL
 }
 
-model UserLeave {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shopId    String
-  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  startDate DateTime
-  endDate   DateTime
-  type      String   @default("ANNUAL") // ANNUAL, SICK, UNPAID, etc.
-  note      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([shopId])
-}
-
 enum EDMInvoiceType {
   EINVOICE
   EARCHIVE
@@ -938,156 +1182,8 @@ enum EDMInvoiceStatus {
   CANCELLED
 }
 
-model EDMInvoice {
-  id              String           @id @default(cuid())
-  shopId          String
-  uuid            String           // EDM UUID (ETTN)
-  invoiceId       String           // Fatura numarası
-  type            EDMInvoiceType   @default(EARCHIVE)
-  status          EDMInvoiceStatus @default(DRAFT)
-  customerId      String?
-  saleId          String?          @unique
-  serviceTicketId String?          @unique
-  totalAmount     Decimal          @db.Decimal(12, 2)
-  subtotal        Decimal          @db.Decimal(12, 2)
-  taxTotal        Decimal          @db.Decimal(12, 2)
-  currency        String           @default("TRY")
-  issueDate       DateTime
-  note            String?
-  rawXml          String?          @db.Text
-  rawResponse     String?          @db.Text
-  xmlContent      String?          @db.Text
-  xsltContent     String?          @db.Text
-  edmError        String?          @db.Text
-  cancelledAt     DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  shop          Shop             @relation(fields: [shopId], references: [id])
-  customer      Customer?        @relation(fields: [customerId], references: [id])
-  sale          Sale?            @relation(fields: [saleId], references: [id])
-  serviceTicket ServiceTicket?   @relation(fields: [serviceTicketId], references: [id])
-  lines         EDMInvoiceLine[]
-
-  @@index([shopId, status])
-  @@index([shopId, issueDate])
-  @@unique([shopId, uuid])
-}
-
-model EDMInvoiceLine {
-  id          String  @id @default(cuid())
-  invoiceId   String
-  shopId      String
-  name        String
-  quantity    Int
-  unitPrice   Decimal @db.Decimal(12, 2)
-  totalPrice  Decimal @db.Decimal(12, 2)
-  vatRate     Int     @default(18)
-  vatAmount   Decimal @db.Decimal(12, 2)
-  unitCode    String  @default("C62")
-
-  invoice EDMInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  shop    Shop       @relation(fields: [shopId], references: [id])
-}
-
-model EDMIncomingInvoice {
-  id           String   @id @default(cuid())
-  shopId       String
-  uuid         String   // Gelen fatura UUID
-  invoiceId    String   // Gelen fatura numarası
-  senderVkn    String
-  senderName   String
-  receiverVkn  String
-  amount       Decimal  @db.Decimal(12, 2)
-  currency     String   @default("TRY")
-  status       String   // PENDING/APPROVED/REJECTED
-  issueDate    DateTime
-  envelopeId   String?
-  htmlContent  String?  @db.Text
-  pdfBlob      Bytes?   // EDM'den alınan PDF binary
-  rawXml       String?  @db.Text
-  isRead       Boolean  @default(false)
-  syncedAt     DateTime @default(now())
-
-  shop Shop @relation(fields: [shopId], references: [id])
-
-  @@unique([shopId, uuid])
-  @@index([shopId, issueDate])
-}
-
-model EDMSettings {
-  id                String   @id @default(cuid())
-  shopId            String   @unique
-  environment       String   @default("TEST") // TEST or PRODUCTION
-  senderVkn         String?
-  senderName        String?
-  senderAddress     String?
-  senderCity        String?   @default("İstanbul")
-  senderDistrict    String?
-  senderTaxOffice   String?
-  username          String?
-  passwordEncrypted String?  @db.Text
-  apiUrl            String?
-  registrationUrl   String?
-  edmActive         Boolean  @default(false)  // Bayi icin e-Fatura modulu aktif mi?
-  earsivXslt        String?  @db.Text         // e-Arsiv XSLT sablonu
-  efaturaXslt       String?  @db.Text         // e-Fatura XSLT sablonu
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-}
-
-model TenantSettings {
-  id                   String   @id @default(cuid())
-  tenant_id            String   @unique
-  company_vkn          String
-  edm_username         String
-  edm_password_encrypted String
-  integration_code     String?
-  integration_company_id Int?
-  xslt_path_satim      String?
-  xslt_path_alim       String?
-  is_active            Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-}
-
-model Invoices {
-  id              String   @id @default(cuid())
-  tenant_id       String
-  direction       String   // INBOUND or OUTBOUND
-  invoice_number  String?
-  ettn            String
-  receiver_title  String?
-  receiver_vkn    String?
-  invoice_date    DateTime?
-  payable_amount  Decimal  @db.Decimal(12, 2)
-  status          String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([tenant_id, direction])
-  @@index([tenant_id, ettn])
-  @@index([tenant_id, invoice_date])
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  shopId      String
-  action      String   // e.g., "DELETE", "UPDATE", "CREATE"
-  entityType  String   // e.g., "PRODUCT", "STAFF", "CUSTOMER", "SALE", "SERVICE"
-  entityId    String?
-  entityName  String?  // Name of the entity at the time of log (important for deleted items)
-  message     String
-  details     Json?    // Optional: stores old values or more context
-  createdAt   DateTime @default(now())
-
-  user        User?    @relation(fields: [userId], references: [id])
-  shop        Shop     @relation(fields: [shopId], references: [id])
-
-  @@index([shopId])
-  @@index([userId])
-  @@index([createdAt])
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

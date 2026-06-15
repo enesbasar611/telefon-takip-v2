@@ -166,15 +166,15 @@ export function StockReceiptModal({ isOpen, onClose, items }: StockReceiptModalP
                         <div
                             ref={receiptRef}
                             className={`receipt-preview bg-white text-black p-4 font-mono shadow-xl ${currentPaperSize === "58mm" ? "w-[58mm]" :
-                                    currentPaperSize === "80mm" ? "w-[80mm]" :
-                                        "w-[72mm]"
+                                currentPaperSize === "80mm" ? "w-[80mm]" :
+                                    "w-[72mm]"
                                 }`}
                             style={{ width: currentPaperSize }}
                         >
                             <div className="text-center border-b-2 border-black pb-3 mb-3">
                                 {settings?.logoUrl && (
                                     <div className="mb-2 flex justify-center">
-                                        <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-150" />
+                                        <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
                                     </div>
                                 )}
                                 <h3 className="font-black text-sm uppercase">{settings?.title || "BAŞAR TEKNİK"}</h3>

@@ -126,6 +126,7 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       href: "/ayarlar",
       subItems: [
         { label: "Sistem Ayarları", href: "/ayarlar" },
+        { label: "İşlem Logları", href: "/ayarlar/loglar" },
         ...(effectiveRole === "SUPER_ADMIN" ? [
           { label: "Sektör Yönetimi", href: "/ayarlar/sektorler" },
           { label: "Tüm Dükkanlar (Admin)", href: "/admin/shops" },
@@ -229,13 +230,27 @@ export function Sidebar({ className, user, shop, onNavigate }: {
           <p className="text-[12px]  text-muted-foreground/60 uppercase tracking-widest px-3 mb-3">Menü</p>
 
           {menuItems.filter(item => {
-            if (item.label === "Ayarlar" &&
-              session?.user?.role !== "SUPER_ADMIN" &&
-              session?.user?.role !== "ADMIN" &&
-              session?.user?.role !== "MANAGER" &&
-              session?.user?.role !== "SHOP_MANAGER") return false;
+            const u = session?.user as any;
+            if (!u) return false;
 
-            // Granular module check
+            if (item.label === "Ayarlar" &&
+              u.role !== "SUPER_ADMIN" &&
+              u.role !== "ADMIN" &&
+              u.role !== "MANAGER" &&
+              u.role !== "SHOP_MANAGER") return false;
+
+            // Granular User Permission Checks
+            if (item.href.startsWith("/satis") && !u.canSell && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/veresiye") && !u.canFinance && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/servis") && !u.canService && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/cihaz-listesi") && !u.canService && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/stok") && !u.canStock && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/tedarikciler") && !u.canStock && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/raporlar") && !u.canFinance && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/efatura") && !u.canFinance && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/personel") && u.role !== "ADMIN" && u.role !== "MANAGER" && u.role !== "SHOP_MANAGER" && u.role !== "SUPER_ADMIN") return false;
+
+            // Granular module check based on shop config
             if ((item as any).module && !isModuleEnabled(shop, (item as any).module)) return false;
 
             return true;

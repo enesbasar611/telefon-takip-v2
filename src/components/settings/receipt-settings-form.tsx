@@ -114,66 +114,24 @@ export function ReceiptSettingsForm({ initialSettings, shop }: { initialSettings
                     {/* Form Component */}
                     <div className="space-y-8">
                         <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-3xl border border-slate-200 dark:border-zinc-800 space-y-8 shadow-sm">
-                            {/* Firma Bilgileri (Fixed or Editable) */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                            <Store className="w-5 h-5" />
-                                        </div>
-                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                                            Firma Bilgileri
-                                        </h3>
+                            <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                        <Store className="w-5 h-5" />
                                     </div>
-                                    {activeType !== 'general' && (
-                                        <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded-full uppercase">
-                                            Genel Ayarlardan Alınır
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-slate-500">Firma Ünvanı</Label>
-                                        <Input
-                                            value={localSettings.title || ""}
-                                            onChange={(e) => setLocalSettings({ ...localSettings, title: e.target.value })}
-                                            disabled={activeType !== 'general'}
-                                            placeholder="Örn: Başar Teknik"
-                                            className={cn("h-11 rounded-xl", activeType !== 'general' && "bg-slate-50 dark:bg-zinc-800/30 font-medium")}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-slate-500">İletişim Hattı</Label>
-                                        <Input
-                                            value={localSettings.phone || ""}
-                                            onChange={(e) => setLocalSettings({ ...localSettings, phone: e.target.value })}
-                                            disabled={activeType !== 'general'}
-                                            placeholder="05xx xxx xx xx"
-                                            className={cn("h-11 rounded-xl", activeType !== 'general' && "bg-slate-50 dark:bg-zinc-800/30 font-medium")}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-slate-500">Web Adresi</Label>
-                                        <Input
-                                            value={localSettings.website || ""}
-                                            onChange={(e) => setLocalSettings({ ...localSettings, website: e.target.value })}
-                                            disabled={activeType !== 'general'}
-                                            placeholder="www.isletmeadi.com"
-                                            className={cn("h-11 rounded-xl", activeType !== 'general' && "bg-slate-50 dark:bg-zinc-800/30 font-medium")}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-slate-500">Adres Bilgisi</Label>
-                                        <Input
-                                            value={localSettings.address || ""}
-                                            onChange={(e) => setLocalSettings({ ...localSettings, address: e.target.value })}
-                                            disabled={activeType !== 'general'}
-                                            placeholder="Cadde, Mahalle, İlçe/İl"
-                                            className={cn("h-11 rounded-xl", activeType !== 'general' && "bg-slate-50 dark:bg-zinc-800/30 font-medium")}
-                                        />
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900 dark:text-white">Firma Bilgileri Artık Profilde!</p>
+                                        <p className="text-[11px] text-muted-foreground">Fişlerdeki ünvan, telefon ve adres bilgileri artık Profil sayfasından yönetiliyor.</p>
                                     </div>
                                 </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.location.href = "/profil"}
+                                    className="rounded-xl border-blue-500/20 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                >
+                                    Profile Git
+                                </Button>
                             </div>
 
                             {/* Şablon Ayarları */}

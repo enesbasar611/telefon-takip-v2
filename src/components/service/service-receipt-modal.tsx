@@ -25,7 +25,7 @@ interface ServiceReceiptModalProps {
     ticket: any;
 }
 
-const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange, shopName, shopPhone, shopAddress }: any) => {
+const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange, shopName, shopPhone, shopAddress, shopLogo, shopWebsite }: any) => {
     if (!ticket) return null;
 
     return (
@@ -36,6 +36,8 @@ const ServiceReceiptContent = ({ ticket, settings, isEditing, onCostChange, shop
             shopName={shopName}
             shopPhone={shopPhone}
             shopAddress={shopAddress}
+            shopLogo={shopLogo}
+            shopWebsite={shopWebsite}
         >
             {/* Customer Info */}
             <div className="mb-4 border-b-[1.5px] border-black pb-3">
@@ -174,6 +176,8 @@ export function ServiceReceiptModal({ isOpen, onClose, ticket }: ServiceReceiptM
                             shopName={shop?.name}
                             shopPhone={shop?.phone}
                             shopAddress={shop?.address}
+                            shopLogo={shop?.logoUrl}
+                            shopWebsite={shop?.website}
                         />
                     </div>
                 )}

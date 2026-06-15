@@ -2685,7 +2685,8 @@ export function VeresiyeClient({
                         shopPhone={receiptSettings?.phone || shop?.phone}
                         rates={rates as any}
                         initialShowPaid={receiptShowPaid}
-                        logoUrl={receiptSettings?.logoUrl}
+                        shopLogo={receiptSettings?.logoUrl}
+                        defaultCurrency={defaultCurrency}
                     />
                 )
             }

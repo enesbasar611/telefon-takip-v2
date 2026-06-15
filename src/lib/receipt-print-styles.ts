@@ -268,7 +268,7 @@ export async function generateReceiptImage(
         const html2canvasModule = await import("html2canvas");
         const html2canvas = html2canvasModule.default;
         const canvas = await html2canvas(receiptRef.current, {
-            scale: 4,
+            scale: 6,
             backgroundColor: "#ffffff",
             logging: false,
             useCORS: true,
@@ -434,7 +434,7 @@ export async function generateProfessionalPDF(
         const html2canvas = html2canvasModule.default;
 
         const canvas = await html2canvas(element, {
-            scale: 2, // 2x scale is enough for PDF quality and keeps file size reasonable
+            scale: 4, // 4-5x scale is best for high-quality printing
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff"

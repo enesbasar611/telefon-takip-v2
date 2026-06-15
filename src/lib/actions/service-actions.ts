@@ -341,6 +341,44 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       }
     }
 
+    // --- Technician Bonus Injection ---
+    if (status === ServiceStatus.READY && currentTicket.status !== ServiceStatus.READY && currentTicket.technicianId) {
+      try {
+        const technician = await (prisma.user as any).findUnique({
+          where: { id: currentTicket.technicianId },
+          select: { serviceCommissionAmount: true, name: true }
+        });
+
+        if (technician && Number((technician as any).serviceCommissionAmount) > 0) {
+          // Check if already awarded
+          const existing = await (prisma as any).staffCommission.findFirst({
+            where: {
+              userId: currentTicket.technicianId,
+              referenceId: ticketId,
+              type: "SERVICE"
+            }
+          });
+
+          if (!existing) {
+            await (prisma as any).staffCommission.create({
+              data: {
+                userId: currentTicket.technicianId,
+                amount: Number((technician as any).serviceCommissionAmount),
+                description: `Servis Bitiş Primi - ${currentTicket.ticketNumber}`,
+                type: "SERVICE",
+                referenceId: ticketId,
+                shopId,
+                status: "PENDING"
+              }
+            });
+            console.log(`[SERVICE_ACTION] Awarded ${(technician as any).serviceCommissionAmount} bonus to ${(technician as any).name} for ticket ${currentTicket.ticketNumber}`);
+          }
+        }
+      } catch (err) {
+        console.error("Error awarding technician bonus:", err);
+      }
+    }
+
     // --- WhatsApp Integration for 'READY' ---
     let whatsappPending = null;
     if (status === ServiceStatus.READY) {

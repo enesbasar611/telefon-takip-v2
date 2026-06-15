@@ -83,20 +83,20 @@ const authMiddleware = withAuth(
                 return NextResponse.redirect(new URL("/ayarlar?tab=moduller&error=EInvoiceNotEnabled", req.url));
             }
 
-            if (pathname.startsWith("/finans") && !token.canFinance && !isAdmin) {
-                return NextResponse.redirect(new URL("/", req.url));
+            if ((pathname.startsWith("/finans") || pathname.startsWith("/veresiye") || pathname.startsWith("/raporlar") || pathname.startsWith("/efatura")) && !token.canFinance && !isAdmin) {
+                return NextResponse.redirect(new URL("/dashboard", req.url));
             }
 
             if ((pathname.startsWith("/satis") || pathname.startsWith("/kasa")) && !token.canSell && !isAdmin) {
-                return NextResponse.redirect(new URL("/", req.url));
+                return NextResponse.redirect(new URL("/dashboard", req.url));
             }
 
-            if ((pathname.startsWith("/servis") || pathname.startsWith("/teknik")) && !token.canService && !isAdmin) {
-                return NextResponse.redirect(new URL("/", req.url));
+            if ((pathname.startsWith("/servis") || pathname.startsWith("/teknik") || pathname.startsWith("/cihaz-listesi")) && !token.canService && !isAdmin) {
+                return NextResponse.redirect(new URL("/dashboard", req.url));
             }
 
-            if ((pathname.startsWith("/stok") || pathname.startsWith("/cihaz-listesi") || pathname.startsWith("/urunler")) && !token.canStock && !isAdmin) {
-                return NextResponse.redirect(new URL("/", req.url));
+            if ((pathname.startsWith("/stok") || pathname.startsWith("/urunler") || pathname.startsWith("/tedarikciler")) && !token.canStock && !isAdmin) {
+                return NextResponse.redirect(new URL("/dashboard", req.url));
             }
         }
 

@@ -9,13 +9,43 @@ export type StaffPermissionSet = {
   canEdit: boolean;
 };
 
-export const STAFF_PERMISSION_FIELDS: { key: keyof StaffPermissionSet; label: string }[] = [
-  { key: "canSell", label: "Satış" },
-  { key: "canService", label: "Servis" },
-  { key: "canStock", label: "Stok" },
-  { key: "canFinance", label: "Finans" },
-  { key: "canEdit", label: "Düzenle" },
-  { key: "canDelete", label: "Sil" },
+export const STAFF_PERMISSION_FIELDS: { key: keyof StaffPermissionSet; label: string; description: string; prohibitedRoles?: Role[] }[] = [
+  {
+    key: "canSell",
+    label: "Satış & POS",
+    description: "Dükkan satışı yapabilir, ürün ekleyebilir ve ödeme alabilir.",
+    prohibitedRoles: ["COURIER"]
+  },
+  {
+    key: "canService",
+    label: "Teknik Servis",
+    description: "Cihaz kayıtları oluşturabilir, teknik servis kayıtlarını yönetebilir.",
+    prohibitedRoles: ["COURIER"]
+  },
+  {
+    key: "canStock",
+    label: "Stok Yönetimi",
+    description: "Ürün stoklarını güncelleyebilir, yeni ürün tanımlayabilir.",
+    prohibitedRoles: ["COURIER"]
+  },
+  {
+    key: "canFinance",
+    label: "Finans & Kasa",
+    description: "Kasa işlemlerini, veresiye takibini ve genel mali raporları görebilir.",
+    prohibitedRoles: ["COURIER"]
+  },
+  {
+    key: "canEdit",
+    label: "Düzenleme",
+    description: "Mevcut kayıtları (satış, servis, ürün) düzenleme yetkisi.",
+    prohibitedRoles: ["COURIER"]
+  },
+  {
+    key: "canDelete",
+    label: "Silme Yetkisi",
+    description: "Sistemdeki kritik kayıtları silebilme yetkisi.",
+    prohibitedRoles: ["COURIER"]
+  },
 ];
 
 export const STAFF_ROLE_TEMPLATE_ROLES: Role[] = [

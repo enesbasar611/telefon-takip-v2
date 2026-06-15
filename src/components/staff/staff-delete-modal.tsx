@@ -8,7 +8,11 @@ import {
     UserPlus,
     UserMinus,
     ChevronRight,
-    Users
+    Users,
+    Briefcase,
+    Wallet,
+    Download,
+    CheckCircle2
 } from "lucide-react";
 import {
     Dialog,
@@ -27,8 +31,14 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { checkStaffDeletion, deleteStaff } from "@/lib/actions/staff-actions";
+import { getEmployeeDashboardData, getFinanceAccounts } from "@/lib/actions/staff-finance-actions";
+import { getShopInfo } from "@/lib/actions/shop-actions";
 import { cn } from "@/lib/utils";
+import { generateCorporatePayrollPDF } from "@/lib/utils/pdf-utils";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 interface StaffDeleteModalProps {
     isOpen: boolean;
@@ -49,6 +59,13 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
     const [selectedAction, setSelectedAction] = useState<'TRANSFER' | 'DELETE_ALL' | 'DETACH' | null>(null);
     const [transferToId, setTransferToId] = useState<string>("");
 
+    // Financial closure states
+    const [financeData, setFinanceData] = useState<any>(null);
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [shouldPaySalary, setShouldPaySalary] = useState(false);
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+    const [shopInfo, setShopInfo] = useState<any>(null);
+
     useEffect(() => {
         if (isOpen && member) {
             setChecking(true);
@@ -63,12 +80,25 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
                         setSelectedAction('DETACH'); // Default for no tasks
                     }
                 }
-                setChecking(false);
             });
+
+            // Load financial information
+            getEmployeeDashboardData(member.id).then(data => setFinanceData(data));
+            getFinanceAccounts().then(accs => {
+                setAccounts(accs);
+                const defaultAcc = accs.find(a => a.isDefault);
+                if (defaultAcc) setSelectedAccountId(defaultAcc.id);
+                else if (accs.length > 0) setSelectedAccountId(accs[0].id);
+            });
+            getShopInfo().then(info => setShopInfo(info));
+
+            setChecking(false);
         } else {
             setStatus(null);
             setSelectedAction(null);
             setTransferToId("");
+            setFinanceData(null);
+            setShouldPaySalary(false);
         }
     }, [isOpen, member]);
 
@@ -84,10 +114,15 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
         }
 
         setLoading(true);
-        const res = await deleteStaff(member.id, selectedAction ? {
-            action: selectedAction,
-            transferToId: transferToId || undefined
-        } : undefined);
+        const res = await deleteStaff(member.id, {
+            action: selectedAction || 'DETACH',
+            transferToId: transferToId || undefined,
+            salaryPayment: shouldPaySalary && selectedAccountId ? {
+                accountId: selectedAccountId,
+                amount: financeData?.finance?.netPayout || 0,
+                description: `${member.name} ${member.surname || ''} - İşten Ayrılma Final Maaş Ödemesi`
+            } : undefined
+        });
 
         if (res.success) {
             toast.success("Personel başarıyla silindi.");
@@ -97,6 +132,24 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
             toast.error(res.error || "Bir hata oluştu.");
         }
         setLoading(false);
+    };
+
+    const handleExportPayroll = () => {
+        if (!financeData || !member) return;
+
+        try {
+            generateCorporatePayrollPDF({
+                shop: shopInfo,
+                member: member,
+                finance: financeData.finance,
+                expenses: financeData.expenses || [],
+                commissions: financeData.commissions || []
+            });
+            toast.success("Kurumsal bordro başarıyla oluşturuldu.");
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            toast.error("Bordro oluşturulurken bir hata oluştu.");
+        }
     };
 
     if (!member) return null;
@@ -121,6 +174,94 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
                 </div>
 
                 <div className="p-8 space-y-6">
+                    {/* Financial Summary Section */}
+                    {financeData && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground italic">FİNANSAL DURUM VE KAPANIŞ</p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleExportPayroll}
+                                    className="h-8 rounded-lg text-[9px] font-bold border-slate-200 dark:border-white/10 gap-2"
+                                >
+                                    <Download className="w-3 h-3" /> FİNAL BORDRO AL
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">FİNAL HAKEDİŞ</p>
+                                    <p className="text-xl font-black text-emerald-600">
+                                        {financeData.finance.netPayout.toLocaleString('tr-TR')} {member.salaryCurrency || 'TRY'}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">İZİN KULLANIMI</p>
+                                    <p className="text-xl font-black text-amber-600">
+                                        {financeData.finance.leaveDays || 0} GÜN
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setShouldPaySalary(!shouldPaySalary)}
+                                className={cn(
+                                    "w-full p-4 rounded-2xl border-2 transition-all flex items-center gap-4 text-left group",
+                                    shouldPaySalary
+                                        ? "bg-emerald-500/5 border-emerald-600"
+                                        : "bg-slate-50 dark:bg-white/5 border-transparent hover:border-slate-200 dark:hover:border-white/10"
+                                )}
+                            >
+                                <div className={cn(
+                                    "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                                    shouldPaySalary ? "bg-emerald-600 text-white" : "bg-white dark:bg-card text-muted-foreground"
+                                )}>
+                                    <CheckCircle2 className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white">Maaş Ödemesi Yapılsın mı?</p>
+                                    <p className="text-[10px] text-muted-foreground font-medium uppercase">Kasadaki parayı otomatik düşer</p>
+                                </div>
+                                <div className={cn(
+                                    "h-6 w-10 rounded-full border-2 p-1 transition-colors relative",
+                                    shouldPaySalary ? "bg-emerald-600 border-emerald-600" : "bg-slate-200 dark:bg-white/10 border-transparent"
+                                )}>
+                                    <div className={cn(
+                                        "h-3.5 w-3.5 rounded-full bg-white transition-all absolute top-0.5",
+                                        shouldPaySalary ? "left-5" : "left-1"
+                                    )} />
+                                </div>
+                            </button>
+
+                            {shouldPaySalary && (
+                                <div className="animate-in slide-in-from-top-2 duration-300">
+                                    <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                                        <SelectTrigger className="h-14 bg-emerald-500/5 border-emerald-500/20 rounded-2xl focus:ring-0">
+                                            <SelectValue placeholder="Ödemenin yapılacağı kasa" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white dark:bg-card rounded-2xl border-border/50">
+                                            {accounts.map((acc) => (
+                                                <SelectItem key={acc.id} value={acc.id} className="rounded-xl py-3 px-4">
+                                                    <div className="flex justify-between items-center w-full min-w-[200px]">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-xs font-bold uppercase tracking-tight">{acc.name}</span>
+                                                            <span className="text-[9px] text-muted-foreground font-medium">{acc.type}</span>
+                                                        </div>
+                                                        <span className="text-xs font-black text-slate-900 dark:text-white ml-8">
+                                                            {Number(acc.balance).toLocaleString('tr-TR')} ₺
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            <Separator className="bg-slate-100 dark:bg-white/5" />
+                        </div>
+                    )}
                     {checking ? (
                         <div className="flex flex-col items-center justify-center py-8 space-y-4">
                             <div className="h-12 w-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />

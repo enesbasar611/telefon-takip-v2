@@ -93,12 +93,19 @@ export async function getTransactions(options: {
 export async function getAccounts() {
   try {
     const shopId = await getShopId();
+    if (!shopId) {
+      console.error("[getAccounts] No shopId found for current session");
+      return [];
+    }
+
     const accounts = await prisma.financeAccount.findMany({
-      where: { shopId },
+      where: { shopId, isActive: true },
       orderBy: { createdAt: "asc" }
     });
+
     return serializePrisma(accounts);
   } catch (error) {
+    console.error("[getAccounts] Error:", error);
     return [];
   }
 }
@@ -339,12 +346,13 @@ export async function updateManualTransaction(
 
     const oldTx = await prisma.transaction.findUnique({
       where: { id, shopId },
-      select: { 
+      select: {
         id: true,
-        amount: true, 
+        amount: true,
         type: true,
         financeAccountId: true,
-        attachments: { select: { id: true, url: true, name: true } }
+        createdAt: true,
+        attachments: { select: { id: true, url: true, filename: true } }
       }
     });
 
@@ -656,9 +664,9 @@ export async function getDailySession() {
         status: true,
         openedBy: { select: { id: true, name: true } },
         transactions: {
-          select: { 
-            id: true, 
-            amount: true, 
+          select: {
+            id: true,
+            amount: true,
             type: true,
             description: true,
             financeAccount: { select: { name: true, type: true } }
@@ -708,11 +716,12 @@ export async function closeDailySession(id: string, actualBalance: number, notes
 
     const session = await prisma.dailySession.findUnique({
       where: { id },
-      select: { 
+      select: {
         id: true,
         openingBalance: true,
-        transactions: { 
-          select: { amount: true, type: true }
+        notes: true,
+        transactions: {
+          select: { id: true, amount: true, type: true, financeAccountId: true, paymentMethod: true }
         }
       }
     });
@@ -1053,12 +1062,14 @@ export async function deleteTransaction(id: string) {
     await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findUnique({
         where: { id, shopId },
-        select: { 
+        select: {
           id: true,
-          amount: true, 
+          amount: true,
           type: true,
           description: true,
-          financeAccount: { select: { name: true } },
+          financeAccountId: true,
+          createdAt: true,
+          financeAccount: { select: { name: true, type: true } },
           user: { select: { name: true } }
         }
       });

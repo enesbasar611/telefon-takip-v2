@@ -1,317 +1,277 @@
 "use server";
-import { cache } from "react";
-import { unstable_cache } from "next/cache";
+
 import prisma from "@/lib/prisma";
-import { serializePrisma, formatCurrency } from "@/lib/utils";
-import { getDeadStockCount } from "./product-actions";
-import { getOrCreateKasaAccount } from "./finance-actions";
-import { getExchangeRates } from "./currency-actions";
+import { auth, getShopId } from "@/lib/auth";
+import { serializePrisma } from "@/lib/utils";
+import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
 
-export const getDashboardStats = async (shopId: string | null) => {
-  if (!shopId) {
-    return serializePrisma({
-      todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
-      kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
-      collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
-      criticalStock: "0", outOfStockCount: "0", totalDebts: "₺0", cashBalance: "₺0",
-      pendingProcurementCount: "0", deadStockCount: "0",
-      totalDevices: "0",
-    });
-  }
-  return unstable_cache(
-    async () => {
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+export async function getDashboardStats() {
+  const shopId = await getShopId();
+  if (!shopId) return null;
 
-        const res = await Promise.all([
-          prisma.serviceTicket.count({
-            where: { shopId, status: { in: ["PENDING", "APPROVED", "REPAIRING", "WAITING_PART"] } }
-          }),
-          prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
-          prisma.product.findMany({
-            where: { shopId },
-            select: {
-              stock: true,
-              criticalStock: true,
-            }
-          }),
-          // Actual cash-basis sales (exclude DEBT)
-          prisma.sale.aggregate({
-            where: {
-              shopId,
-              createdAt: { gte: today },
-              paymentMethod: { not: "DEBT" }
-            },
-            _sum: { finalAmount: true }
-          }),
-          prisma.serviceTicket.aggregate({
-            where: { shopId, status: "DELIVERED", deliveredAt: { gte: today } },
-            _sum: { actualCost: true }
-          }),
-          // Actual income (exclude DEBT transactions)
-          prisma.transaction.aggregate({
-            where: {
-              shopId,
-              type: "INCOME",
-              createdAt: { gte: today },
-              paymentMethod: { not: "DEBT" }
-            },
-            _sum: { amount: true }
-          }),
-          prisma.supplier.aggregate({ where: { shopId }, _sum: { balance: true } }),
-          prisma.shortageItem.count({ where: { shopId, isResolved: false } }),
-          getDeadStockCount(shopId),
-          getOrCreateKasaAccount(shopId),
-          prisma.product.count({ where: { shopId, deviceInfo: { isNot: null } } }),
-          prisma.dailySession.findFirst({
-            where: { shopId, status: "OPEN" },
-            orderBy: { createdAt: "desc" }
-          }),
-          getExchangeRates(shopId),
-        ]);
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+  const yesterdayStart = startOfDay(new Date(new Date().setDate(new Date().getDate() - 1)));
+  const yesterdayEnd = endOfDay(new Date(new Date().setDate(new Date().getDate() - 1)));
+  const monthStart = startOfMonth(new Date());
 
-        const [
-          pendingServicesValue,
-          readyDevicesValue,
-          productsList,
-          todaySalesAggResult,
-          todayRepairIncomeResult,
-          todayTransactionsResult,
-          totalDebtsResult,
-          pendingProcurementCountValue,
-          deadStockCountValue,
-          kasaAccountObject,
-          totalDevicesCountValue,
-          activeSession,
-          ratesData,
-        ] = res;
-
-        const lowStockCount = productsList.filter(p => p.stock <= p.criticalStock).length;
-        const outOfStockCount = productsList.filter(p => p.stock <= 0).length;
-        const kasaBalance = Number(kasaAccountObject.balance) || 0;
-        const todaySalesAmount = Number(todaySalesAggResult._sum.finalAmount) || 0;
-        const collectedToday = Number(todayTransactionsResult._sum.amount) || 0;
-        const kasaOpeningBalance = Number(activeSession?.openingBalance) || 0;
-
-        const repairIncomeAmount = Number(todayRepairIncomeResult._sum.actualCost) || 0;
-        const totalDebtsAmount = Number(totalDebtsResult._sum.balance) || 0;
-
-        // Fetch exchange rate for USD conversions
-        const usdRate = ratesData?.usd || 32.5;
-
-        return serializePrisma({
-          todaySales: `₺${formatCurrency(todaySalesAmount)}`,
-          todaySalesRaw: todaySalesAmount,
-          todaySalesUSD: todaySalesAmount / usdRate,
-          kasaBalance: `₺${formatCurrency(kasaBalance)}`,
-          kasaBalanceRaw: kasaBalance,
-          kasaBalanceUSD: kasaBalance / usdRate,
-          kasaOpeningBalance: `₺${formatCurrency(kasaOpeningBalance)}`,
-          kasaOpeningBalanceRaw: kasaOpeningBalance,
-          todayRepairIncome: `₺${formatCurrency(repairIncomeAmount)}`,
-          todayRepairIncomeUSD: repairIncomeAmount / usdRate,
-          collectedPayments: `₺${formatCurrency(collectedToday)}`,
-          collectedPaymentsUSD: collectedToday / usdRate,
-          pendingServices: pendingServicesValue.toString(),
-          readyDevices: readyDevicesValue.toString(),
-          criticalStock: lowStockCount.toString(),
-          outOfStockCount: outOfStockCount.toString(),
-          totalDebts: `₺${formatCurrency(totalDebtsAmount)}`,
-          totalDebtsUSD: totalDebtsAmount / usdRate,
-          cashBalance: `₺${formatCurrency(kasaBalance)}`,
-          usdRate,
-          pendingProcurementCount: pendingProcurementCountValue.toString(),
-          deadStockCount: deadStockCountValue.toString(),
-          totalDevices: (totalDevicesCountValue || 0).toString(),
-        });
-      } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
-        return serializePrisma({
-          todaySales: "₺0", todaySalesRaw: 0, kasaBalance: "₺0", kasaBalanceRaw: 0,
-          kasaOpeningBalance: "₺0", kasaOpeningBalanceRaw: 0, todayRepairIncome: "₺0",
-          collectedPayments: "₺0", pendingServices: "0", readyDevices: "0",
-          criticalStock: "0", outOfStockCount: "0", totalDebts: "₺0", cashBalance: "₺0",
-          pendingProcurementCount: "0", deadStockCount: "0",
-        });
-      }
-    },
-    [`dashboard-stats-${shopId}`],
-    { tags: [`dashboard-${shopId}`], revalidate: 10 } // Reduced to 10 seconds for real-time feel
-  )();
-};
-
-export const getRecentSales = async (shopId: string | null, limit: number = 5) => {
-  if (!shopId) return [];
-  return unstable_cache(
-    async () => {
-      try {
-        const tickets = await prisma.serviceTicket.findMany({
-          where: { shopId },
-          take: limit,
-          orderBy: { createdAt: "desc" },
-          include: {
-            customer: true,
-            technician: true
-          }
-        });
-        return serializePrisma(tickets);
-      } catch (error) {
-        console.error("Error fetching recent tickets:", error);
-        return [];
-      }
-    },
-    [`recent-tickets-${shopId}-${limit}`],
-    { tags: [`dashboard-${shopId}`, `tickets-${shopId}`], revalidate: 60 }
-  )();
-}
-
-export const getRecentTransactions = async (shopId: string | null) => {
-  if (!shopId) return [];
-  return unstable_cache(
-    async () => {
-      try {
-        const transactions = await prisma.transaction.findMany({
-          where: { shopId, paymentMethod: { not: "DEBT" } },
-          take: 10,
-          orderBy: { createdAt: "desc" },
-          include: {
-            customer: true,
-            sale: {
-              include: {
-                customer: true
-              }
-            }
-          }
-        });
-        return serializePrisma(transactions);
-      } catch (error) {
-        console.error("Error fetching recent transactions:", error);
-        return [];
-      }
-    },
-    [`recent-transactions-${shopId}`],
-    { tags: [`dashboard-${shopId}`, `transactions-${shopId}`], revalidate: 60 }
-  )();
-}
-
-export const getTopProducts = async (shopId: string | null, limit: number = 5) => {
-  if (!shopId) return [];
-  return unstable_cache(
-    async () => {
-      try {
-        const products = await prisma.product.findMany({
-          where: { shopId },
-          take: limit,
-          orderBy: { saleItems: { _count: 'desc' } },
-          include: {
-            category: true,
-            _count: {
-              select: { saleItems: true }
-            }
-          }
-        });
-
-        return serializePrisma(products.map(p => ({
-          id: p.id,
-          name: p.name,
-          category: p.category.name,
-          price: Number(p.sellPrice),
-          sales: p._count.saleItems,
-          stock: p.stock,
-          criticalStock: p.criticalStock
-        })));
-      } catch (error) {
-        console.error("Error fetching top products:", error);
-        return [];
-      }
-    },
-    [`top-products-${shopId}-${limit}`],
-    { tags: [`dashboard-${shopId}`, `products-${shopId}`], revalidate: 300 }
-  )();
-}
-
-export async function getDashboardInit(shopId: string | null) {
-  const [stats, rates, settings] = await Promise.all([
-    getDashboardStats(shopId),
-    getExchangeRates(shopId),
-    prisma.setting.findMany({ where: { shopId: shopId || "" } }),
+  const [
+    totalSalesData,
+    todaySalesData,
+    pendingServices,
+    totalDebtData,
+    products,
+    cashAccounts,
+    serviceIncomeData,
+    collectionsData,
+    readyTickets,
+    cancelledTickets,
+    yesterdayServiceIncomeData
+  ] = await Promise.all([
+    // Total Sales this month
+    prisma.sale.aggregate({
+      where: { shopId, createdAt: { gte: monthStart } },
+      _sum: { finalAmount: true }
+    }),
+    // Today's Sales
+    prisma.sale.aggregate({
+      where: { shopId, createdAt: { gte: todayStart } },
+      _sum: { finalAmount: true }
+    }),
+    // Pending services count
+    prisma.serviceTicket.count({
+      where: { shopId, status: { in: ["PENDING", "REPAIRING", "WAITING_PART", "APPROVED"] } }
+    }),
+    // Total Debt (Remaining amount from debt table)
+    prisma.debt.aggregate({
+      where: { shopId, remainingAmount: { gt: 0 } },
+      _sum: { remainingAmount: true }
+    }),
+    // Fetch products for low stock
+    prisma.product.findMany({
+      where: { shopId },
+      select: { stock: true, criticalStock: true }
+    }),
+    // Total Cash Balance (Sum of all CASH type accounts)
+    prisma.financeAccount.findMany({
+      where: { shopId, type: "CASH", isActive: true },
+      select: { balance: true }
+    }),
+    // Service Income (today)
+    prisma.transaction.aggregate({
+      where: {
+        shopId,
+        type: "INCOME",
+        createdAt: { gte: todayStart, lte: todayEnd },
+        category: { in: ["Teknik Servis", "Servis", "SERVICE", "Tamir"] }
+      },
+      _sum: { amount: true }
+    }),
+    // Collections (today) - All income transactions today
+    prisma.transaction.aggregate({
+      where: {
+        shopId,
+        type: "INCOME",
+        createdAt: { gte: todayStart, lte: todayEnd }
+      },
+      _sum: { amount: true }
+    }),
+    // Ready tickets
+    prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
+    // Cancelled tickets
+    prisma.serviceTicket.count({ where: { shopId, status: "CANCELLED" } }),
+    // Service Income (yesterday)
+    prisma.transaction.aggregate({
+      where: {
+        shopId,
+        type: "INCOME",
+        createdAt: { gte: yesterdayStart, lte: yesterdayEnd },
+        category: { in: ["Teknik Servis", "Servis", "SERVICE", "Tamir"] }
+      },
+      _sum: { amount: true }
+    }),
   ]);
 
-  return { stats, rates, settings: serializePrisma(settings) };
+  const todayRepairIncome = Number(serviceIncomeData?._sum?.amount || 0);
+  const totalYesterdayIncome = Number(yesterdayServiceIncomeData?._sum?.amount || 0);
+
+  // Calculate percentage change
+  let repairIncomeChange = 0;
+  if (totalYesterdayIncome > 0) {
+    repairIncomeChange = ((todayRepairIncome - totalYesterdayIncome) / totalYesterdayIncome) * 100;
+  } else if (todayRepairIncome > 0) {
+    repairIncomeChange = 100; // From 0 to something
+  }
+
+  const lowStockProducts = products.filter(p => p.stock <= p.criticalStock).length;
+  const cashBalance = cashAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+  return serializePrisma({
+    totalSales: Number(totalSalesData?._sum?.finalAmount || 0),
+    todaySales: Number(todaySalesData?._sum?.finalAmount || 0),
+    kasaBalance: cashBalance,
+    todayRepairIncome: todayRepairIncome,
+    repairIncomeChange: Number(repairIncomeChange.toFixed(1)),
+    collectedPayments: Number(collectionsData?._sum?.amount || 0),
+    pendingServices,
+    totalDebts: Number(totalDebtData?._sum?.remainingAmount || 0),
+    criticalStock: lowStockProducts,
+    readyDevices: readyTickets,
+    issueDevices: cancelledTickets
+  });
 }
 
-export const getDashboardFinancialSummary = async (shopId: string | null) => {
-  if (!shopId) return null;
-  return unstable_cache(
-    async () => {
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+/**
+ * Dashboard Provider için gerekli başlangıç verilerini getirir
+ */
+export async function getDashboardInit(shopIdParam?: string) {
+  const shopId = shopIdParam || await getShopId();
+  if (!shopId) return { rates: null, stats: {}, settings: [] };
 
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
+  const [stats, settings] = await Promise.all([
+    getDashboardStats(),
+    prisma.setting.findMany({ where: { shopId } })
+  ]);
 
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+  const rates = await getExchangeRates(shopId);
+  const usdRate = rates?.usd || 34;
 
-        const [todayTransactions, yesterdayTransactions, currencySetting, ratesData] = await Promise.all([
-          prisma.transaction.findMany({
-            where: {
-              shopId,
-              createdAt: { gte: today, lt: tomorrow },
-              paymentMethod: { not: "DEBT" }
-            },
-            select: { amount: true, type: true, currency: true }
-          }),
-          prisma.transaction.findMany({
-            where: {
-              shopId,
-              createdAt: { gte: yesterday, lt: today },
-              paymentMethod: { not: "DEBT" }
-            },
-            select: { amount: true, type: true, currency: true }
-          }),
-          prisma.setting.findUnique({ where: { shopId_key: { shopId, key: "defaultCurrency" } } }),
-          getExchangeRates(shopId),
-        ]);
+  // Add calculated USD values to stats for consistent usage in wrappers
+  if (stats) {
+    stats.kasaBalanceUSD = Number((stats.kasaBalance / usdRate).toFixed(2));
+    stats.todaySalesUSD = Number((stats.todaySales / usdRate).toFixed(2));
+    stats.todayRepairIncomeUSD = Number((stats.todayRepairIncome / usdRate).toFixed(2));
+    stats.collectedPaymentsUSD = Number((stats.collectedPayments / usdRate).toFixed(2));
+    stats.totalDebtsUSD = Number((stats.totalDebts / usdRate).toFixed(2));
+  }
 
-        const defaultCurrency = currencySetting?.value || "TRY";
-        const usdRate = ratesData?.usd || 34;
+  return serializePrisma({
+    stats,
+    settings: settings.map(s => ({ key: s.key, value: s.value })),
+    rates
+  });
+}
 
-        const calculateTotal = (txs: any[]) => {
-          let income = 0;
-          let expense = 0;
-          txs.forEach(t => {
-            let val = Number(t.amount);
-            // Convert to base currency if mismatch
-            if (defaultCurrency === "TRY" && t.currency === "USD") {
-              val *= usdRate;
-            } else if (defaultCurrency === "USD" && t.currency === "TRY") {
-              val /= usdRate;
-            }
+/**
+ * Hızlı istatistikler (Widget'lar için)
+ */
+export async function getDashboardQuickStats() {
+  return getDashboardStats();
+}
 
-            if (t.type === "INCOME") {
-              income += val;
-            } else {
-              expense += val;
-            }
-          });
-          return { income, expense };
-        };
+/**
+ * Son işlemleri getirir
+ */
+export async function getRecentTransactions(shopIdIn?: string, take = 10) {
+  const shopId = shopIdIn || await getShopId();
+  if (!shopId) return [];
 
-        return {
-          today: calculateTotal(todayTransactions),
-          yesterday: calculateTotal(yesterdayTransactions),
-          currency: defaultCurrency,
-        };
-      } catch (error) {
-        console.error("Error fetching financial summary:", error);
-        return null;
-      }
+  const transactions = await prisma.transaction.findMany({
+    where: { shopId },
+    include: {
+      customer: { select: { name: true } },
+      sale: { include: { customer: { select: { name: true } } } }
     },
-    [`financial-summary-${shopId}`],
-    { tags: [`dashboard-${shopId}`, `transactions-${shopId}`], revalidate: 60 }
-  )();
-};
+    orderBy: { createdAt: "desc" },
+    take
+  });
 
+  return serializePrisma(transactions);
+}
+
+/**
+ * Finansal özeti getirir (Bugün vs Dün)
+ */
+export async function getDashboardFinancialSummary(shopIdIn?: string) {
+  const shopId = shopIdIn || await getShopId();
+  if (!shopId) return null;
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const yesterdayStart = startOfDay(new Date(now.setDate(now.getDate() - 1)));
+  const yesterdayEnd = endOfDay(yesterdayStart);
+
+  const [todayIncome, todayExpense, yesterdayIncome, yesterdayExpense] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { shopId, type: "INCOME", createdAt: { gte: todayStart } },
+      _sum: { amount: true }
+    }),
+    prisma.transaction.aggregate({
+      where: { shopId, type: "EXPENSE", createdAt: { gte: todayStart } },
+      _sum: { amount: true }
+    }),
+    prisma.transaction.aggregate({
+      where: { shopId, type: "INCOME", createdAt: { gte: yesterdayStart, lte: yesterdayEnd } },
+      _sum: { amount: true }
+    }),
+    prisma.transaction.aggregate({
+      where: { shopId, type: "EXPENSE", createdAt: { gte: yesterdayStart, lte: yesterdayEnd } },
+      _sum: { amount: true }
+    })
+  ]);
+
+  return {
+    today: {
+      income: Number(todayIncome._sum.amount || 0),
+      expense: Number(todayExpense._sum.amount || 0)
+    },
+    yesterday: {
+      income: Number(yesterdayIncome._sum.amount || 0),
+      expense: Number(yesterdayExpense._sum.amount || 0)
+    },
+    currency: "TRY" // Default
+  };
+}
+
+/**
+ * Son satışları/servisleri getirir (İsim uyumluluğu için)
+ */
+export async function getRecentSales(shopIdIn?: string, take = 5) {
+  const shopId = shopIdIn || await getShopId();
+  if (!shopId) return [];
+
+  // ServiceQueueStream actually wants ServiceTickets based on typical usage
+  const tickets = await prisma.serviceTicket.findMany({
+    where: { shopId },
+    include: {
+      customer: { select: { name: true } },
+      technician: { select: { name: true } }
+    },
+    orderBy: { createdAt: "desc" },
+    take
+  });
+
+  return serializePrisma(tickets);
+}
+
+/**
+ * En çok satılan ürünleri getirir
+ */
+export async function getTopProducts(shopIdIn?: string, limit = 5) {
+  const shopId = shopIdIn || await getShopId();
+  if (!shopId) return [];
+
+  const topProducts = await prisma.saleItem.groupBy({
+    by: ['productId'],
+    where: { shopId },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: limit
+  });
+
+  const products = await Promise.all(
+    topProducts.map(async (tp) => {
+      const product = await prisma.product.findUnique({
+        where: { id: tp.productId },
+        include: { category: true }
+      });
+      return {
+        ...product,
+        totalSold: tp._sum.quantity
+      };
+    })
+  );
+
+  return serializePrisma(products);
+}

@@ -24,6 +24,8 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const shopLogoInputRef = useRef<HTMLInputElement>(null);
+
 
     // Edit Form State
     const [editData, setEditData] = useState({
@@ -36,6 +38,12 @@ export default function ProfilePage() {
         taxNumber: "",
         taxOffice: "",
         address: "",
+        website: "",
+        logoUrl: "",
+        companyCity: "",
+        companyDistrict: "",
+        shopPhone: "",
+        shopEmail: "",
     });
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -57,6 +65,12 @@ export default function ProfilePage() {
                     taxNumber: p.shop?.taxNumber || "",
                     taxOffice: p.shop?.taxOffice || "",
                     address: p.shop?.address || "",
+                    website: p.shop?.website || "",
+                    logoUrl: p.shop?.logoUrl || "",
+                    companyCity: p.shop?.companyCity || "",
+                    companyDistrict: p.shop?.companyDistrict || "",
+                    shopPhone: p.shop?.phone || "",
+                    shopEmail: p.shop?.email || "",
                 });
                 const perf = await getStaffPerformance(p.id);
                 setPerformance(perf);
@@ -72,11 +86,27 @@ export default function ProfilePage() {
         loadData();
     }, []);
 
+    // İl/ilçe değiştiğinde adres alanını otomatik güncelle
+    const handleCityDistrictChange = (field: "companyCity" | "companyDistrict", value: string) => {
+        const newData = { ...editData, [field]: value };
+        // Mevcut adresten il/ilçe kısmını temizle ve yenisini ekle
+        const baseAddress = editData.address
+            .replace(/\s*\/\s*[^/]*\s*\/\s*[^/]*\s*$/, "") // sondaki "/ İlçe / Şehir" kısmını temizle
+            .trim();
+        const city = field === "companyCity" ? value : editData.companyCity;
+        const district = field === "companyDistrict" ? value : editData.companyDistrict;
+        if (city || district) {
+            const locationSuffix = [district, city].filter(Boolean).join(" / ");
+            newData.address = baseAddress ? `${baseAddress} / ${locationSuffix}` : locationSuffix;
+        }
+        setEditData(newData);
+    };
+
     const handleUpdateProfile = async () => {
         if (!editData.name) return toast.error("İsim alanı boş bırakılamaz.");
         setIsSaving(true);
         try {
-            // Update User Profile
+            // Kullanıcı profilini güncelle
             const res = await updateProfile({
                 name: editData.name,
                 surname: editData.surname,
@@ -84,7 +114,7 @@ export default function ProfilePage() {
                 image: editData.image
             });
 
-            // Update Shop Info (if user is MANAGER or ADMIN)
+            // Mağaza bilgilerini güncelle (Yönetici ve Admin rolü için)
             if (profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") {
                 await updateShop({
                     ...profile.shop,
@@ -92,13 +122,20 @@ export default function ProfilePage() {
                     taxNumber: editData.taxNumber,
                     taxOffice: editData.taxOffice,
                     address: editData.address,
+                    website: editData.website,
+                    logoUrl: editData.logoUrl,
+                    companyCity: editData.companyCity,
+                    companyDistrict: editData.companyDistrict,
+                    phone: editData.shopPhone,
+                    email: editData.shopEmail,
                 });
             }
 
             if (res.success) {
                 toast.success("Profil başarıyla güncellendi.");
-                setProfile(res.user);
                 setIsEditModalOpen(false);
+                // Tüm verileri yeniden yükle (Shop bilgileri dahil)
+                await loadData();
             } else {
                 toast.error(res.error);
             }
@@ -134,6 +171,11 @@ export default function ProfilePage() {
         fileInputRef.current?.click();
     };
 
+    const handleShopLogoClick = () => {
+        shopLogoInputRef.current?.click();
+    };
+
+
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -148,9 +190,10 @@ export default function ProfilePage() {
             const base64 = event.target?.result as string;
             setIsSaving(true);
             try {
-                const res = await updateProfile({ ...editData, image: base64 });
+                const res = await updateProfile({ name: editData.name || profile.name, surname: editData.surname || profile.surname, phone: editData.phone || profile.phone, image: base64 });
                 if (res.success) {
                     setProfile({ ...profile, image: base64 });
+                    setEditData(prev => ({ ...prev, image: base64 }));
                     await update({ image: base64 });
                     toast.success("Profil fotoğrafı başarıyla güncellendi.");
                 } else {
@@ -164,6 +207,25 @@ export default function ProfilePage() {
         };
         reader.readAsDataURL(file);
     };
+
+    const handleShopLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 1 * 1024 * 1024) {
+            toast.error("Logo boyutu 1MB'den küçük olmalıdır.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            setEditData({ ...editData, logoUrl: base64 });
+            toast.success("Mağaza logosu seçildi. Kaydetmeyi unutmayın.");
+        };
+        reader.readAsDataURL(file);
+    };
+
 
     if (loading) {
         return (
@@ -196,85 +258,199 @@ export default function ProfilePage() {
                                 <Settings className="w-4 h-4" /> Profili Düzenle
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-white dark:bg-[#0f0f0f] border-slate-200 dark:border-white/10 rounded-2xl max-w-md w-full">
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <User className="w-5 h-5 text-blue-500" /> Profil Bilgilerini Güncelle
+                        <DialogContent className="bg-white dark:bg-[#0f0f0f] border-slate-200 dark:border-white/10 rounded-3xl max-w-lg w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                            <DialogHeader className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                <DialogTitle className="flex items-center gap-3 text-xl font-black">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                        <Settings className="w-5 h-5 text-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-base">Profili Düzenle</span>
+                                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Kişisel ve Mağaza Bilgileri</span>
+                                    </div>
                                 </DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-5 py-4">
-                                <div className="space-y-4">
-                                    <div className="flex flex-col items-center gap-4 py-2">
-                                        <div className="relative group cursor-pointer">
-                                            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center bg-slate-50 dark:bg-black/20 text-muted-foreground overflow-hidden">
-                                                {editData.image ? (
-                                                    <img src={editData.image} alt="Profil" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <Camera className="w-8 h-8" />
-                                                )}
+
+                            <div className="flex-1 min-h-0 overflow-y-auto px-6">
+                                <div className="space-y-8 py-6">
+                                    {/* Kişisel Bilgiler Bölümü */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="h-4 w-1 bg-blue-500 rounded-full" />
+                                            <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Kişisel Bilgiler</h4>
+                                        </div>
+
+                                        <div className="flex flex-col items-center gap-6 p-4 rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                                            <div className="relative group cursor-pointer" onClick={handlePhotoClick}>
+                                                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center bg-slate-50 dark:bg-black/20 text-muted-foreground overflow-hidden">
+                                                    {editData.image ? (
+                                                        <img src={editData.image} alt="Profil" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Camera className="w-8 h-8" />
+                                                    )}
+                                                </div>
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-2xl transition-opacity">
+                                                    <Camera className="w-6 h-6 text-white" />
+                                                </div>
                                             </div>
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-2xl transition-opacity">
-                                                <Camera className="w-6 h-6 text-white" />
+                                            <div className="w-full space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Profil Fotoğrafı URL</Label>
+                                                <Input
+                                                    placeholder="https://gorsel-linki.com/foto.jpg"
+                                                    value={editData.image}
+                                                    onChange={(e) => setEditData({ ...editData, image: e.target.value })}
+                                                    className="bg-white dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5"
+                                                />
                                             </div>
                                         </div>
-                                        <div className="w-full space-y-1.5">
-                                            <Label className="text-xs font-bold uppercase opacity-60">Profil Fotoğrafı URL</Label>
-                                            <Input
-                                                placeholder="https://gorsel-linki.com/foto.jpg"
-                                                value={editData.image}
-                                                onChange={(e) => setEditData({ ...editData, image: e.target.value })}
-                                                className="bg-slate-50 dark:bg-black/40 rounded-xl"
-                                            />
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">İsim</Label>
+                                                <Input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Soyisim</Label>
+                                                <Input value={editData.surname} onChange={(e) => setEditData({ ...editData, surname: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold uppercase opacity-60">Kişisel Telefon</Label>
+                                            <Input value={editData.phone} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold uppercase opacity-60">İsim</Label>
-                                            <Input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold uppercase opacity-60">Soyisim</Label>
-                                            <Input value={editData.surname} onChange={(e) => setEditData({ ...editData, surname: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold uppercase opacity-60">Telefon</Label>
-                                        <Input value={editData.phone} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
-                                    </div>
-
+                                    {/* Mağaza Bilgileri Bölümü */}
                                     {(profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") && (
-                                        <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-4">
-                                            <Label className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Mağaza / Vergi Bilgileri</Label>
+                                        <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-white/5">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="h-4 w-1 bg-orange-500 rounded-full" />
+                                                <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Mağaza Bilgileri</h4>
+                                            </div>
 
                                             <div className="space-y-1.5">
-                                                <Label className="text-xs font-bold uppercase opacity-60">Resmi Unvan</Label>
-                                                <Input value={editData.companyName} onChange={(e) => setEditData({ ...editData, companyName: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Resmi Unvan</Label>
+                                                <Input value={editData.companyName} onChange={(e) => setEditData({ ...editData, companyName: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
-                                                    <Label className="text-xs font-bold uppercase opacity-60">VKN / TCKN</Label>
-                                                    <Input value={editData.taxNumber} onChange={(e) => setEditData({ ...editData, taxNumber: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">VKN / TCKN</Label>
+                                                    <Input value={editData.taxNumber} onChange={(e) => setEditData({ ...editData, taxNumber: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
                                                 </div>
                                                 <div className="space-y-1.5">
-                                                    <Label className="text-xs font-bold uppercase opacity-60">Vergi Dairesi</Label>
-                                                    <Input value={editData.taxOffice} onChange={(e) => setEditData({ ...editData, taxOffice: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Vergi Dairesi</Label>
+                                                    <Input value={editData.taxOffice} onChange={(e) => setEditData({ ...editData, taxOffice: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Şehir</Label>
+                                                    <Input value={editData.companyCity} onChange={(e) => handleCityDistrictChange("companyCity", e.target.value)} placeholder="İstanbul" className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">İlçe</Label>
+                                                    <Input value={editData.companyDistrict} onChange={(e) => handleCityDistrictChange("companyDistrict", e.target.value)} placeholder="Kadıköy" className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Telefon</Label>
+                                                    <Input value={editData.shopPhone} onChange={(e) => setEditData({ ...editData, shopPhone: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza E-posta</Label>
+                                                    <Input value={editData.shopEmail} onChange={(e) => setEditData({ ...editData, shopEmail: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
                                                 </div>
                                             </div>
 
                                             <div className="space-y-1.5">
-                                                <Label className="text-xs font-bold uppercase opacity-60">Adres</Label>
-                                                <Input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} className="bg-slate-50 dark:bg-black/40 rounded-xl" />
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Web Sitesi</Label>
+                                                <Input value={editData.website} onChange={(e) => setEditData({ ...editData, website: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" placeholder="www.websiteniz.com" />
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Logosu</Label>
+                                                <div className="p-4 rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 flex items-center gap-6">
+                                                    <div
+                                                        className="w-20 h-20 shrink-0 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 flex items-center justify-center bg-white dark:bg-black/20 overflow-hidden cursor-pointer group relative shadow-inner"
+                                                        onClick={handleShopLogoClick}
+                                                    >
+                                                        {editData.logoUrl ? (
+                                                            <img src={editData.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                                                        ) : (
+                                                            <Camera className="w-6 h-6 text-muted-foreground" />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <Camera className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 space-y-3">
+                                                        <input
+                                                            type="file"
+                                                            ref={shopLogoInputRef}
+                                                            className="hidden"
+                                                            accept="image/png, image/jpeg, image/webp"
+                                                            onChange={handleShopLogoChange}
+                                                        />
+                                                        <div className="flex flex-col sm:flex-row gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="flex-1 rounded-xl text-[11px] h-9 border-slate-200 dark:border-white/10"
+                                                                onClick={handleShopLogoClick}
+                                                            >
+                                                                Görsel Seç
+                                                            </Button>
+                                                            {editData.image && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    className="flex-1 rounded-xl text-[11px] h-9 bg-blue-500/10 text-blue-500 border-none hover:bg-blue-500/20"
+                                                                    onClick={() => setEditData({ ...editData, logoUrl: editData.image })}
+                                                                >
+                                                                    Gmail Logosunu Al
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <Input
+                                                            value={editData.logoUrl}
+                                                            onChange={(e) => setEditData({ ...editData, logoUrl: e.target.value })}
+                                                            className="h-9 text-[10px] bg-white dark:bg-black/40 rounded-xl border-slate-200 dark:border-white/5"
+                                                            placeholder="Veya Logo URL yapıştırın"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 pb-6">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Adresi</Label>
+                                                <Input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" placeholder="Cadde/Sokak No (İl/İlçe otomatik eklenir)" />
+                                                <p className="text-[9px] text-muted-foreground/50 mt-1">💡 Şehir ve İlçe alanları otomatik olarak adrese eklenir</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <DialogFooter className="gap-3">
-                                <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="rounded-xl border-slate-200 dark:border-white/10">Vazgeç</Button>
-                                <Button onClick={handleUpdateProfile} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 px-8">
-                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Kaydet</>}
+
+                            <DialogFooter className="p-6 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-end gap-3 sticky bottom-0">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="rounded-xl h-11 px-6 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                >
+                                    Vazgeç
+                                </Button>
+                                <Button
+                                    onClick={handleUpdateProfile}
+                                    disabled={isSaving}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xl shadow-blue-500/20 h-11 px-10 transition-all active:scale-95"
+                                >
+                                    {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Değişiklikleri Kaydet</>}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

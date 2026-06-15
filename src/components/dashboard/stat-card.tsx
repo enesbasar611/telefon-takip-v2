@@ -11,7 +11,11 @@ import {
     CheckCircle2,
     AlertTriangle,
     Banknote,
-    ArrowDownCircle
+    ArrowDownCircle,
+    Smartphone,
+    CreditCard,
+    Activity,
+    TrendingUp
 } from "lucide-react";
 
 const IconMap: Record<string, any> = {
@@ -22,7 +26,11 @@ const IconMap: Record<string, any> = {
     CheckCircle2,
     AlertTriangle,
     Banknote,
-    ArrowDownCircle
+    ArrowDownCircle,
+    Smartphone,
+    CreditCard,
+    Activity,
+    TrendingUp
 };
 
 export function StatCard({
@@ -62,11 +70,29 @@ export function StatCard({
         );
     }
 
-    const showUSD = defaultCurrency === "USD" && usdValue !== undefined && usdValue !== null;
+    const isUSD = defaultCurrency === "USD";
+    const hasUSD = usdValue !== undefined && usdValue !== null;
+    const hasTRY = value !== undefined && value !== null;
 
-    const displayValue = showUSD
-        ? `$${Number(usdValue).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const formatTRY = (val: any) => {
+        const num = typeof val === 'string' ? Number(val.replace('₺', '').replace(/\./g, '').replace(',', '.')) : Number(val);
+        if (isNaN(num)) return val;
+        return `₺${num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const formatUSD = (val: any) => {
+        const num = Number(val);
+        if (isNaN(num)) return val;
+        return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const isCurrency = hasUSD;
+    const mainDisplay = isCurrency
+        ? (isUSD && hasUSD ? formatUSD(usdValue) : formatTRY(value))
         : value;
+    const secondaryDisplay = isCurrency
+        ? (isUSD ? (hasTRY ? formatTRY(value) : null) : (hasUSD ? formatUSD(usdValue) : null))
+        : null;
 
     return (
         <div className="h-full w-full @container">
@@ -87,12 +113,12 @@ export function StatCard({
                             <Icon className={cn("h-5 w-5", colorClass)} />
                         </div>
                         <div className="flex flex-col items-end gap-1.5">
-                            {showUSD && (
+                            {isUSD && (
                                 <span className="text-[9px] bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20 text-blue-500 tracking-tighter uppercase font-bold">
                                     USD
                                 </span>
                             )}
-                            {trend && !showUSD && (
+                            {trend && !isUSD && (
                                 <span className="text-[9px] bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase font-bold">
                                     {trend}
                                 </span>
@@ -124,28 +150,33 @@ export function StatCard({
                                         <span className="text-[7px] font-black uppercase tracking-widest text-rose-500/60">Biten</span>
                                     </div>
                                 </div>
-                            ) : typeof displayValue === 'string' && (displayValue.includes('₺') || displayValue.includes('$')) ? (
+                            ) : secondaryDisplay ? (
+                                <>
+                                    <RevealFinancial
+                                        amount={mainDisplay}
+                                        prefix=""
+                                        className={cn("text-2xl tracking-tight font-bold", colorClass)}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground/30 tracking-tight font-medium pb-1 italic">
+                                        ({secondaryDisplay})
+                                    </p>
+                                </>
+                            ) : typeof mainDisplay === 'string' && (mainDisplay.includes('₺') || mainDisplay.includes('$')) ? (
                                 <RevealFinancial
-                                    amount={displayValue}
-                                    prefix={displayValue.startsWith('$') || displayValue.startsWith('₺') ? "" : "₺"}
+                                    amount={mainDisplay}
+                                    prefix=""
                                     className={cn("text-2xl tracking-tight font-bold", colorClass)}
                                 />
                             ) : (
-                                <h3 className={cn("text-2xl tracking-tighter font-black", colorClass)}>{displayValue}</h3>
-                            )}
-
-                            {showUSD && value && (
-                                <p className="text-[10px] text-muted-foreground/30 tracking-tight font-medium pb-1 italic">
-                                    ({value} TL)
-                                </p>
+                                <h3 className={cn("text-2xl tracking-tighter font-black", colorClass)}>{mainDisplay}</h3>
                             )}
                         </div>
 
-                        {!showUSD && subValue && (
-                            <p className="text-[10px] text-muted-foreground/40 mt-1 tracking-tight font-medium leading-tight">{subValue}</p>
-                        )}
-                        {showUSD && subValue && (
+                        {isUSD && subValue && (
                             <p className="text-[9px] text-muted-foreground/30 mt-0.5 tracking-tight font-medium leading-tight">{subValue}</p>
+                        )}
+                        {!isUSD && subValue && (
+                            <p className="text-[10px] text-muted-foreground/40 mt-1 tracking-tight font-medium leading-tight">{subValue}</p>
                         )}
                     </div>
                 </CardContent>

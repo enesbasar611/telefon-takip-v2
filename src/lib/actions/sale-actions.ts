@@ -196,6 +196,15 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       revalidatePath(`/musteriler/${data.customerId}`);
     }
 
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "SALE",
+      entityId: sale.id,
+      entityName: sale.saleNumber,
+      message: `${sale.saleNumber} numaralı yeni satış oluşturuldu.`,
+      details: { totalAmount: Number(sale.finalAmount), paymentMethod: sale.paymentMethod }
+    });
+
     return { success: true, data: serializePrisma(sale) };
   } catch (error) {
     if (error instanceof z.ZodError) {

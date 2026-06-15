@@ -720,6 +720,7 @@ export function POSInterface({ initialSaleId }: {
             isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
             getEquivalentDisplay={(item) => getEquivalentDisplay(item)}
             defaultCurrency={defaultCurrency}
+            rates={exchangeRates}
           />
         </div>
       </div>
@@ -729,6 +730,8 @@ export function POSInterface({ initialSaleId }: {
           isOpen={showReceipt}
           onClose={closeReceiptAndReload}
           sale={lastSale}
+          rates={exchangeRates as any}
+          initialDefaultCurrency={defaultCurrency}
         />
       )}
 

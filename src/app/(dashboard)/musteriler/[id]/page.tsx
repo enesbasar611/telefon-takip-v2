@@ -60,18 +60,23 @@ const getLoyaltyTier = (points: number) => {
     return { label: "Bronz", color: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: Star, next: 200, percent: (points / 200) * 100 };
 };
 
-import { getShop } from "@/lib/actions/setting-actions";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
+import { getSettings, getShop } from "@/lib/actions/setting-actions";
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-    const [customer, accounts, shop] = await Promise.all([
+    const [customer, accounts, shop, rates, settings] = await Promise.all([
         getCustomerById(params.id),
         getAccounts(),
-        getShop()
+        getShop(),
+        getCurrentExchangeRates(),
+        getSettings()
     ]);
 
     if (!customer) {
         notFound();
     }
+
+    const defaultCurrency = settings.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
 
     const totalRevenue = (customer.sales?.reduce((acc: number, s: any) => acc + Number(s.finalAmount), 0) || 0) +
         (customer.tickets?.reduce((acc: number, t: any) => acc + Number(t.actualCost), 0) || 0);
@@ -81,13 +86,13 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
     const totalDebt = customer.debts?.reduce((acc: number, d: any) => acc + Number(d.remainingAmount), 0) || 0;
     const tier = getLoyaltyTier(customer.loyaltyPoints);
 
-    // Collect all items (Service parts + Sale items)
+    // Tüm kalemleri topla (Servis parçaları + Satış ürünleri)
     const serviceParts = customer.tickets?.flatMap((t: any) =>
         (t.usedParts || []).map((p: any) => {
             const startDate = t.deliveredAt || t.createdAt;
             let expiry = t.warrantyExpiry;
 
-            // If ticket doesn't have expiry, calculate from part's warranty info
+            // Eğer servis kaydında garanti bitişi yoksa, parça garanti bilgilerinden hesapla
             if (!expiry) {
                 const date = new Date(startDate);
                 if (p.warrantyDays) {
@@ -146,7 +151,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
     return (
         <div className="flex flex-col gap-10 pb-20 bg-background text-foreground min-h-screen lg:p-14 p-8">
-            {/* Header Profile Section */}
+            {/* Başlık Profil Bölümü */}
             <div className="flex flex-col md:flex-row gap-8 items-start justify-between mb-4">
                 <div className="flex gap-8 items-center">
                     <Link href="/musteriler">
@@ -204,9 +209,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 </div>
             </div>
 
-            {/* Main Grid: CRM Analiz & Sadakat */}
+            {/* Ana Izgara: CRM Analiz & Sadakat */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Loyalty Panel */}
+                {/* Sadakat Paneli */}
                 <Card className="lg:col-span-1 border-border shadow-sm group overflow-hidden relative bg-card rounded-xl">
                     <CardHeader className="border-b border-border pb-6 bg-muted/10">
                         <div className="flex items-center gap-3">
@@ -238,7 +243,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </CardContent>
                 </Card>
 
-                {/* Financial & Summary Cards */}
+                {/* Finansal & Özet Kartları */}
                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-8">
                     <Card className="border-border shadow-sm group bg-card rounded-xl hover:translate-y-[-4px] transition-all overflow-hidden relative">
                         <CardContent className="p-10 flex flex-col gap-6">
@@ -276,7 +281,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                         </CardContent>
                     </Card>
 
-                    {/* History Tabs */}
+                    {/* Geçmiş Sekmeleri */}
                     <div className="col-span-1 md:col-span-3">
                         <Tabs defaultValue="history" className="w-full">
                             <TabsList className="bg-muted/30 border-b border-border w-full justify-start rounded-none h-auto p-0 gap-10 mb-8 overflow-x-auto">
@@ -288,14 +293,20 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                             </TabsList>
 
                             <TabsContent value="financial" className="outline-none">
-                                <CustomerDebtPanel customer={customer} accounts={accounts} shop={shop} />
+                                <CustomerDebtPanel
+                                    customer={customer}
+                                    accounts={accounts}
+                                    shop={shop}
+                                    rates={rates}
+                                    defaultCurrency={defaultCurrency}
+                                />
                             </TabsContent>
 
                             <TabsContent value="history" className="space-y-2 outline-none">
                                 {[...(customer.tickets || []), ...(customer.sales || [])]
                                     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                     .map((item: any, idx: number) => {
-                                        // Build display title
+                                        // Görüntülenecek başlığı oluştur
                                         const saleItemNames = !item.ticketNumber && item.items?.length > 0
                                             ? item.items.map((i: any) => i.product?.name || 'Ürün').join(', ')
                                             : null;

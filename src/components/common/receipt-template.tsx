@@ -15,6 +15,8 @@ interface ReceiptTemplateProps {
     shopName?: string;
     shopPhone?: string;
     shopAddress?: string;
+    shopLogo?: string;
+    shopWebsite?: string;
 }
 
 export const ReceiptTemplate = ({
@@ -27,6 +29,8 @@ export const ReceiptTemplate = ({
     shopName,
     shopPhone,
     shopAddress,
+    shopLogo,
+    shopWebsite,
 }: ReceiptTemplateProps) => {
     const paperSizeVal = paperSize || settings?.paperSize || "72mm";
 
@@ -49,13 +53,17 @@ export const ReceiptTemplate = ({
 
             {/* Header */}
             <div className="text-center border-b-[1.5px] border-black pb-1 mb-2">
-                {settings?.logoUrl && (
+                {(shopLogo || settings?.logoUrl || settings?.logo) && (
                     <div className="mb-2 flex justify-center">
-                        <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto grayscale contrast-[2]" />
+                        <img
+                            src={shopLogo || settings?.logoUrl || settings?.logo}
+                            alt="Logo"
+                            className="h-10 w-auto object-contain max-w-[80%]"
+                        />
                     </div>
                 )}
                 <h3 className="font-black text-base uppercase text-black leading-tight tracking-tight">
-                    {settings?.title || shopName || "TEKNİK SERVİS"}
+                    {shopName || settings?.title || "TEKNİK SERVİS"}
                 </h3>
                 {subtitle && (
                     <div className="flex justify-center mt-2 mb-1">
@@ -66,9 +74,9 @@ export const ReceiptTemplate = ({
                 )}
 
                 <div className="mt-1 text-[8px] font-black text-black leading-tight">
-                    <p>TEL: {settings?.phone || shopPhone || "05xx xxx xx xx"}</p>
-                    {settings?.website && <p>{settings.website}</p>}
-                    {(settings?.address || shopAddress) && <p className="px-1">{settings?.address || shopAddress}</p>}
+                    <p>TEL: {shopPhone || settings?.phone || "05xx xxx xx xx"}</p>
+                    {(shopWebsite || settings?.website) && <p>{shopWebsite || settings.website}</p>}
+                    {(shopAddress || settings?.address) && <p className="px-1">{shopAddress || settings?.address}</p>}
                 </div>
             </div>
 

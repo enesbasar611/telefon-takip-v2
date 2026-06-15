@@ -236,9 +236,10 @@ export async function createDeviceEntry(data: any) {
     revalidatePath("/dashboard");
 
     return { success: true, device: serializePrisma(result) };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create device error:", error);
-    return { success: false, error: "Cihaz kaydı oluşturulamadı." };
+    const detail = error?.message || "Bilinmeyen hata";
+    return { success: false, error: `Cihaz kaydı oluşturulamadı: ${detail}` };
   }
 }
 
