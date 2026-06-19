@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { getEdmSession, sendInvoice, getInvoices } from "@/lib/edm/rest-client";
+import { sendInvoice, getInvoices, getShopEdmCredentials, checkEdmUser, getInvoiceViewUrl } from "@/lib/edm/rest-client";
 import { invoiceSchema } from "@/lib/validations/edm-schemas";
 import { ZodError } from "zod";
+import prisma from "@/lib/prisma";
 
 // Test VKN (EDM test ortami icin varsayilan)
 const DEFAULT_TEST_VKN = "3230512384";
@@ -29,26 +29,20 @@ export async function POST(req: NextRequest) {
             username: user.email,
         });
 
-        // Dukkanin EDM ayarlarini kontrol et
-        const edmSettings = await prisma.eDMSettings.findUnique({
-            where: { shopId: String(shopId) },
-        });
-
-        if (!edmSettings || !edmSettings.edmActive) {
-            console.warn("[EDM Invoice API] EDM modulu aktif degil", { shopId });
+        // Dukkanin EDM ayarlarini ve credential'larini al
+        let credentials;
+        try {
+            credentials = await getShopEdmCredentials(String(shopId));
+        } catch (error: any) {
+            console.warn("[EDM Invoice API] EDM ayarlari bulunamadi:", error.message);
             return NextResponse.json(
-                { error: "e-Fatura modulu aktif degil. Lutfen yoneticiye basvurun." },
+                { error: error.message || "e-Fatura modulu aktif degil veya kurulum tamamlanmadı." },
                 { status: 403 }
             );
         }
 
         // Request body'yi al ve validate et
         const body = await req.json();
-        console.log("[EDM Invoice API] Validasyon baslaniyor", {
-            invoiceId: body.invoiceId,
-            items: body.items?.length,
-        });
-
         const validated = invoiceSchema.parse(body);
 
         console.log("[EDM Invoice API] Validasyon basarili", {
@@ -57,69 +51,96 @@ export async function POST(req: NextRequest) {
             type: validated.invoiceType,
         });
 
-        // EDM'e gonder
-        const senderVkn = edmSettings.senderVkn || DEFAULT_TEST_VKN;
-        const credentials = {
-            username: edmSettings.username!,
-            password: decryptPassword(edmSettings.passwordEncrypted),
-            senderVkn,
-            baseUrl: edmSettings.apiUrl || undefined,
-        };
-
-        console.log("[EDM Invoice API] EDM gonderimi baslaniyor", {
-            invoiceId: validated.invoiceId,
-            senderVkn,
-            customer: validated.customer.name,
-        });
-
-        // Muesteri veritabaninda kayitli mi kontrol et (TCKN/VKN ile)
-        let localCustomer = await prisma.customer.findFirst({
-            where: { 
-                shopId: String(shopId),
-                taxNumber: validated.customer.taxNumber
-            }
-        });
-
-        const result = await sendInvoice(credentials, {
-            invoiceId: validated.invoiceId,
-            issueDate: validated.issueDate,
-            dueDate: validated.dueDate,
-            currency: validated.currency,
-            note: validated.note,
-            invoiceScenario: validated.invoiceScenario,
-            invoiceType: validated.invoiceType,
-            customer: {
-                ...validated.customer,
-                isEInvoiceUser: localCustomer?.isEInvoiceUser ?? undefined,
-            },
-            items: validated.items,
-        });
-
-        // XSLT sablonunu fatura tipine gore sec
-        // isEInvoiceUser'a gore otomatik belirle
-        const isEarsiv = localCustomer?.isEInvoiceUser === false;
-        let xsltContent: string | null = null;
-        try {
-            const fs = await import("fs");
-            const xsltFileName = isEarsiv ? "e-arsiv.xslt" : "e-fatura.xslt";
-            const xsltPath = process.cwd() + "/public/" + xsltFileName;
-            xsltContent = fs.readFileSync(xsltPath, "utf8");
-            console.log(`[EDM Invoice API] XSLT sablonu okundu: ${xsltFileName} (isEarsiv=${isEarsiv})`);
-        } catch (xsltError) {
-            console.warn("[EDM Invoice API] XSLT sablonu okunamadi:", xsltError);
+        // 3. Veritabanından Müşteri Bilgilerini Al veya Doğrula (Zorunlu EDM Detayları İçin)
+        let dbCustomer = null;
+        if (body.customerId) {
+            dbCustomer = await prisma.customer.findUnique({
+                where: { id: body.customerId }
+            });
+        } else {
+            dbCustomer = await prisma.customer.findFirst({
+                where: {
+                    shopId: String(shopId),
+                    taxNumber: validated.customer.vknTckn
+                }
+            });
         }
 
-        // DB'ye kaydet (invoice classification from local customer override)
-        const invoiceClassification = localCustomer?.isEInvoiceUser === false ? "EARCHIVE" : "EINVOICE";
+        // Eğer veritabanında varsa ve formdaki veriler eksikse veritabanındakini kullan (Defansif)
+        const finalCustomerName = (validated.customer.name?.length > 3)
+            ? validated.customer.name
+            : (dbCustomer?.name || validated.customer.name);
+
+        const finalTaxNo = dbCustomer?.taxNumber || validated.customer.vknTckn;
+        const finalAddress = (validated.customer.address?.length > 5)
+            ? validated.customer.address
+            : (dbCustomer?.address || validated.customer.address || "Merkez");
+
+        // Mükellef sorgulama yap (Ground Truth)
+        console.log("[EDM Invoice API] Mükellef sorgulanıyor:", finalTaxNo);
+        const checkResult = await checkEdmUser(credentials, finalTaxNo);
+        const isEInvoice = checkResult.isEInvoice;
+
+        if (dbCustomer) {
+            await prisma.customer.update({
+                where: { id: dbCustomer.id },
+                data: { isEInvoiceUser: isEInvoice }
+            });
+        }
+
+        // Fatura tipini ve senaryosunu alıcının durumuna göre ayarla
+        const invoiceType = isEInvoice ? "efatura" : "earsiv";
+
+        // Eğer e-Arşiv ise senaryo her zaman TEMEL (EARSIVFATURA) olmalı
+        // e-Fatura ise kullanıcının seçtiği (TEMEL/TICARI) korunmalı
+        const finalScenario = isEInvoice ? validated.invoiceScenario : "TEMEL";
+
+        // Fatura tipini SATIS/IADE formatına çevir (Schema enum'dan al)
+        const mappedInvoiceTypeForUbl = validated.invoiceType === "TEVKIFAT" ? "SATIS" : (validated.invoiceType as any);
+
+        const result = await sendInvoice(
+            credentials,
+            {
+                invoiceId: validated.invoiceId,
+                issueDate: validated.issueDate,
+                dueDate: validated.dueDate,
+                currency: validated.currency,
+                note: validated.note,
+                invoiceScenario: finalScenario,
+                invoiceType: mappedInvoiceTypeForUbl,
+                customer: {
+                    name: finalCustomerName,
+                    vknTckn: finalTaxNo,
+                    taxOffice: validated.customer.taxOffice || dbCustomer?.taxOffice || undefined,
+                    address: finalAddress,
+                    city: validated.customer.city || "İSTANBUL",
+                    district: validated.customer.district || "Merkez",
+                    email: (validated.customer.email || dbCustomer?.email || undefined) as string | undefined,
+                    phone: (validated.customer.phone || dbCustomer?.phone || undefined) as string | undefined,
+                },
+                items: validated.items.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    vatRate: item.vatRate,
+                    unitCode: item.unitCode
+                })),
+            },
+            invoiceType,
+            checkResult.alias
+        );
+
+        // DB'ye kaydet
+        const invoiceClassification = isEInvoice ? "EINVOICE" : "EARCHIVE";
 
         const invoice = await prisma.eDMInvoice.create({
             data: {
                 shopId: String(shopId),
                 uuid: result.uuid,
-            invoiceId: validated.invoiceId,
-            type: invoiceClassification,
-                status: "SENT",
-                customerId: localCustomer?.id || null,
+                invoiceId: result.invoiceId,
+                type: invoiceClassification,
+                status: result.success ? "SENT" : "ERROR",
+                customerId: dbCustomer?.id || null,
                 totalAmount: validated.items.reduce((sum, item) => {
                     const total = item.quantity * item.unitPrice;
                     const vat = total * (item.vatRate / 100);
@@ -133,9 +154,7 @@ export async function POST(req: NextRequest) {
                 currency: validated.currency,
                 issueDate: new Date(validated.issueDate),
                 note: validated.note || null,
-                rawResponse: JSON.stringify(result),
-                xmlContent: result.xmlContent || null,
-                xsltContent: xsltContent || null,
+                edmError: result.error || null,
             },
         });
 
@@ -154,36 +173,34 @@ export async function POST(req: NextRequest) {
             })),
         });
 
-        console.log("[EDM Invoice API] Islem basarili", {
-            invoiceId: validated.invoiceId,
-            uuid: result.uuid,
-            dbId: invoice.id,
-        });
+        console.log("[EDM Invoice API] EDM Yanıtı:", JSON.stringify(result, null, 2));
 
+        if (!result.success) {
+            return NextResponse.json({
+                success: false,
+                error: result.error || "Fatura EDM'e gönderilemedi.",
+                debug: result.rawResponse
+            }, { status: 400 });
+        }
+
+        // 6. Basarili yanit don
         return NextResponse.json({
             success: true,
             uuid: result.uuid,
-            invoiceId: invoice.id,
+            invoiceId: invoice.id,      // Local DB ID (cuid)
+            gibNumber: result.invoiceId, // GİB No (BSR2026...)
+            invoiceType: invoiceType,   // efatura veya earsiv
+            viewUrl: getInvoiceViewUrl(credentials.senderVkn, result.uuid, invoiceType),
             message: "Fatura basariyla gonderildi ve kaydedildi.",
         });
     } catch (error: any) {
-        console.error("[EDM Invoice API] POST Hata", {
-            message: error.message,
-            name: error.name,
-            stack: error.stack?.split("\n").slice(0, 3).join(" "),
-        });
+        console.error("[EDM Invoice API] POST Hata:", error.message);
 
         if (error instanceof ZodError) {
-            return NextResponse.json(
-                {
-                    error: "Validasyon hatasi",
-                    details: error.errors.map(e => ({
-                        field: e.path.join("."),
-                        message: e.message,
-                    })),
-                },
-                { status: 400 }
-            );
+            return NextResponse.json({
+                error: "Validasyon hatasi",
+                details: error.errors
+            }, { status: 400 });
         }
 
         return NextResponse.json(
@@ -195,31 +212,23 @@ export async function POST(req: NextRequest) {
 
 /**
  * GET /api/edm/invoices
- * Giden faturalari listeler (İstege gore DB veya EDM Canli)
+ * Giden faturalari listeler
  */
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user) {
-            console.error("[EDM Invoice API] GET: Yetkisiz erisim");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const user = session.user as any;
         const shopId = user.shopId || user.currentShopId;
 
-        console.log("[EDM Invoice API] GET baslandi", { shopId });
-
-        const edmSettings = await prisma.eDMSettings.findUnique({
-            where: { shopId: String(shopId) },
-        });
-
-        if (!edmSettings || !edmSettings.edmActive) {
-            console.warn("[EDM Invoice API] GET: EDM modulu aktif degil", { shopId });
-            return NextResponse.json(
-                { error: "e-Fatura modulu aktif degil." },
-                { status: 403 }
-            );
+        let credentials;
+        try {
+            credentials = await getShopEdmCredentials(String(shopId));
+        } catch (error: any) {
+            return NextResponse.json({ error: error.message }, { status: 403 });
         }
 
         const { searchParams } = new URL(req.url);
@@ -227,29 +236,14 @@ export async function GET(req: NextRequest) {
         const endDate = searchParams.get("endDate") || undefined;
         const source = searchParams.get("source") || "db"; // 'db' veya 'edm'
 
-        const senderVkn = edmSettings.senderVkn || DEFAULT_TEST_VKN;
-        const credentials = {
-            username: edmSettings.username!,
-            password: decryptPassword(edmSettings.passwordEncrypted),
-            senderVkn,
-            baseUrl: edmSettings.apiUrl || undefined,
-        };
-
-        // DB'den faturalari cek (customerId NULL olsa bile)
         if (source === "db") {
             const dbInvoices = await prisma.eDMInvoice.findMany({
                 where: { shopId: String(shopId) },
                 orderBy: { createdAt: "desc" },
                 include: { lines: true },
             });
-            console.log("DB_GELEN_FATURALAR:", JSON.stringify(dbInvoices, null, 2));
             return NextResponse.json({ invoices: dbInvoices, count: dbInvoices.length, source: "db" });
         }
-
-        console.log("[EDM Invoice API] Faturalari sorgulaniyor", {
-            senderVkn,
-            dateRange: `${startDate} - ${endDate}`,
-        });
 
         const invoices = await getInvoices(credentials, {
             startDate,
@@ -257,30 +251,11 @@ export async function GET(req: NextRequest) {
             direction: "OUTBOUND",
         });
 
-        console.log("[EDM Invoice API] GET Basarili", {
-            count: invoices.length,
-        });
-
         return NextResponse.json({ invoices, count: invoices.length, source: "edm" });
     } catch (error: any) {
-        console.error("[EDM Invoice API] GET Hata", {
-            message: error.message,
-            name: error.name,
-        });
         return NextResponse.json(
             { error: error.message || "Faturalar listelenirken hata olustu." },
             { status: 500 }
         );
-    }
-}
-
-/* ─── Helpers ─── */
-function decryptPassword(encrypted: string | null): string {
-    if (!encrypted) throw new Error("Sifreli parola bulunamadi.");
-    try {
-        return Buffer.from(encrypted, "base64").toString("utf8");
-    } catch {
-        console.warn("[EDM Invoice API] Sifre cozme hatasi, duz metin kullaniliyor");
-        return encrypted;
     }
 }

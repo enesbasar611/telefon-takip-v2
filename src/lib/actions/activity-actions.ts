@@ -25,6 +25,7 @@ export interface UnifiedOperation {
     status?: string;
     saleId?: string;
     debtId?: string;
+    transactionType: 'INCOME' | 'EXPENSE';
 }
 
 export async function getUnifiedHistory(options: {
@@ -100,7 +101,7 @@ export async function getUnifiedHistory(options: {
             const operationItems = tx.sale?.items.map((item: any) => ({
                 name: item.product?.name || "Bilinmeyen Ürün",
                 quantity: item.quantity,
-                price: Number(item.price),
+                price: Number(item.unitPrice),
                 productId: item.productId
             })) || [];
 
@@ -130,7 +131,8 @@ export async function getUnifiedHistory(options: {
                 items: operationItems,
                 status: isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT"),
                 saleId: tx.saleId || undefined,
-                debtId: tx.debtId || undefined
+                debtId: tx.debtId || undefined,
+                transactionType: tx.type
             };
         });
 

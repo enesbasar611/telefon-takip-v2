@@ -158,8 +158,6 @@ export async function updateShop(data: any) {
     revalidatePath("/");
     revalidatePath("/ayarlar");
     revalidatePath("/admin/edm");
-    revalidatePath("/");
-    revalidatePath("/ayarlar");
     revalidateTag("shop");
     revalidateTag(`shop-${shopId}`);
     revalidateTag("receipt-settings");

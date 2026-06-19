@@ -37,7 +37,9 @@ import {
     OperationType
 } from "@/lib/actions/activity-actions";
 import { getSaleById } from "@/lib/actions/sale-actions";
-import { ReceiptModal } from "@/components/pos/receipt-modal";
+import { UnifiedSaleModal } from "@/components/pos/unified-sale-modal";
+import { AddReturnModal } from "@/components/stock/add-return-modal";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { toast } from "sonner";
 
 interface SalesHistoryClientProps {
@@ -71,6 +73,12 @@ export function SalesHistoryClient({
     const [receiptSale, setReceiptSale] = useState<any>(null);
     const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
 
+    // Return modal state
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+    const [returnInitialData, setReturnInitialData] = useState<any>(null);
+
+    const { rates, defaultCurrency } = useDashboardData();
+
     const updateParams = (newParams: Record<string, string | number>) => {
         const params = new URLSearchParams(searchParams.toString());
 
@@ -93,15 +101,16 @@ export function SalesHistoryClient({
     };
 
     const handlePrintReceipt = async (op: UnifiedOperation) => {
-        if (op.type !== 'SALE') return;
+        if (op.type !== 'SALE' && !op.saleId) return;
         setReceiptLoading(op.id);
         try {
-            // op.id is the transaction ID, but for sales we need the actual sale ID
             const targetId = op.saleId || op.id;
             const sale = await getSaleById(targetId);
             if (sale) setReceiptSale(sale);
+            else toast.error("Satış bulunamadı.");
         } catch (e) {
             console.error("Failed to load sale for receipt", e);
+            toast.error("Hata: Fiş yüklenemedi.");
         } finally {
             setReceiptLoading(null);
         }
@@ -182,22 +191,36 @@ export function SalesHistoryClient({
         window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
     };
 
-    const handleReturn = (op: UnifiedOperation, item: any) => {
-        const params = new URLSearchParams({
-            customerId: op.customerId || "",
-            customerName: op.customerName,
-            productId: item.productId || "",
-            productName: item.name,
-            quantity: String(item.quantity),
-            refundAmount: String((item.price || 0) * item.quantity),
-            refundCurrency: op.currency,
-            unitPrice: String(item.price || 0),
-            saleNumber: op.number,
-            soldAt: op.date.toString(),
-            saleId: op.saleId || "",
-            debtId: op.debtId || "",
+    const handleReturn = (op: UnifiedOperation, item?: any) => {
+        setReturnInitialData({
+            sourceType: "CUSTOMER",
+            sourceId: op.customerId === "GUEST" ? "" : op.customerId,
+            sourceName: op.customerName === "HIZLI SATIŞ" ? "PERAKENDE (HIZLI)" : op.customerName,
+            items: item ? [{
+                productId: item.productId,
+                name: item.name,
+                quantity: item.quantity || 1,
+                refundAmount: (item.price || 0) * (item.quantity || 1),
+                refundCurrency: op.currency || "TRY",
+                unitPrice: item.price || 0,
+                saleNumber: op.number,
+                soldAt: op.date,
+                saleId: op.saleId,
+                debtId: op.debtId
+            }] : op.items.map(i => ({
+                productId: i.productId,
+                name: i.name,
+                quantity: i.quantity || 1,
+                refundAmount: (i.price || 0) * (i.quantity || 1),
+                refundCurrency: op.currency || "TRY",
+                unitPrice: i.price || 0,
+                saleNumber: op.number,
+                soldAt: op.date,
+                saleId: op.saleId,
+                debtId: op.debtId
+            }))
         });
-        router.push(`/stok/iade?${params.toString()}`);
+        setIsReturnModalOpen(true);
     };
 
     return (
@@ -263,12 +286,12 @@ export function SalesHistoryClient({
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr className="border-b border-border/40 bg-muted/5">
-                                    <th className="px-8 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-16">Tür</th>
-                                    <th className="px-6 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tarih</th>
-                                    <th className="px-6 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Müşteri</th>
-                                    <th className="px-6 py-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Açıklama / Ürünler</th>
-                                    <th className="px-6 py-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tutar</th>
-                                    <th className="px-8 py-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-28">İşlem</th>
+                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60 w-16">Tür</th>
+                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Tarih</th>
+                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Müşteri</th>
+                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Açıklama / Ürünler</th>
+                                    <th className="px-6 py-3 text-right text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Tutar</th>
+                                    <th className="px-6 py-3 text-right text-[14px] font-black uppercase tracking-widest text-muted-foreground/60 w-28">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
@@ -305,6 +328,8 @@ export function SalesHistoryClient({
                                                     }
                                                 }}
                                                 receiptLoading={receiptLoading}
+                                                rates={rates}
+                                                defaultCurrency={defaultCurrency}
                                             />
                                             {expandedOpId === op.id && (
                                                 <tr className="bg-muted/10">
@@ -318,6 +343,8 @@ export function SalesHistoryClient({
                                                             handleReturn={handleReturn}
                                                             handleSendWhatsApp={handleSendWhatsApp}
                                                             handlePrintReceipt={handlePrintReceipt}
+                                                            rates={rates}
+                                                            defaultCurrency={defaultCurrency}
                                                         />
                                                     </td>
                                                 </tr>
@@ -384,10 +411,21 @@ export function SalesHistoryClient({
             </Card>
 
             {/* Receipt Modal */}
-            <ReceiptModal
+            <UnifiedSaleModal
                 isOpen={!!receiptSale}
                 onClose={() => setReceiptSale(null)}
                 sale={receiptSale}
+                rates={rates as any}
+            />
+
+            {/* Return Modal */}
+            <AddReturnModal
+                open={isReturnModalOpen}
+                onOpenChange={setIsReturnModalOpen}
+                initialData={returnInitialData}
+                onSuccess={() => {
+                    router.refresh();
+                }}
             />
         </div>
     );

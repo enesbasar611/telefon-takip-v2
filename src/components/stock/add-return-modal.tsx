@@ -76,6 +76,9 @@ interface ReturnItem {
     refundAmount: number;
     refundCurrency: string;
     restockProduct: boolean;
+    immediateRestock: boolean;
+    newBuyPrice?: number;
+    newSellPrice?: number;
     notes?: string;
 }
 
@@ -101,8 +104,14 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
     const [sources, setSources] = useState<any[]>([]);
     const [isLoadingSources, setIsLoadingSources] = useState(false);
 
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+
     // Sync initialData when modal opens
     useEffect(() => {
+        if (open) {
+            import("@/lib/actions/finance-actions").then(mod => mod.getAccounts().then(setAccounts));
+        }
         if (open && initialData) {
             if (initialData.sourceType) setSourceType(initialData.sourceType);
             if (initialData.sourceId) setSelectedSourceId(initialData.sourceId);
@@ -117,6 +126,9 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                     refundAmount: i.refundAmount,
                     refundCurrency: i.refundCurrency || "TRY",
                     restockProduct: true,
+                    immediateRestock: true,
+                    newBuyPrice: undefined,
+                    newSellPrice: undefined,
                     ...(i.unitPrice ? { unitPrice: i.unitPrice } : {}),
                     ...(i.saleNumber ? { saleNumber: i.saleNumber } : {}),
                     ...(i.soldAt ? { soldAt: i.soldAt } : {}),
@@ -235,7 +247,10 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             reason: "GENERAL_RETURN",
             refundAmount: 0,
             refundCurrency: "TRY",
-            restockProduct: true
+            restockProduct: true,
+            immediateRestock: true,
+            newBuyPrice: undefined,
+            newSellPrice: undefined,
         }]);
         setProductSearch("");
         setProductResults([]);
@@ -250,7 +265,10 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
     };
 
     const handleSubmit = async () => {
-        if (!selectedSourceId) {
+        // Can proceed if selectedSourceId OR if all items have a source reference (saleId/debtId)
+        const hasSourceReference = items.every(item => (item as any).saleId || (item as any).debtId);
+
+        if (!selectedSourceId && !hasSourceReference) {
             toast.error("Lütfen bir kaynak (Müşteri/Tedarikçi) seçin.");
             return;
         }
@@ -271,6 +289,9 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                 reason: item.reason,
                 notes: item.notes,
                 restockProduct: item.restockProduct,
+                immediateRestock: item.immediateRestock,
+                newBuyPrice: item.newBuyPrice,
+                newSellPrice: item.newSellPrice,
                 // Assign to properly linked debt or sale if passed
                 debtId: (item as any).debtId,
                 saleId: (item as any).saleId,
@@ -278,7 +299,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                 supplierId: sourceType === "SUPPLIER" ? selectedSourceId : undefined,
             }));
 
-            const res = await createMultipleReturnTickets(tickets);
+            const res = await createMultipleReturnTickets(tickets, selectedAccountId);
             if (res.success) {
                 toast.success("İade kayıtları başarıyla oluşturuldu.");
                 onOpenChange(false);
@@ -471,6 +492,9 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                         refundAmount: Number(saleItem.unitPrice) * saleItem.quantity,
                                                                         refundCurrency: saleCurrency,
                                                                         restockProduct: true,
+                                                                        immediateRestock: true,
+                                                                        newBuyPrice: undefined,
+                                                                        newSellPrice: undefined,
                                                                         saleId: sale.id,
                                                                         debtId: sale._debtId,
                                                                         unitPrice: Number(saleItem.unitPrice),
@@ -584,80 +608,122 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                         </p>
                                                     )}
                                                 </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => removeItem(item.id)}
-                                                    className="h-8 w-8 rounded-xl text-rose-500 hover:bg-rose-500/10"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeItem(item.id)}
+                                                        className="h-8 w-8 rounded-xl text-rose-500 hover:bg-rose-500/10"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Adet</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={(e) => updateItem(item.id, { quantity: parseInt(e.target.value) || 1 })}
-                                                        className="h-10 rounded-xl border-border/40 bg-muted/20"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Durum</Label>
-                                                    <Select value={item.reason} onValueChange={(v) => updateItem(item.id, { reason: v })}>
-                                                        <SelectTrigger className="h-10 rounded-xl border-border/40 bg-muted/20">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="rounded-xl border-border/40">
-                                                            <SelectItem value="GENERAL_RETURN">Genel İade</SelectItem>
-                                                            <SelectItem value="DAMAGED">Hasarlı Ürün</SelectItem>
-                                                            <SelectItem value="PART_FAILURE">Parça Arızası</SelectItem>
-                                                            <SelectItem value="LABOR_ERROR">İşçilik Hatası</SelectItem>
-                                                            <SelectItem value="CUSTOMER_CANCEL">Vazgeçme</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">İade Tutarı</Label>
-                                                    <div className="flex gap-2">
-                                                        <div className="relative flex-1">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
-                                                                {currencySymbol(item.refundCurrency)}
-                                                            </span>
-                                                            <Input
-                                                                type="number"
-                                                                value={item.refundAmount}
-                                                                onChange={(e) => updateItem(item.id, { refundAmount: parseFloat(e.target.value) || 0 })}
-                                                                className="h-10 rounded-xl border-border/40 bg-muted/20 pl-7"
-                                                            />
-                                                        </div>
-                                                        <Select value={item.refundCurrency} onValueChange={(v) => updateItem(item.id, { refundCurrency: v })}>
-                                                            <SelectTrigger className="h-10 w-20 rounded-xl border-border/40 bg-muted/20">
+                                            <div className="flex flex-col gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Adet</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={item.quantity}
+                                                            onChange={(e) => updateItem(item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                            className="h-10 rounded-xl border-border/40 bg-muted/20"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Durum</Label>
+                                                        <Select value={item.reason} onValueChange={(v) => updateItem(item.id, { reason: v })}>
+                                                            <SelectTrigger className="h-10 rounded-xl border-border/40 bg-muted/20">
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent className="rounded-xl border-border/40">
-                                                                <SelectItem value="TRY">TRY</SelectItem>
-                                                                <SelectItem value="USD">USD</SelectItem>
+                                                                <SelectItem value="GENERAL_RETURN">Genel İade</SelectItem>
+                                                                <SelectItem value="DAMAGED">Hasarlı Ürün</SelectItem>
+                                                                <SelectItem value="PART_FAILURE">Parça Arızası</SelectItem>
+                                                                <SelectItem value="LABOR_ERROR">İşçilik Hatası</SelectItem>
+                                                                <SelectItem value="CUSTOMER_CANCEL">Vazgeçme</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col justify-end pb-1 pr-2">
-                                                    <div className="flex items-center justify-between bg-muted/30 p-2 rounded-xl border border-border/40 h-10 w-full">
-                                                        <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`restock-${item.id}`}>Stokla</Label>
-                                                        <Checkbox
-                                                            id={`restock-${item.id}`}
-                                                            checked={item.restockProduct}
-                                                            onCheckedChange={(v) => updateItem(item.id, { restockProduct: !!v })}
-                                                            className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-emerald-500"
-                                                        />
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">İade Tutarı</Label>
+                                                        <div className="flex gap-2">
+                                                            <div className="relative flex-1">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
+                                                                    {currencySymbol(item.refundCurrency)}
+                                                                </span>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={item.refundAmount}
+                                                                    onChange={(e) => updateItem(item.id, { refundAmount: parseFloat(e.target.value) || 0 })}
+                                                                    className="h-10 rounded-xl border-border/40 bg-muted/20 pl-7"
+                                                                />
+                                                            </div>
+                                                            <Select value={item.refundCurrency} onValueChange={(v) => updateItem(item.id, { refundCurrency: v })}>
+                                                                <SelectTrigger className="h-10 w-20 rounded-xl border-border/40 bg-muted/20">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="rounded-xl border-border/40">
+                                                                    <SelectItem value="TRY">TRY</SelectItem>
+                                                                    <SelectItem value="USD">USD</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 bg-muted/30 p-2 rounded-xl border border-border/40">
+                                                        <div className="flex items-center justify-between w-full h-10 px-1">
+                                                            <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`restock-${item.id}`}>Stokla</Label>
+                                                            <Checkbox
+                                                                id={`restock-${item.id}`}
+                                                                checked={item.restockProduct}
+                                                                onCheckedChange={(v) => updateItem(item.id, { restockProduct: !!v })}
+                                                                className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-emerald-500"
+                                                            />
+                                                        </div>
+                                                        {item.restockProduct && (
+                                                            <div className="flex items-center justify-between w-full h-10 px-1 border-t border-border/20 pt-1 mt-1">
+                                                                <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`quick-${item.id}`}>Hızlı</Label>
+                                                                <Checkbox
+                                                                    id={`quick-${item.id}`}
+                                                                    checked={item.immediateRestock}
+                                                                    onCheckedChange={(v) => updateItem(item.id, { immediateRestock: !!v })}
+                                                                    className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-indigo-500"
+                                                                />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-1.5">
+                                            {
+                                                item.restockProduct && item.immediateRestock && (
+                                                    <div className="grid grid-cols-2 gap-4 pb-2 animate-in slide-in-from-top-1 duration-200">
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-[10px] uppercase font-bold text-indigo-500 pl-1">Yeni Alış Fiyatı (Opsiyonel)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="Alış fiyatını güncelle..."
+                                                                value={item.newBuyPrice || ""}
+                                                                onChange={(e) => updateItem(item.id, { newBuyPrice: parseFloat(e.target.value) || undefined })}
+                                                                className="h-10 rounded-xl border-indigo-500/20 bg-indigo-500/5 focus:ring-indigo-500/20"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <Label className="text-[10px] uppercase font-bold text-indigo-500 pl-1">Yeni Satış Fiyatı (Opsiyonel)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="Satış fiyatını güncelle..."
+                                                                value={item.newSellPrice || ""}
+                                                                onChange={(e) => updateItem(item.id, { newSellPrice: parseFloat(e.target.value) || undefined })}
+                                                                className="h-10 rounded-xl border-indigo-500/20 bg-indigo-500/5 focus:ring-indigo-500/20"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+
+                                            <div className="space-y-1.5 pt-2 border-t border-border/10">
                                                 <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Notlar</Label>
                                                 <Input
                                                     placeholder="İade nedeni ile ilgili ek açıklama..."
@@ -673,28 +739,50 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                         </div>
                     </div>
 
-                    <DialogFooter className="p-6 pt-4 border-t border-border/40 bg-muted/30">
-                        <Button
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className="rounded-xl h-12 px-6 border-border/40"
-                        >
-                            Vazgeç
-                        </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={loading || items.length === 0}
-                            className="rounded-xl h-12 px-10 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 min-w-[200px]"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Oluşturuluyor...
-                                </>
-                            ) : (
-                                "İadeleri Tamamla"
+                    <DialogFooter className="p-6 pt-4 border-t border-border/40 bg-muted/30 gap-4 flex-col sm:flex-row items-center">
+                        <div className="flex-1 w-full max-w-sm">
+                            {(items.some(i => i.refundAmount > 0)) && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-rose-500 pl-1">Ödemenin Çıkacağı Kasa / Hesap</Label>
+                                    <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                                        <SelectTrigger className="h-11 rounded-xl border-rose-500/20 bg-rose-500/5 focus:ring-rose-500/20">
+                                            <SelectValue placeholder="Kasa/Hesap Seçin" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border/40">
+                                            {accounts.map(acc => (
+                                                <SelectItem key={acc.id} value={acc.id}>
+                                                    {acc.name} ({Number(acc.balance).toLocaleString('tr-TR')} {acc.currency})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             )}
-                        </Button>
+                        </div>
+                        <div className="flex gap-3 w-full sm:w-auto shrink-0 mt-auto">
+                            <Button
+                                variant="outline"
+                                type="button"
+                                onClick={() => onOpenChange(false)}
+                                className="rounded-xl h-11 px-6 border-border/40 flex-1 sm:flex-none"
+                            >
+                                Vazgeç
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={loading || items.length === 0 || (items.some(i => i.refundAmount > 0) && !selectedAccountId)}
+                                className="rounded-xl h-11 px-10 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 flex-1 sm:flex-none"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Oluşturuluyor...
+                                    </>
+                                ) : (
+                                    "İadeleri Tamamla"
+                                )}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </div>
             </DialogContent>

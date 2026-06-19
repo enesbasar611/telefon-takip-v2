@@ -8,23 +8,29 @@ import { z } from "zod";
 
 /* ─── VKN / TCKN Validasyonu ─── */
 
+const isTestEnv = (process.env.EDM_ENVIRONMENT || "TEST") === "TEST";
+
 /**
  * VKN validasyonu (10 hane)
- * Algoritma: Çift ve tek indexlerin farklı çarpanlarla işlenmesi
+ * TEST ortamında sadece 10 hane kontrolü yapılır.
+ * PRODUCTION ortamında GİB algoritmik doğrulama çalışır.
  */
 export const vknSchema = z
     .string()
     .trim()
     .regex(/^\d{10}$/, "VKN tam olarak 10 haneli rakam olmalıdır.")
     .refine((val) => {
-        // VKN algoritma kontrolu (Vergi Müfettişleri Derneği standardı)
+        if (isTestEnv) return true; // TEST ortamında algoritmik kontrol atlanır
+        // Resmi Türk VKN algoritması (GİB / Maliye Bakanlığı standardı)
         const digits = val.split("").map(Number);
         let sum = 0;
         for (let i = 0; i < 9; i++) {
-            const digit = digits[i];
-            const multiplier = ((i + 1) % 2 === 0) ? 2 : 1;
-            const product = digit * multiplier;
-            sum += product > 9 ? product - 9 : product;
+            const tmp = (digits[i] + (10 - (i + 1))) % 10;
+            if (tmp === 9) {
+                sum += tmp;
+            } else {
+                sum += (tmp * Math.pow(2, 10 - (i + 1))) % 9;
+            }
         }
         const checkDigit = (10 - (sum % 10)) % 10;
         return digits[9] === checkDigit;
@@ -32,16 +38,18 @@ export const vknSchema = z
 
 /**
  * TCKN validasyonu (11 hane)
- * Algoritma: Luhn-tipi kontrol
+ * TEST ortamında sadece 11 hane kontrolü yapılır.
+ * PRODUCTION ortamında Luhn-tipi kontrol çalışır.
  */
 export const tcknSchema = z
     .string()
     .trim()
     .regex(/^\d{11}$/, "TCKN tam olarak 11 haneli rakam olmalıdır.")
     .refine((val) => {
+        if (isTestEnv) return true; // TEST ortamında algoritmik kontrol atlanır
         // TCKN algoritma kontrolu
         const digits = val.split("").map(Number);
-        if (digits[0] === 0) return false; // Geçersiz TC başlar
+        if (digits[0] === 0) return false;
 
         const oddSum = digits[0] + digits[2] + digits[4] + digits[6] + digits[8];
         const evenSum = digits[1] + digits[3] + digits[5] + digits[7];

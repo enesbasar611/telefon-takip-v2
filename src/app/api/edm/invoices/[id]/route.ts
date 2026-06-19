@@ -11,7 +11,14 @@ export async function GET(
         const { id } = params;
 
         const invoice = await prisma.eDMInvoice.findFirst({
-            where: { id, shopId },
+            where: {
+                OR: [
+                    { id: id },
+                    { uuid: id },
+                    { invoiceId: id }
+                ],
+                shopId: shopId
+            },
             include: {
                 customer: { select: { id: true, name: true, taxNumber: true, taxOffice: true, address: true } },
                 lines: true,
@@ -39,7 +46,14 @@ export async function DELETE(
         const { id } = params;
 
         const invoice = await prisma.eDMInvoice.findFirst({
-            where: { id, shopId },
+            where: {
+                OR: [
+                    { id: id },
+                    { uuid: id },
+                    { invoiceId: id }
+                ],
+                shopId: shopId
+            },
         });
 
         if (!invoice) {

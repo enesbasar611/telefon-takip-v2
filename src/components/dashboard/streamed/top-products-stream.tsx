@@ -101,7 +101,7 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 8, rows = 
                                                 <span className={cn(
                                                     "text-blue-500 tracking-tighter",
                                                     isVerySmall ? "text-sm" : "text-xl"
-                                                )}>₺{product.price.toLocaleString('tr-TR')}</span>
+                                                )}>₺{Number(product.price || 0).toLocaleString('tr-TR')}</span>
                                             </div>
                                             {!isVerySmall && (
                                                 <div className="text-right">
@@ -148,7 +148,7 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 8, rows = 
                                     <span className={cn(
                                         "font-bold text-blue-500 tracking-tight",
                                         isVerySmall || isShort ? "text-xs" : "text-lg"
-                                    )}>₺{product.price.toLocaleString('tr-TR')}</span>
+                                    )}>₺{Number(product.price || 0).toLocaleString('tr-TR')}</span>
                                     {!isVerySmall && !isShort && (
                                         <p className={cn(
                                             "text-[9px] uppercase tracking-widest mt-1",

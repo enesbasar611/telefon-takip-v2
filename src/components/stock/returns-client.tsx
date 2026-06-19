@@ -107,13 +107,13 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
         const soldAt = searchParams.get("soldAt");
         const saleId = searchParams.get("saleId");
 
-        if (customerId && (productId || debtId)) {
+        if (productId || debtId || saleId) {
             setAddReturnInitialData({
                 sourceType: "CUSTOMER" as const,
-                sourceId: customerId,
+                sourceId: customerId || "",
                 sourceName: customerName || "",
                 items: [{
-                    productId: productId || undefined,
+                    productId: productId || "",
                     name: productName || "",
                     quantity: parseInt(quantity || "1"),
                     refundAmount: parseFloat(refundAmount || "0"),

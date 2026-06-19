@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkUser } from "@/lib/edm/rest-client";
+import { checkEdmUser } from "@/lib/edm/rest-client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         let isEInvoiceUser = false;
 
         try {
-            result = await checkUser(credentials, vknTckn);
+            result = await checkEdmUser(credentials, vknTckn);
             // UserAlias donerse → e-Fatura mükellefi
             isEInvoiceUser = !!result.alias;
             console.log(`[CheckUser] Mükellef durumu sorgulandı:`, {

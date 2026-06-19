@@ -247,7 +247,10 @@ export function Sidebar({ className, user, shop, onNavigate }: {
             if (item.href.startsWith("/stok") && !u.canStock && u.role !== "ADMIN") return false;
             if (item.href.startsWith("/tedarikciler") && !u.canStock && u.role !== "ADMIN") return false;
             if (item.href.startsWith("/raporlar") && !u.canFinance && u.role !== "ADMIN") return false;
-            if (item.href.startsWith("/efatura") && !u.canFinance && u.role !== "ADMIN") return false;
+            if (item.href.startsWith("/efatura")) {
+              if (!u.canFinance && u.role !== "ADMIN") return false;
+              if (!shop?.isEInvoiceEnabled) return false;
+            }
             if (item.href.startsWith("/personel") && u.role !== "ADMIN" && u.role !== "MANAGER" && u.role !== "SHOP_MANAGER" && u.role !== "SUPER_ADMIN") return false;
 
             // Granular module check based on shop config

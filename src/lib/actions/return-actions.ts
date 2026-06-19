@@ -328,7 +328,10 @@ export async function createMultipleReturnTickets(tickets: {
   reason?: string;
   notes?: string;
   restockProduct?: boolean;
-}[]) {
+  immediateRestock?: boolean;
+  newBuyPrice?: number;
+  newSellPrice?: number;
+}[], financeAccountId?: string) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -353,6 +356,8 @@ export async function createMultipleReturnTickets(tickets: {
           throw new Error(`Bu ürün için ${existingActiveReturn.ticketNumber} numaralı iade işlemi henüz tamamlanmamış.`);
         }
 
+        const isImmediate = data.immediateRestock && data.restockProduct;
+
         const ticket = await tx.returnTicket.create({
           data: {
             ticketNumber,
@@ -371,22 +376,110 @@ export async function createMultipleReturnTickets(tickets: {
             restockProduct: data.restockProduct ?? true,
             shopId,
             userId,
-            returnStatus: "PENDING",
+            returnStatus: isImmediate ? "RESTOCKED" : "PENDING",
           },
         });
         createdTickets.push(ticket);
 
-        if (data.debtId && data.refundAmount) {
-          const debt = await tx.debt.findUnique({ where: { id: data.debtId, shopId } });
-          if (debt) {
-            const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(data.refundAmount));
-            await tx.debt.update({
-              where: { id: data.debtId },
-              data: {
-                remainingAmount: newRemaining,
-                isPaid: newRemaining <= 0,
-              },
-            });
+        // Immediate restock logic
+        if (isImmediate && data.productId) {
+          // 1. Update Product Stockholm and Prices
+          await tx.product.update({
+            where: { id: data.productId },
+            data: {
+              stock: { increment: data.quantity },
+              ...(data.newBuyPrice !== undefined ? { buyPrice: data.newBuyPrice } : {}),
+              ...(data.newSellPrice !== undefined ? { sellPrice: data.newSellPrice } : {}),
+            },
+          });
+
+          // 2. Create Inventory Movement
+          await tx.inventoryMovement.create({
+            data: {
+              productId: data.productId,
+              quantity: data.quantity,
+              type: "IN",
+              notes: `İade Alındı (Hızlı): ${ticketNumber}${data.notes ? ` - ${data.notes}` : ''}`,
+              shopId,
+              returnTicketId: ticket.id,
+              saleId: data.saleId,
+              debtId: data.debtId
+            },
+          });
+
+          // 3. Create Inventory Log for history
+          await tx.inventoryLog.create({
+            data: {
+              productId: data.productId,
+              userId,
+              quantity: data.quantity,
+              type: "RETURN",
+              notes: `İade: ${ticketNumber}${data.notes ? ` - ${data.notes}` : ''}`,
+              shopId
+            }
+          });
+        }
+
+        // Handle Finance / Debt impact
+        const refundVal = Number(data.refundAmount || 0);
+        if (refundVal > 0) {
+          if (data.debtId) {
+            const debt = await tx.debt.findUnique({ where: { id: data.debtId, shopId } });
+            if (debt) {
+              const newRemaining = Math.max(0, Number(debt.remainingAmount) - refundVal);
+              await tx.debt.update({
+                where: { id: data.debtId },
+                data: {
+                  remainingAmount: newRemaining,
+                  isPaid: newRemaining <= 0,
+                },
+              });
+            }
+          } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
+            // For completed sales or general customer returns, create an Expense transaction
+            if (financeAccountId) {
+              // Get the account to update balance
+              const account = await tx.financeAccount.findUnique({ where: { id: financeAccountId } });
+              if (account) {
+                const newBalance = Number(account.balance) - refundVal;
+                await tx.financeAccount.update({
+                  where: { id: financeAccountId },
+                  data: {
+                    balance: newBalance,
+                    availableBalance: account.type === 'CREDIT_CARD' ? (account.limit ? Number(account.limit) - newBalance : null) : newBalance
+                  }
+                });
+
+                await tx.transaction.create({
+                  data: {
+                    type: "EXPENSE",
+                    amount: refundVal,
+                    currency: data.refundCurrency || "TRY",
+                    description: `${ticketNumber} - İade Geri Ödemesi`,
+                    category: "İade",
+                    userId,
+                    shopId,
+                    financeAccountId,
+                    saleId: data.saleId,
+                    runningBalance: newBalance
+                  },
+                });
+              }
+            } else {
+              // Fallback to unlinked transaction if no account selected
+              await tx.transaction.create({
+                data: {
+                  type: "EXPENSE",
+                  amount: refundVal,
+                  currency: data.refundCurrency || "TRY",
+                  description: `${ticketNumber} - İade Geri Ödemesi`,
+                  category: "İade",
+                  userId,
+                  shopId,
+                  saleId: data.saleId
+                },
+              });
+            }
           }
         }
       }

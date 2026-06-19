@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { checkUser } from "@/lib/edm/rest-client";
+import { checkEdmUser } from "@/lib/edm/rest-client";
 
 export async function checkSuperAdmin() {
     const session = await getSession();
@@ -296,6 +296,11 @@ export async function getShopsForEdmAdmin() {
                         id: true,
                         senderVkn: true,
                         senderName: true,
+                        senderAddress: true,
+                        senderCity: true,
+                        senderDistrict: true,
+                        senderTaxOffice: true,
+                        environment: true,
                         edmActive: true,
                         username: true,
                     },
@@ -416,7 +421,7 @@ export async function getEdmBalanceForShop(shopId: string) {
         };
 
         // 1. Mükellef Durumunu Sorgula (e-Fatura mı e-Arşiv mi?)
-        const statusResult = await checkUser(credentials, vkn);
+        const statusResult = await checkEdmUser(credentials, vkn);
 
         // 2. Bakiyeyi Sorgula (EdmRegistrationService kullanarak)
         const { EdmRegistrationService } = await import("@/lib/edm/registration");

@@ -13,24 +13,27 @@ export async function GET(req: Request) {
         const user = session.user as any;
         const shopId = user.shopId || user.currentShopId;
 
-        const settings = await prisma.eDMSettings.findUnique({
-            where: { shopId: String(shopId) },
-        });
+        const [settings, shop] = await Promise.all([
+            prisma.eDMSettings.findUnique({
+                where: { shopId: String(shopId) },
+            }),
+            prisma.shop.findUnique({
+                where: { id: String(shopId) },
+            })
+        ]);
 
         return NextResponse.json({
             edmActive: settings?.edmActive ?? false,
-            settings: settings
-                ? {
-                      senderVkn: settings.senderVkn,
-                      senderName: settings.senderName,
-                      senderAddress: settings.senderAddress,
-                      senderCity: settings.senderCity,
-                      senderDistrict: settings.senderDistrict,
-                      senderTaxOffice: settings.senderTaxOffice,
-                      environment: settings.environment,
-                      username: settings.username,
-                  }
-                : null,
+            settings: {
+                senderVkn: settings?.senderVkn || shop?.taxNumber || "",
+                senderName: settings?.senderName || shop?.companyName || shop?.name || "",
+                senderAddress: settings?.senderAddress || shop?.address || "",
+                senderCity: settings?.senderCity || shop?.companyCity || "İstanbul",
+                senderDistrict: settings?.senderDistrict || shop?.companyDistrict || "",
+                senderTaxOffice: settings?.senderTaxOffice || shop?.taxOffice || "",
+                environment: settings?.environment || "TEST",
+                username: settings?.username || "",
+            },
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

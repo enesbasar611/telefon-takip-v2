@@ -405,7 +405,7 @@ export function DashboardCore({
                       <div className="flex items-end justify-between pt-2 border-t border-border/20">
                         <div className="flex flex-col">
                           <span className="text-[8px]  text-muted-foreground/60 uppercase tracking-widest mb-0.5">Birim Fiyat</span>
-                          <span className="text-xl  text-blue-500 tracking-tighter">₺{product.price.toLocaleString('tr-TR')}</span>
+                          <span className="text-xl  text-blue-500 tracking-tighter">₺{Number(product.price || 0).toLocaleString('tr-TR')}</span>
                         </div>
                         <div className="text-right">
                           <span className="text-[8px]  text-muted-foreground/60 uppercase tracking-widest block mb-1">Satış</span>

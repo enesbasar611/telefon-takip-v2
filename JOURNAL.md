@@ -321,3 +321,22 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - **Kur Kontrolü**: Tüm finansal hesaplamalarda (CheckoutSummary, POS Sepet, Borç Ekstresi) sabit `34.5` kuru yerine sistemdeki güncel canlı kurlar kullanılacak şekilde refactor edildi.
     - **Müşteri Paneli**: Müşteri detay sayfasındaki ödeme ve ekstre bölümleri merkezi kur sistemine bağlandı; manuel ödemeler ve otomatik fişler artık aynı toplamları gösteriyor.
     - **Dosyalar**: `src/components/finance/debt-receipt-modal.tsx`, `src/components/pos/receipt-modal.tsx`, `src/components/pos/parts/checkout-summary.tsx`, `src/components/customer/customer-debt-panel.tsx`, `src/app/(dashboard)/musteriler/[id]/page.tsx`.
+
+- [x] 2026-06-15: EDM Bilişim e-Fatura Entegrasyonu Modernizasyonu & Legacy Temizliği:
+    - Dosyalar: `src/lib/edm/rest-client.ts`, `prisma/schema.prisma`, `src/lib/edm/xml-builder.ts`, `src/app/api/edm/invoices/route.ts`, `src/app/api/edm/invoices/[id]/render/route.ts` (SİLİNDİ), `package.json`.
+    - Neden: SOAP bağımlılıklarını temizlemek, veritabanı şişkinliğini (XML/XSLT storage) önlemek ve sistemi modern JSON-only REST mimarisine tam uyumlu hale getirmek.
+    - Yapılanlar:
+      - REST Client: Tüm legacy SOAP fonksiyonları kaldırıldı. `SendInvoiceResult` arayüzü sanitize edildi (xmlContent çıkarıldı).
+      - Prisma: `EDMInvoice`, `EDMIncomingInvoice`, `EDMSettings` ve `TenantSettings` modellerinden XML ve XSLT ile ilgili 10'dan fazla kolon silindi.
+      - Bağımlılıklar: `xslt-processor` paketi kaldırıldı.
+      - XML Builder: Dahili XML motoru XSLT bağımlılığından arındırıldı.
+    - Durum: Kod seviyesi temizlik tamamlandı. Windows environment kilitli olduğu için `prisma generate` ve `db push` manuel tetiklenmek üzere müşteriye devredildi.
+
+- [x] 2026-06-16: EDM Bilişim e-Fatura Entegrasyonu C# Katmanı Uyumluluk Güncellemesi:
+    - Dosya: `src/lib/edm/rest-client.ts`.
+    - Neden: Mert'in C# tabanlı `EFaturaEDMConnectorLibrary.cs` katmanının (`SendInvoiceRequest` metodu) alıcı posta kutusu bilgilerini `HEADER.TO` ve kök seviyedeki `RECEIVER` objesinden haritalandırdığı tespit edildi.
+    - Yapılanlar:
+        - Fatura Header'ına `TO` alanı eklendi (alıcı etiketi).
+        - Gönderilen JSON isteğinin kök (root) seviyesine `RECEIVER` objesi (`vkn` ve `alias` içerikli) eklendi.
+        - Robustness için `receiverVkn` ve `receiverAlias` gibi camelCase varyasyonlar kök seviyede tutulmaya devam edildi.
+    - Sonuç: Backend tarafındaki SOAP servisi besleme aşamasındaki haritalama hatası giderildi, alıcı etiketi (alias) artık EDM'ye doğru şekilde iletiliyor.

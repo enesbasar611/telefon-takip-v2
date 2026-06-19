@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
@@ -25,7 +25,7 @@ import {
 export function EdmAdminClient() {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
-    const [setupShop, setSetupShop] = useState<any | null>(null);
+    const [setupShopId, setSetupShopId] = useState<string | null>(null);
     const [checkingBalance, setCheckingBalance] = useState<string | null>(null);
 
     const { data: shopsData, isLoading } = useQuery({
@@ -40,6 +40,7 @@ export function EdmAdminClient() {
     });
 
     const shops = shopsData || [];
+    const setupShop = shops.find((s: any) => s.id === setupShopId);
 
     const filtered = shops.filter((shop: any) => {
         if (!search.trim()) return true;
@@ -55,7 +56,7 @@ export function EdmAdminClient() {
         setCheckingBalance(shop.id);
         try {
             const res = await getEdmBalanceForShop(shop.id);
-            if (res.success) {
+            if (res.success && res.data) {
                 const data = res.data;
                 toast.success(`${shop.name}: ${data.isEInvoice ? "e-Fatura" : "e-Arşiv"} - ${data.counterLeft ?? 0} kontör mevcut.`);
             } else {
@@ -182,7 +183,7 @@ export function EdmAdminClient() {
                                                     variant="secondary"
                                                     size="sm"
                                                     className="h-9 px-3 rounded-xl gap-2 font-bold text-xs bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
-                                                    onClick={() => setSetupShop(shop)}
+                                                    onClick={() => setSetupShopId(shop.id)}
                                                 >
                                                     <Settings className="h-4 w-4" />
                                                     Ayarlar
@@ -198,7 +199,7 @@ export function EdmAdminClient() {
             </div>
 
             {/* Setup Modal */}
-            <Dialog open={!!setupShop} onOpenChange={(open) => !open && setSetupShop(null)}>
+            <Dialog open={!!setupShopId} onOpenChange={(open) => !open && setSetupShopId(null)}>
                 <DialogContent className="max-w-lg rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>EDM Ayarları — {setupShop?.name}</DialogTitle>
@@ -208,7 +209,7 @@ export function EdmAdminClient() {
                     </DialogHeader>
                     {setupShop && <EdmSetupForm shop={setupShop} onSuccess={() => {
                         queryClient.invalidateQueries({ queryKey: ["admin-edm-shops"] });
-                        setSetupShop(null);
+                        setSetupShopId(null);
                     }} />}
                 </DialogContent>
             </Dialog>
@@ -230,6 +231,22 @@ function EdmSetupForm({ shop, onSuccess }: { shop: any; onSuccess: () => void })
         environment: shop.edmSettings?.environment || "TEST",
         edmActive: shop.edmSettings?.edmActive || false,
     });
+
+    // Sync form state if shop prop changes (e.g. after refetch)
+    useEffect(() => {
+        setForm({
+            username: shop.edmSettings?.username || "",
+            password: "",
+            senderVkn: shop.edmSettings?.senderVkn || shop.taxNumber || "",
+            senderName: shop.edmSettings?.senderName || shop.companyName || shop.name || "",
+            senderAddress: shop.edmSettings?.senderAddress || "",
+            senderCity: shop.edmSettings?.senderCity || "",
+            senderDistrict: shop.edmSettings?.senderDistrict || "",
+            senderTaxOffice: shop.edmSettings?.senderTaxOffice || "",
+            environment: shop.edmSettings?.environment || "TEST",
+            edmActive: shop.edmSettings?.edmActive || false,
+        });
+    }, [shop]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

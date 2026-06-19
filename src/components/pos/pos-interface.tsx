@@ -42,7 +42,7 @@ import {
 import { createSale, getSaleById } from "@/lib/actions/sale-actions";
 import { getPOSInitialData } from "@/lib/actions/product-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
-import { ReceiptModal } from "./receipt-modal";
+import { UnifiedSaleModal } from "./unified-sale-modal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -160,6 +160,9 @@ export function POSInterface({ initialSaleId }: {
     return products.filter((p) => {
       const searchLower = debouncedSearchTerm.toLowerCase().trim();
       const isSearching = searchLower.length > 0;
+
+      // Always filter out items with no stock
+      if (p.stock != null && p.stock <= 0) return false;
 
       const matchesSearch =
         p.name.toLowerCase().includes(searchLower) ||
@@ -726,7 +729,7 @@ export function POSInterface({ initialSaleId }: {
       </div>
 
       {lastSale && (
-        <ReceiptModal
+        <UnifiedSaleModal
           isOpen={showReceipt}
           onClose={closeReceiptAndReload}
           sale={lastSale}

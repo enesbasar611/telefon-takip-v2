@@ -268,10 +268,13 @@ export async function getTopProducts(shopIdIn?: string, limit = 5) {
       });
       return {
         ...product,
-        totalSold: tp._sum.quantity
+        price: Number(product?.sellPrice || 0),
+        sales: tp._sum.quantity,
+        totalSold: tp._sum.quantity,
+        category: product?.category?.name || "Kategorisiz"
       };
     })
   );
 
-  return serializePrisma(products);
+  return serializePrisma(products.filter((p: any) => p && p.id));
 }

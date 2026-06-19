@@ -314,11 +314,11 @@ export function ShortageList() {
         )}
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-3xl w-full bg-card border border-border/40 rounded-[2rem] p-0 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-          <DialogHeader className="p-5 border-b border-border/50 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-blue-500" /> Eksik Ürün Listesi
+        <DialogContent className="max-w-4xl w-full bg-card border border-border/40 rounded-[2rem] p-0 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+          <DialogHeader className="p-3 px-5 border-b border-border/50 flex-shrink-0">
+            <div className="flex items-center justify-between pr-10">
+              <DialogTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-blue-500" /> Eksik Ürün Listesi
               </DialogTitle>
               {activeTab === "main" && items.length > 0 && (
                 <div className="flex gap-2">
@@ -330,7 +330,7 @@ export function ShortageList() {
                         await clearAllFlow();
                       }
                     }}
-                    className="h-8 text-[10px] font-bold border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-black gap-2"
+                    className="h-8 text-[10px] font-bold border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-slate-950 gap-2"
                   >
                     <Eraser className="h-3 w-3" /> Listeyi Temizle & Yenile
                   </Button>
@@ -381,7 +381,7 @@ export function ShortageList() {
 
           {/* Tab: Main Shortage List */}
           {activeTab === "main" && (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
               <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-3 rounded-xl mb-4">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -402,7 +402,7 @@ export function ShortageList() {
                           <span className="text-[10px] font-bold text-blue-400">{selectedCustomer.name}</span>
                           <span className="text-[8px] text-muted-foreground">{selectedCustomer.phone || "Telefon Yok"}</span>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)} className="h-6 w-6 hover:bg-rose-500 hover:text-black">
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)} className="h-6 w-6 hover:bg-rose-500 hover:text-slate-950">
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -451,7 +451,7 @@ export function ShortageList() {
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onFocus={() => newName.length >= 2 && setShowResults(true)}
-                      className="h-8 bg-white/[0.03] border-border/50 text-[10px] rounded-lg pl-8"
+                      className="h-9 bg-white/[0.03] border-border/50 text-sm rounded-lg pl-8"
                     />
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
                     {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />}
@@ -460,7 +460,7 @@ export function ShortageList() {
                     onClick={handleManualAdd}
                     size="icon"
                     disabled={adding || !newName.trim()}
-                    className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-black shrink-0 rounded-lg"
+                    className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-slate-950 shrink-0 rounded-lg"
                   >
                     <PackagePlus className="h-4 w-4" />
                   </Button>
@@ -482,7 +482,7 @@ export function ShortageList() {
                     ) : (
                       <div className="p-3 text-center text-[10px] text-gray-500">Ürün bulunamadı.</div>
                     )}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleManualAdd(); }} className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px]  hover:bg-blue-500/10 transition-colors">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleManualAdd(); }} className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px]  hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
                       + "{newName}" OLARAK MANUEL EKLE
                     </button>
                   </div>
@@ -503,7 +503,7 @@ export function ShortageList() {
                   }, {});
 
                   return Object.entries(grouped).map(([key, group]: any) => (
-                    <div key={key} className="space-y-3 pb-2 border-b border-white/[0.03] last:border-0">
+                    <div key={key} className="space-y-2 pb-1 border-b border-white/[0.03] last:border-0">
                       <div className="flex items-center gap-2 px-1 sticky top-0 bg-card z-10 py-1">
                         <div className={cn(
                           "h-6 w-6 rounded-full flex items-center justify-center border text-white font-black text-[8px] shadow-sm uppercase shrink-0",
@@ -512,19 +512,19 @@ export function ShortageList() {
                           {getInitials(group.label)}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">{group.label}</span>
+                          <span className="text-sm font-black text-blue-400 uppercase tracking-tighter">{group.label}</span>
                           {group.phone && <span className="text-[8px] text-muted-foreground">{group.phone}</span>}
                         </div>
                       </div>
 
                       <div className="space-y-2 ml-2">
                         {group.items.map((item: any) => (
-                          <div key={item.id} className="group relative flex flex-col p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all gap-3 shadow-sm">
+                          <div key={item.id} className="group relative flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all gap-2 shadow-sm">
                             {/* Top Action Buttons */}
                             <div className="absolute top-2 right-2 flex items-center gap-1">
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black rounded-lg transition-all" title="Tedarikçiye Gönder">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-slate-950 rounded-lg transition-all" title="Tedarikçiye Gönder">
                                     <UserPlus2 className="h-4 w-4" />
                                   </Button>
                                 </PopoverTrigger>
@@ -538,7 +538,7 @@ export function ShortageList() {
                                         <button
                                           key={s.id}
                                           onClick={() => handleSendToSupplier(s, item)}
-                                          className="w-full text-left px-2 py-1.5 text-[10px]  text-gray-300 hover:bg-blue-500 hover:text-black rounded transition-colors"
+                                          className="w-full text-left px-2 py-1.5 text-[10px]  text-gray-300 hover:bg-blue-500 hover:text-slate-950 rounded transition-colors"
                                         >
                                           {s.name}
                                         </button>
@@ -564,17 +564,17 @@ export function ShortageList() {
                                     className="h-7 w-6 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
                                   >+</button>
                                 </div>
-                                <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black rounded-lg transition-all" title="Stok Tamamla">
+                                <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 rounded-lg transition-all" title="Stok Tamamla">
                                   <CheckCircle2 className="h-4 w-4" />
                                 </Button>
-                                <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-black rounded-lg transition-all" title="Kaldır">
+                                <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-slate-950 rounded-lg transition-all" title="Kaldır">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             </div>
 
                             <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
-                              <span className="text-[10px] font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
+                              <span className="text-sm font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -595,7 +595,12 @@ export function ShortageList() {
                               </div>
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[8px] uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 rounded-md">
+                                  <Button variant="ghost" size="sm" className={cn(
+                                    "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all",
+                                    item.assignedToId
+                                      ? "text-orange-400 bg-orange-500/5 border border-orange-500/20 hover:bg-orange-500 hover:text-slate-950"
+                                      : "text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500 hover:text-slate-950"
+                                  )}>
                                     {item.assignedToId ? "DEĞİŞTİR" : "ATA"}
                                   </Button>
                                 </PopoverTrigger>
@@ -612,7 +617,7 @@ export function ShortageList() {
                                             onClick={() => handleAssignToCourier(item.id, c.id)}
                                             className={cn(
                                               "w-full text-left px-2 py-1.5 text-[10px] rounded transition-colors flex items-center justify-between",
-                                              item.assignedToId === c.id ? "bg-orange-500/10 text-orange-400" : "text-gray-300 hover:bg-blue-500 hover:text-black"
+                                              item.assignedToId === c.id ? "bg-orange-500/10 text-orange-400" : "text-gray-300 hover:bg-blue-500 hover:text-slate-950"
                                             )}
                                           >
                                             {c.name} {c.surname}
@@ -647,7 +652,7 @@ export function ShortageList() {
               {items.length > 0 && (
                 <>
                   <Separator className="my-2 bg-white/5" />
-                  <Button onClick={() => setShowPrintModal(true)} className="w-full bg-blue-500 hover:bg-blue-600 text-black  text-[10px] h-10 rounded-xl">
+                  <Button onClick={() => setShowPrintModal(true)} className="w-full bg-blue-500 hover:bg-blue-600 text-slate-950 text-[10px] h-10 rounded-xl">
                     <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
                   </Button>
                 </>

@@ -58,7 +58,11 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
         include: {
           items: {
             include: {
-              product: true
+              product: {
+                include: {
+                  deviceInfo: true
+                }
+              }
             }
           },
           customer: true
@@ -242,7 +246,15 @@ export async function getSaleById(id: string) {
       where: { id, shopId },
       include: {
         customer: true,
-        items: { include: { product: true } },
+        items: {
+          include: {
+            product: {
+              include: {
+                deviceInfo: true
+              }
+            }
+          }
+        },
         transaction: true,
         inventoryMovements: { include: { product: true } },
       },
