@@ -168,7 +168,7 @@ export async function createAndSendInvoice(input: CreateInvoiceInput): Promise<{
             issueDate: new Date().toISOString(),
             customer: {
                 name: input.customerName,
-                taxNumber: input.customerTaxNumber,
+                vknTckn: input.customerTaxNumber || "",
                 taxOffice: input.customerTaxOffice,
                 address: input.customerAddress,
                 city: input.customerCity,
@@ -210,7 +210,7 @@ export async function createAndSendInvoice(input: CreateInvoiceInput): Promise<{
                 currency: input.currency || "TRY",
                 issueDate: new Date(),
                 note: input.notes || null,
-                rawResponse: result.rawResponse ? JSON.stringify(result.rawResponse) : null,
+                viewUrl: result.viewUrl || null,
                 edmError: result.error || null,
                 lines: {
                     create: input.items.map(item => ({

@@ -340,3 +340,16 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
         - Gönderilen JSON isteğinin kök (root) seviyesine `RECEIVER` objesi (`vkn` ve `alias` içerikli) eklendi.
         - Robustness için `receiverVkn` ve `receiverAlias` gibi camelCase varyasyonlar kök seviyede tutulmaya devam edildi.
     - Sonuç: Backend tarafındaki SOAP servisi besleme aşamasındaki haritalama hatası giderildi, alıcı etiketi (alias) artık EDM'ye doğru şekilde iletiliyor.
+
+- [x] 
+2026-06-19 - **Arayüz (UI/UX) Standardizasyonu ve Eksik Listesi Optimizasyonu**
+- **Eksik Ürün Listesi (ShortageList)**:
+    - Modal yapısı optimize edildi; dikey boşluklar (padding/gap) daraltıldı, yazı boyutları 14px (`text-sm`) olarak standartlaştırıldı.
+    - Kurye atama ("ATA") butonu daha belirgin hale getirildi (border ve background vurgusu).
+    - Hover durumlarındaki okunurluk sorunu (arka planla aynı renk olan yazılar) `hover:text-slate-950` ile tüm aksiyon butonlarında çözüldü.
+    - Header kısmındaki buton çakışmaları (Listeyi Temizle ve Kapat butonu) sağ iç boşluklar düzenlenerek giderildi.
+    - Modal genişliği `max-w-4xl` seviyesine çekilerek daha ferah bir kullanım sağlandı.
+- **Dashboard Görünümü**:
+    - Dashboard üzerindeki 8 adet bilgi kartı tamamen yenilenerek, Personel sayfasındaki gibi canlı (vibrant) gradyan arka planlara (`Emerald`, `Blue`, `Rose`, `Amber`, `Purple`, `Indigo`) kavuşturuldu.
+    - Metin renkleri beyaz yapılarak okunabilirlik artırıldı ve kartların her biri kendi kategorisine göre (finans, teknik, stok) güçlü bir görsel kimlik kazandı.
+- **Dosyalar**: `src/components/navbar/shortage-list.tsx`, `src/components/dashboard/stat-card.tsx`.

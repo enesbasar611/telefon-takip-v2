@@ -1,4 +1,5 @@
 "use client";
+import { useMemo } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
@@ -94,40 +95,60 @@ export function StatCard({
         ? (isUSD ? (hasTRY ? formatTRY(value) : null) : (hasUSD ? formatUSD(usdValue) : null))
         : null;
 
+    const { styles, isVibrant } = useMemo(() => {
+        if (colorClass.includes("primary")) return { styles: "bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none shadow-xl shadow-blue-500/20", isVibrant: true };
+        if (colorClass.includes("secondary")) return { styles: "bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-none shadow-xl shadow-purple-500/20", isVibrant: true };
+        if (colorClass.includes("blue-500")) return { styles: "bg-gradient-to-br from-sky-500 to-blue-700 text-white border-none shadow-xl shadow-blue-500/20", isVibrant: true };
+        if (colorClass.includes("amber-500")) return { styles: "bg-gradient-to-br from-orange-400 to-amber-600 text-white border-none shadow-xl shadow-orange-500/20", isVibrant: true };
+        if (colorClass.includes("emerald-500")) return { styles: "bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-xl shadow-emerald-500/20", isVibrant: true };
+        if (colorClass.includes("rose-500")) return { styles: "bg-gradient-to-br from-rose-500 to-pink-600 text-white border-none shadow-xl shadow-rose-500/20", isVibrant: true };
+        if (colorClass.includes("indigo-500")) return { styles: "bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none shadow-xl shadow-indigo-500/20", isVibrant: true };
+        return { styles: "bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5", isVibrant: false };
+    }, [colorClass]);
+
     return (
         <div className="h-full w-full @container">
             <Card
                 onClick={onClick}
                 className={cn(
-                    "rounded-[1.5rem] bg-card/60 backdrop-blur-xl border border-border/40 transition-all duration-300 hover:-translate-y-1.5 group relative overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-primary/5 cursor-pointer active:scale-[0.98] h-full",
+                    "rounded-[1.5rem] transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-sm hover:shadow-2xl cursor-pointer active:scale-[0.98] h-full border-none",
+                    styles,
                     "@min-w-[400px]:rounded-[2rem]"
                 )}>
-                <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full relative z-10 font-sans">
-                    <Icon className="absolute -bottom-2 -right-2 h-24 w-24 opacity-[0.02] -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110" />
+                <CardContent className="p-4 sm:p-6 flex flex-col justify-between h-full relative z-10 font-sans">
+                    <Icon className={cn(
+                        "absolute -bottom-4 -right-4 h-32 w-32 -rotate-12 transition-transform duration-700 group-hover:rotate-0 group-hover:scale-110",
+                        isVibrant ? "opacity-10 text-white" : "opacity-[0.02]"
+                    )} />
 
                     <div className="flex items-start justify-between relative">
                         <div className={cn(
-                            "p-2.5 rounded-xl border border-border/50 shadow-sm transition-all duration-500 group-hover:scale-105 group-hover:rotate-3",
-                            bgClass
+                            "p-3 rounded-2xl border shadow-sm transition-all duration-500 group-hover:scale-110 group-hover:rotate-3",
+                            isVibrant ? "bg-white/20 border-white/10 text-white" : cn("border-border/50", bgClass)
                         )}>
-                            <Icon className={cn("h-5 w-5", colorClass)} />
+                            <Icon className={cn("h-6 w-6", isVibrant ? "text-white" : colorClass)} />
                         </div>
                         <div className="flex flex-col items-end gap-1.5">
                             {isUSD && (
-                                <span className="text-[9px] bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20 text-blue-500 tracking-tighter uppercase font-bold">
+                                <span className={cn(
+                                    "text-[9px] px-2.5 py-1 rounded-full border tracking-tighter uppercase font-bold",
+                                    isVibrant ? "bg-white/20 border-white/20 text-white" : "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                                )}>
                                     USD
                                 </span>
                             )}
                             {trend && !isUSD && (
-                                <span className="text-[9px] bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-500 tracking-tighter uppercase font-bold">
+                                <span className={cn(
+                                    "text-[9px] px-2.5 py-1 rounded-full border tracking-tighter uppercase font-bold",
+                                    isVibrant ? "bg-white/20 border-white/20 text-white" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                                )}>
                                     {trend}
                                 </span>
                             )}
                             {badge && (
                                 <span className={cn(
-                                    "text-[9px] px-2.5 py-1 rounded-full border border-border/50 tracking-tighter uppercase font-bold shadow-sm",
-                                    colorClass,
-                                    bgClass
+                                    "text-[9px] px-2.5 py-1 rounded-full border tracking-tighter uppercase font-bold shadow-sm",
+                                    isVibrant ? "bg-white/20 border-white/10 text-white" : cn(colorClass, bgClass, "border-border/50")
                                 )}>
                                     {badge}
                                 </span>
@@ -135,19 +156,24 @@ export function StatCard({
                         </div>
                     </div>
 
-                    <div className="mt-2 relative">
-                        <p className="text-[9px] mb-1 text-muted-foreground/50 tracking-[0.15em] uppercase font-bold">{label}</p>
+                    <div className="mt-4 relative">
+                        <p className={cn(
+                            "text-[10px] mb-1 tracking-[0.15em] uppercase font-black",
+                            isVibrant ? "text-white/60" : "text-muted-foreground/50"
+                        )}>
+                            {label}
+                        </p>
                         <div className="flex items-baseline gap-2 flex-wrap">
                             {outOfStockCount !== undefined ? (
-                                <div className="flex items-baseline gap-2">
-                                    <div className="flex flex-col items-start">
-                                        <h3 className="text-2xl tracking-tighter font-black text-amber-500">{value}</h3>
-                                        <span className="text-[7px] font-black uppercase tracking-widest text-amber-500/60">Kritik</span>
+                                <div className="flex items-baseline gap-4">
+                                    <div className="flex flex-col items-start gap-1">
+                                        <h3 className={cn("text-3xl tracking-tighter font-black", isVibrant ? "text-white" : "text-amber-500")}>{value}</h3>
+                                        <span className={cn("text-[8px] font-black uppercase tracking-widest", isVibrant ? "text-white/50" : "text-amber-500/60")}>Kritik</span>
                                     </div>
-                                    <div className="h-6 w-px bg-border/40 mx-1 self-center" />
-                                    <div className="flex flex-col items-start">
-                                        <h3 className="text-2xl tracking-tighter font-black text-rose-500">{outOfStockCount}</h3>
-                                        <span className="text-[7px] font-black uppercase tracking-widest text-rose-500/60">Biten</span>
+                                    <div className={cn("h-8 w-px mx-1 self-center", isVibrant ? "bg-white/20" : "bg-border/40")} />
+                                    <div className="flex flex-col items-start gap-1">
+                                        <h3 className={cn("text-3xl tracking-tighter font-black", isVibrant ? "text-white" : "text-rose-500")}>{outOfStockCount}</h3>
+                                        <span className={cn("text-[8px] font-black uppercase tracking-widest", isVibrant ? "text-white/50" : "text-rose-500/60")}>Biten</span>
                                     </div>
                                 </div>
                             ) : secondaryDisplay ? (
@@ -155,9 +181,9 @@ export function StatCard({
                                     <RevealFinancial
                                         amount={mainDisplay}
                                         prefix=""
-                                        className={cn("text-2xl tracking-tight font-bold", colorClass)}
+                                        className={cn("text-3xl tracking-tight font-black", isVibrant ? "text-white" : colorClass)}
                                     />
-                                    <p className="text-[10px] text-muted-foreground/30 tracking-tight font-medium pb-1 italic">
+                                    <p className={cn("text-xs tracking-tight font-bold italic", isVibrant ? "text-white/40" : "text-muted-foreground/30")}>
                                         ({secondaryDisplay})
                                     </p>
                                 </>
@@ -165,18 +191,20 @@ export function StatCard({
                                 <RevealFinancial
                                     amount={mainDisplay}
                                     prefix=""
-                                    className={cn("text-2xl tracking-tight font-bold", colorClass)}
+                                    className={cn("text-3xl tracking-tight font-black", isVibrant ? "text-white" : colorClass)}
                                 />
                             ) : (
-                                <h3 className={cn("text-2xl tracking-tighter font-black", colorClass)}>{mainDisplay}</h3>
+                                <h3 className={cn("text-3xl tracking-tighter font-black", isVibrant ? "text-white" : colorClass)}>{mainDisplay}</h3>
                             )}
                         </div>
 
-                        {isUSD && subValue && (
-                            <p className="text-[9px] text-muted-foreground/30 mt-0.5 tracking-tight font-medium leading-tight">{subValue}</p>
-                        )}
-                        {!isUSD && subValue && (
-                            <p className="text-[10px] text-muted-foreground/40 mt-1 tracking-tight font-medium leading-tight">{subValue}</p>
+                        {subValue && (
+                            <p className={cn(
+                                "text-[10px] mt-2 tracking-tight font-bold leading-tight",
+                                isVibrant ? "text-white/50" : "text-muted-foreground/40"
+                            )}>
+                                {subValue}
+                            </p>
                         )}
                     </div>
                 </CardContent>

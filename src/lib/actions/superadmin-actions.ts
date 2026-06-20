@@ -329,56 +329,75 @@ export async function setupEdmForShop(
         senderTaxOffice?: string;
         environment?: string;
         edmActive?: boolean;
+        // EdmSetupModal mapping support
+        vkn?: string;
+        title?: string;
+        name?: string;
+        surname?: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+        city?: string;
+        district?: string;
+        taxOffice?: string;
     }
 ) {
     try {
         await checkSuperAdmin();
 
-        // EDMSettings'i güncelle
+        // Normalize fields from modal payload
+        const mappedSenderName = data.senderName || data.title || `${data.name || ""} ${data.surname || ""}`.trim() || null;
+        const mappedSenderVkn = data.senderVkn || data.vkn || null;
+        const mappedSenderAddress = data.senderAddress || data.address || null;
+        const mappedSenderCity = data.senderCity || data.city || null;
+        const mappedSenderDistrict = data.senderDistrict || data.district || null;
+        const mappedSenderTaxOffice = data.senderTaxOffice || data.taxOffice || null;
+        const mappedUsername = data.username || (data.email ? data.email.split("@")[0] : null);
+
         const settings = await prisma.eDMSettings.upsert({
             where: { shopId },
             create: {
                 shopId,
-                username: data.username || null,
+                username: mappedUsername,
                 passwordEncrypted: data.password
                     ? Buffer.from(data.password).toString("base64")
                     : null,
-                senderVkn: data.senderVkn || null,
-                senderName: data.senderName || null,
-                senderAddress: data.senderAddress || null,
-                senderCity: data.senderCity || null,
-                senderDistrict: data.senderDistrict || null,
-                senderTaxOffice: data.senderTaxOffice || null,
+                senderVkn: mappedSenderVkn,
+                senderName: mappedSenderName,
+                senderAddress: mappedSenderAddress,
+                senderCity: mappedSenderCity,
+                senderDistrict: mappedSenderDistrict,
+                senderTaxOffice: mappedSenderTaxOffice,
                 environment: data.environment || "TEST",
                 edmActive: data.edmActive ?? false,
             },
             update: {
-                ...(data.username !== undefined && { username: data.username }),
+                ...(mappedUsername !== null && { username: mappedUsername }),
                 ...(data.password && {
                     passwordEncrypted: Buffer.from(data.password).toString("base64"),
                 }),
-                ...(data.senderVkn !== undefined && { senderVkn: data.senderVkn }),
-                ...(data.senderName !== undefined && { senderName: data.senderName }),
-                ...(data.senderAddress !== undefined && { senderAddress: data.senderAddress }),
-                ...(data.senderCity !== undefined && { senderCity: data.senderCity }),
-                ...(data.senderDistrict !== undefined && { senderDistrict: data.senderDistrict }),
-                ...(data.senderTaxOffice !== undefined && { senderTaxOffice: data.senderTaxOffice }),
+                ...(mappedSenderVkn !== null && { senderVkn: mappedSenderVkn }),
+                ...(mappedSenderName !== null && { senderName: mappedSenderName }),
+                ...(mappedSenderAddress !== null && { senderAddress: mappedSenderAddress }),
+                ...(mappedSenderCity !== null && { senderCity: mappedSenderCity }),
+                ...(mappedSenderDistrict !== null && { senderDistrict: mappedSenderDistrict }),
+                ...(mappedSenderTaxOffice !== null && { senderTaxOffice: mappedSenderTaxOffice }),
                 ...(data.environment !== undefined && { environment: data.environment }),
                 ...(data.edmActive !== undefined && { edmActive: data.edmActive }),
             },
         });
 
-        // Shop modelini de güncelle (Senkronizasyon)
-        // Eğer VKN veya diğer ticari bilgiler girildiyse Shop tablosuna da işle
         await prisma.shop.update({
             where: { id: shopId },
             data: {
-                ...(data.senderVkn !== undefined && { taxNumber: data.senderVkn }),
-                ...(data.senderTaxOffice !== undefined && { taxOffice: data.senderTaxOffice }),
-                ...(data.senderName !== undefined && { companyName: data.senderName }),
-                ...(data.senderAddress !== undefined && { companyAddress: data.senderAddress }),
-                ...(data.senderCity !== undefined && { companyCity: data.senderCity }),
-                ...(data.senderDistrict !== undefined && { companyDistrict: data.senderDistrict }),
+                ...(mappedSenderVkn !== null && { taxNumber: mappedSenderVkn }),
+                ...(mappedSenderTaxOffice !== null && { taxOffice: mappedSenderTaxOffice }),
+                ...(mappedSenderName !== null && { companyName: mappedSenderName }),
+                ...(mappedSenderAddress !== null && { companyAddress: mappedSenderAddress }),
+                ...(mappedSenderCity !== null && { companyCity: mappedSenderCity }),
+                ...(mappedSenderDistrict !== null && { companyDistrict: mappedSenderDistrict }),
+                ...(data.phone !== undefined && { phone: data.phone || null }),
+                ...(data.email !== undefined && { email: data.email || null }),
             } as any
         });
 

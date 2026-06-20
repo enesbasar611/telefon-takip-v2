@@ -154,6 +154,7 @@ export async function POST(req: NextRequest) {
                 currency: validated.currency,
                 issueDate: new Date(validated.issueDate),
                 note: validated.note || null,
+                viewUrl: result.viewUrl || null,
                 edmError: result.error || null,
             },
         });

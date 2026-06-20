@@ -1,6 +1,6 @@
 import { schedule } from "node-cron";
 import prisma from "@/lib/prisma";
-import { EdmService } from "@/lib/edm/service";
+import { getInvoices as getEdmInvoices } from "./rest-client";
 
 let cronInitialized = false;
 
@@ -13,8 +13,8 @@ export function initEdmCron() {
         console.log("[CRON] Gelen fatura senkronizasyonu başlatılıyor...");
         try {
             const shops = await prisma.shop.findMany({
-                where: { edmSettings: { isActive: true } },
-                include: { edmSettings: true },
+                where: { eDMSettings: { edmActive: true } },
+                include: { eDMSettings: true },
             });
 
             for (const shop of shops) {
@@ -23,17 +23,25 @@ export function initEdmCron() {
                     const startDate = new Date();
                     startDate.setDate(startDate.getDate() - 7);
 
-                    const envelopes = await EdmService.getIncomingEnvelopes(startDate, endDate, {
-                        baseUrl: process.env.EDM_REST_API_URL,
-                        username: process.env.EDM_USERNAME,
-                        password: process.env.EDM_PASSWORD,
-                    });
+                    const invoices = await getEdmInvoices(
+                        {
+                            username: process.env.EDM_USERNAME || "",
+                            password: process.env.EDM_PASSWORD || "",
+                            senderVkn: shop.eDMSettings?.senderVkn || process.env.EDM_SENDER_VKN || "",
+                            baseUrl: process.env.EDM_REST_API_URL,
+                        } as any,
+                        {
+                            startDate: startDate.toISOString().split('T')[0],
+                            endDate: endDate.toISOString().split('T')[0],
+                            direction: "INBOUND",
+                        }
+                    );
 
                     let created = 0;
                     let updated = 0;
 
-                    for (const env of envelopes) {
-                        const uuid = env.UUID || env.uuid;
+                    for (const inv of invoices) {
+                        const uuid = inv.UUID || inv.uuid;
                         if (!uuid) continue;
 
                         const existing = await prisma.eDMIncomingInvoice.findUnique({
@@ -43,15 +51,15 @@ export function initEdmCron() {
                         const data = {
                             shopId: shop.id,
                             uuid,
-                            invoiceId: env.ID || env.id || uuid,
-                            senderVkn: env.senderVKN || env.sender || "",
-                            senderName: env.senderName || env.supplier || "Bilinmeyen",
-                            receiverVkn: env.receiverVKN || shop.edmSettings?.senderVkn || "",
-                            amount: env.payableAmount?.value || env.amount || 0,
-                            currency: env.payableAmount?.currencyID === 0 ? "TRY" : (env.currency || "TRY"),
-                            status: env.status || "PENDING",
-                            issueDate: env.issueDate ? new Date(env.issueDate) : new Date(),
-                            envelopeId: env.envelopeId || null,
+                            invoiceId: inv.ID || inv.id || uuid,
+                            senderVkn: inv.senderVKN || inv.sender || "",
+                            senderName: inv.senderName || inv.supplier || "Bilinmeyen",
+                            receiverVkn: inv.receiverVKN || shop.eDMSettings?.senderVkn || "",
+                            amount: inv.payableAmount?.value || inv.amount || 0,
+                            currency: inv.payableAmount?.currencyID === 0 ? "TRY" : (inv.currency || "TRY"),
+                            status: inv.status || "PENDING",
+                            issueDate: inv.issueDate ? new Date(inv.issueDate) : new Date(),
+                            envelopeId: inv.envelopeId || null,
                         };
 
                         if (existing) {
