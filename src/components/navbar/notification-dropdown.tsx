@@ -46,7 +46,9 @@ export function NotificationDropdown() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [browserEnabled, setBrowserEnabled] = useState(false);
-    const lastSeenIdRef = useRef<string | null>(null);
+    // Track ALL notification IDs we've already seen/shown browser notifications for.
+    // Using a Set prevents re-notifying when the list changes due to snooze/dismiss.
+    const seenNotificationIdsRef = useRef<Set<string> | null>(null);
 
     const { data, isLoading } = useQuery({
         queryKey: ["system-notifications"],
@@ -55,7 +57,7 @@ export function NotificationDropdown() {
         },
         staleTime: 60 * 1000,
         gcTime: 5 * 60 * 1000,
-        refetchInterval: 60 * 1000, // Reduced to 1 minute for better "real-time" feel without push
+        refetchInterval: 60 * 1000,
         refetchOnWindowFocus: true,
         refetchOnMount: true,
     });
@@ -72,24 +74,28 @@ export function NotificationDropdown() {
     useEffect(() => {
         if (!notifications.length || !browserEnabled || Notification.permission !== "granted") return;
 
-        const latest = notifications[0];
-
-        // Initial load: just set the last seen ID
-        if (lastSeenIdRef.current === null) {
-            lastSeenIdRef.current = latest.id;
+        // Initial load: seed the seen set with all current notification IDs (don't notify for existing ones)
+        if (seenNotificationIdsRef.current === null) {
+            seenNotificationIdsRef.current = new Set(notifications.map((n: SystemNotification) => n.id));
             return;
         }
 
-        // Check if there are new unread notifications
-        const unreadLatest = notifications.find((n: any) => !n.isRead);
-        if (unreadLatest && unreadLatest.id !== lastSeenIdRef.current) {
-            // New notification!
-            new Notification(unreadLatest.title, {
-                body: unreadLatest.message,
+        // Find truly NEW unread notifications (IDs we haven't seen before)
+        const newUnreadNotifications = notifications.filter(
+            (n: SystemNotification) => !n.isRead && !seenNotificationIdsRef.current!.has(n.id)
+        );
+
+        // Show browser notification only for genuinely new ones
+        if (newUnreadNotifications.length > 0) {
+            const latest = newUnreadNotifications[0];
+            new Notification(latest.title, {
+                body: latest.message,
                 icon: "/favicon.ico"
             });
-            lastSeenIdRef.current = unreadLatest.id;
         }
+
+        // Update seen set with all current notification IDs
+        notifications.forEach((n: SystemNotification) => seenNotificationIdsRef.current!.add(n.id));
     }, [notifications, browserEnabled]);
 
     useEffect(() => {
