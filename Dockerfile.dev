@@ -2,10 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Gerekli sistem paketleri (Alpine için)
-RUN apk add --no-cache openssl python3 make g++
+# Alpine için Prisma'nın ihtiyaç duyduğu libc6-compat ve openssl'i ekliyoruz
+RUN apk add --no-cache openssl python3 make g++ libc6-compat
 
-# Sadece package dosyalarını kopyalayarak bağımlılık katmanını önbelleğe alıyoruz
 COPY package*.json ./
 COPY prisma ./prisma/
 
@@ -15,11 +14,9 @@ RUN npm install
 # Prisma client üret
 RUN npx prisma generate
 
-# Uygulama kodlarını kopyala
 COPY . .
 
-# Port ayarı (local'de 5000)
 EXPOSE 5000
 
-# Next.js development server başlat
-CMD ["npm", "run", "dev", "--", "-p", "5000"]
+# Geliştirme aşamasında local veritabanıyla çalışırken şemanın hep güncel kalması için:
+CMD ["sh", "-c", "npx prisma generate && npm run dev -- -p 5000"]

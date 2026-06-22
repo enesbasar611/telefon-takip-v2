@@ -9,6 +9,7 @@
 - Rapor sonrasi temizlik: 13 dead-code dosyasi temizlendi; buna ek olarak daha once 3 temp/debug dosyasi silindi.
 - Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti. `npm run build` basarili.
 - Calisma agaci notu: EDM entegrasyonu, POS tip guvenligi ve customer-debt-panel imza guncellemesi commitlendi (`83ff6703`).
+- POS Compact Senkronizasyonu: POS Compact (mobil) terminali, ana POSInterface ile finansal mantık, para birimi çevrimi ve sadakat puanı hesaplamaları açısından %100 senkronize edildi. Toplam tutar gösterimi dinamik ve detaylı (KDV/Ara Toplam) hale getirildi.
 
 ## To-Do List (Backlog)
 
@@ -18,6 +19,10 @@
   - Graphify baglamlari: Community 11 (`buildInvoiceXml`, `amountToWords`, `buildRequestHeader`, EDM tipleri), Community 13 (`getSettings`, `getShop`, `updateSetting`, `AyarlarPage`), Community 46 (`cron`, `getLocalIps`, `getPreferredIp`, `httpServer`, `io`), Community 55 (`generateInvoiceHTML`, `generateInvoicePDF`, `formatInvoiceMoney`, `formatDateTR`), Community 69 (`middleware`, `authMiddleware`, `config`, `role`), Community 75 (`prisma`, `PrismaClient`, `SUPER_ADMIN_EMAILS`), Community 93 (`UIContext`, `UIProvider`), Community 94 (`JWT`, `Session`, `User`).
   - Amac: EDM Biliºim e-Fatura/e-Arºiv servisini kendi sistem üzerinden tam entegre etmek; yeni fatura oluºturma, gönderme, gelen fatura alma, HTML/PDF indirme, iptal ve ayar yönetimi. EDM sitesine yönlendirme yok.
   - Durum: Faz 1-6 tamamlandi (Prisma schema, EDM client, API routes, UI sayfalari, cron senkronizasyonu, sidebar/menu, modul aktivasyonu, otomasyon ayarlari). Test credentials ile login basarili. Payload key'leri EDM REST API beklenen buyuk harf formatina cevrildi (HEADER, CONTENT, SENDER, RECEIVER, ISSUE_DATE, PAYABLE_AMOUNT, PROFILEID, EARCHIVE, INVOICE_TYPE, RECEIVER_ALIAS, INVOICE_SEND_TYPE, UUID, ID). CONTENT.Value base64 string olarak guncellendi (EDM REST API byte array bekliyordu, base64 string kabul ediyor). XSLT sablonlari public/xslt/ altina eklendi. TenantSettings ve Invoices Prisma modelleri eklendi. Encryption servisi (AES-256) yazildi. Registration servisi (initializeParameter, createCustomerPortal, getTenantBalanceAndStatus, loadCredit) yazildi. Debug/test endpoint'leri temizlendi. Build ve tip kontrolu basarili.
+
+- [x] Ozellik 6: POS Compact (Mobil) Terminal Optimizasyonu (Tamamlandı)
+  - Amac: Mobil arayüzde dinamik toplam tutar gösterimi sağlamak, KDV ve ara toplam detaylarını sunmak ve ana POS ile finansal mantığı (para birimi, yuvarlama, indirim) tam eşitlemek.
+  - Detay: Başlık çubuğuna tıklanabilir toplam tutar eklendi. Sadakat puanı (Loyalty) hesaplamaları TL bazlı standardize edildi. Fiş yazdırma ve hızlı satış drawer'ındaki tutar tutarsızlıkları/çevrim hataları giderildi. 2-basamak hassasiyeti (`.toFixed(2)`) tüm finansal hesaplamalara uygulandı.
 
 - [x] Ozellik 5: Merkezi Firma Bilgileri ve Logo Yönetimi (Tamamlandı)
   - Amac: Firma bilgilerini (İsim, Tel, Adres, Logo, Vergi Bilgileri) tek merkezden (Profil Sayfası) yönetmek; fiş ve faturalarda mükerrer girişi önlemek.
@@ -352,4 +357,18 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
 - **Dashboard Görünümü**:
     - Dashboard üzerindeki 8 adet bilgi kartı tamamen yenilenerek, Personel sayfasındaki gibi canlı (vibrant) gradyan arka planlara (`Emerald`, `Blue`, `Rose`, `Amber`, `Purple`, `Indigo`) kavuşturuldu.
     - Metin renkleri beyaz yapılarak okunabilirlik artırıldı ve kartların her biri kendi kategorisine göre (finans, teknik, stok) güçlü bir görsel kimlik kazandı.
-- **Dosyalar**: `src/components/navbar/shortage-list.tsx`, `src/components/dashboard/stat-card.tsx`.
+- [x] 2026-06-22: POS Terminali DÃ¶viz ve FiÅŸ YazdÄ±rma Ä°yileÅŸtirmeleri:
+    - **DÃ¶viz Senkronizasyonu**: FiÅŸ Ã¼zerindeki tutarlarÄ±n, iÅŸlem tarihindeki orijinal para birimine gÃ¶re doÄŸru gÃ¶sterilmesi saÄŸlandÄ±. USD ile satÄ±lan Ã¼rÃ¼nÃ¼n TL olarak algÄ±lanÄ±p mÃ¼kerrer Ã§evrilme hatasÄ± (Ã¶rn: 21$ -> 21TL -> 0.35$) giderildi.
+    - **YazdÄ±rma GÃ¼venilirliÄŸi**: `printReceipt` motoru revize edilerek sayfa tamamen yÃ¼klenmeden (boÅŸ ekran) yazdÄ±rma penceresinin aÃ§Ä±lmasÄ± engellendi. Stil ve resimlerin parse edilmesi iÃ§in beklemeli fallback mekanizmasÄ± eklendi.
+    - **"Hepsini YazdÄ±r" Tamiri**: FiÅŸ, SÃ¶zleÅŸme ve Garanti ÅŸablonlarÄ±nÄ±n sekmeler arasÄ± geÃ§iÅŸte DOM'dan silinmesi (unmount) engellendi; CSS ile `hidden` yapÄ±larak React `refs`'lerinin her zaman dolu kalmasÄ± saÄŸlandÄ±.
+    - **FiÅŸ Ä°Ã§erik GÃ¼ncellemesi**: Ã–deme yÃ¶ntemleri TÃ¼rkÃ§eleÅŸtirildi (CASH->NAKÄ°T, DEBT->VERESÄ°YE vb.). DÃ¶vizli satÄ±ÅŸlarda ana tutarÄ±n altÄ±na gÃ¼ncel kur tabanlÄ± "TL KARÅžILIÄžI" satÄ±rÄ± eklendi.
+    - **Fiyat Hassasiyeti**: JS floating-point hatalarÄ±nÄ± (`0.01` kaymalarÄ±) Ã¶nlemek iÃ§in tÃ¼m finansal hesaplamalara 2 ondalÄ±k basamak yuvarlama (`toFixed(2)`) kuralÄ± getirildi. KullanÄ±cÄ±nÄ±n girdiÄŸi fiyatlar tam olarak korunuyor.
+    - **Dosyalar**: `src/components/pos/unified-sale-modal.tsx`, `src/lib/receipt-print-styles.ts`, `src/components/pos/pos-interface.tsx`, `src/lib/actions/sale-actions.ts`.
+
+- [x] 2026-06-22: POS Compact (Mobil) Terminali Senkronizasyonu ve Detaylı Fiyat Görünümü:
+    - **Header Optimizasyonu**: Mobil terminal başlığına dinamik "Ödenecek Toplam" göstergesi eklendi.
+    - **Fiyat Detayları**: Toplam tutara tıklandığında Ara Toplam, KDV (%20) ve Vefa İndirimi detaylarını gösteren genişleyebilir bir panel (CheckoutSummary) entegre edildi.
+    - **Finansal Senkronizasyon**: POS Compact terminalinin hesaplama mantığı (döviz çevrimi, yuvarlama, indirimler) ana POSInterface ile %100 uyumlu hale getirildi. 
+    - **Hata Giderme**: Dolar ile yapılan satışlarda fiş üzerinde TL'den tekrar dolara çevrim yapan (21$ -> 0.35$ gibi) mantık hatası düzeltildi; sepet fiyatı neyse fişe o aktarılıyor.
+    - **Hızlı Satış**: Navbar üzerindeki hızlı satış drawer'ı, ana satış sayfasıyla finansal olarak eşitlendi.
+    - **Dosyalar**: `src/components/pos/pos-compact.tsx`, `src/components/pos/parts/checkout-summary.tsx`, `src/components/pos/receipt-modal.tsx`.

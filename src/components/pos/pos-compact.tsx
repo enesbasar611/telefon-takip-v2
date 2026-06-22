@@ -42,6 +42,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
     const [localProducts, setLocalProducts] = useState(initialProducts);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [lastSale, setLastSale] = useState<any>(null);
@@ -82,24 +84,33 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         return isNaN(numRate) || numRate <= 0 ? 34.5 : numRate;
     }, [exchangeRates, settingsData]);
 
+    const eurRate = useMemo(() => {
+        return exchangeRates?.eur || exchangeRates?.EUR || 37.0;
+    }, [exchangeRates]);
+
     const getCartCurrencySymbol = useCallback(() => {
         if (defaultCurrency === "USD") return "$";
+        if (defaultCurrency === "EUR") return "€";
         return "₺";
     }, [defaultCurrency]);
 
+    const currencySymbol = getCartCurrencySymbol();
+
     const getCartDisplayPrice = useCallback((item: any) => {
         if (defaultCurrency === "USD") {
-            return Number(item.sellPriceUsd || (item.sellPrice / usdRate));
+            const price = Number(item.sellPriceUsd || (item.sellPrice / usdRate));
+            return Number(price.toFixed(2));
         } else if (defaultCurrency === "EUR") {
-            return (item.sellPrice / (exchangeRates?.eur || 37.0));
+            const price = (item.sellPrice / eurRate);
+            return Number(price.toFixed(2));
         }
 
         // TRY mode
         if (item.sellPriceUsd && item.sellPriceUsd > 0) {
-            return item.sellPriceUsd * usdRate;
+            return Number((item.sellPriceUsd * usdRate).toFixed(2));
         }
         return Number(item.sellPrice || 0);
-    }, [defaultCurrency, usdRate, exchangeRates]);
+    }, [defaultCurrency, usdRate, eurRate]);
 
     const getEquivalentDisplay = useCallback((product: any) => {
         const isDefaultUSD = defaultCurrency === "USD";
@@ -203,7 +214,12 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...currentCart, { ...product, quantity: 1 }];
+            const cartItem = {
+                ...product,
+                quantity: 1,
+                sellPrice: Number((product.sellPrice || (product.sellPriceUsd ? (product.sellPriceUsd * usdRate) : 0)).toFixed(2))
+            };
+            return [...currentCart, cartItem];
         });
     };
 
@@ -288,11 +304,16 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         };
     }, [cart, initialProducts]);
 
-    const totalItemsAmount = useMemo(() => {
+    const displaySubtotal = useMemo(() => {
         return cart.reduce((sum, item) => sum + (getCartDisplayPrice(item) * item.quantity), 0);
     }, [cart, getCartDisplayPrice]);
 
-    const tax = totalItemsAmount * 0.20;
+    const displaySubtotalTl = useMemo(() => {
+        return cart.reduce((sum, item) => {
+            const priceTl = (item.sellPriceUsd && item.sellPriceUsd > 0) ? (item.sellPriceUsd * usdRate) : (item.sellPrice || 0);
+            return sum + (priceTl * item.quantity);
+        }, 0);
+    }, [cart, usdRate]);
 
     const activeCustomer = useMemo(() => {
         return customers.find(c => c.id === selectedCustomerId);
@@ -302,17 +323,18 @@ export function POSCompact({ products: initialProducts, customers, categories }:
 
     const loyaltyDiscountAmount = useMemo(() => {
         if (!applyLoyaltyDiscount || totalPoints <= 0 || !loyaltyEnabled) return 0;
-        const maxPointsDiscount = totalPoints * pointValueTl;
-        return Math.min(maxPointsDiscount, totalItemsAmount);
-    }, [applyLoyaltyDiscount, totalPoints, totalItemsAmount, pointValueTl, loyaltyEnabled]);
+        const maxPointsDiscountTl = totalPoints * pointValueTl;
+        return Math.min(maxPointsDiscountTl, displaySubtotalTl);
+    }, [applyLoyaltyDiscount, totalPoints, pointValueTl, loyaltyEnabled, displaySubtotalTl]);
+
+    const displayTotal = useMemo(() => {
+        const discountInCurrency = defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
+            defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
+                loyaltyDiscountAmount;
+        return Math.max(0, displaySubtotal - discountInCurrency);
+    }, [displaySubtotal, loyaltyDiscountAmount, defaultCurrency, usdRate, eurRate]);
 
     const usedPoints = Math.ceil(loyaltyDiscountAmount / pointValueTl);
-    const total = totalItemsAmount - loyaltyDiscountAmount;
-
-    // Display values are already in the defaultCurrency because totalItemsAmount uses getCartDisplayPrice
-    const displaySubtotal = totalItemsAmount;
-    const displayDiscount = loyaltyDiscountAmount;
-    const displayTotal = total;
 
     const handleCheckout = async () => {
         if (cart.length === 0) return;
@@ -326,15 +348,31 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         try {
             const result = await createSale({
                 customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
-                items: cart.map(item => ({
-                    productId: item.id,
-                    quantity: item.quantity,
-                    unitPrice: defaultCurrency === "USD" ? (item.sellPriceUsd || item.sellPrice / usdRate) : item.sellPrice
-                })),
+                items: cart.map(item => {
+                    const isItemUSD = item.sellPriceUsd && item.sellPriceUsd > 0;
+                    let finalUnitPrice = item.sellPrice; // Default to TL
+
+                    if (defaultCurrency === "USD") {
+                        finalUnitPrice = isItemUSD ? item.sellPriceUsd : Number((item.sellPrice / usdRate).toFixed(2));
+                    } else if (defaultCurrency === "EUR") {
+                        const isItemEUR = item.sellPriceEur && item.sellPriceEur > 0;
+                        finalUnitPrice = isItemEUR ? item.sellPriceEur : Number((item.sellPrice / eurRate).toFixed(2));
+                    } else {
+                        finalUnitPrice = isItemUSD ? Number((item.sellPriceUsd * usdRate).toFixed(2)) : item.sellPrice;
+                    }
+
+                    return {
+                        productId: item.id,
+                        quantity: item.quantity,
+                        unitPrice: finalUnitPrice
+                    };
+                }),
                 totalAmount: displayTotal,
+                currency: defaultCurrency || 'TRY',
                 paymentMethod,
-                currency: defaultCurrency || "TRY",
-                discountAmount: displayDiscount,
+                discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
+                    defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
+                        loyaltyDiscountAmount,
                 usedPoints
             });
 
@@ -389,6 +427,17 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                             }}
                         />
                     </div>
+
+                    <button
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="flex flex-col items-end justify-center px-4 py-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all text-white min-w-[100px]"
+                    >
+                        <span className="text-[8px] font-black tracking-widest opacity-80 uppercase leading-none mb-0.5">TOPLAM</span>
+                        <span className="text-sm font-black tabular-nums leading-none">
+                            {currencySymbol}{displayTotal.toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </button>
+
                     <Button
                         size="icon"
                         variant="secondary"
@@ -496,7 +545,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
                                         <span className="text-sm font-black tabular-nums">
-                                            {getCartCurrencySymbol()}{getCartDisplayPrice(product).toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                            {currencySymbol}{getCartDisplayPrice(product).toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                         </span>
                                         <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                             <Plus className="h-4 w-4" />
@@ -574,24 +623,26 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 />
 
                 <CheckoutSummary
-                    subtotal={displaySubtotal}
-                    tax={defaultCurrency === "USD" ? (totalItemsAmount * 0.20) : (totalItemsAmount * 0.20)}
-                    total={displayTotal}
                     paymentMethod={paymentMethod}
                     setPaymentMethod={setPaymentMethod}
                     loyaltyEnabled={loyaltyEnabled}
-                    totalPoints={totalPoints}
+                    totalPoints={usedPoints}
                     pointValueTl={pointValueTl}
                     applyLoyaltyDiscount={applyLoyaltyDiscount}
                     setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
-                    loyaltyDiscountAmount={displayDiscount}
-                    onCheckout={handleCheckout}
+                    loyaltyDiscountAmount={loyaltyDiscountAmount}
                     isProcessing={isProcessing}
+                    onCheckout={handleCheckout}
                     isDebtBlocked={isDebtBlocked}
                     isCompact={true}
-                    getEquivalentDisplay={getEquivalentDisplay}
                     defaultCurrency={defaultCurrency}
                     rates={exchangeRates}
+                    formattedTotal={currencySymbol + displayTotal.toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 2 })}
+                    formattedSubtotal={currencySymbol + (displayTotal * 0.833).toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 2 })}
+                    formattedTax={currencySymbol + (displayTotal * 0.167).toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 2 })}
+                    formattedEquivalentTotal={defaultCurrency === 'TRY' ? "" : `₺${(displayTotal * (defaultCurrency === 'USD' ? usdRate : eurRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`}
+                    showDetails={showDetails}
+                    setShowDetails={setShowDetails}
                 />
             </div>
 
@@ -600,6 +651,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     isOpen={showReceipt}
                     onClose={closeReceiptAndRefresh}
                     sale={lastSale}
+                    rates={exchangeRates as any}
+                    initialDefaultCurrency={defaultCurrency}
                 />
             )}
 

@@ -30,6 +30,8 @@ interface CheckoutSummaryProps {
     formattedSubtotal: string;
     formattedTax: string;
     formattedEquivalentTotal: string;
+    showDetails?: boolean;
+    setShowDetails?: (v: boolean) => void;
 }
 
 export const CheckoutSummary = ({
@@ -50,9 +52,14 @@ export const CheckoutSummary = ({
     formattedTotal,
     formattedSubtotal,
     formattedTax,
-    formattedEquivalentTotal
+    formattedEquivalentTotal,
+    showDetails: externalShowDetails,
+    setShowDetails: externalSetShowDetails
 }: CheckoutSummaryProps) => {
-    const [showDetails, setShowDetails] = React.useState(false);
+    const [internalShowDetails, setInternalShowDetails] = React.useState(false);
+    const showDetails = externalShowDetails ?? internalShowDetails;
+    const setShowDetails = externalSetShowDetails ?? setInternalShowDetails;
+
     const currentUsdRate = Number(rates?.usd || rates?.USD) || 34.5;
     const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
     const paymentMethods = [
@@ -66,10 +73,38 @@ export const CheckoutSummary = ({
         return (
             <div className="space-y-4 border-t border-border/40 bg-card p-4 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl">
                 <div className="bg-muted/30 border-2 border-border/40 p-3 sm:p-5 rounded-[1.75rem] space-y-3">
+                    <button
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="w-full flex items-center justify-between p-1 hover:bg-muted/50 rounded-xl transition-all duration-300 group"
+                    >
+                        <div className="flex flex-col items-start gap-1">
+                            <span className="text-[10px] font-black text-foreground tracking-[0.1em] uppercase leading-none flex items-center gap-2">
+                                TOPLAM TUTAR
+                                <ChevronDown className={cn("h-3 w-3 transition-transform duration-300 text-primary", showDetails && "rotate-180")} />
+                            </span>
+                            <span className="text-[9px] text-muted-foreground font-bold group-hover:text-primary transition-colors">
+                                {showDetails ? "Detayları Gizle" : "Detayları Gör"}
+                            </span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            {loyaltyDiscountAmount > 0 && (
+                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">
+                                    - {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / currentUsdRate)}
+                                </Badge>
+                            )}
+                            <span className="text-4xl font-black text-blue-700 dark:text-blue-400 tabular-nums tracking-tighter leading-none transition-transform group-active:scale-95">
+                                {formattedTotal}
+                            </span>
+                            <span className="text-[12px] font-bold text-muted-foreground italic mt-0.5">
+                                {formattedEquivalentTotal}
+                            </span>
+                        </div>
+                    </button>
+
                     {/* Collapsible Details */}
                     <div className={cn(
-                        "space-y-3 overflow-hidden transition-all duration-300 ease-in-out",
-                        showDetails ? "max-h-40 opacity-100 mb-4" : "max-h-0 opacity-0 mb-0"
+                        "space-y-3 overflow-hidden transition-all duration-300 ease-in-out border-t border-border/20 pt-3 mt-3",
+                        showDetails ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
                     )}>
                         <div className="flex justify-between items-center px-1">
                             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
@@ -78,30 +113,6 @@ export const CheckoutSummary = ({
                         <div className="flex justify-between items-center px-1">
                             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
                             <span className="text-xs font-black text-foreground/70 tabular-nums">{formattedTax}</span>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-end">
-                        <button
-                            onClick={() => setShowDetails(!showDetails)}
-                            className="flex flex-col items-start gap-1 p-1 hover:bg-muted/50 rounded-lg transition-colors group"
-                        >
-                            <span className="text-[10px] font-black text-foreground tracking-[0.1em] uppercase leading-none flex items-center gap-2">
-                                ÖDENECEK TUTAR
-                                <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", showDetails && "rotate-180")} />
-                            </span>
-                            <span className="text-[9px] text-muted-foreground font-bold group-hover:text-primary transition-colors">Detayları gör</span>
-                        </button>
-                        <div className="flex flex-col items-end">
-                            {loyaltyDiscountAmount > 0 && (
-                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / currentUsdRate)}</Badge>
-                            )}
-                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">
-                                {formattedTotal}
-                            </span>
-                            <span className="text-[14px] font-bold text-muted-foreground italic mt-1">
-                                {formattedEquivalentTotal}
-                            </span>
                         </div>
                     </div>
                 </div>

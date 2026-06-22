@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Bell,
@@ -258,32 +259,41 @@ export function NotificationDropdown() {
                                                     size="icon"
                                                     className="h-8 w-8 rounded-lg hover:bg-amber-500/10 hover:text-amber-600 transition-all text-muted-foreground/40"
                                                     title="Ertele..."
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                    }}
                                                 >
                                                     <Clock className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-40 border-amber-500/20 bg-background/95 backdrop-blur-sm">
-                                                <DropdownMenuItem onClick={() => {
-                                                    snoozeNotificationAction(n.id, 24);
+                                                <DropdownMenuItem onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    await snoozeNotificationAction(n.id, 24);
                                                     broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
                                                     window.dispatchEvent(new CustomEvent("notification-update"));
+                                                    toast.success("Bildirim 24 saat ertelendi", { icon: <Clock className="h-4 w-4 text-amber-500" /> });
                                                 }} className="cursor-pointer">
                                                     <Clock className="mr-2 h-4 w-4 text-amber-500" />
                                                     <span>24 Saat</span>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => {
-                                                    snoozeNotificationAction(n.id, 168);
+                                                <DropdownMenuItem onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    await snoozeNotificationAction(n.id, 168);
                                                     broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
                                                     window.dispatchEvent(new CustomEvent("notification-update"));
+                                                    toast.success("Bildirim 1 hafta ertelendi", { icon: <Calendar className="h-4 w-4 text-amber-500" /> });
                                                 }} className="cursor-pointer">
                                                     <Calendar className="mr-2 h-4 w-4 text-amber-500" />
                                                     <span>1 Hafta</span>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => {
-                                                    snoozeNotificationAction(n.id, 876000);
+                                                <DropdownMenuItem onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    await snoozeNotificationAction(n.id, 876000);
                                                     broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
                                                     window.dispatchEvent(new CustomEvent("notification-update"));
+                                                    toast.success("Bildirim süresiz gizlendi", { icon: <TimerOff className="h-4 w-4 text-rose-500" /> });
                                                 }} className="cursor-pointer">
                                                     <TimerOff className="mr-2 h-4 w-4 text-rose-500" />
                                                     <span>Süresiz</span>

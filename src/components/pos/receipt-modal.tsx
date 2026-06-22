@@ -22,14 +22,36 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
   if (!sale) return null;
 
   const getPrice = (price: number) => {
-    if (defaultCurrency === 'USD') {
+    const saleCurrency = sale?.transaction?.currency || sale?.currency || "TRY";
+
+    // Current display currency matches original sale currency - return as is
+    if (defaultCurrency === saleCurrency) {
+      return Number(price).toFixed(2);
+    }
+
+    // Need conversion: original was TRY, display is USD
+    if (defaultCurrency === 'USD' && saleCurrency === 'TRY') {
       const rate = Number(rates?.usd || rates?.USD || 34.5);
       return Number(price / rate).toFixed(2);
     }
-    if (defaultCurrency === 'EUR') {
+
+    // Need conversion: original was USD, display is TRY
+    if (defaultCurrency === 'TRY' && saleCurrency === 'USD') {
+      const rate = Number(rates?.usd || rates?.USD || 34.5);
+      return Number(price * rate).toFixed(2);
+    }
+
+    // EUR cases
+    if (defaultCurrency === 'EUR' && saleCurrency === 'TRY') {
       const rate = Number(rates?.eur || rates?.EUR || 37.0);
       return Number(price / rate).toFixed(2);
     }
+
+    if (defaultCurrency === 'TRY' && saleCurrency === 'EUR') {
+      const rate = Number(rates?.eur || rates?.EUR || 37.0);
+      return Number(price * rate).toFixed(2);
+    }
+
     return Number(price).toFixed(2);
   };
 
@@ -90,8 +112,22 @@ const POSReceiptContent = ({ sale, settings, currencySymbol, defaultCurrency, sh
       <div className="border-t-[1.5px] border-black pt-4 space-y-2">
         <div className="flex justify-between items-center py-1">
           <span className="text-[10px] font-black text-black uppercase">ÖDEME YÖNTEMİ:</span>
-          <span className="text-[11px] font-black text-black uppercase">{sale.paymentMethod}</span>
+          <span className="text-[11px] font-black text-black uppercase">
+            {sale.paymentMethod === 'CASH' ? 'NAKİT' :
+              sale.paymentMethod === 'CREDIT_CARD' ? 'KART' :
+                sale.paymentMethod === 'BANK_TRANSFER' ? 'HAVALE' :
+                  sale.paymentMethod === 'DEBT' ? 'VERESİYE' : sale.paymentMethod}
+          </span>
         </div>
+
+        {defaultCurrency !== 'TRY' && (
+          <div className="flex justify-between items-center py-1 border-b border-black/10">
+            <span className="text-[10px] font-black text-black uppercase">TL KARŞILIĞI:</span>
+            <span className="text-[11px] font-black text-black">
+              ₺{Number(sale.finalAmount * (defaultCurrency === 'USD' ? (rates?.usd || rates?.USD || 34.5) : (rates?.eur || rates?.EUR || 37.0))).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
 
         <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2 font-sans">
           <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
