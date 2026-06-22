@@ -93,7 +93,8 @@ export function POSInterface({ initialSaleId }: {
     queryFn: () => getSettings(),
   });
 
-  const { rates: exchangeRates, shopId } = useDashboardData();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Show receipt if arrived via sale confirmation URL
   useEffect(() => {
@@ -137,8 +138,6 @@ export function POSInterface({ initialSaleId }: {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Auto-select customer from URL param (e.g. /satis?customerId=xxx)
@@ -233,17 +232,19 @@ export function POSInterface({ initialSaleId }: {
     }
   };
 
-  const defaultCurrency = useMemo(() => {
-    return settingsData?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
-  }, [settingsData]);
+  const { rates: exchangeRates, defaultCurrency, shopId } = useDashboardData();
 
   const usdRate = useMemo(() => {
-    return Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
-  }, [exchangeRates, settingsData]);
+    const rawRate = exchangeRates?.usd || exchangeRates?.USD;
+    const numRate = typeof rawRate === "string" ? parseFloat(rawRate.replace(",", ".")) : Number(rawRate);
+    return isNaN(numRate) || numRate <= 0 ? 1 : numRate;
+  }, [exchangeRates]);
 
   const eurRate = useMemo(() => {
-    return Number(exchangeRates?.EUR || settingsData?.find((s: any) => s.key === "exchange_rate_eur")?.value || 37.0);
-  }, [exchangeRates, settingsData]);
+    const rawRate = exchangeRates?.eur || exchangeRates?.EUR;
+    const numRate = typeof rawRate === "string" ? parseFloat(rawRate.replace(",", ".")) : Number(rawRate);
+    return isNaN(numRate) || numRate <= 0 ? 1 : numRate;
+  }, [exchangeRates]);
 
   function getCartItemCurrency(item: any): "TRY" | "USD" | "EUR" {
     const storedCurrency = item?.attributes?.priceCurrency;
@@ -258,23 +259,58 @@ export function POSInterface({ initialSaleId }: {
   }, [defaultCurrency]);
 
   const getCartDisplayPrice = useCallback((item: any) => {
+    let price = 0;
+    // If the dashboard is in USD mode
     if (defaultCurrency === "USD") {
-      return item.sellPriceUsd || (item.sellPrice / usdRate);
+      // Use the USD price if it exists, otherwise convert TRY price to USD
+      price = Number(item.sellPriceUsd || (item.sellPrice / usdRate));
     } else if (defaultCurrency === "EUR") {
-      return (item.sellPrice / eurRate);
+      // Direct conversion to EUR
+      price = (item.sellPrice / eurRate);
+    } else {
+      // If the dashboard is in TRY mode
+      // If the product has a USD price, convert it to TL using the current rate
+      if (item.sellPriceUsd && item.sellPriceUsd > 0) {
+        price = item.sellPriceUsd * usdRate;
+      } else {
+        price = item.sellPrice || 0;
+      }
     }
-    return item.sellPrice || 0;
+    return Number(price.toFixed(2));
   }, [defaultCurrency, usdRate, eurRate]);
 
-  const getEquivalentDisplay = useCallback((product: any) => {
-    if (defaultCurrency === "USD") {
-      const priceTl = Number(product.sellPrice || 0);
-      return `(₺${priceTl.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
+  const getEquivalentDisplay = useCallback((item: any) => {
+    if (!exchangeRates) return "";
+
+    // Determine the equivalent value to display based on current dashboard currency
+    const isDefaultUSD = defaultCurrency === "USD";
+    const isDefaultEUR = defaultCurrency === "EUR";
+
+    if (isDefaultUSD) {
+      // We are in USD mode, show TRY equivalent
+      // item could be a product or a total
+      let priceTl = 0;
+      if (item.sellPriceUsd) {
+        priceTl = item.sellPriceUsd * usdRate;
+      } else {
+        priceTl = item.sellPrice || 0;
+      }
+      return `₺${Number(priceTl.toFixed(2)).toLocaleString("tr-TR")}`;
+    } else if (isDefaultEUR) {
+      // We are in EUR mode, show TRY equivalent
+      let priceTl = 0;
+      if (item.sellPriceEur) {
+        priceTl = item.sellPriceEur * eurRate;
+      } else {
+        priceTl = item.sellPrice || 0;
+      }
+      return `₺${Number(priceTl.toFixed(2)).toLocaleString("tr-TR")}`;
     } else {
-      const priceUsd = Number(product.sellPriceUsd || (product.sellPrice / usdRate) || 0);
-      return `($${priceUsd.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
+      // We are in TRY mode, show USD equivalent
+      const priceUsd = item.sellPriceUsd || ((item.sellPrice || 0) / usdRate);
+      return `$${Number(priceUsd.toFixed(2)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
-  }, [defaultCurrency, usdRate]);
+  }, [defaultCurrency, usdRate, eurRate, exchangeRates]);
 
   const addToCart = useCallback((product: any) => {
     if (products.length === 0) return;
@@ -297,9 +333,15 @@ export function POSInterface({ initialSaleId }: {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...currentCart, { ...product, quantity: 1 }];
+      const cartItem = {
+        ...product,
+        quantity: 1,
+        // Ensure sellPrice (TL) is populated correctly even if product only has sellPriceUsd
+        sellPrice: Number((product.sellPrice || (product.sellPriceUsd ? (product.sellPriceUsd * usdRate) : 0)).toFixed(2))
+      };
+      return [...currentCart, cartItem];
     });
-  }, [toast, products]); // Added products dependency
+  }, [toast, products, usdRate]);
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
@@ -347,12 +389,13 @@ export function POSInterface({ initialSaleId }: {
           return {
             ...item,
             sellPriceUsd: newPrice,
-            sellPrice: newPrice * usdRate,
+            sellPrice: Number((newPrice * usdRate).toFixed(2)),
           };
         } else if (defaultCurrency === "EUR") {
           return {
             ...item,
-            sellPrice: newPrice * eurRate,
+            sellPriceEur: newPrice,
+            sellPrice: Number((newPrice * eurRate).toFixed(2)),
           };
         } else {
           return { ...item, sellPrice: newPrice };
@@ -418,15 +461,18 @@ export function POSInterface({ initialSaleId }: {
     }
   }, [initializeScannerRoom, shopId]);
 
-  const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
-  }, [cart]);
-
   const displaySubtotal = useMemo(() => {
-    if (defaultCurrency === "USD") return subtotal / usdRate;
-    if (defaultCurrency === "EUR") return subtotal / eurRate;
-    return subtotal;
-  }, [subtotal, defaultCurrency, usdRate, eurRate]);
+    return cart.reduce((sum, item) => sum + (getCartDisplayPrice(item) * item.quantity), 0);
+  }, [cart, getCartDisplayPrice]);
+
+  const subtotal = useMemo(() => {
+    // subtotal is always the TL base for backend and equivalent calculations
+    // Calculate dynamically to be reactive to exchange rate changes
+    return cart.reduce((sum, item) => {
+      const itemTlPrice = item.sellPriceUsd ? (item.sellPriceUsd * usdRate) : (item.sellPrice || 0);
+      return sum + (Number(itemTlPrice.toFixed(2)) * item.quantity);
+    }, 0);
+  }, [cart, usdRate]);
 
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
@@ -445,11 +491,38 @@ export function POSInterface({ initialSaleId }: {
 
   const finalTotal = subtotal - loyaltyDiscountAmount;
 
+
   const displayTotal = useMemo(() => {
-    if (defaultCurrency === "USD") return finalTotal / usdRate;
-    if (defaultCurrency === "EUR") return finalTotal / eurRate;
-    return finalTotal;
-  }, [finalTotal, defaultCurrency, usdRate, eurRate]);
+    const discount = defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
+      defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
+        loyaltyDiscountAmount;
+    return displaySubtotal - discount;
+  }, [displaySubtotal, loyaltyDiscountAmount, defaultCurrency, usdRate, eurRate]);
+
+  // Pre-formatted strings for consistent display across components
+  const { formattedTotal, formattedSubtotal, formattedTax, formattedEquivalentTotal } = useMemo(() => {
+    const symbol = getCartCurrencySymbol();
+    const isUSD = defaultCurrency === "USD";
+    const isEUR = defaultCurrency === "EUR";
+    const locale = isUSD ? 'en-US' : 'tr-TR';
+
+    const fmt = (val: number) => symbol + val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Tax is included in our prices (20%)
+    const taxValue = displayTotal * 0.166666; // 20% in 120% total
+    const subtotalNoTax = displayTotal - taxValue;
+
+    return {
+      formattedTotal: fmt(displayTotal),
+      formattedSubtotal: fmt(subtotalNoTax),
+      formattedTax: fmt(taxValue),
+      formattedEquivalentTotal: `(${getEquivalentDisplay(
+        isUSD ? { sellPriceUsd: displayTotal } :
+          isEUR ? { sellPriceEur: displayTotal } :
+            { sellPrice: finalTotal }
+      )})`
+    };
+  }, [displayTotal, defaultCurrency, getCartCurrencySymbol, getEquivalentDisplay, finalTotal]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -462,15 +535,32 @@ export function POSInterface({ initialSaleId }: {
       try {
         const result = await createSale({
           customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
-          items: cart.map(item => ({
-            productId: item.id,
-            quantity: item.quantity,
-            unitPrice: item.sellPrice
-          })),
-          totalAmount: finalTotal,
+          items: cart.map(item => {
+            const isItemUSD = item.sellPriceUsd && item.sellPriceUsd > 0;
+            let finalUnitPrice = item.sellPrice; // Default to TL
+
+            if (defaultCurrency === "USD") {
+              finalUnitPrice = isItemUSD ? item.sellPriceUsd : Number((item.sellPrice / usdRate).toFixed(2));
+            } else if (defaultCurrency === "EUR") {
+              const isItemEUR = item.sellPriceEur && item.sellPriceEur > 0;
+              finalUnitPrice = isItemEUR ? item.sellPriceEur : Number((item.sellPrice / eurRate).toFixed(2));
+            } else {
+              // TRY mode: If it was a USD item, use calculated TL
+              finalUnitPrice = isItemUSD ? Number((item.sellPriceUsd * usdRate).toFixed(2)) : item.sellPrice;
+            }
+
+            return {
+              productId: item.id,
+              quantity: item.quantity,
+              unitPrice: finalUnitPrice
+            };
+          }),
+          totalAmount: displayTotal,
           currency: defaultCurrency || 'TRY',
           paymentMethod,
-          discountAmount: loyaltyDiscountAmount,
+          discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
+            defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
+              loyaltyDiscountAmount,
           usedPoints
         });
 
@@ -707,9 +797,6 @@ export function POSInterface({ initialSaleId }: {
           </div>
 
           <CheckoutSummary
-            subtotal={displaySubtotal}
-            tax={0} // Tax calculation can be added if needed, setting 0 for now
-            total={displayTotal}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
             loyaltyEnabled={loyaltyEnabled}
@@ -721,9 +808,12 @@ export function POSInterface({ initialSaleId }: {
             onCheckout={handleCheckout}
             isProcessing={isProcessing}
             isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
-            getEquivalentDisplay={(item) => getEquivalentDisplay(item)}
             defaultCurrency={defaultCurrency}
             rates={exchangeRates}
+            formattedTotal={formattedTotal}
+            formattedSubtotal={formattedSubtotal}
+            formattedTax={formattedTax}
+            formattedEquivalentTotal={formattedEquivalentTotal}
           />
         </div>
       </div>

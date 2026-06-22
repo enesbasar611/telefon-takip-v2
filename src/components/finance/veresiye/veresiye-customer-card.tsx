@@ -24,6 +24,7 @@ interface VeresiyeCustomerCardProps {
     viewMode: 'list' | 'grid';
     usdRate: number;
     rates: any;
+    defaultCurrency?: string;
     onWhatsApp: (item: any) => void;
     onReceipt: (item: any) => void;
     onDetail: (item: any) => void;
@@ -38,6 +39,7 @@ export function VeresiyeCustomerCard({
     viewMode,
     usdRate,
     rates,
+    defaultCurrency = "TRY",
     onWhatsApp,
     onReceipt,
     onDetail,
@@ -45,6 +47,7 @@ export function VeresiyeCustomerCard({
     isSelected,
     onSelect
 }: VeresiyeCustomerCardProps) {
+    const isUsdPrimary = defaultCurrency === "USD";
     return (
         <AddDebtModal rates={rates} initialData={{ name: item.name, phone: item.phone || "" }}>
             <motion.div
@@ -121,52 +124,38 @@ export function VeresiyeCustomerCard({
 
                 <div className={cn("flex flex-row items-center gap-4 mt-4 md:mt-0", viewMode === 'list' && "md:min-w-[150px]")}>
                     <div className="flex flex-row items-center gap-3">
-                        {item.totalRemainingTRY > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className={cn("font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                    ₺{item.totalRemainingTRY.toLocaleString('tr-TR')}
+                        <div className="flex flex-col items-end">
+                            <span className={cn("font-black tabular-nums tracking-tighter text-rose-600 dark:text-rose-400", viewMode === 'grid' ? "text-sm" : "text-base md:text-xl")}>
+                                {isUsdPrimary
+                                    ? `$${(item.totalRemainingUSD + (item.totalRemainingTRY / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : `₺${Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * usdRate)).toLocaleString('tr-TR')}`
+                                }
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
+                                {isUsdPrimary
+                                    ? `(₺${Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * usdRate)).toLocaleString('tr-TR')})`
+                                    : `($${(item.totalRemainingUSD + (item.totalRemainingTRY / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                                }
+                            </span>
+                        </div>
+                        {(item.balance > 0 || item.balanceUsd > 0) && (
+                            <div className="flex flex-col items-end opacity-80">
+                                <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
+                                    - {isUsdPrimary
+                                        ? `$${(item.balanceUsd + (item.balance / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                        : `₺${Math.round(item.balance + (item.balanceUsd * usdRate)).toLocaleString('tr-TR')}`
+                                    }
                                 </span>
-                                <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                    ${(item.totalRemainingTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                        )}
-                        {item.totalRemainingUSD > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className={cn("font-black text-rose-500 dark:text-rose-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                    ${item.totalRemainingUSD.toLocaleString('tr-TR')}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium -mt-1">
-                                    ₺{Math.round(item.totalRemainingUSD * usdRate).toLocaleString('tr-TR')}
+                                <span className={cn("text-[9px] text-emerald-500/60 tabular-nums font-bold -mt-1 uppercase tracking-widest", viewMode === 'grid' && "hidden md:block")}>
+                                    {isUsdPrimary
+                                        ? `(₺${Math.round(item.balance + (item.balanceUsd * usdRate)).toLocaleString('tr-TR')})`
+                                        : `($${(item.balanceUsd + (item.balance / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                                    }
                                 </span>
                             </div>
                         )}
                         {item.totalRemainingTRY === 0 && item.totalRemainingUSD === 0 && !item.balance && !item.balanceUsd && (
                             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">ÖDENDİ</span>
-                        )}
-                        {item.balance > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                    - ₺{item.balance.toLocaleString('tr-TR')}
-                                </span>
-                                <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">TL Emanet</span>
-                            </div>
-                        )}
-                        {item.balanceUsd > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className={cn("font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter", viewMode === 'grid' ? "text-xs" : "text-sm md:text-base")}>
-                                    - ${item.balanceUsd.toLocaleString('tr-TR')}
-                                </span>
-                                <span className="text-[10px] text-emerald-500/60 tabular-nums font-medium -mt-1 uppercase tracking-tighter">USD Emanet</span>
-                            </div>
-                        )}
-                        {(item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0) && viewMode === 'list' && (
-                            <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-all hover:bg-indigo-100">
-                                <span className="text-[8px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">TOPLAM</span>
-                                <span className="text-sm md:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums">
-                                    ₺{Math.round(item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
-                                </span>
-                            </div>
                         )}
                     </div>
                     <div className="flex items-center gap-1.5">

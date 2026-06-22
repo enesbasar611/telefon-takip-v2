@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Bell,
     Clock,
+    Calendar,
+    TimerOff,
     CheckCheck,
     ShieldAlert,
     ShoppingCart,
@@ -23,17 +25,22 @@ import {
     getSystemNotifications,
     markNotificationAsReadAction,
     markAllNotificationsAsReadAction,
-    SystemNotification
+    snoozeNotificationAction,
+    SystemNotification,
+    getBrowserNotificationPreference
 } from "@/lib/actions/notification-actions";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { subscribeToNotificationEvents, broadcastNotificationEvent } from "@/lib/broadcast-events";
 
 export function NotificationDropdown() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const [browserEnabled, setBrowserEnabled] = useState(false);
+    const lastSeenIdRef = useRef<string | null>(null);
 
     const { data, isLoading } = useQuery({
         queryKey: ["system-notifications"],
@@ -42,13 +49,42 @@ export function NotificationDropdown() {
         },
         staleTime: 60 * 1000,
         gcTime: 5 * 60 * 1000,
-        refetchInterval: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
+        refetchInterval: 60 * 1000, // Reduced to 1 minute for better "real-time" feel without push
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
     });
 
     const notifications = data?.notifications || [];
     const unreadCount = data?.unreadCount || 0;
+
+    // Load browser preference
+    useEffect(() => {
+        getBrowserNotificationPreference().then(setBrowserEnabled);
+    }, []);
+
+    // Effect for handling browser notifications
+    useEffect(() => {
+        if (!notifications.length || !browserEnabled || Notification.permission !== "granted") return;
+
+        const latest = notifications[0];
+
+        // Initial load: just set the last seen ID
+        if (lastSeenIdRef.current === null) {
+            lastSeenIdRef.current = latest.id;
+            return;
+        }
+
+        // Check if there are new unread notifications
+        const unreadLatest = notifications.find((n: any) => !n.isRead);
+        if (unreadLatest && unreadLatest.id !== lastSeenIdRef.current) {
+            // New notification!
+            new Notification(unreadLatest.title, {
+                body: unreadLatest.message,
+                icon: "/favicon.ico"
+            });
+            lastSeenIdRef.current = unreadLatest.id;
+        }
+    }, [notifications, browserEnabled]);
 
     useEffect(() => {
         const handleUpdate = () => {
@@ -57,14 +93,22 @@ export function NotificationDropdown() {
 
         window.addEventListener("notification-update", handleUpdate);
 
+        const unsubscribe = subscribeToNotificationEvents((event) => {
+            queryClient.invalidateQueries({ queryKey: ["system-notifications"] });
+
+            // If it's a new notification event (not triggered by local action), 
+            // the next query refetch will handle the browser notification.
+        });
+
         return () => {
             window.removeEventListener("notification-update", handleUpdate);
+            unsubscribe();
         };
     }, [queryClient]);
 
     const handleAction = async (notification: SystemNotification) => {
         if (!notification.isRead) {
-            // OPTIMISTIC UPDATE: Sunucudan cevap beklemeden arayüzü anında okundu yap ($0ms)
+            // OPTIMISTIC UPDATE
             queryClient.setQueryData(["system-notifications"], (oldData: any) => {
                 if (!oldData) return oldData;
                 return {
@@ -76,11 +120,10 @@ export function NotificationDropdown() {
                 };
             });
 
-            // Arkadan veritabanını güncelle
             await markNotificationAsReadAction(notification.id);
+            broadcastNotificationEvent({ type: "MARK_AS_READ", notificationId: notification.id });
         }
 
-        // Sayfa yönlendirme mantığı
         if (notification.type === "COMPLETED" || notification.type === "DELIVERY_TIME" || notification.type === "PENDING_APPROVAL") {
             const statusMap: Record<string, string> = {
                 "PENDING": "PENDING",
@@ -147,6 +190,7 @@ export function NotificationDropdown() {
                                 };
                             });
                             await markAllNotificationsAsReadAction();
+                            broadcastNotificationEvent({ type: "MARK_ALL_READ" });
                         }}
                         className="h-9 text-xs text-primary hover:bg-primary/5 border border-primary/10 rounded-xl px-4 transition-all"
                     >
@@ -205,6 +249,47 @@ export function NotificationDropdown() {
                                         )}>
                                             {n.message}
                                         </p>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 rounded-lg hover:bg-amber-500/10 hover:text-amber-600 transition-all text-muted-foreground/40"
+                                                    title="Ertele..."
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Clock className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-40 border-amber-500/20 bg-background/95 backdrop-blur-sm">
+                                                <DropdownMenuItem onClick={() => {
+                                                    snoozeNotificationAction(n.id, 24);
+                                                    broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
+                                                    window.dispatchEvent(new CustomEvent("notification-update"));
+                                                }} className="cursor-pointer">
+                                                    <Clock className="mr-2 h-4 w-4 text-amber-500" />
+                                                    <span>24 Saat</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => {
+                                                    snoozeNotificationAction(n.id, 168);
+                                                    broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
+                                                    window.dispatchEvent(new CustomEvent("notification-update"));
+                                                }} className="cursor-pointer">
+                                                    <Calendar className="mr-2 h-4 w-4 text-amber-500" />
+                                                    <span>1 Hafta</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => {
+                                                    snoozeNotificationAction(n.id, 876000);
+                                                    broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: n.id });
+                                                    window.dispatchEvent(new CustomEvent("notification-update"));
+                                                }} className="cursor-pointer">
+                                                    <TimerOff className="mr-2 h-4 w-4 text-rose-500" />
+                                                    <span>Süresiz</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             </DropdownMenuItem>

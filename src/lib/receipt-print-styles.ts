@@ -24,8 +24,11 @@ export function getReceiptPrintCSS(paperSize: string): string {
         body { 
             font-family: 'Courier New', Courier, monospace;
         }
-        .receipt-container { 
+        .receipt-container {
             width: 100%;
+            height: auto !important;
+            min-height: 100px;
+            overflow: visible !important;
             padding: 2mm 4mm;
             box-sizing: border-box;
             background: white;
@@ -225,20 +228,32 @@ export function printReceipt(
     paperSize: string,
     title: string
 ): void {
-    if (!receiptRef.current) return;
+    if (!receiptRef.current) {
+        console.error("Print failed: Receipt ref is null");
+        return;
+    }
 
     const content = receiptRef.current.innerHTML;
+    if (!content) {
+        console.error("Print failed: Receipt content is empty");
+        return;
+    }
+
     const w = window.open("", "_blank");
-    if (!w) return;
+    if (!w) {
+        alert("Pop-up engelleyici yazıcıyı engelliyor. Lütfen izin verin.");
+        return;
+    }
 
     w.document.write(`
         <!DOCTYPE html>
         <html>
             <head>
+                <meta charset="UTF-8">
                 <title>${title}</title>
                 <style>${getReceiptPrintCSS(paperSize)}</style>
             </head>
-            <body>
+            <body class="bg-white">
                 <div class="receipt-container">
                     ${content}
                 </div>
@@ -247,10 +262,24 @@ export function printReceipt(
     `);
 
     w.document.close();
+
+    // Wait for content and styles to be ready
+    w.onload = () => {
+        setTimeout(() => {
+            w.focus();
+            w.print();
+            w.close();
+        }, 500);
+    };
+
+    // Fallback if onload doesn't fire (some browsers with about:blank)
     setTimeout(() => {
-        w.print();
-        w.close();
-    }, 300);
+        if (!w.closed) {
+            w.focus();
+            w.print();
+            w.close();
+        }
+    }, 1000);
 }
 
 /**

@@ -26,6 +26,7 @@ export interface SystemNotification {
   status?: string;
   isRead?: boolean;
   isDeleted?: boolean;
+  snoozedUntil?: Date;
   metadata?: any;
 }
 
@@ -33,6 +34,7 @@ export async function getSystemNotifications(options?: {
   page?: number;
   limit?: number;
   category?: NotificationCategory;
+  showSnoozed?: boolean;
 }) {
   try {
     const shopId = await getShopId(false);
@@ -45,22 +47,35 @@ export async function getSystemNotifications(options?: {
     const now = new Date();
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-    // Fetch user-specific notification states from DB
+    // Fetch all notification states from DB including deleted ones to check metadata
     const dbStates = await (prisma as any).notification.findMany({
-      where: { isDeleted: false, shopId },
+      where: { shopId },
       orderBy: { createdAt: "desc" }
     });
 
-    const deletedIds = new Set();
-    const readIds = new Set();
+    const deletedIds = new Set<string>();
+    const readIds = new Set<string>();
+    const snoozedIds = new Map<string, Date>();
+    const dismissedMetadata = new Map<string, any>();
 
     dbStates.forEach((n: any) => {
-      if (n.isDeleted) deletedIds.add(n.id);
+      if (n.isDeleted) {
+        deletedIds.add(n.id);
+        if (n.metadata) dismissedMetadata.set(n.id, n.metadata);
+      }
       if (n.isRead) readIds.add(n.id);
+      if (n.snoozedUntil && new Date(n.snoozedUntil) > now) {
+        snoozedIds.set(n.id, new Date(n.snoozedUntil));
+      }
+    });
 
+    dbStates.forEach((n: any) => {
       // Add existing DB notifications to the list
-      // Only if they aren't "virtual" placeholders (which we'll generate below)
-      if (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.isDeleted) {
+      // Only if they aren't "virtual" placeholders
+      const isSnoozed = snoozedIds.has(n.id);
+      const shouldInclude = options?.showSnoozed ? isSnoozed : !isSnoozed;
+
+      if (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.isDeleted && shouldInclude) {
         notifications.push({
           id: n.id,
           type: n.type as any,
@@ -85,7 +100,19 @@ export async function getSystemNotifications(options?: {
     });
     criticalProducts.forEach(p => {
       const id = `stock-${p.id}`;
-      if (!deletedIds.has(id)) {
+      const isSnoozed = snoozedIds.has(id);
+      const shouldInclude = options?.showSnoozed ? isSnoozed : !isSnoozed;
+
+      // Smart delete: only hide if deleted AND stock level hasn't changed since deletion
+      let isDeleted = deletedIds.has(id);
+      if (isDeleted && dismissedMetadata.has(id)) {
+        const lastStock = dismissedMetadata.get(id)?.stock;
+        if (lastStock !== undefined && lastStock !== p.stock) {
+          isDeleted = false; // Stock changed, show it again
+        }
+      }
+
+      if (!isDeleted && shouldInclude) {
         notifications.push({
           id,
           type: "CRITICAL_STOCK",
@@ -94,7 +121,8 @@ export async function getSystemNotifications(options?: {
           message: `Stok kodu: ${p.sku || p.barcode || 'Yok'}. Acil tedarik gerekiyor.`,
           createdAt: p.updatedAt,
           referenceId: p.id,
-          isRead: readIds.has(id)
+          isRead: readIds.has(id),
+          metadata: { stock: p.stock } // Include current stock for dismiss action
         });
       }
     });
@@ -110,7 +138,7 @@ export async function getSystemNotifications(options?: {
     });
     suppliersWithDebt.forEach(s => {
       const id = `fin-${s.id}`;
-      if (!deletedIds.has(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id)) {
         notifications.push({
           id,
           type: "FINANCIAL_DELAY",
@@ -134,7 +162,7 @@ export async function getSystemNotifications(options?: {
       // PENDING APPROVAL
       if (t.status === "PENDING" || t.status === "WAITING_PART") {
         const id = `pend-${t.id}`;
-        if (!deletedIds.has(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id)) {
           notifications.push({
             id,
             type: "PENDING_APPROVAL",
@@ -153,7 +181,7 @@ export async function getSystemNotifications(options?: {
       // COMPLETED
       if ((t.status === "READY" || t.status === "DELIVERED") && t.updatedAt >= threeDaysAgo) {
         const id = `comp-${t.id}`;
-        if (!deletedIds.has(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id)) {
           notifications.push({
             id,
             type: "COMPLETED",
@@ -171,7 +199,7 @@ export async function getSystemNotifications(options?: {
       // DELIVERY_TIME
       if (t.estimatedDeliveryDate && t.estimatedDeliveryDate <= now && t.status !== "DELIVERED") {
         const id = `deliv-${t.id}`;
-        if (!deletedIds.has(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id)) {
           const delayDays = Math.floor((now.getTime() - t.estimatedDeliveryDate.getTime()) / (1000 * 60 * 60 * 24));
           const delayMsg = delayDays > 0 ? `${delayDays} gün gecikti!` : "Bugün teslim edilmeli!";
           notifications.push({
@@ -191,7 +219,7 @@ export async function getSystemNotifications(options?: {
       // WARRANTY_EXPIRY
       if (t.warrantyExpiry && t.warrantyExpiry > now && t.warrantyExpiry.getTime() - now.getTime() < 14 * 24 * 60 * 60 * 1000) {
         const id = `warr-${t.id}`;
-        if (!deletedIds.has(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id)) {
           const daysLeft = Math.ceil((t.warrantyExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           notifications.push({
             id,
@@ -219,7 +247,7 @@ export async function getSystemNotifications(options?: {
 
     stockAlerts.forEach((a: any) => {
       const id = `ai-${a.id}`;
-      if (!deletedIds.has(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id)) {
         notifications.push({
           id,
           type: "CRITICAL_STOCK",
@@ -246,7 +274,7 @@ export async function getSystemNotifications(options?: {
 
     trackedDebts.forEach(d => {
       const id = `debt-${d.id}`;
-      if (!deletedIds.has(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id)) {
         notifications.push({
           id,
           type: "DEBT_TRACKING",
@@ -277,7 +305,8 @@ export async function getSystemNotifications(options?: {
       notifications: serializePrisma(paginated),
       total,
       hasMore: skip + limit < total,
-      unreadCount: filtered.filter(n => !n.isRead).length
+      unreadCount: notifications.filter(n => !n.isRead && !snoozedIds.has(n.id)).length,
+      snoozedCount: snoozedIds.size
     };
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -363,12 +392,14 @@ export async function markAllNotificationsAsReadAction() {
   }
 }
 
-export async function dismissNotificationAction(id: string) {
+
+
+export async function dismissNotificationAction(id: string, metadata?: any) {
   try {
     const shopId = await getShopId();
     await (prisma as any).notification.upsert({
       where: { id },
-      update: { isDeleted: true },
+      update: { isDeleted: true, metadata },
       create: {
         id,
         type: "MANUAL",
@@ -376,6 +407,7 @@ export async function dismissNotificationAction(id: string) {
         title: "Dismissed",
         message: "...",
         isDeleted: true,
+        metadata,
         shopId
       }
     });
@@ -390,8 +422,88 @@ export async function dismissNotificationAction(id: string) {
     }
 
     revalidatePath("/bildirimler");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
+    console.error("Dismiss error:", error);
+    return { success: false };
+  }
+}
+export async function snoozeNotificationAction(id: string, hours: number = 24) {
+  try {
+    const shopId = await getShopId();
+    const snoozedUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
+
+    // Find or create notification state
+    await prisma.notification.upsert({
+      where: { id },
+      // @ts-ignore
+      update: { snoozedUntil },
+      create: {
+        id,
+        shopId,
+        title: "Ertelenmiş Bildirim",
+        message: "Bu bildirim kullanıcı tarafından ertelendi.",
+        type: "SYSTEM",
+        category: "SYSTEM",
+        // @ts-ignore
+        snoozedUntil
+      }
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Snooze error:", error);
+    return { success: false, error: "Bildirim ertelenemedi" };
+  }
+}
+
+export async function unsnoozeNotificationAction(id: string) {
+  try {
+    await prisma.notification.update({
+      where: { id },
+      // @ts-ignore
+      data: { snoozedUntil: null }
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Unsnooze error:", error);
+    return { success: false, error: "Bildirim ertelemesi kaldırılamadı" };
+  }
+}
+export async function getBrowserNotificationPreference() {
+  try {
+    const session = await (await import("@/lib/auth")).getSession();
+    if (!session?.user?.id) return false;
+
+    const user = await (prisma.user as any).findUnique({
+      where: { id: session.user.id },
+      select: { browserNotificationsEnabled: true }
+    } as any);
+
+    return user?.browserNotificationsEnabled || false;
+  } catch (error) {
+    console.error("Error getting browser notification preference:", error);
+    return false;
+  }
+}
+
+export async function updateBrowserNotificationPreference(enabled: boolean) {
+  try {
+    const session = await (await import("@/lib/auth")).getSession();
+    if (!session?.user?.id) return { success: false };
+
+    await (prisma.user as any).update({
+      where: { id: session.user.id },
+      data: { browserNotificationsEnabled: enabled }
+    } as any);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating browser notification preference:", error);
     return { success: false };
   }
 }

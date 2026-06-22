@@ -307,6 +307,7 @@ export function VeresiyeClient({
     const [statsModalType, setStatsModalType] = useState<'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED' | null>(null);
     const [statsDates, setStatsDates] = useState<{ start?: string; end?: string }>({});
     const [editNotes, setEditNotes] = useState<string>("");
+    const [editDescription, setEditDescription] = useState<string>("");
     const [editCurrency, setEditCurrency] = useState<string>("TRY");
     const [statsSearchQuery, setStatsSearchQuery] = useState("");
     const [statsViewMode, setStatsViewMode] = useState<'list' | 'grid'>('list');
@@ -657,12 +658,10 @@ export function VeresiyeClient({
     const statsData = [
         {
             type: 'RECEIVABLE_TRY' as const,
-            title: defaultCurrency === 'USD' ? "Toplam Alacak (USD)" : "Toplam Alacak (TL)",
-            value: !mounted ? "--" : (defaultCurrency === 'USD'
-                ? `$${totalReceivableUSD.toLocaleString('tr-TR')}`
-                : `₺${totalReceivableTRY.toLocaleString('tr-TR')}`),
+            title: "TL ALACAKLAR",
+            value: !mounted ? "--" : `₺${totalReceivableTRY.toLocaleString('tr-TR')}`,
             subValue: !mounted ? "--" : (defaultCurrency === 'USD'
-                ? `~₺${Math.round(totalReceivableUSD * usdRate).toLocaleString('tr-TR')}`
+                ? `$${(totalReceivableTRY / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : `${activeDebtorCount} Aktif Müşteri`),
             icon: CreditCard,
             color: "text-emerald-500",
@@ -670,24 +669,22 @@ export function VeresiyeClient({
         },
         {
             type: 'RECEIVABLE_USD' as const,
-            title: defaultCurrency === 'USD' ? "Toplam Alacak (TL)" : "Toplam Alacak (USD)",
-            value: !mounted ? "--" : (defaultCurrency === 'USD'
-                ? `₺${totalReceivableTRY.toLocaleString('tr-TR')}`
-                : `$${totalReceivableUSD.toLocaleString('tr-TR')}`),
-            subValue: !mounted ? "--" : (defaultCurrency === 'USD'
-                ? `${activeDebtorCount} Aktif Müşteri`
-                : `~₺${Math.round(totalReceivableUSD * usdRate).toLocaleString('tr-TR')}`),
+            title: "DOLAR ALACAKLAR",
+            value: !mounted ? "--" : `$${totalReceivableUSD.toLocaleString('tr-TR')}`,
+            subValue: !mounted ? "--" : (defaultCurrency === 'TRY'
+                ? `₺${Math.round(totalReceivableUSD * usdRate).toLocaleString('tr-TR')}`
+                : `${activeDebtorCount} Aktif Müşteri`),
             icon: Wallet,
             color: "text-blue-500",
             bg: "bg-blue-500/10"
         },
         {
             type: 'GENERAL_TOTAL' as const,
-            title: defaultCurrency === 'USD' ? "Genel Portfolio (USD)" : "Genel Portfolio (TL)",
+            title: defaultCurrency === 'USD' ? "TOPLAM PORTFÖY (USD)" : "TOPLAM PORTFÖY (TL)",
             value: !mounted ? "--" : (defaultCurrency === 'USD'
-                ? `$${Math.round(totalReceivableUSD + (totalReceivableTRY / usdRate)).toLocaleString('tr-TR')}`
+                ? `$${(totalReceivableUSD + (totalReceivableTRY / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : `₺${Math.round(totalReceivableTRY + (totalReceivableUSD * usdRate)).toLocaleString('tr-TR')}`),
-            subValue: "TL + USD Birleşik",
+            subValue: "BİRLEŞİK TOPLAM",
             icon: TrendingUp,
             color: "text-amber-500",
             bg: "bg-amber-500/10"
@@ -929,7 +926,8 @@ export function VeresiyeClient({
                 id: editingDebt.id,
                 amount: parseFloat(editAmount),
                 currency: editCurrency,
-                notes: editNotes
+                notes: editNotes,
+                description: editDescription
             });
             if (res.success) {
                 toast.success("Borç kaydı güncellendi.");
@@ -1460,6 +1458,7 @@ export function VeresiyeClient({
                                                     viewMode={viewMode}
                                                     usdRate={usdRate}
                                                     rates={rates}
+                                                    defaultCurrency={defaultCurrency}
                                                     isSelected={selectedCustomerIds.includes(item.customerId)}
                                                     onSelect={(id) => {
                                                         setSelectedCustomerIds(prev =>
@@ -1945,12 +1944,12 @@ export function VeresiyeClient({
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{item.isPaid ? "ÖDENDİ" : "KALAN"}:</span>
                                                             <div className="flex flex-col items-end">
-                                                                <span className={cn("text-sm font-black tabular-nums leading-none", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
+                                                                <span className={cn("text-2xl font-black tabular-nums leading-none tracking-tight", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
                                                                     {defaultCurrency === "USD"
                                                                         ? `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                                                         : `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`}
                                                                 </span>
-                                                                <span className="text-[8px] font-bold text-muted-foreground/50 mt-0.5 leading-none">
+                                                                <span className="text-xs font-bold text-muted-foreground/50 mt-1.5 leading-none">
                                                                     ({defaultCurrency === "USD"
                                                                         ? `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`
                                                                         : `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
@@ -1991,7 +1990,7 @@ export function VeresiyeClient({
                                                                     </Button>
                                                                 );
                                                             })()}
-                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingDebt(item); setEditAmount(String(item.amount)); setEditNotes(item.notes || ""); setEditCurrency(item.currency || "TRY"); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-indigo-600 bg-muted hover:bg-muted/80 rounded-lg"><Pencil className="w-3 h-3" /></Button>
+                                                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditingDebt(item); setEditAmount(String(item.amount)); setEditNotes(item.notes || ""); setEditDescription(item.description || ""); setEditCurrency(item.currency || "TRY"); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-indigo-600 bg-muted hover:bg-muted/80 rounded-lg"><Pencil className="w-3 h-3" /></Button>
                                                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteDebt(item.id); }} className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 bg-muted hover:bg-muted/80 rounded-lg"><Trash2 className="w-3 h-3" /></Button>
                                                         </div>
                                                     )}
@@ -2104,18 +2103,18 @@ export function VeresiyeClient({
                         <div className="flex items-center gap-4 px-4 py-2.5 bg-muted/30 rounded-2xl border border-border/40">
                             <div className="flex flex-col items-end">
                                 <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">TL BORCU</span>
-                                <span className="text-sm font-black text-emerald-600 leading-none">₺{historyTotals.try.toLocaleString('tr-TR')}</span>
-                                <span className="text-[7px] font-bold text-muted-foreground/50 uppercase mt-0.5">~${Math.round(historyTotals.try / usdRate).toLocaleString('tr-TR')}</span>
+                                <span className="text-lg font-black text-emerald-600 leading-none">₺{historyTotals.try.toLocaleString('tr-TR')}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">~${Math.round(historyTotals.try / usdRate).toLocaleString('tr-TR')}</span>
                             </div>
                             <div className="flex flex-col items-end border-l border-border/40 pl-4">
                                 <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">USD BORCU</span>
-                                <span className="text-sm font-black text-blue-600 leading-none">${historyTotals.usd.toLocaleString('tr-TR')}</span>
-                                <span className="text-[7px] font-bold text-muted-foreground/50 uppercase mt-0.5">~₺{(historyTotals.usd * usdRate).toLocaleString('tr-TR')}</span>
+                                <span className="text-lg font-black text-blue-600 leading-none">${historyTotals.usd.toLocaleString('tr-TR')}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">~₺{(historyTotals.usd * usdRate).toLocaleString('tr-TR')}</span>
                             </div>
                             <div className="h-8 w-px bg-border/40" />
                             <div className="flex flex-col items-end">
-                                <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">GENEL TOPLAM</span>
-                                <span className="text-lg font-black text-indigo-600 tracking-tighter leading-none">
+                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">GENEL TOPLAM</span>
+                                <span className="text-2xl font-black text-indigo-600 tracking-tighter leading-none">
                                     ₺{Math.round(historyTotals.try + (historyTotals.usd * usdRate)).toLocaleString('tr-TR')}
                                 </span>
                             </div>
@@ -2137,8 +2136,17 @@ export function VeresiyeClient({
                             <p className="text-[10px] text-amber-500 italic">Not: Tutarı düşürürken dikkatli olun. Kalan borç, aradaki farka göre otomatik güncellenecektir.</p>
                         </div>
                         <div className="space-y-2">
+                            <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">ÜRÜN ADI</Label>
+                            <Input value={editNotes} readOnly className="h-12 bg-muted/50 border-border/50 text-muted-foreground cursor-not-allowed" />
+                        </div>
+                        <div className="space-y-2">
                             <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">AÇIKLAMA</Label>
-                            <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="h-12 bg-muted/30 border-border/50 text-foreground" />
+                            <Input
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                placeholder="Opsiyonel açıklama..."
+                                className="h-12 bg-muted/30 border-border/50 font-medium text-foreground"
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-xs uppercase font-bold tracking-wider text-muted-foreground">PARA BİRİMİ</Label>

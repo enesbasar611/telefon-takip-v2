@@ -3,7 +3,8 @@
 import React from "react";
 import {
     Banknote, CreditCard, Landmark, History,
-    Sparkles, CheckCircle, AlertCircle, Loader2, Printer
+    Sparkles, CheckCircle, AlertCircle, Loader2, Printer,
+    ChevronDown
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface CheckoutSummaryProps {
-    subtotal: number;
-    tax: number;
-    total: number; // Final total after loyalty
     paymentMethod: string;
     setPaymentMethod: (m: string) => void;
     loyaltyEnabled: boolean;
@@ -24,17 +22,17 @@ interface CheckoutSummaryProps {
     loyaltyDiscountAmount: number;
     isProcessing: boolean;
     onCheckout: () => void;
-    isDebtBlocked?: boolean; // When DEBT selected but no customer
+    isDebtBlocked?: boolean;
     isCompact?: boolean;
-    getEquivalentDisplay?: (val: any) => string;
     defaultCurrency?: string;
     rates?: any;
+    formattedTotal: string;
+    formattedSubtotal: string;
+    formattedTax: string;
+    formattedEquivalentTotal: string;
 }
 
 export const CheckoutSummary = ({
-    subtotal,
-    tax,
-    total,
     paymentMethod,
     setPaymentMethod,
     loyaltyEnabled,
@@ -47,10 +45,14 @@ export const CheckoutSummary = ({
     onCheckout,
     isDebtBlocked = false,
     isCompact = false,
-    getEquivalentDisplay,
     defaultCurrency = "TRY",
-    rates
+    rates,
+    formattedTotal,
+    formattedSubtotal,
+    formattedTax,
+    formattedEquivalentTotal
 }: CheckoutSummaryProps) => {
+    const [showDetails, setShowDetails] = React.useState(false);
     const currentUsdRate = Number(rates?.usd || rates?.USD) || 34.5;
     const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
     const paymentMethods = [
@@ -63,22 +65,43 @@ export const CheckoutSummary = ({
     if (isCompact) {
         return (
             <div className="space-y-4 border-t border-border/40 bg-card p-4 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl">
-                <div className="bg-muted/30 border-2 border-border/40 p-5 rounded-[1.75rem] space-y-4">
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
-                        <span className="text-xs font-black text-foreground/70 tabular-nums">{currencySymbol}{subtotal.toLocaleString('tr-TR')}</span>
+                <div className="bg-muted/30 border-2 border-border/40 p-3 sm:p-5 rounded-[1.75rem] space-y-3">
+                    {/* Collapsible Details */}
+                    <div className={cn(
+                        "space-y-3 overflow-hidden transition-all duration-300 ease-in-out",
+                        showDetails ? "max-h-40 opacity-100 mb-4" : "max-h-0 opacity-0 mb-0"
+                    )}>
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
+                            <span className="text-xs font-black text-foreground/70 tabular-nums">{formattedSubtotal}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
+                            <span className="text-xs font-black text-foreground/70 tabular-nums">{formattedTax}</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
-                        <span className="text-xs font-black text-foreground/70 tabular-nums">₺{tax.toLocaleString('tr-TR')}</span>
-                    </div>
-                    <div className="flex justify-between items-end pt-4 mt-2 border-t-2 border-border/30">
-                        <span className="text-xs font-black text-foreground tracking-[0.1em] uppercase leading-none">ÖDENECEK TUTAR</span>
+
+                    <div className="flex justify-between items-end">
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="flex flex-col items-start gap-1 p-1 hover:bg-muted/50 rounded-lg transition-colors group"
+                        >
+                            <span className="text-[10px] font-black text-foreground tracking-[0.1em] uppercase leading-none flex items-center gap-2">
+                                ÖDENECEK TUTAR
+                                <ChevronDown className={cn("h-3 w-3 transition-transform duration-300", showDetails && "rotate-180")} />
+                            </span>
+                            <span className="text-[9px] text-muted-foreground font-bold group-hover:text-primary transition-colors">Detayları gör</span>
+                        </button>
                         <div className="flex flex-col items-end">
                             {loyaltyDiscountAmount > 0 && (
                                 <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">- {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / currentUsdRate)}</Badge>
                             )}
-                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">{currencySymbol}{total.toLocaleString('tr-TR')}</span>
+                            <span className="text-4xl font-black text-blue-700 tabular-nums tracking-tighter leading-none">
+                                {formattedTotal}
+                            </span>
+                            <span className="text-[14px] font-bold text-muted-foreground italic mt-1">
+                                {formattedEquivalentTotal}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -125,7 +148,7 @@ export const CheckoutSummary = ({
 
                 <div className="flex gap-4 min-h-[72px]">
                     <Button
-                        disabled={total <= 0 || isProcessing}
+                        disabled={isProcessing}
                         onClick={onCheckout}
                         className={cn(
                             "flex-1 h-auto text-[13px] font-black tracking-widest rounded-[1.5rem] shadow-2xl transition-all gap-4 uppercase py-6",
@@ -197,16 +220,11 @@ export const CheckoutSummary = ({
                     <span className="text-[10px] sm:text-[11px] text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
                     <div className="flex flex-col items-end gap-0">
                         <div className="flex items-center gap-2">
-                            {loyaltyDiscountAmount > 0 && (
-                                <span className="text-[10px] sm:text-xs text-muted-foreground line-through opacity-50">{currencySymbol}{formatCurrency(subtotal)}</span>
-                            )}
-                            {getEquivalentDisplay && (
-                                <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
-                                    ({getEquivalentDisplay({ sellPrice: total * (defaultCurrency === 'USD' ? currentUsdRate : 1) })})
-                                </span>
-                            )}
+                            <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
+                                {formattedEquivalentTotal}
+                            </span>
                         </div>
-                        <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">{currencySymbol}{formatCurrency(total)}</span>
+                        <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">{formattedTotal}</span>
                     </div>
                 </div>
 
@@ -217,7 +235,7 @@ export const CheckoutSummary = ({
                             ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
                             : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
                     )}
-                    disabled={total <= 0 || isProcessing}
+                    disabled={isProcessing}
                     onClick={onCheckout}
                 >
                     {isProcessing ? (

@@ -192,8 +192,6 @@ export function AutomationTab({ formData, onChange, savingKeys }: AutomationTabP
                     </div>
                 </div>
             </div>
-
-            <WhatsAppTemplatesSection formData={formData} onChange={onChange} />
         </div>
     );
 }

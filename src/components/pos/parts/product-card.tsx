@@ -99,7 +99,7 @@ export const ProductCard = React.memo(({
             {/* Bottom Row: Price & Title */}
             <div className="flex flex-col gap-0 z-10 w-full mt-auto">
                 <div className="text-[11px] sm:text-[13px] font-bold text-muted-foreground/80 mb-0">
-                    {getEquivalentDisplay(product)}
+                    ({getEquivalentDisplay(product)})
                 </div>
                 <div className="text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible drop-shadow-sm text-lg sm:text-xl font-black">
                     {getCartCurrencySymbol()}{priceStr}

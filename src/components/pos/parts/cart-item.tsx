@@ -37,7 +37,7 @@ export const CartItem = React.memo(({
                                 <span className="text-[10px] text-blue-600 font-black">{getCartCurrencySymbol()}</span>
                                 <input
                                     type="number"
-                                    value={displayPrice ?? item.sellPrice}
+                                    value={Number(displayPrice ?? item.sellPrice).toFixed(2)}
                                     onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
                                     className="bg-transparent border-none text-[11px] text-blue-700 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
                                 />
@@ -72,7 +72,7 @@ export const CartItem = React.memo(({
                     </div>
                     <div className="text-right">
                         <span className="text-sm font-black text-foreground tabular-nums">
-                            {getCartCurrencySymbol()}{((displayPrice ?? item.sellPrice) * item.quantity).toLocaleString('tr-TR')}
+                            {getCartCurrencySymbol()}{Number((displayPrice ?? item.sellPrice) * item.quantity).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                     </div>
                 </div>
@@ -90,7 +90,7 @@ export const CartItem = React.memo(({
                         <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol()}</span>
                         <input
                             type="number"
-                            value={displayPrice ?? item.sellPrice}
+                            value={Number(displayPrice ?? item.sellPrice).toFixed(2)}
                             onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
                             className="bg-transparent border-none text-[14px] text-primary font-black focus:ring-0 w-24 pl-5 py-0 h-auto"
                             title="Sepet fiyatı değiştirilebilir"
@@ -98,7 +98,7 @@ export const CartItem = React.memo(({
                     </div>
                     <div className="flex flex-col leading-none">
                         <span className="text-[11px] font-bold text-muted-foreground/80">
-                            {getEquivalentDisplay(item)}
+                            ({getEquivalentDisplay(item)})
                         </span>
                     </div>
                 </div>

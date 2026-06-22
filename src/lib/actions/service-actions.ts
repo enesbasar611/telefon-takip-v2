@@ -292,6 +292,8 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
       }
 
       if (totalRevenue > 0) {
+        const serviceLabel = `${currentTicket.deviceBrand} ${currentTicket.deviceModel}${currentTicket.serviceType ? ` ${currentTicket.serviceType}` : ''}`;
+
         if (paymentMethod === "DEBT") {
           // Create a debt record for the customer
           await prisma.debt.create({
@@ -299,7 +301,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
               customerId: currentTicket.customerId,
               amount: totalRevenue,
               remainingAmount: totalRevenue,
-              notes: `SERVIS BORÇ - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
+              notes: `${serviceLabel} - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
               dueDate: new Date(new Date().setDate(new Date().getDate() + 15)), // Default 15 days due date
               shopId
             }
@@ -311,7 +313,7 @@ export async function updateServiceStatus(ticketId: string, status: ServiceStatu
             data: {
               type: "INCOME",
               amount: totalRevenue,
-              description: `SERVİS TAHSİLAT - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
+              description: `SERVİS TAHSİLAT: ${serviceLabel} - ${currentTicket.ticketNumber}${discountAmount > 0 ? ` (₺${discountAmount} İndirim)` : ''}`,
               paymentMethod: paymentMethod as any,
               userId,
               shopId,

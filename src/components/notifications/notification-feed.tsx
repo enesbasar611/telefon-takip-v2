@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
 import {
     Clock,
     Bell,
@@ -15,7 +20,14 @@ import {
     Loader2,
     MessageCircle,
     Calendar,
-    Settings2
+    TimerOff,
+    Settings2,
+    MoreVertical,
+    Eye,
+    BellOff,
+    Check,
+    Filter,
+    MoreHorizontal,
 } from "lucide-react";
 import {
     SystemNotification,
@@ -23,16 +35,26 @@ import {
     getSystemNotifications,
     markNotificationAsReadAction,
     markAllNotificationsAsReadAction,
-    dismissNotificationAction
+    dismissNotificationAction,
+    snoozeNotificationAction,
+    unsnoozeNotificationAction,
 } from "@/lib/actions/notification-actions";
-import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuPortal,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 import { ReplenishStockModal } from "./replenish-stock-modal";
 import { ReminderManagement } from "./reminder-management";
+import { subscribeToNotificationEvents, broadcastNotificationEvent } from "@/lib/broadcast-events";
 
 // Uniform icons for the feed
 const categoryConfigs: Record<NotificationCategory, { color: string; icon: any }> = {
@@ -52,10 +74,12 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [unreadCount, setUnreadCount] = useState(initialNotifications.unreadCount || 0);
+    const [snoozedCount, setSnoozedCount] = useState(initialNotifications.snoozedCount || 0);
     const [showReminders, setShowReminders] = useState(false);
 
     // Track all notifications to calculate counts for all categories simultaneously
     const [allNotifications, setAllNotifications] = useState<SystemNotification[]>(initialNotifications.notifications || []);
+    const [viewMode, setViewMode] = useState<"active" | "snoozed">("active");
 
     const categoryCounts = {
         "Tümü": allNotifications.length,
@@ -79,30 +103,50 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
     });
 
     useEffect(() => {
-        if (activeTab) {
+        if (activeTab || viewMode) {
             loadNotifications(1, activeTab, true);
         }
+    }, [activeTab, viewMode]);
+
+    useEffect(() => {
+        const unsubscribe = subscribeToNotificationEvents((event) => {
+            if (event.type === "REFRESH_NOTIFICATIONS" || event.type === "MARK_ALL_READ") {
+                loadNotifications(1, activeTab, true);
+            } else if (event.type === "MARK_AS_READ") {
+                setNotifications((prev: SystemNotification[]) => prev.map(n => n.id === event.notificationId ? { ...n, isRead: true } : n));
+                setAllNotifications((prev: SystemNotification[]) => prev.map(n => n.id === event.notificationId ? { ...n, isRead: true } : n));
+                setUnreadCount((prev: number) => Math.max(0, prev - 1));
+            } else if (event.type === "SNOOZE_NOTIFICATION") {
+                setNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== event.notificationId));
+                setAllNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== event.notificationId));
+                loadNotifications(1, activeTab, true);
+            }
+        });
+        return unsubscribe;
     }, [activeTab]);
 
-    const loadNotifications = async (pageNum: number, category: NotificationCategory, reset = false) => {
+    const loadNotifications = async (pageNum: number, category: NotificationCategory, reset: boolean = false) => {
         setIsLoading(true);
         try {
             const result = await getSystemNotifications({
                 page: pageNum,
-                limit: 10,
-                category
+                limit: 15,
+                category,
+                showSnoozed: viewMode === "snoozed"
             });
 
             if (reset) {
                 setNotifications(result.notifications);
+                setAllNotifications(result.notifications);
                 setPage(1);
             } else {
-                setNotifications(prev => [...prev, ...result.notifications]);
+                setNotifications((prev: SystemNotification[]) => [...prev, ...result.notifications]);
                 setPage(pageNum);
             }
-            setTotal(result.total);
             setHasMore(result.hasMore);
+            setTotal(result.total);
             setUnreadCount(result.unreadCount);
+            setSnoozedCount(result.snoozedCount || 0);
         } catch (error) {
             toast.error("Bildirimler yüklenemedi");
         } finally {
@@ -116,6 +160,7 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
             setAllNotifications((prev: SystemNotification[]) => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
             setUnreadCount((prev: number) => Math.max(0, prev - 1));
             await markNotificationAsReadAction(notification.id);
+            broadcastNotificationEvent({ type: "MARK_AS_READ", notificationId: notification.id });
             window.dispatchEvent(new CustomEvent("notification-update"));
             router.refresh();
         }
@@ -136,10 +181,44 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
 
     const handleDismiss = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
+        const notification = notifications.find(n => n.id === id);
         setNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
         setAllNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
-        await dismissNotificationAction(id);
+        await dismissNotificationAction(id, notification?.metadata);
+        broadcastNotificationEvent({ type: "REFRESH_NOTIFICATIONS" });
         toast.success("Bildirim silindi");
+    };
+
+    const handleSnooze = async (e: React.MouseEvent | undefined, id: string, hours: number) => {
+        if (e) e.stopPropagation();
+        setNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
+        setAllNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
+        await snoozeNotificationAction(id, hours);
+        broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: id });
+
+        let message = "Bildirim ertelendi";
+        if (hours === 24) message = "Bildirim 24 saat ertelendi";
+        else if (hours === 168) message = "Bildirim 1 hafta ertelendi";
+        else if (hours > 100000) message = "Bildirim süresiz olarak gizlendi";
+
+        toast.success(message, {
+            icon: <Clock className="h-4 w-4 text-amber-500" />
+        });
+        window.dispatchEvent(new CustomEvent("notification-update"));
+        router.refresh();
+    };
+
+    const handleUnsnooze = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        setNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
+        setAllNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
+        await unsnoozeNotificationAction(id);
+        broadcastNotificationEvent({ type: "REFRESH_NOTIFICATIONS" });
+        toast.success("Bildirim ertelemesi kaldırıldı", {
+            icon: <Bell className="h-4 w-4 text-blue-500" />
+        });
+        window.dispatchEvent(new CustomEvent("notification-update"));
+        router.refresh();
     };
 
     const handleMarkAllRead = async () => {
@@ -147,9 +226,10 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
         toast.promise(promise, {
             loading: 'Tümü okunuyor...',
             success: () => {
-                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                setAllNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                setNotifications((prev: SystemNotification[]) => prev.map(n => ({ ...n, isRead: true })));
+                setAllNotifications((prev: SystemNotification[]) => prev.map(n => ({ ...n, isRead: true })));
                 setUnreadCount(0);
+                broadcastNotificationEvent({ type: "MARK_ALL_READ" });
                 window.dispatchEvent(new CustomEvent("notification-update"));
                 router.refresh();
                 return 'Tüm bildirimler okundu olarak işaretlendi';
@@ -164,16 +244,30 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                 <ReminderManagement onBack={() => setShowReminders(false)} />
             ) : (
                 <>
-                    {/* Header Area */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
-                        <div className="space-y-1">
-                            <h1 className="font-semibold text-3xl text-foreground tracking-tighter">
-                                Bildirimler <span className="text-blue-500 font-serif italic text-2xl">&</span> Hatırlatmalar
-                            </h1>
-                            <p className="text-muted-foreground font-bold text-[13px] flex items-center gap-2">
-                                <span className={cn("h-1.5 w-1.5 rounded-full", unreadCount > 0 ? "bg-blue-500 animate-pulse" : "bg-slate-400 dark:bg-slate-600")} />
-                                Şu an {unreadCount} adet okunmamış işleminiz var.
-                            </p>
+                    {/* Action Bar (Refined) */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-1">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setViewMode(viewMode === "active" ? "snoozed" : "active")}
+                                className={cn(
+                                    "flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-300 font-bold text-xs uppercase tracking-tight shadow-sm active:scale-95",
+                                    viewMode === "snoozed"
+                                        ? "bg-amber-500 text-white border-amber-400 shadow-amber-500/20"
+                                        : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted/80 hover:text-foreground"
+                                )}
+                            >
+                                <Clock className={cn("h-4 w-4", viewMode === "snoozed" ? "animate-pulse" : "")} />
+                                Ertelenenler
+                                <span className={cn(
+                                    "ml-0.5 px-2 py-0.5 rounded-lg text-[10px] font-black min-w-[20px] text-center",
+                                    viewMode === "snoozed" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                                )}>
+                                    {snoozedCount}
+                                </span>
+                                {viewMode === "snoozed" && (
+                                    <div className="ml-1 w-2 h-2 rounded-full bg-white shadow-[0_0_8px_white]" />
+                                )}
+                            </button>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -297,6 +391,46 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
                                                 >
                                                     İncele
                                                 </Button>
+                                                {/* Snooze/Unsnooze Button */}
+                                                {viewMode === "snoozed" ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={(e) => handleUnsnooze(e, n.id)}
+                                                        className="h-8 w-8 rounded-lg bg-white/5 hover:bg-blue-500/20 hover:text-blue-500 transition-all border border-border/50"
+                                                        title="Ertelemeyi Kaldır"
+                                                    >
+                                                        <Bell className="h-4 w-4" />
+                                                    </Button>
+                                                ) : (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-lg bg-white/5 hover:bg-amber-500/20 hover:text-amber-500 transition-all border border-border/50"
+                                                                title="Ertele..."
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <Clock className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-40 border-amber-500/20 bg-background/95 backdrop-blur-sm">
+                                                            <DropdownMenuItem onClick={() => handleSnooze(undefined, n.id, 24)} className="cursor-pointer">
+                                                                <Clock className="mr-2 h-4 w-4 text-amber-500" />
+                                                                <span>24 Saat</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleSnooze(undefined, n.id, 168)} className="cursor-pointer">
+                                                                <Calendar className="mr-2 h-4 w-4 text-amber-500" />
+                                                                <span>1 Hafta</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleSnooze(undefined, n.id, 876000)} className="cursor-pointer">
+                                                                <TimerOff className="mr-2 h-4 w-4 text-rose-500" />
+                                                                <span>Süresiz</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                                 {/* Trash Icon Instead of MoreHorizontal */}
                                                 <Button
                                                     variant="ghost"
@@ -347,8 +481,3 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
         </div>
     );
 }
-
-
-
-
-

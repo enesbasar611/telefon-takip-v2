@@ -1,7 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { VariableTextarea } from "@/components/ui/variable-textarea";
 import { cn } from "@/lib/utils";
 import { MessageCircle } from "lucide-react";
 
@@ -80,10 +80,12 @@ export function WhatsAppTemplatesSection({ formData, onChange }: WhatsAppTemplat
                                 {t.label}
                             </div>
                         </div>
-                        <Textarea
+                        <VariableTextarea
                             value={formData[t.key] || t.defaultValue}
                             onChange={(e) => onChange(t.key, e.target.value)}
                             onBlur={(e) => onChange(t.key, e.target.value, true)}
+                            onValueChange={(val) => onChange(t.key, val, true)}
+                            variables={t.variables}
                             className="bg-slate-50/50 dark:bg-black/40 border-slate-200 dark:border-border/50 rounded-xl text-xs text-slate-900 dark:text-white min-h-[80px] focus:border-blue-500/50 transition-all font-medium leading-relaxed"
                             placeholder={t.defaultValue}
                         />

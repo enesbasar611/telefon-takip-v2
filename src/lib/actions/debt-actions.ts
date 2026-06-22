@@ -99,6 +99,7 @@ export async function createDebt(data: {
   exchangeRate?: number;
   dueDate?: Date;
   notes?: string;
+  description?: string;
   items?: {
     title: string;
     amount: number;
@@ -170,6 +171,7 @@ export async function createDebt(data: {
           exchangeRate: data.exchangeRate,
           dueDate: data.dueDate,
           notes: data.notes,
+          description: data.description,
           shopId
         }
       });
@@ -292,6 +294,7 @@ export async function updateDebt(data: {
   amount: number;
   currency: string;
   notes?: string;
+  description?: string;
 }) {
   try {
     const shopId = await getShopId();
@@ -316,6 +319,7 @@ export async function updateDebt(data: {
         amount: debtAmount,
         currency: data.currency,
         notes: data.notes,
+        description: data.description,
         remainingAmount: newRemaining,
         isPaid: newRemaining <= 0.01
       }

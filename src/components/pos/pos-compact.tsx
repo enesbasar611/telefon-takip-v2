@@ -76,25 +76,41 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         return item?.sellPriceUsd ? "USD" : "TRY";
     }
 
+    const usdRate = useMemo(() => {
+        const rawRate = exchangeRates?.usd || exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5;
+        const numRate = typeof rawRate === "string" ? parseFloat(rawRate.replace(",", ".")) : Number(rawRate);
+        return isNaN(numRate) || numRate <= 0 ? 34.5 : numRate;
+    }, [exchangeRates, settingsData]);
+
     const getCartCurrencySymbol = useCallback(() => {
         if (defaultCurrency === "USD") return "$";
         return "₺";
     }, [defaultCurrency]);
 
-    const getEquivalentDisplay = useCallback((product: any) => {
-        const itemCurrency = getCartItemCurrency(product);
-        const usdRate = Number(exchangeRates?.USD || settingsData?.find((s: any) => s.key === "exchange_rate_usd")?.value || 34.5);
-
-        if (itemCurrency === "USD") {
-            const priceUsd = Number(product.sellPriceUsd || product.sellPrice || 0);
-            const tlEquiv = priceUsd * usdRate;
-            return `(₺${tlEquiv.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
-        } else {
-            const priceTl = Number(product.sellPrice || 0);
-            const usdEquiv = priceTl / usdRate;
-            return `($${usdEquiv.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })})`;
+    const getCartDisplayPrice = useCallback((item: any) => {
+        if (defaultCurrency === "USD") {
+            return Number(item.sellPriceUsd || (item.sellPrice / usdRate));
+        } else if (defaultCurrency === "EUR") {
+            return (item.sellPrice / (exchangeRates?.eur || 37.0));
         }
-    }, [exchangeRates, settingsData]);
+
+        // TRY mode
+        if (item.sellPriceUsd && item.sellPriceUsd > 0) {
+            return item.sellPriceUsd * usdRate;
+        }
+        return Number(item.sellPrice || 0);
+    }, [defaultCurrency, usdRate, exchangeRates]);
+
+    const getEquivalentDisplay = useCallback((product: any) => {
+        const isDefaultUSD = defaultCurrency === "USD";
+        if (isDefaultUSD) {
+            const priceTl = product.sellPriceUsd ? (product.sellPriceUsd * usdRate) : (product.sellPrice || 0);
+            return `(₺${Math.round(priceTl).toLocaleString("tr-TR")})`;
+        } else {
+            const priceUsd = product.sellPriceUsd || (product.sellPrice / usdRate) || 0;
+            return `($${priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+        }
+    }, [defaultCurrency, usdRate]);
 
     const {
         initializeScannerRoom,
@@ -235,6 +251,13 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const updatePrice = (id: string, newPrice: number) => {
         setCart((prev) => prev.map((item) => {
             if (item.id === id) {
+                if (defaultCurrency === "USD") {
+                    return {
+                        ...item,
+                        sellPriceUsd: newPrice,
+                        sellPrice: newPrice * usdRate,
+                    };
+                }
                 return { ...item, sellPrice: newPrice };
             }
             return item;
@@ -265,7 +288,10 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         };
     }, [cart, initialProducts]);
 
-    const totalItemsAmount = cart.reduce((sum, item) => sum + (item.sellPrice * item.quantity), 0);
+    const totalItemsAmount = useMemo(() => {
+        return cart.reduce((sum, item) => sum + (getCartDisplayPrice(item) * item.quantity), 0);
+    }, [cart, getCartDisplayPrice]);
+
     const tax = totalItemsAmount * 0.20;
 
     const activeCustomer = useMemo(() => {
@@ -283,6 +309,11 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const usedPoints = Math.ceil(loyaltyDiscountAmount / pointValueTl);
     const total = totalItemsAmount - loyaltyDiscountAmount;
 
+    // Display values are already in the defaultCurrency because totalItemsAmount uses getCartDisplayPrice
+    const displaySubtotal = totalItemsAmount;
+    const displayDiscount = loyaltyDiscountAmount;
+    const displayTotal = total;
+
     const handleCheckout = async () => {
         if (cart.length === 0) return;
 
@@ -298,12 +329,12 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 items: cart.map(item => ({
                     productId: item.id,
                     quantity: item.quantity,
-                    unitPrice: item.sellPrice
+                    unitPrice: defaultCurrency === "USD" ? (item.sellPriceUsd || item.sellPrice / usdRate) : item.sellPrice
                 })),
-                totalAmount: total,
+                totalAmount: displayTotal,
                 paymentMethod,
-                currency: "TRY",
-                discountAmount: loyaltyDiscountAmount,
+                currency: defaultCurrency || "TRY",
+                discountAmount: displayDiscount,
                 usedPoints
             });
 
@@ -464,7 +495,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                         </div>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
-                                        <span className="text-sm font-black tabular-nums">₺{product.sellPrice.toLocaleString('tr-TR')}</span>
+                                        <span className="text-sm font-black tabular-nums">
+                                            {getCartCurrencySymbol()}{getCartDisplayPrice(product).toLocaleString(defaultCurrency === "USD" ? 'en-US' : 'tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                        </span>
                                         <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                             <Plus className="h-4 w-4" />
                                         </div>
@@ -507,6 +540,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                             removeFromCart={removeFromCart}
                                             getCartCurrencySymbol={getCartCurrencySymbol}
                                             getEquivalentDisplay={getEquivalentDisplay}
+                                            displayPrice={getCartDisplayPrice(item)}
                                             isCompact={true}
                                         />
                                     ))}
@@ -540,9 +574,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 />
 
                 <CheckoutSummary
-                    subtotal={totalItemsAmount}
-                    tax={tax}
-                    total={total}
+                    subtotal={displaySubtotal}
+                    tax={defaultCurrency === "USD" ? (totalItemsAmount * 0.20) : (totalItemsAmount * 0.20)}
+                    total={displayTotal}
                     paymentMethod={paymentMethod}
                     setPaymentMethod={setPaymentMethod}
                     loyaltyEnabled={loyaltyEnabled}
@@ -550,11 +584,14 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     pointValueTl={pointValueTl}
                     applyLoyaltyDiscount={applyLoyaltyDiscount}
                     setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
-                    loyaltyDiscountAmount={loyaltyDiscountAmount}
+                    loyaltyDiscountAmount={displayDiscount}
                     onCheckout={handleCheckout}
                     isProcessing={isProcessing}
                     isDebtBlocked={isDebtBlocked}
                     isCompact={true}
+                    getEquivalentDisplay={getEquivalentDisplay}
+                    defaultCurrency={defaultCurrency}
+                    rates={exchangeRates}
                 />
             </div>
 

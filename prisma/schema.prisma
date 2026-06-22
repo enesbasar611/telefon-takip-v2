@@ -75,6 +75,7 @@ model Shop {
   transactions         Transaction[]
   users                User[]
   leaveRequests        LeaveRequest[]
+  whatsAppTemplates    WhatsAppTemplate[]
 }
 
 model RolePermission {
@@ -110,6 +111,7 @@ model User {
   canEdit              Boolean               @default(true)
   shopId               String?
   isApproved           Boolean               @default(false)
+  browserNotificationsEnabled Boolean        @default(false)
   verificationCode     String?
   lastVerificationSent DateTime?
   verificationAttempts Int                   @default(0)
@@ -648,6 +650,7 @@ model Debt {
   dueDate            DateTime?
   isPaid             Boolean             @default(false)
   isTracking         Boolean             @default(false)
+  description        String?
   notes              String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -763,6 +766,21 @@ model Setting {
   shop   Shop   @relation(fields: [shopId], references: [id])
 
   @@unique([shopId, key])
+}
+
+model WhatsAppTemplate {
+  id        String   @id @default(cuid())
+  name      String   // e.g., "SERVICE_READY", "STOCK_CRITICAL"
+  content   String   @db.Text
+  category  String   @default("GENERAL")
+  variables String[] // e.g., ["customerName", "productName"]
+  isActive  Boolean  @default(true)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, name])
 }
 
 model ReceiptSettings {

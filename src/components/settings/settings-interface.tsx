@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback, useMemo, useTransition, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Settings as SettingsIcon, Palette, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate, ShieldAlert } from "lucide-react";
+import { Settings as SettingsIcon, Palette, Printer, Database, Zap, Users, Store, LayoutGrid, LayoutTemplate, ShieldAlert, Bell, MessageSquare } from "lucide-react";
 import { bulkUpdateSettings, updateSetting, updateShop } from "@/lib/actions/setting-actions";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,8 @@ import { ShopTab } from "./tabs/shop-tab";
 import { ModulesTab } from "./tabs/modules-tab";
 import { FormsTab } from "./tabs/forms-tab";
 import { AdminTab } from "./tabs/admin-tab";
+import { NotificationsTab } from "./tabs/notifications-tab";
+import { WhatsAppTab } from "./tabs/whatsapp-tab";
 import { FloatingSaveBar } from "./floating-save-bar";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -37,6 +39,8 @@ const defaultTabs = [
   { id: "shop", label: "Dükkan", icon: Store, desc: "Sektör ve bilgiler" },
   { id: "forms", label: "Dinamik Formlar", icon: LayoutTemplate, desc: "Sektörel form ayarları" },
   { id: "modules", label: "Modüller", icon: LayoutGrid, desc: "Aktif özellikler" },
+  { id: "notifications", label: "Bildirimler", icon: Bell, desc: "Tarayıcı ve sistem bildirimleri" },
+  { id: "whatsapp", label: "WhatsApp Şablonları", icon: MessageSquare, desc: "Mesaj şablonlarını yönetin" },
   { id: "printing", label: "Yazıcı", icon: Printer, desc: "Fiş ayarları" },
   { id: "customers", label: "Müşteriler", icon: Users, desc: "Sadakat modülü" },
   { id: "data", label: "Veri", icon: Database, desc: "Yedek ve export" },
@@ -288,6 +292,12 @@ export function SettingsInterface({ initialSettings, receiptSettings: initialRec
               )}
               {activeTab === "automation" && (
                 <AutomationTab formData={formData} onChange={handleChange} savingKeys={savingKeys} />
+              )}
+              {activeTab === "notifications" && (
+                <NotificationsTab />
+              )}
+              {activeTab === "whatsapp" && (
+                <WhatsAppTab shop={shop} formData={formData} onChange={handleChange} savingKeys={savingKeys} />
               )}
               {activeTab === "admin" && isSuperAdmin && (
                 <AdminTab />

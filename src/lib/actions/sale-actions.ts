@@ -188,7 +188,25 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
         });
       }
 
-      return newSale;
+      // 8. Fetch the full sale object with transaction to return
+      const fullSale = await tx.sale.findUnique({
+        where: { id: newSale.id },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  deviceInfo: true
+                }
+              }
+            }
+          },
+          customer: true,
+          transaction: true
+        }
+      });
+
+      return fullSale;
     });
 
     revalidatePath("/satis");
@@ -198,6 +216,10 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
     revalidateTag(`dashboard-${shopId}`);
     if (data.customerId) {
       revalidatePath(`/musteriler/${data.customerId}`);
+    }
+
+    if (!sale) {
+      return { success: false, error: "Satış oluşturulamadı." };
     }
 
     await recordAuditLog({

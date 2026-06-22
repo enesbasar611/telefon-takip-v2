@@ -15,7 +15,7 @@ interface DashboardDataContextType {
     settings: DashboardSetting[];
     isLoading: boolean;
     refresh: () => void;
-    defaultCurrency: "TRY" | "USD";
+    defaultCurrency: "TRY" | "USD" | "EUR";
     shopId?: string;
 }
 

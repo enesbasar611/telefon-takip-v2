@@ -1,9 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
-import { PlusCircle, User, Eye, EyeOff, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun, LayoutDashboard, Zap } from "lucide-react";
+import { ShoppingCart, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun, LayoutDashboard, Zap, User, UserCircle, Eye, EyeOff } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -28,15 +30,42 @@ import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useUI } from "@/lib/context/ui-context";
 import { NotificationDropdown } from "@/components/navbar/notification-dropdown";
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
+import { updateSetting } from "@/lib/actions/setting-actions";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 export function Navbar({ shop }: { shop?: any }) {
   const { isFinancialVisible, toggleFinancialVisibility, isLayoutEditing, toggleLayoutEditing } = useUI();
   const { data: session } = useSession();
+  const { defaultCurrency, refresh: refreshDashboardData } = useDashboardData();
   const { setTheme } = useTheme();
   const router = useRouter();
 
+  const [isChangingCurrency, setIsChangingCurrency] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'SHOP_MANAGER';
 
+  const handleCurrencyChange = async (currency: "TRY" | "USD") => {
+    setIsChangingCurrency(true);
+    try {
+      const res = await updateSetting("defaultCurrency", currency);
+      if (res.success) {
+        await refreshDashboardData();
+        startTransition(() => {
+          router.refresh();
+        });
+
+        // Wait a bit more for all components to react to the new state
+        setTimeout(() => {
+          setIsChangingCurrency(false);
+        }, 1000);
+      } else {
+        setIsChangingCurrency(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsChangingCurrency(false);
+    }
+  };
   return (
     <>
       <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-20 shadow-none gap-4">
@@ -144,6 +173,34 @@ export function Navbar({ shop }: { shop?: any }) {
                     </Link>
                   </DropdownMenuItem>
 
+                  {/* Para Birimi Seçimi */}
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase px-3 py-2 font-black tracking-widest">Para Birimi</DropdownMenuLabel>
+                  <div className="grid grid-cols-2 gap-1 p-1">
+                    <button
+                      onClick={() => handleCurrencyChange("TRY")}
+                      disabled={isChangingCurrency || isPending}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 p-2 rounded-xl transition-colors border border-transparent active:border-primary/20",
+                        defaultCurrency === "TRY" ? "bg-muted shadow-sm border-border/50" : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="text-sm font-bold text-amber-500">₺ TRY</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">Türk Lirası</span>
+                    </button>
+                    <button
+                      onClick={() => handleCurrencyChange("USD")}
+                      disabled={isChangingCurrency || isPending}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 p-2 rounded-xl transition-colors border border-transparent active:border-primary/20",
+                        defaultCurrency === "USD" ? "bg-muted shadow-sm border-border/50" : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="text-sm font-bold text-emerald-500">$ USD</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">Amerikan Doları</span>
+                    </button>
+                  </div>
+
                   {/* Theme Selection - Mobil Öncelikli ama genel eklendi */}
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase px-3 py-2 font-black tracking-widest">Tema Seçimi</DropdownMenuLabel>
@@ -178,6 +235,22 @@ export function Navbar({ shop }: { shop?: any }) {
       <div className="md:hidden flex items-center gap-2 px-4 py-2 bg-background/60 backdrop-blur-md border-b border-border/50 overflow-x-auto no-scrollbar scroll-smooth">
         <CurrencyDisplay mobile />
       </div>
+
+      {/* Loading Overlay for Currency Change */}
+      {(isChangingCurrency || isPending) && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-card border border-border shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="relative">
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              <div className="absolute inset-0 blur-xl bg-primary/20 animate-pulse rounded-full" />
+            </div>
+            <div className="space-y-1 text-center">
+              <h3 className="text-lg font-bold text-foreground">Döviz Ayarı Güncelleniyor</h3>
+              <p className="text-sm text-muted-foreground animate-pulse">Lütfen bekleyin, veriler yenileniyor...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

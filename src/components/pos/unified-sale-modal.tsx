@@ -97,15 +97,52 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
     const currentPaperSize = settings?.paperSize || "72mm";
 
     const getPrice = (price: number) => {
-        if (defaultCurrency === 'USD') {
+        const saleCurrency = sale?.transaction?.currency || "TRY";
+
+        // Current display currency matches original sale currency - return as is
+        if (defaultCurrency === saleCurrency) {
+            return Number(price).toFixed(2);
+        }
+
+        // Need conversion: original was TRY, display is USD
+        if (defaultCurrency === 'USD' && saleCurrency === 'TRY') {
             const rate = Number(rates?.usd || 34.5);
             return Number(price / rate).toFixed(2);
         }
-        if (defaultCurrency === 'EUR') {
+
+        // Need conversion: original was USD, display is TRY
+        if (defaultCurrency === 'TRY' && saleCurrency === 'USD') {
+            const rate = Number(rates?.usd || 34.5);
+            return Number(price * rate).toFixed(2);
+        }
+
+        // EUR cases
+        if (defaultCurrency === 'EUR' && saleCurrency === 'TRY') {
             const rate = Number(rates?.eur || 37.0);
             return Number(price / rate).toFixed(2);
         }
+
+        if (defaultCurrency === 'TRY' && saleCurrency === 'EUR') {
+            const rate = Number(rates?.eur || 37.0);
+            return Number(price * rate).toFixed(2);
+        }
+
         return Number(price).toFixed(2);
+    };
+
+    const getPriceInTRY = (price: number) => {
+        const saleCurrency = sale?.transaction?.currency || "TRY";
+        if (saleCurrency === "TRY") return Number(price).toFixed(2);
+        const rate = saleCurrency === "USD" ? Number(rates?.usd || 34.5) : Number(rates?.eur || 37.0);
+        return Number(price * rate).toFixed(2);
+    };
+
+    const paymentMethodMap: Record<string, string> = {
+        CASH: "NAKİT",
+        CARD: "KREDİ KARTI",
+        TRANSFER: "HAVALE / EFT",
+        DEBT: "VERESİYE",
+        MIXED: "PARÇALI"
     };
 
     const handlePrint = () => {
@@ -384,79 +421,93 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-12 flex justify-center items-start custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-12 flex justify-center items-start custom-scrollbar relative">
                         {/* Receipt Tab */}
-                        {activeTab === "receipt" && (
-                            <div className="shadow-[0_0_100px_rgba(255,255,255,0.05)] rounded-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-                                <div ref={receiptRef}>
-                                    <ReceiptTemplate
-                                        settings={settings}
-                                        subtitle={settings?.subtitle || "SATIŞ FİŞİ"}
-                                        date={sale.createdAt ? new Date(sale.createdAt) : undefined}
-                                        shopName={shop?.name}
-                                        shopPhone={shop?.phone}
-                                        shopAddress={shop?.address}
-                                        shopLogo={shop?.logoUrl}
-                                        shopWebsite={shop?.website}
-                                    >
-                                        <div className="mb-4 border-b-[1.5px] border-black pb-3">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[9px] font-black text-black">MÜŞTERİ</span>
-                                                <span className="text-[13px] font-black uppercase text-black">
-                                                    {sale.customer?.name || "HIZLI SATIŞ"}
-                                                </span>
-                                                {sale.customer?.phone && (
-                                                    <span className="text-[11px] font-bold text-black">{sale.customer.phone}</span>
-                                                )}
-                                            </div>
+                        <div
+                            className={cn(
+                                "shadow-[0_0_100px_rgba(255,255,255,0.05)] rounded-2xl overflow-hidden animate-in fade-in zoom-in duration-300",
+                                activeTab !== "receipt" && "hidden"
+                            )}
+                        >
+                            <div ref={receiptRef}>
+                                <ReceiptTemplate
+                                    settings={settings}
+                                    subtitle={settings?.subtitle || "SATIŞ FİŞİ"}
+                                    date={sale.createdAt ? new Date(sale.createdAt) : undefined}
+                                    shopName={shop?.name}
+                                    shopPhone={shop?.phone}
+                                    shopAddress={shop?.address}
+                                    shopLogo={shop?.logoUrl}
+                                    shopWebsite={shop?.website}
+                                >
+                                    <div className="mb-4 border-b-[1.5px] border-black pb-3">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[9px] font-black text-black">MÜŞTERİ</span>
+                                            <span className="text-[13px] font-black uppercase text-black">
+                                                {sale.customer?.name || "HIZLI SATIŞ"}
+                                            </span>
+                                            {sale.customer?.phone && (
+                                                <span className="text-[11px] font-bold text-black">{sale.customer.phone}</span>
+                                            )}
                                         </div>
-                                        <div className="mb-4 border-b-[1.5px] border-black pb-3">
-                                            <div className="flex justify-between items-baseline">
-                                                <span className="font-black text-[9px] text-black uppercase">FİŞ NO:</span>
-                                                <span className="font-black text-sm text-black">{sale.saleNumber}</span>
-                                            </div>
+                                    </div>
+                                    <div className="mb-4 border-b-[1.5px] border-black pb-3">
+                                        <div className="flex justify-between items-baseline">
+                                            <span className="font-black text-[9px] text-black uppercase">FİŞ NO:</span>
+                                            <span className="font-black text-sm text-black">{sale.saleNumber}</span>
                                         </div>
-                                        <div className="space-y-3 mb-6 min-h-[50px]">
-                                            {sale.items?.map((item: any, idx: number) => (
-                                                <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
-                                                    <div className="flex flex-col flex-1 pr-4">
-                                                        <span className="text-[9px] font-black uppercase leading-none block text-black">
-                                                            {item.product?.name}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-black/60">
-                                                            {item.quantity} ADET x {currencySymbol}{getPrice(item.unitPrice)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right whitespace-nowrap">
-                                                        <div className="text-[11px] font-black text-black">
-                                                            {currencySymbol}{getPrice(item.totalPrice)}
-                                                        </div>
+                                    </div>
+                                    <div className="space-y-3 mb-6 min-h-[50px]">
+                                        {sale.items?.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
+                                                <div className="flex flex-col flex-1 pr-4">
+                                                    <span className="text-[9px] font-black uppercase leading-none block text-black">
+                                                        {item.product?.name}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-black/60">
+                                                        {item.quantity} ADET x {currencySymbol}{getPrice(item.unitPrice)}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right whitespace-nowrap">
+                                                    <div className="text-[11px] font-black text-black">
+                                                        {currencySymbol}{getPrice(item.totalPrice)}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        <div className="border-t-[1.5px] border-black pt-4 space-y-2">
-                                            <div className="flex justify-between items-center py-1">
-                                                <span className="text-[10px] font-black text-black uppercase">ÖDEME YÖNTEMİ:</span>
-                                                <span className="text-[11px] font-black text-black uppercase">{sale.paymentMethod}</span>
                                             </div>
-                                            <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2">
+                                        ))}
+                                    </div>
+                                    <div className="border-t-[1.5px] border-black pt-4 space-y-2">
+                                        <div className="flex justify-between items-center py-1">
+                                            <span className="text-[10px] font-black text-black uppercase">ÖDEME YÖNTEMİ:</span>
+                                            <span className="text-[11px] font-black text-black uppercase">{paymentMethodMap[sale.paymentMethod || "CASH"] || sale.paymentMethod}</span>
+                                        </div>
+                                        <div className="flex flex-col border-[1.5px] border-black mt-2">
+                                            <div className="flex justify-between items-center p-2">
                                                 <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
                                                 <span className="text-lg font-black text-black">
                                                     {currencySymbol}{getPrice(sale.finalAmount)}
                                                 </span>
                                             </div>
+                                            {currencySymbol !== "₺" && (
+                                                <div className="flex justify-between items-center px-2 pb-2 bg-gray-50/50">
+                                                    <span className="text-[9px] font-bold text-black uppercase opacity-70 italic">TL KARŞILIĞI:</span>
+                                                    <span className="text-[11px] font-black text-black italic">
+                                                        ₺{getPriceInTRY(sale.finalAmount)}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                    </ReceiptTemplate>
-                                </div>
+                                    </div>
+                                </ReceiptTemplate>
                             </div>
-                        )}
+                        </div>
 
                         {/* Contract Tab */}
-                        {activeTab === "contract" && hasDevice && (
+                        {hasDevice && (
                             <div className={cn(
                                 "shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 transition-all bg-white",
-                                printFormat === "a4" ? "w-[210mm] min-h-[297mm] p-[15mm]" : "w-[72mm]"
+                                printFormat === "a4" ? "w-[210mm] min-h-[297mm] p-[15mm]" : "w-[72mm]",
+                                activeTab !== "contract" && "hidden"
                             )}>
                                 <div ref={contractRef}>
                                     {printFormat === "a4" ? (
@@ -571,8 +622,11 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                         )}
 
                         {/* Warranty Tab */}
-                        {activeTab === "warranty" && hasDevice && (
-                            <div className="w-[210mm] min-h-[297mm] bg-white p-[15mm] shadow-2xl animate-in fade-in zoom-in duration-300">
+                        {hasDevice && (
+                            <div className={cn(
+                                "w-[210mm] min-h-[297mm] bg-white p-[15mm] shadow-2xl animate-in fade-in zoom-in duration-300",
+                                activeTab !== "warranty" && "hidden"
+                            )}>
                                 <div ref={warrantyRef} className="text-black font-sans flex flex-col h-full">
                                     <div className="flex justify-between items-start mb-12 border-b-2 border-black pb-6">
                                         <div className="space-y-1">
